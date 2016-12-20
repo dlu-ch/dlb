@@ -1,6 +1,3 @@
-# -> rst???
-# http://sphinx-doc.org/markup/para.html#directive-productionlist
-
 import re
 import collections
 import collections.abc
@@ -223,10 +220,6 @@ class TokensTemplate:
     Once defined, a root value cannot be changed.
 
     Types can be looked-up in a different scope than values by explicitly calling :meth:`lookup_types()`.
-
-    Examples::
-
-      - ???
 
     See :ref:`tmpl-expansion-rules` for details.
     """
@@ -551,7 +544,7 @@ class TokensTemplate:
                 None: None,
                 '[': '[',
                 '{': '{',
-                '{:': '{'  # important: look-up only once for key and value for test???
+                '{:': '{'
             }[variable_spec.container])
 
         if var_name_key in value_by_name_components:

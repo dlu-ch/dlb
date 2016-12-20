@@ -5,15 +5,6 @@ String-token based replacement engine which provides simple type checking (with 
 and support for iteration (and repetition) over sequences and mappings.
 It's primary intended use is command line compilation from file list etc.
 
-Module Contents
----------------
-
-.. automodule:: dlb.cmd.tmpl
-   :synopsis: Tokens templates.
-   :members:
-   :special-members:
-   :exclude-members: __weakref__
-
 .. _tmpl-expansion-rules:
 
 Syntax and Expansion Rules
@@ -31,10 +22,10 @@ Example:
     ::
 
         tmpl = TokensTemplate(
-            '{tool.cplusplus_compiler_path:dlb.fs.NativePath.Absolute}',
+            '{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}',
             '-x', 'c++',
             (
-                '-I', '{tool.include_paths:[dlb.fs.NativePath+]+?}'
+                '-I', '{tool.include_paths:[dlb.fs.Path.Native+]+?}'
             ),
             (
                 '-D', '{tool.macros:{Tool.MacroDefinitionName+?:}}={tool.macros:{:Tool.MacroDefinitionReplacement!}+?}'
@@ -42,7 +33,7 @@ Example:
             '{tool.optional_argument:str?}',
             '--',
             (
-                '{tool.source_file_paths:[dlb.fs.NativePath.Relative]}',
+                '{tool.source_file_paths:[dlb.fs.RelativePath.Native]}',
             )
         )
 
@@ -55,14 +46,14 @@ Example:
            edge [fontname=Helvetica, fontsize=10];
 
            root[shape=circle, label=""];
-           root -> "'{tool.cplusplus_compiler_path:dlb.fs.NativePath.Absolute}'";
+           root -> "'{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}'";
            root -> "'-x'";
            root -> "'c++'";
 
            root -> group1;
            group1[shape=circle, label=""];
            group1 -> "'-I'";
-           group1 -> "'{tool.include_paths:[dlb.fs.NativePath+]+?}'";
+           group1 -> "'{tool.include_paths:[dlb.fs.Path.Native+]+?}'";
 
            root -> group2;
 
@@ -75,7 +66,7 @@ Example:
 
            root -> group3
            group3[shape=circle, label=""];
-           group3 -> "'{tool.source_file_paths:[dlb.fs.NativePath.Relative]}'";
+           group3 -> "'{tool.source_file_paths:[dlb.fs.RelativePath.Native]}'";
 
 The expansion of the template is the expansion of its root.
 
@@ -109,11 +100,11 @@ Each part is then expanded separately:
   The type specification describes the type requirements of the variable's values.
   Example:
 
-      ``'{a.b:[dlb.fs.NativePath]?}'``
+      ``'{a.b:[dlb.fs.Path.Native]?}'``
 
-  describes a variable with name ``'a.b'`` of type 'optional list of ``dlb.fs.NativePath`` objects'.
+  describes a variable with name ``'a.b'`` of type 'optional list of ``dlb.fs.Path.Native`` objects'.
 
-  Variable names (``'a.b'`` in the example) and type names (``dlb.fs.NativePath`` in the example)
+  Variable names (``'a.b'`` in the example) and type names (``dlb.fs.Path.Native`` in the example)
   are looked-up in root objects defined with :meth:`TokensTemplate.define()`.
   The type specification states whether a variable specification is a
   :ref:`non-container variable specification <tmpl-expansion-varspec-noncontainer>`,
@@ -352,10 +343,10 @@ Example:
     ::
 
         tmpl = TokensTemplate(
-            '{tool.cplusplus_compiler_path:dlb.fs.NativePath.Absolute}',
+            '{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}',
             '-x', 'c++',
             (
-                '-I', '{tool.include_paths:[dlb.fs.NativePath+]+?}'
+                '-I', '{tool.include_paths:[dlb.fs.Path.Native+]+?}'
             ),
             (
                 '-D', '{tool.macros:{Tool.MacroDefinitionName+?:}}={tool.macros:{:Tool.MacroDefinitionReplacement!}+?}'
@@ -363,7 +354,7 @@ Example:
             '{tool.optional_argument:str?}',
             '--',
             (
-                '{tool.source_file_paths:[dlb.fs.NativePath.Relative]}',
+                '{tool.source_file_paths:[dlb.fs.RelativePath.Native]}',
             )
         )
 
@@ -378,14 +369,14 @@ Example:
            edge [fontname=Helvetica, fontsize=10];
 
            root[shape=circle, label=""];
-           root -> "'{tool.cplusplus_compiler_path:dlb.fs.NativePath.Absolute}'";
+           root -> "'{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}'";
            root -> "'-x'";
            root -> "'c++'";
 
            root -> group1;
            group1[shape=circle, label=""];
            group1 -> "'-I'";
-           group1 -> "'{tool.include_paths:[dlb.fs.NativePath+]+?}'";
+           group1 -> "'{tool.include_paths:[dlb.fs.Path.Native+]+?}'";
 
            root -> group2;
 
@@ -398,7 +389,7 @@ Example:
 
            root -> group3
            group3[shape=circle, label=""];
-           group3 -> "'{tool.source_file_paths:[dlb.fs.NativePath.Relative]}'";
+           group3 -> "'{tool.source_file_paths:[dlb.fs.RelativePath.Native]}'";
 
 
     After expansion of all leaf-nodes,
@@ -486,3 +477,12 @@ Example:
            root[shape=egg, fillcolor=lightgray,
                label="['/usr/bin/g++', '-x', 'c++', '-D', 'a=1', '-D', 'b=a', '--', './a/b', './u']"];
 
+
+Module Contents
+---------------
+
+.. automodule:: dlb.cmd.tmpl
+   :synopsis: Tokens templates.
+   :members:
+   :special-members:
+   :exclude-members: __weakref__
