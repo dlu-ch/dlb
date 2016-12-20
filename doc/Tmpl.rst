@@ -5,12 +5,6 @@ String-token based replacement engine which provides simple type checking (with 
 and support for iteration (and repetition) over sequences and mappings.
 It's primary intended use is command line compilation from file list etc.
 
-Introduction ???,
-
-Examples::
-
-    ???
-
 Module Contents
 ---------------
 
