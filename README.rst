@@ -5,4 +5,4 @@ dlb is a `Pythonic <https://www.python.org/>`_ build tool which does not try to 
 to the build process.
 It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
 
-See [here](doc/index.rst) for more.
+See doc/index.rst for more.
