@@ -37,15 +37,16 @@ Example::
     class Linker(StaticLinkerGcc): pass
 
     class Context(dlb.cmd.Context): PROPAGATED_ENVS = ['PATH']
-    context = Context()                                                           # (c)
 
-    object_files = [                                                              # (d)
-       Compiler(source_file=p, object_file=Path('build/out/' + p + '.o')).run_in(context).object_file
-       for p in Path('src/X/').list(filter=r'\.cpp$') if not p.is_dir()
-    ]
+    with Context() as context:                                                    # (c)
 
-    l = Linker(object_files=object_files, executable_file=Path('build/out/example')).run_in(context)
-    print('Size:', l.executable_file.native.stat().st_size, 'B')                  # (e)
+        object_files = [                                                          # (d)
+           Compiler(source_file=p, object_file=Path('build/out/' + p + '.o')).run_in(context).object_file
+           for p in Path('src/X/').list(filter=r'\.cpp$') if not p.is_dir()
+        ]
+
+        l = Linker(object_files=object_files, executable_file=Path('build/out/example')).run_in(context)
+        print('Size:', l.executable_file.native.stat().st_size, 'B')              # (e)
 
 Explanation:
 
@@ -56,7 +57,7 @@ a.  Restrict paths to ones without spaces, usable on Windows and Posix systems.
 
 #.  Configure some tools of the toolchain by subclassing and redefining attributes.
 
-#.  Configure and create a context object.
+#.  Create a context object.
 
     A context object describes how subprocesses (e.g. the compiler) are started and
     how they interact with the environment (e.g. which environment variables they see).
