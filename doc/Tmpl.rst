@@ -10,7 +10,7 @@ It's primary intended use is command line compilation from file list etc.
 Syntax and Expansion Rules
 --------------------------
 
-A template is an ordered tree whose whose leafs are *template strings* and whose non-leaf
+A template is an ordered tree whose leafs are *template strings* and whose non-leaf
 nodes are *template groups*.
 The root of a template is always a template group.
 
@@ -22,7 +22,7 @@ Example:
     ::
 
         tmpl = TokensTemplate(
-            '{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}',
+            '{tool.cplusplus_compiler_path:dlb.fs.Path.Native}',
             '-x', 'c++',
             (
                 '-I', '{tool.include_paths:[dlb.fs.Path.Native+]+?}'
@@ -33,7 +33,7 @@ Example:
             '{tool.optional_argument:str?}',
             '--',
             (
-                '{tool.source_file_paths:[dlb.fs.RelativePath.Native]}',
+                '{tool.source_file_paths:[dlb.fs.Path.Native]}',
             )
         )
 
@@ -46,7 +46,7 @@ Example:
            edge [fontname=Helvetica, fontsize=10];
 
            root[shape=circle, label=""];
-           root -> "'{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}'";
+           root -> "'{tool.cplusplus_compiler_path:dlb.fs.Path.Native}'";
            root -> "'-x'";
            root -> "'c++'";
 
@@ -66,7 +66,7 @@ Example:
 
            root -> group3
            group3[shape=circle, label=""];
-           group3 -> "'{tool.source_file_paths:[dlb.fs.RelativePath.Native]}'";
+           group3 -> "'{tool.source_file_paths:[dlb.fs.Path.Native]}'";
 
 The expansion of the template is the expansion of its root.
 
@@ -343,7 +343,7 @@ Example:
     ::
 
         tmpl = TokensTemplate(
-            '{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}',
+            '{tool.cplusplus_compiler_path:dlb.fs.Path.Native}',
             '-x', 'c++',
             (
                 '-I', '{tool.include_paths:[dlb.fs.Path.Native+]+?}'
@@ -354,11 +354,11 @@ Example:
             '{tool.optional_argument:str?}',
             '--',
             (
-                '{tool.source_file_paths:[dlb.fs.RelativePath.Native]}',
+                '{tool.source_file_paths:[dlb.fs.Path.Native]}',
             )
         )
 
-        ... = tmpl.defined(...).expand()
+        ... = tmpl.define(...).expand()
 
     Unexpanded template:
 
@@ -369,7 +369,7 @@ Example:
            edge [fontname=Helvetica, fontsize=10];
 
            root[shape=circle, label=""];
-           root -> "'{tool.cplusplus_compiler_path:dlb.fs.AbsolutePath.Native}'";
+           root -> "'{tool.cplusplus_compiler_path:dlb.fs.Path.Native}'";
            root -> "'-x'";
            root -> "'c++'";
 

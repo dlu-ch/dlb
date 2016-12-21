@@ -207,8 +207,8 @@ class TokensTemplate:
     Sequence and mappings types are supported; they expand to 0 or more string token.
     Once constructed, the template cannot be changed.
 
-    The template is an ordered tree whose whose leafs are *template strings*.
-    Is is described by template strings and (arbitrarily deep nested) tuples of template strings
+    The template is an ordered tree whose leafs are *template strings*.
+    It is described by template strings and (arbitrarily deep nested) tuples of template strings
     (forming the non-leaf nodes of the tree). The non-leaf nodes are called *template groups*.
 
     Template groups are only significant if sequence- or mapping-like variables are used.
