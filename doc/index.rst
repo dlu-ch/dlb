@@ -31,36 +31,44 @@ Example::
     import dlb.cmd
     ...
 
-    # Restrict paths to ones without spaces, usable on Windows and Posix systems.
-    # The attempt to construct a Path object for a path violating these restriction leads to an exception.
-    class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass
+    class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
 
-    class Compiler(CppCompilerGcc):
-        WARNINGS = ('all', )
-
+    class Compiler(CppCompilerGcc): WARNINGS = ['all']                            # (b)
     class Linker(StaticLinkerGcc): pass
 
-    class Context(dlb.cmd.Context):
-        PROPAGATED_ENVS = ('PATH', )
+    class Context(dlb.cmd.Context): PROPAGATED_ENVS = ['PATH']
+    context = Context()                                                           # (c)
 
-    # A context object describes how subprocesses (e.g. the compiler) are started and
-    # how they interact with the environment (e.g. which environment variables they see).
-    # A context object also stores the state of inputs and outputs, which are used to determine
-    # whether a run is necessary or not.
-    context = Context()
+    object_files = [                                                              # (d)
+       Compiler(source_file=p, object_file=Path('build/out/' + p + '.o')).run_in(context).object_file
+       for p in Path('src/X/').list(filter=r'\.cpp$') if not p.is_dir()
+    ]
 
-    # Compile all '.cpp' files in directory 'src/X/' and its subdirectories into object files:
-    object_files = []
-    for p in Path('src/X/').list(filter=r'\.cpp$'):
-        if not p.native.is_dir():
-            # Compiling also means: find and all included files and store them as inputs for future executions.
-            # run() runs the compiler only if not all outputs exist or if an input or the context has changed.
-            c = Compiler(source_file=p, object_file=Path('build/out/' + p + '.o')).run_in(context)
-            object_files.append(c.object_file)
-
-    # Link these object files into an executable file:
     l = Linker(object_files=object_files, executable_file=Path('build/out/example')).run_in(context)
-    print('Size:', l.executable_file.native.stat().st_size, 'B')
+    print('Size:', l.executable_file.native.stat().st_size, 'B')                  # (e)
+
+Explanation:
+
+a.  Restrict paths to ones without spaces, usable on Windows and Posix systems.
+    The attempt to construct such a ``Path`` object for a path violating these restrictions leads to an exception.
+
+    This is useful to enforce portability where necessary.
+
+#.  Configure some tools of the toolchain by subclassing and redefining attributes.
+
+#.  Configure and create a context object.
+
+    A context object describes how subprocesses (e.g. the compiler) are started and
+    how they interact with the environment (e.g. which environment variables they see).
+    A context object also stores the state of inputs and outputs, which are used to determine
+    whether a run is necessary or not.
+
+#.  Compile all ``.cpp`` files in directory ``src/X/`` and its subdirectories into object files.
+
+    Compiling also means: find and all included files and store them as inputs for future executions.
+    run() runs the compiler only if not all outputs exist or if an input or the context has changed.
+
+#.  Link these object files into an executable file and output its file size.
 
 .. _Make: https://en.wikipedia.org/wiki/Make_%28software%29
 
