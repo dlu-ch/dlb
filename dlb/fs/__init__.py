@@ -1,41 +1,120 @@
 import functools
+import copy
 import pathlib  # since Python 3.4
 
-@functools.total_ordering
-class Path:
+__all__ = [
+    'Path', 'RelativePath', 'AbsolutePath', 'NoSpacePath',
+    'PosixPath', 'PortablePosixPath',
+    'PortableWindowsPath', 'WindowsPath',
+    'PortablePath'
+]
 
-    # cannot derive easily from pathlib.Path without defining non-API members
-    class Native:
 
-        def __init__(self, path):
-            self._native = pathlib.Path(path)
-
-        def __getattr__(self, item):
-            return getattr(pathlib.Path, item)
-
-        def __str__(self):
-            s = str(self._native)
-            if not self._native.anchor:  # with anchor: 'c:x', 'c:/x', '//unc/root/x'
-                if s != '.' and self._native.parts[:1] != ('..',):
-                    s = str('_.' / self._native)[1:]
-            return s
-
+# cannot derive easily from pathlib.Path without defining non-API members
+class _Native:
     def __init__(self, path):
+        self._raw = pathlib.Path(path)
+
+    @property
+    def raw(self):
+        return self._raw
+
+    def __str__(self):
+        r = self._raw
+        s = str(r)
+        if not r.anchor:  # with anchor: 'c:x', 'c:/x', '//unc/root/x'
+            if s != '.' and r.parts[:1] != ('..',):
+                s = str('_.' / r)[1:]
+        return s
+
+    def __repr__(self):
+        return 'Path.Native({})'.format(repr(str(self)))
+
+    def __getattr__(self, item):
+        return getattr(pathlib.Path, item)
+
+
+# http://stackoverflow.com/questions/13762231/python-metaclass-arguments
+class _Meta(type):
+    def __subclasscheck__(mcl, subclass):
+        # Class hierarchy:
+        #
+        #   B > A > Path   ==>   A.Native > B.Native > _Native
+        #
+        # Note: the class hierarchy induced by issubclass() reflects only the (static) hierarchy
+        # provided by Path classes. On the other hand, the object hierarchy induced by isinstance()
+        # is based on (dynamic) properties of the Path's components.
+        common_bases = set(mcl.__class__.__bases__) & set(subclass.__class__.__bases__)
+        return common_bases and issubclass(subclass._cls, mcl._cls)
+
+
+class _NativeMeta(_Meta):
+    def __call__(mcl, value):
+        obj = _Native(value)
+        mcl._cls(obj._raw)
+        return obj
+
+    def __instancecheck__(mcl, instance):
+        if not isinstance(instance, _Native):
+            return False
+        try:
+            mcl._cls(instance._raw)
+        except ValueError:
+            return False
+        return True
+
+
+class _PathMeta(type):
+    def __init__(cls, name, bases, nmspc):
+        super().__init__(name, bases, nmspc)
+        meta = type(cls.__name__ + '.<NativeMeta>', (_NativeMeta,), {'_cls': cls})
+        cls.Native = meta(cls.__name__ + '.Native', (_Native,), {})
+
+
+@functools.total_ordering
+class Path(metaclass=_PathMeta):
+    def __init__(self, path, is_dir=None):
+        if path is None:
+            raise ValueError('invalid path: None')
+
         if isinstance(path, Path):
             self._path = path._path
             self._is_dir = path._is_dir
         else:
-            if isinstance(path, pathlib.PurePath) and not isinstance(path, pathlib.Path):
-                path = str(path)
-            elif path is None:
-                raise ValueError('invalid path: None')
+            if isinstance(path, str):
+                p = path
+            elif isinstance(path, pathlib.PurePath):
+                p = str(path)
+                if isinstance(path, pathlib.PurePosixPath):
+                    pass
+                elif isinstance(path, pathlib.PureWindowsPath):
+                    if path.anchor:
+                        if not path.root:
+                            raise ValueError('neither absolute nor relative: root is missing')
+                        if not path.drive:
+                            raise ValueError('neither absolute nor relative: drive is missing')
+                    p = p.replace('\\', '/')
+                    if path.anchor and path.anchor[0] not in '/\\':
+                        p = '/' + p
+                else:
+                    raise TypeError("unknown subclass of 'pathlib.PurePath'")
             else:
-                path = str(path)
-            if not path:
+                # like pathlib
+                raise TypeError(
+                    "argument should be a path or str object, not {}".format(repr(path.__class__)))
+
+            if not p:
                 raise ValueError("invalid path: ''")
-            self._path = pathlib.PurePosixPath(path)  # '.' represented as empty path
-            self._is_dir = path.endswith('/') or path.endswith('/.') \
-                or not self._path.parts or self._path.parts[-1:] == ('..',)
+            self._path = pathlib.PurePosixPath(p)  # '.' represented as empty path
+            self._is_dir = p.endswith('/') or p.endswith('/.') \
+                           or not self._path.parts or self._path.parts[-1:] == ('..',)
+
+        if is_dir is not None:
+            is_dir = bool(is_dir)
+            if not is_dir and (not self._path.parts or self._path.parts[-1:] == ('..',)):
+                raise ValueError(
+                    'cannot be the path of a non-directory: {}'.format(repr(str(self._path))))
+            self._is_dir = is_dir
 
         try:
             for c in reversed(self.__class__.mro()):
@@ -43,22 +122,24 @@ class Path:
                     c.check_restriction_to_base(self)
         except ValueError as e:
             reason = str(e)
-            msg = "invalid path for {}: {}".format(repr(self.__class__.__qualname__), repr(str(self._path)))
+            msg = "invalid path for {}: {}".format(
+                repr(self.__class__.__qualname__), repr(str(self._path)))
             if reason:
                 msg = '{} ({})'.format(msg, reason)
             raise ValueError(msg)
 
-    def is_absolute(self):
-        return self._path.is_absolute()
-
     def is_dir(self):
         return self._is_dir
+
+    def is_absolute(self):
+        return self._path.is_absolute()
 
     def relative_to(self, other):
         other = self.__class__(other)
         if not other.is_dir():
-            raise ValueError('since {} is not a directory, a path cannot be relative to it'.format(repr(other)))
-        return self.__class__(self._path.relative_to(other._path))
+            raise ValueError(
+                'since {} is not a directory, a path cannot be relative to it'.format(repr(other)))
+        return self.__class__(self._path.relative_to(other._path), is_dir=self._is_dir)
 
     @property
     def parts(self):
@@ -98,33 +179,54 @@ class Path:
         :rtype: pathlib.PureWindowsPath
         """
 
-        s = str(self._path)
+        s = self._str()
         if s.startswith('/') and not s.startswith('//'):
             s = s[1:]
-        # accepted: c:x/y, c:/x/y, //unc/root/x/y
-        return pathlib.PureWindowsPath(s)
 
-    @property
-    def native(self):
-        if not issubclass(self.Native, pathlib.PosixPath):
-            return self.Native(self.pure_posix)
-        if issubclass(self.Native, pathlib.WindowsPathPath):
-            return self.Native(self.pure_windows)
-        raise TypeError("unknown 'Native' class: {}".format(repr(self.Native)))
+        # accepted: 'c:x', 'c:/x', '//unc/root/x/y'
+        p = pathlib.PureWindowsPath(s)
+        if p.anchor:
+            if not p.root:
+                raise ValueError('neither absolute nor relative: root is missing')
+            if not p.drive:
+                raise ValueError('neither absolute nor relative: drive is missing')
+
+        return p
+
+    if isinstance(pathlib.Path(), pathlib.PosixPath):
+
+        @property
+        def native(self):
+            return _Native(self.pure_posix)
+
+    elif isinstance(pathlib.Path(), pathlib.WindowsPath):
+
+        @property
+        def native(self):
+            return _Native(self.pure_windows)
+
+    else:
+        raise TypeError("unknown 'Native' class")
+
+    def _str(self):
+        s = str(self._path)
+        if self.is_dir() and not s.endswith('/'):
+            s += '/'
+        return s
 
     def __truediv__(self, other):
         if not self.is_dir():
-            raise ValueError('cannot join with non-directory path {}'.format(repr(self)))
-        return self.__class__(self._path / self.__class__(other)._path)
+            raise ValueError('cannot join with non-directory path: {}'.format(repr(self)))
+        other = self.__class__(other)
+        if other.is_absolute():
+            raise ValueError('cannot join with absolute path: {}'.format(repr(other)))
+        return self.__class__(self._path / other._path, is_dir=other._is_dir)
 
     def __rtruediv__(self, other):
-        other = self.__class__(other)
-        if not other.is_dir():
-            raise ValueError('cannot join with non-directory path {}'.format(repr(other)))
-        return self.__class__(self.__class__(other)._path / self._path)
+        return self.__class__(other) / self
 
     def __eq__(self, other):
-        # on all platform, comparision is case sensitive
+        # on all platform, comparison is case sensitive
         other = self.__class__(other)
         return (self._path, self._is_dir) == (other._path, other._is_dir)
 
@@ -136,10 +238,7 @@ class Path:
         return hash((self._path, self._is_dir))
 
     def __repr__(self):
-        s = str(self._path)
-        if self.is_dir() and not s.endswith('/'):
-            s += '/'
-        return '{}({})'.format(self.__class__.__qualname__, repr(s))  # since Python 3.3
+        return '{}({})'.format(self.__class__.__qualname__, repr(self._str()))  # since Python 3.3
 
     def __str__(self):
         # make sure this object is not converted to a string where a native path is expected
@@ -242,8 +341,10 @@ class PortablePosixPath(PosixPath):
 class WindowsPath(Path):
     """
     A :class:`Path` which represents a Microsoft Windows-compliant path in its least-constricted form,
-    which is either relative or absolute (but not drive-relativ like ``C:x\y`) and does not contain components
-    with reserved names (like ``NUL``).
+    which is either relative or absolute and does not contain components with reserved names (like ``NUL``).
+
+    It cannot represent incomplete paths which are neither absolute nor relative to the current working
+    directory (e.g. ``C:a\b`` and ``\\name``).
     """
 
     def check_restriction_to_base(self):
@@ -255,8 +356,7 @@ class WindowsPath(Path):
                 raise ValueError('component {} is reserved'.format(repr(c)))
 
 
-class PortableWindowsPath(Path):
-
+class PortableWindowsPath(WindowsPath):
     # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx#maxpath
     MAX_COMPONENT_LENGTH = 255  # lpMaximumComponentLength
     MAX_PATH_LENGTH = 259  # MAX_PATH - 1
