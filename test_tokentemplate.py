@@ -595,31 +595,3 @@ class TestExpansion(unittest.TestCase):
 
         self.assertEqual(3, a.getitem_count)
         self.assertEqual(1, a.items_count)
-
-
-class TestExample(unittest.TestCase):
-
-    def xtest_example1(self): #???
-
-        import dlb
-
-        class Tool:
-            pass
-
-        tmpl = TokensTemplate(
-            '{tool.cplusplus_compiler_path:dlb.fs.NativePath.Absolute}',
-            '-x', 'c++',
-            (
-                '-I', '{tool.include_paths:[dlb.fs.NativePath+]+?}'
-            ),
-            (
-                '-D', '{tool.macros:{Tool.MacroDefinitionName+?:}}={tool.macros:{:Tool.MacroDefinitionReplacement!}+?}'
-            ),
-            '--',
-            '{tool.source_file_paths:[dlb.fs.NativePath.Relative]}'
-        )
-        tmpl.protect(TokensTemplate.LookupScope.GLOBAL, TokensTemplate.LookupScope.KNOWN)
-        tmpl.define({'^': TokensTemplate.LookupScope.LOCAL}, Tool=Tool, dlb=dlb)
-        tmpl.lookup_types()
-
-        #???tmpl.expand(tool=Tool())
