@@ -1,5 +1,4 @@
 import functools
-import copy
 import pathlib  # since Python 3.4
 
 __all__ = [
@@ -357,6 +356,13 @@ class WindowsPath(Path):
 
 
 class PortableWindowsPath(WindowsPath):
+    """
+    A :class:`Path` which represents a Microsoft Windows-compliant path in its strictest form.
+
+    A component cannot be longer than 255 characters.
+    The path cannot not be longer than 259 characters.
+    """
+
     # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx#maxpath
     MAX_COMPONENT_LENGTH = 255  # lpMaximumComponentLength
     MAX_PATH_LENGTH = 259  # MAX_PATH - 1

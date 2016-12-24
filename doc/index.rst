@@ -79,8 +79,8 @@ Content
 .. toctree::
    :maxdepth: 2
 
-   Path.rst
-   Tmpl.rst
+   fs_path.rst
+   cmd_tmp.rst
 
 Indices and tables
 ==================
