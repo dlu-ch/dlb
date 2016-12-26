@@ -142,42 +142,14 @@ class Path(metaclass=_PathMeta):
 
     @property
     def parts(self):
-        """
-        A tuple giving access to the path’s various components::
-
-            >>> p = Path('/usr/bin/python3')
-            >>> p.parts
-            ('/', 'usr', 'bin', 'python3')
-
-        :rtype: tuple(str)
-        """
         return self._path.parts
 
     @property
     def pure_posix(self):
-        """
-        This path as a ::class::``PurePosixPath``::
-
-            >>> p = Path('/usr/bin/')
-            >>> p.pure_posix
-            PurePosixPath('/usr/bin')
-
-        :rtype: pathlib.PurePosixPath
-        """
         return self._path
 
     @property
     def pure_windows(self):
-        """
-        This path as a ::class::``PureWindowsPath``::
-
-            >>> p = Path('/C:/Program Files/')
-            >>> p.pure_windows
-            PureWindowsPath('C:/Program Files')
-
-        :rtype: pathlib.PureWindowsPath
-        """
-
         s = self._str()
         if s.startswith('/') and not s.startswith('//'):
             s = s[1:]
@@ -262,43 +234,10 @@ class NoSpacePath(Path):
             raise ValueError('must not contain space')
 
 
-class PosixPath(Path):
-    """
-    A :class:`Path` which represents a POSIX-compliant (`ISO 1003.1-2008`_) paths in its least-constricted form.
-
-    Every non-empty string, which does not contain ``'/'`` is a valid component.
-    Components are separated by ``'/'``.
-    '/' and every string of the form ``'//'`` ... ``'/'``, where ... is non-empty and does not contain ``'/'``
-    is a valid root component.
-
-    For every path prefix (in the POSIX sense) *{NAME_MAX}* and *{PATH_MAX}* are considered unlimited.
-
-    Relevant parts of `ISO 1003.1-2008`_:
-
-    - section 4.12 Pathname Resolution
-    - section 4.5 File Hierarchy
-    - section 4.6 Filenames
-    - section 4.7 Filename Portability
-    - section 3.267 Pathname
-    - section 3.269 Path Prefix
-    - limits.h
-    """
-    pass
+class PosixPath(Path): pass
 
 
 class PortablePosixPath(PosixPath):
-    """
-    A :class:`Path` which represents a POSIX-compliant (`ISO 1003.1-2008`_) path in its strictest form.
-    Any path whose support is not required by POSIX or is declared as non-portable is considered invalid.
-
-    A component cannot be longer than 14 characters, which must all be members of the
-    *Portable Filename Character Set*.
-
-    The length of the string representation of the path is limited to 255 characters.
-
-    No absolute path prefix other than ``'/'`` is allowed (because implementation-defined).
-    """
-
     MAX_COMPONENT_LENGTH = 14  # {_POSIX_NAME_MAX}
     MAX_PATH_LENGTH = 255  # {_POSIX_PATH_MAX} - 1
     CHARACTERS = frozenset('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-')
@@ -338,14 +277,6 @@ class PortablePosixPath(PosixPath):
 
 
 class WindowsPath(Path):
-    """
-    A :class:`Path` which represents a Microsoft Windows-compliant path in its least-constricted form,
-    which is either relative or absolute and does not contain components with reserved names (like ``NUL``).
-
-    It cannot represent incomplete paths which are neither absolute nor relative to the current working
-    directory (e.g. ``C:a\b`` and ``\\name``).
-    """
-
     def check_restriction_to_base(self):
         p = self.pure_windows
         if len(p.parts) > 1 and p.anchor and not p.root:
@@ -356,13 +287,6 @@ class WindowsPath(Path):
 
 
 class PortableWindowsPath(WindowsPath):
-    """
-    A :class:`Path` which represents a Microsoft Windows-compliant path in its strictest form.
-
-    A component cannot be longer than 255 characters.
-    The path cannot not be longer than 259 characters.
-    """
-
     # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx#maxpath
     MAX_COMPONENT_LENGTH = 255  # lpMaximumComponentLength
     MAX_PATH_LENGTH = 259  # MAX_PATH - 1
