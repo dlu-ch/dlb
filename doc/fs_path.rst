@@ -14,35 +14,40 @@ Path Objects
 
 .. class:: Path
 
-   A :class:`dlb.fs.Path` represents the path of a filesystem object in platform-independent manner and
+   A :class:`dlb.fs.Path` represents the path of a filesystem object in a platform-independent manner and
    expresses whether the object is a directory or not.
-
-   The interface is similar to ``pathlib`` and conversion from and to ``pathlib`` paths is supported.
+   All operations on instances of :class:`dlb.fs.Path` show the same behaviour on every platform
+   (with the exception of :attr:`native`).
+   Its instances are immutable and hashable (they can be used in sets or as keys in dictionaries).
 
    All represented paths are either absolute or relative to the working directory of a process.
 
-   On all platform the following assumptions are made:
+   The interface is similar to :mod:`pathlib` and conversion from and to ``pathlib`` paths is supported.
+
+   If the path represented by a :class:`dlb.fs.Path` is meaningful as a concrete path on the platform the code
+   is running on, :attr:`native` returns it in the form of a :class:`dlb.fs.Path.Native` instance, which can
+   then be used to access the filesystem (like a :class:`pathlib.Path`).
+
+   On all platform the following properties hold:
 
    - ``'/'`` is used as a path component separator.
-   - paths are absolute iff they start with ``'/'``.
-   - A sequence of two or more consequent ``'/'`` are equivalent to a single ``'/'``, except at the beginning of the path.
+   - Paths are absolute iff they start with ``'/'``.
+   - A component ``'..'`` means the parent directory of the path before it.
+   - A component ``'.'`` means the directory of the path before it;
+     a non-empty path with all such components removed is equivalent to the original one.
+   - A sequence of two or more consequent ``'/'`` is equivalent to a single ``'/'``, except at the beginning of
+     the path.
    - At the beginning of the path:
-   - three or more consequent ``'/'`` are equivalent to a single ``'/'``
-   - exactly two consequent ``'/'`` (followed be a character other than ``'/'``) means that the following component
-     is to be interpreted in a implementation-defined manner (e.g. `ISO 1003.1-2008`_ or UNC paths)
-   - The platform resolving symbolic links according to `ISO 1003.1-2008`_
+       - Three or more consequent ``'/'`` are equivalent to a single ``'/'``
+       - Exactly two consequent ``'/'`` (followed be a character other than ``'/'``) means that the following component
+         is to be interpreted in a implementation-defined manner (e.g. `ISO 1003.1-2008`_ or UNC paths)
+   - If the platform supports symbolic links, it resolves them as specified in `ISO 1003.1-2008`_
      (which means that ``'..'`` cannot be collapsed without knowing the filesystem's content).
-
-   For each subclass ``P`` of :class:`dlb.fs.Path` there is a corresponding subclass ``P.Native`` which imposes the same
-   restrictions as ``P``.
-   If ``Q`` is a subclass of ``P`` and ``P`` is a subclass of :class:`dlb.fs.Path`, then ``Q.Native`` is a subclass
-   of ``P.Native``.
-   These ``Native`` classes can be used like ``pathlib.Path`` to access the filesystem.
 
    :class:`dlb.fs.Path` instances are comparable with each other by ``=``, ``<`` etc.
    They are also comparable with strings and :class:`pathlib.PurePath`.
-   Comparison is done case-sensitively.
-   A directory path is considered smaller than a non-directory path, if they are otherwise identical.
+   Comparison is done case-sensitively and component-wise, observing the equivalence relations described below.
+   A directory path is considered smaller than a non-directory path, if both are otherwise identical.
 
    Usage example::
 
@@ -98,12 +103,12 @@ Path Objects
 
    .. method:: is_dir()
 
-      :return: ``True`` if this represents the path of a directory.
+      :return: ``True`` iff this represents the path of a directory.
       :rtype: bool
 
    .. method:: is_absolute()
 
-      :return: ``True`` if this represents an absolute path.
+      :return: ``True`` iff this represents an absolute path.
       :rtype: bool
 
    .. attribute:: parts
@@ -160,10 +165,12 @@ Path Objects
 
    A native path whose instances can be used like once from :class:`pathlib.Path`.
 
-   Construction of ``Path.Native`` instances underlies the restrictions imposed by the containing
-   (subclass of) :class:`Path`.
+   For each subclass ``P`` of :class:`dlb.fs.Path` there is a corresponding subclass ``P.Native`` which imposes the same
+   restrictions as ``P``.
+   If ``Q`` is a subclass of ``P`` and ``P`` is a subclass of :class:`dlb.fs.Path`, then ``Q.Native`` is a subclass
+   of ``P.Native``.
 
-   Example::
+   Example (on a Posix system)::
 
       >>> dlb.fs.NoSpacePath.Native('/tmp/x y')
       Traceback (most recent call last):
@@ -173,7 +180,7 @@ Path Objects
    In contrast to :class:`pathlib.Path`, conversion to string is done in a safe way:
    relative paths are guaranteed to start with ``'.'``.
 
-   Example::
+   Example (on a Posix system)::
 
        >>> str(Path.Native('-rf'))
        './-rf'
@@ -190,19 +197,19 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: RelativePath
 
-   A :class:`Path` which represents a relative path.
+   A :class:`dlb.fs.Path` which represents a relative path.
 
 .. class:: AbsolutePath
 
-   A :class:`Path` which represents an absolute path.
+   A :class:`dlb.fs.Path` which represents an absolute path.
 
 .. class:: NoSpacePath
 
-   A :class:`Path` whose components do not contain ``' '``.
+   A :class:`dlb.fs.Path` whose components do not contain ``' '``.
 
 .. class:: PosixPath
 
-   A :class:`Path` which represents a POSIX-compliant (`ISO 1003.1-2008`_) paths in its least-constricted form.
+   A :class:`dlb.fs.Path` which represents a POSIX-compliant (`ISO 1003.1-2008`_) paths in its least-constricted form.
 
    Every non-empty string, which does not contain ``'/'`` is a valid component.
    Components are separated by ``'/'``.
@@ -223,7 +230,7 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: PortablePosixPath
 
-   A :class:`PosixPath` which represents a POSIX-compliant (`ISO 1003.1-2008`_) path in its strictest form.
+   A :class:`dlb.fs.PosixPath` which represents a POSIX-compliant (`ISO 1003.1-2008`_) path in its strictest form.
    Any path whose support is not required by POSIX or is declared as non-portable is considered invalid.
 
    A component cannot be longer than 14 characters, which must all be members of the
@@ -235,14 +242,14 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: WindowsPath
 
-   A :class:`Path` which represents a Microsoft Windows-compliant path in its least-constricted form,
+   A :class:`dlb.fs.Path` which represents a Microsoft Windows-compliant path in its least-constricted form,
    which is either relative or absolute and does not contain components with reserved names (like ``NUL``).
    It cannot represent incomplete paths which are neither absolute nor relative to the current working
    directory (e.g. ``C:a\b`` and ``\\name``).
 
 .. class:: PortableWindowsPath
 
-   A :class:`WindowsPath` which represents a Microsoft Windows-compliant path in its strictest form.
+   A :class:`dlb.fs.WindowsPath` which represents a Microsoft Windows-compliant path in its strictest form.
 
    A component cannot be longer than 255 characters.
    The path cannot not be longer than 259 characters.
