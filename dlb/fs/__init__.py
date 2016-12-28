@@ -1,3 +1,4 @@
+import re
 import functools
 import pathlib  # since Python 3.4
 
@@ -150,7 +151,7 @@ class Path(metaclass=_PathMeta):
 
     @property
     def pure_windows(self):
-        s = self._str()
+        s = self._as_string()
         if s.startswith('/') and not s.startswith('//'):
             s = s[1:]
 
@@ -179,7 +180,7 @@ class Path(metaclass=_PathMeta):
     else:
         raise TypeError("unknown 'Native' class")
 
-    def _str(self):
+    def _as_string(self):
         s = str(self._path)
         if self.is_dir() and not s.endswith('/'):
             s += '/'
@@ -209,11 +210,28 @@ class Path(metaclass=_PathMeta):
         return hash((self._path, self._is_dir))
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__qualname__, repr(self._str()))  # since Python 3.3
+        return '{}({})'.format(self.__class__.__qualname__, repr(self._as_string()))  # since Python 3.3
 
     def __str__(self):
         # make sure this object is not converted to a string where a native path is expected
         raise NotImplementedError("use 'repr()' or 'native' instead")
+
+    def __getitem__(self, key):
+        if not isinstance(key, slice):
+            raise TypeError("slice of component indices expected (use 'parts' for single components)")
+        n = len(self.parts)
+        start, stop, step = key.indices(n)
+        assert 0 <= start <= n
+        assert -1 <= stop <= n
+        if start == 0 and stop >= n and step == 1:
+            return self
+        else:
+            c = self.parts[start:stop:step]
+            if self.is_absolute() and not c:
+                raise ValueError("slice of absolute path must not be empty")
+            p = pathlib.PurePosixPath(*c)
+            d = stop < n or self._is_dir
+            return self.__class__(p, d)
 
 
 class RelativePath(Path):
@@ -277,6 +295,7 @@ class PortablePosixPath(PosixPath):
 
 
 class WindowsPath(Path):
+    # TODO: Check supported Unicode range
     def check_restriction_to_base(self):
         p = self.pure_windows
         if len(p.parts) > 1 and p.anchor and not p.root:

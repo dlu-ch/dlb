@@ -18,7 +18,7 @@ Path Objects
    expresses whether the object is a directory or not.
    All operations on instances of :class:`dlb.fs.Path` show the same behaviour on every platform
    (with the exception of :attr:`native`).
-   Its instances are immutable and hashable (they can be used in sets or as keys in dictionaries).
+   Its instances are immutable and hashable_ (they can be used in sets or as keys in dictionaries).
 
    All represented paths are either absolute or relative to the working directory of a process.
 
@@ -60,11 +60,11 @@ Path Objects
        with p.native.open() as f:
            f.readline()
 
-   The :class:`Path` class supports the following methods and attributes:
+   The :class:`dlb.fs.Path` class supports the following methods and attributes:
 
    .. method:: Path(path[, is_dir=None])
 
-      Constructs a path from an other path or a string.
+      Constructs a path from another path or a string.
 
       If ``path`` is interpreted as a string representation of a path in Posix style with ``/`` as a component
       separator.
@@ -78,7 +78,9 @@ Path Objects
       If `is_dir` is ``False``, the path is considered a non-directory path irrespective of ``path``
       However, if ``path`` represents ``'.'`` or endwith a ``'..'`` component, a ``ValueError`` exception is raised.
 
+      :param path: portable string representation or path object
       :type path: str | :class:`Path` | :class:`pathlib.PurePath`
+      :param is_dir: ``True`` if this is a directory path, ``False`` if not and ``None`` for derivation from ``path``
       :type is_dir: NoneType | bool
 
       :raises TypeError: if ``path`` is neither a string nor a path
@@ -101,6 +103,12 @@ Path Objects
           ...
           ValueError: cannot be the path of a non-directory: 'x/y/..'
 
+          >>> Path('x/y/z.tar.gz')[:-2]
+          Path('x/')
+
+          >>> Path('x/y/z.tar.gz').parts[-1]
+          'z.tar.gz'
+
    .. method:: is_dir()
 
       :return: ``True`` iff this represents the path of a directory.
@@ -110,6 +118,22 @@ Path Objects
 
       :return: ``True`` iff this represents an absolute path.
       :rtype: bool
+
+   .. method:: __getitem__(key):
+
+      A subpath (a slice of the path).
+
+      The resulting path is absolute (with the same root) iff the slice starts at 0.
+      The resulting path is a non-directory path iff it contains the last component and if
+      this path is a non-directory path.
+
+      :param key: slice of components (indices into :attr:`parts`)
+      :type key: :class:`slice`
+      :rtype: ``self.__class__``
+      :return: subpath
+
+      :raises TypeError: if ``key`` is not a slice
+      :raises ValueError: if this is an absolute path and ``key`` is an empty slice
 
    .. attribute:: parts
 
@@ -159,7 +183,6 @@ Path Objects
       This attribute cannot be written.
 
       :rtype: :class:`pathlib.PureWindowsPath`
-
 
 .. class:: Path.Native
 
@@ -258,3 +281,4 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. _POSIX:
 .. _ISO 1003.1-2008: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/contents.html
+.. _hashable: https://docs.python.org/3/glossary.html#term-hashable

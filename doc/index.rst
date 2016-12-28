@@ -42,7 +42,7 @@ Example::
 
         object_files = [                                                          # (d)
            Compiler(source_file=p, object_file=Path('build/out/' + p + '.o')).run_in(context).object_file
-           for p in Path('src/X/').list(filter=r'\.cpp$') if not p.is_dir()
+           for p in Path('src/X/').list(include=r'\.cpp$') if not p.is_dir()
         ]
 
         l = Linker(object_files=object_files, executable_file=Path('build/out/example')).run_in(context)

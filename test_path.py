@@ -228,7 +228,7 @@ class TestTransformation(unittest.TestCase):
             dlb.fs.Path('..') / dlb.fs.Path('/a/b/c/d')
         self.assertEqual("cannot join with absolute path: Path('/a/b/c/d')", str(cm.exception))
 
-    def test_relative(self):
+    def test_relative_removes_prefix(self):
         p = dlb.fs.Path('../../a/b/c/../d/e/f/').relative_to('../../a/b/')
         self.assertEqual(p, dlb.fs.Path('c/../d/e/f/'))
 
@@ -240,3 +240,46 @@ class TestTransformation(unittest.TestCase):
 
         p = dlb.fs.Path('/u/v/w').relative_to('/')
         self.assertEqual(p, dlb.fs.Path('u/v/w'))
+
+    def test_parts_of_relative_and_absolute_are_different(self):
+        p = dlb.fs.Path('u/v/w')
+        self.assertEqual(p.parts, ('u', 'v', 'w'))
+
+        p = dlb.fs.Path('/u/v/w')
+        self.assertEqual(p.parts, ('/', 'u', 'v', 'w'))
+
+    def test_parts_of_directory_and_nondirectory_are_equal(self):
+        p = dlb.fs.Path('/u/v/w')
+        self.assertEqual(p.parts, ('/', 'u', 'v', 'w'))
+
+        p = dlb.fs.Path('/u/v/w/')
+        self.assertEqual(p.parts, ('/', 'u', 'v', 'w'))
+
+    def test_slice(self):
+        p = dlb.fs.Path('u/v/w/')
+        self.assertEqual(p[:], p)
+        self.assertEqual(p[1:], dlb.fs.Path('v/w/'))
+        self.assertEqual(p[:-1], dlb.fs.Path('u/v/'))
+        self.assertEqual(p[:-2], dlb.fs.Path('u/'))
+        self.assertEqual(p[:-3], dlb.fs.Path('.'))
+
+        p = dlb.fs.Path('/u/v/w')
+        self.assertEqual(p[:], p)
+        self.assertEqual(p[1:], dlb.fs.Path('u/v/w'))
+        self.assertEqual(p[:-1], dlb.fs.Path('/u/v/'))
+        self.assertEqual(p[:-2], dlb.fs.Path('/u/'))
+        self.assertEqual(p[:-3], dlb.fs.Path('/'))
+
+        with self.assertRaises(ValueError) as cm:
+            p[:-4]
+        self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
+
+        p = dlb.fs.Path('//u/v/w')
+        self.assertEqual(p[:], p)
+        self.assertEqual(p[1:], dlb.fs.Path('u/v/w'))
+        self.assertEqual(p[:-1], dlb.fs.Path('//u/v/'))
+        self.assertEqual(p[:-2], dlb.fs.Path('//u/'))
+        self.assertEqual(p[:-3], dlb.fs.Path('//'))
+        with self.assertRaises(ValueError) as cm:
+            p[:-4]
+        self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
