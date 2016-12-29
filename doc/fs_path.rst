@@ -47,7 +47,8 @@ Path Objects
    :class:`dlb.fs.Path` instances are comparable with each other by ``=``, ``<`` etc.
    They are also comparable with strings and :class:`pathlib.PurePath`.
    Comparison is done case-sensitively and component-wise, observing the equivalence relations described below.
-   A directory path is considered smaller than a non-directory path, if both are otherwise identical.
+   A non-directory path is smaller than an otherwise identical directory path.
+   If a directory path ``d`` is a prefix of another path `p`, then ``d`` < ``p``.
 
    Usage example::
 
@@ -119,11 +120,71 @@ Path Objects
       :return: ``True`` iff this represents an absolute path.
       :rtype: bool
 
+   .. method:: iterdir(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+
+      Yields path objects of the directory contents denoted by this path.
+      The paths are sorted and duplicate-free.
+      They are of type ``self.__class__`` if ``cls`` is ``None`` and of type ``cls`` if it is not.
+
+      ``name_filter`` and ``recurse_name_filter`` are *name filters*.
+      A name filter can be
+
+        - ``None`` --- no name matches this filter
+        - a callable ``c`` accepting exactly one argument --- a name ``n`` matches this filter iff ``bool(c(n))`` is ``True``
+        - a compiled regular expression ``r`` --- a name ``n`` matches this filter iff ``r.fullmatch(n))`` is not ``None``
+        - a non-empty regular expression string ``s``--- a name ``n`` matches this filter iff ``re.compile(s).fullmatch(n))`` is not ``None``
+        - an empty string --- every name matches this filter
+
+      The path of an existing filesystem object is yielded iff
+
+        - its name matches the name filter ``name_filter`` and
+        - it is contained in a matched directory.
+
+      A directory is a matched directory iff it is the directory ``d`` denoted by this path or a direct subdirectory
+      of a matched directory whose name matches the name filter ``recurse_name_filter``.
+      If ``follow_symlinks`` is ``True``, a symbolic link to an existing directory is considered a direct subdirectory
+      of the director containing the symbolic link.
+      If ``follow_symlinks`` is ``False`` or the target of the symbolic link does not exist,
+      it is considered a non-directory.
+
+      Example::
+
+          for p in dlb.fs.Path('src/').iterdir(name_filter=r'(?i).+\.cpp', recurse_name_filter=lambda n: '.' not in n):
+              ...
+
+      :rtype: ``cls`` | ``self.__class__``
+
+      :raises TypeError: if ``cls`` is neither ``None`` nor a subclass of :class:`dlb.fs.Path`
+      :raises TypeError: if ``name_filter`` or ``recurse_name_filter`` are not both name filters
+      :raises ValueError: if this is a non-directory path
+
+   .. method:: iterdir_r(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+
+      Like :meth:`iterdir`, but all returns paths are relative to this path.
+
+   .. method:: list(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+
+      Returns all paths yielded by :meth:`iterdir` as a sorted list.
+
+      Examples::
+
+          >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
+          [NoSpacePath('src/main.cpp'), NoSpacePath('src/Clock.cpp')]
+
+   .. method:: list_r(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+
+      Returns all paths yielded by :meth:`iterdir_r` as a sorted list.
+
+      Examples::
+
+          >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
+          [NoSpacePath('main.cpp'), NoSpacePath('Clock.cpp')]
+
    .. method:: __getitem__(key):
 
       A subpath (a slice of the path).
 
-      The resulting path is absolute (with the same root) iff the slice starts at 0.
+      The resulting path is absolute (with the same anchor) iff the slice starts at 0.
       The resulting path is a non-directory path iff it contains the last component and if
       this path is a non-directory path.
 
@@ -186,12 +247,16 @@ Path Objects
 
 .. class:: Path.Native
 
-   A native path whose instances can be used like once from :class:`pathlib.Path`.
+   A native path whose instances can be used much like ones from :class:`pathlib.Path` and is a :class:`os.PathLike`.
 
    For each subclass ``P`` of :class:`dlb.fs.Path` there is a corresponding subclass ``P.Native`` which imposes the same
-   restrictions as ``P``.
+   restrictions on its representable paths as ``P``.
+
    If ``Q`` is a subclass of ``P`` and ``P`` is a subclass of :class:`dlb.fs.Path`, then ``Q.Native`` is a subclass
    of ``P.Native``.
+
+   These properties make subclasses of :class:`dlb.fs.Path.Native` well-suited for use in type specifications
+   of tokens templates (:class:`dlb.cmd.tmpl.TokensTemplate`).
 
    Example (on a Posix system)::
 
@@ -207,6 +272,14 @@ Path Objects
 
        >>> str(Path.Native('-rf'))
        './-rf'
+
+   Instances of :class:`dlb.fs.Path.Native` and its subclasses should not be constructed directly, but by accessing
+   :attr:`dlb.fs.Path.native`.
+
+   Example (on a Posix system)::
+
+        with open(dlb.fs.NoSpacePath('/tmp/x/a').native) as f:
+            ... = f.read()
 
 
 Restricting Paths

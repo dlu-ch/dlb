@@ -188,18 +188,18 @@ class TestOrderingAndComparison(unittest.TestCase):
         self.assertTrue(b == b)
         self.assertTrue(a != b)
 
-    def test_dir_is_smaller_than_nondir(self):
-        a = dlb.fs.Path('/x/y/')
-        b = dlb.fs.Path('/x/y')
+    def test_nondir_and_dir_are_different(self):
+        a = dlb.fs.Path('/x/y')
+        b = dlb.fs.Path('/x/y/')
 
         self.assertTrue(a == a)
         self.assertTrue(b == b)
         self.assertTrue(a != b)
-        self.assertTrue(a < b)
 
-    def test_prefix_is_smaller(self):
-        self.assertTrue(dlb.fs.Path('/x/y/') < dlb.fs.Path('/x/y/z'))
-        self.assertTrue(dlb.fs.Path('/x/y') < dlb.fs.Path('/x/y/z'))
+    def test_order(self):
+        self.assertTrue(dlb.fs.Path('/a/y') < dlb.fs.Path('/a/y/'))
+        self.assertTrue(dlb.fs.Path('/x/b/') < dlb.fs.Path('/x/b/c'))
+        self.assertTrue(dlb.fs.Path('/x/b/c') < dlb.fs.Path('/x/b/c/'))
 
     def test_can_be_set_element(self):
         s = set([dlb.fs.Path('/x/y/'), dlb.fs.Path('/x/y'), dlb.fs.Path('/a/..')])
@@ -283,3 +283,10 @@ class TestTransformation(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             p[:-4]
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
+
+class TestDirectoryListing(unittest.TestCase):
+
+    def test_error_on_nondir(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('./x').list()
+        self.assertEqual("cannot list non-directory path: 'x'", str(cm.exception))
