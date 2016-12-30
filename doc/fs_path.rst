@@ -31,7 +31,7 @@ Path Objects
    On all platform the following properties hold:
 
    - ``'/'`` is used as a path component separator.
-   - A paths is absolute iff it starts with ``'/'``; it is relative iff it is not absolute.
+   - A path is absolute iff it starts with ``'/'``; it is relative iff it is not absolute.
    - A component ``'..'`` means the parent directory of the path before it.
    - A component ``'.'`` means the directory of the path before it;
      a non-empty path with all such components removed is equivalent to the original one.
@@ -331,10 +331,8 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
    A :class:`dlb.fs.Path` which represents a POSIX-compliant (`ISO 1003.1-2008`_) paths in its least-constricted form.
 
-   Every non-empty string, which does not contain ``'/'`` is a valid component.
+   Every non-empty string, which does not contain ``'/'`` or U+0000 (NUL) is a valid component.
    Components are separated by ``'/'``.
-   '/' and every string of the form ``'//'`` ... ``'/'``, where ... is non-empty and does not contain ``'/'``
-   is a valid root component.
 
    For every path prefix (in the POSIX sense) *{NAME_MAX}* and *{PATH_MAX}* are considered unlimited.
 
