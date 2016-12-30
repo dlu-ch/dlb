@@ -93,11 +93,7 @@ class Path(metaclass=_PathMeta):
                 if isinstance(path, pathlib.PurePosixPath):
                     pass
                 elif isinstance(path, pathlib.PureWindowsPath):
-                    if path.anchor:
-                        if not path.root:
-                            raise ValueError('neither absolute nor relative: root is missing')
-                        if not path.drive:
-                            raise ValueError('neither absolute nor relative: drive is missing')
+                    self._check_windows_path_anchor(path)
                     p = p.replace('\\', '/')
                     if path.anchor and path.anchor[0] not in '/\\':
                         p = '/' + p
@@ -105,8 +101,7 @@ class Path(metaclass=_PathMeta):
                     raise TypeError("unknown subclass of 'pathlib.PurePath'")
             else:
                 # like pathlib
-                raise TypeError(
-                    "argument should be a path or str object, not {}".format(repr(path.__class__)))
+                raise TypeError("argument should be a path or str object, not {}".format(repr(path.__class__)))
 
             if not p:
                 raise ValueError("invalid path: ''")
@@ -133,6 +128,14 @@ class Path(metaclass=_PathMeta):
                 msg = '{} ({})'.format(msg, reason)
             raise ValueError(msg)
 
+    @classmethod
+    def _check_windows_path_anchor(cls, path):
+        if path.anchor:
+            if not path.root:
+                raise ValueError('neither absolute nor relative: root is missing')
+            if not path.drive:
+                raise ValueError('neither absolute nor relative: drive is missing')
+
     def is_dir(self):
         return self._is_dir
 
@@ -148,7 +151,7 @@ class Path(metaclass=_PathMeta):
 
     def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
         if not self.is_dir():
-            raise ValueError("cannot list non-directory path: {}".format(repr(self._as_string())))
+            raise ValueError("cannot list non-directory path: {}".format(repr(self.as_string())))
 
         def make_name_filter(f):
             if f is None:
@@ -156,11 +159,11 @@ class Path(metaclass=_PathMeta):
             if callable(f):
                 return f
             if isinstance(f, type(re.compile(''))):
-                return lambda s: f.fullmatch(s)
+                return lambda s: f.fullmatch(s)  # since Python 3.4
             if isinstance(f, str):
                 if f:
                     r = re.compile(f)
-                    return lambda s: r.fullmatch(s)
+                    return lambda s: r.fullmatch(s)  # since Python 3.4
                 else:
                     return lambda s: True
             raise TypeError('invalid name filter: {}'.format(repr(f)))
@@ -173,11 +176,11 @@ class Path(metaclass=_PathMeta):
         if not issubclass(cls, Path):
             raise TypeError("'cls' must be None or a subclass of 'dlb.fs.Path'")
 
-        dirs_to_recurse = [Path(self)]
-        while dirs_to_recurse:
+        dir_paths_to_recurse = [Path(self)]
+        while dir_paths_to_recurse:
 
-            dir = dirs_to_recurse.pop(0)
-            with os.scandir(dir.native.raw) as it:  # since Python 3.6
+            dir_path = dir_paths_to_recurse.pop(0)
+            with os.scandir(dir_path.native.raw) as it:  # since Python 3.6
 
                 paths = []
                 for de in it:
@@ -188,18 +191,18 @@ class Path(metaclass=_PathMeta):
 
                     p = None
                     if does_name_match or do_recurse:
-                        p = dir / Path(n, d)
+                        p = dir_path / Path(n, d)
 
                     if does_name_match:
                         paths.append(p)
                     if do_recurse:
-                        dirs_to_recurse.append(p)
+                        dir_paths_to_recurse.append(p)
 
                 paths.sort()
                 for p in paths:
                     yield cls(p)
 
-            dirs_to_recurse.sort()
+            dir_paths_to_recurse.sort()
 
     def iterdir_r(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
         for p in self.iterdir(name_filter, recurse_name_filter, follow_symlinks, cls):
@@ -212,6 +215,10 @@ class Path(metaclass=_PathMeta):
         return list(self.iterdir_r(name_filter, recurse_name_filter, follow_symlinks, cls))
 
     @property
+    def _cparts(self):
+        return self.parts if self.is_absolute() else ('',) + self.parts
+
+    @property
     def parts(self):
         return self._path.parts
 
@@ -221,17 +228,17 @@ class Path(metaclass=_PathMeta):
 
     @property
     def pure_windows(self):
-        s = self._as_string()
+        s = self.as_string()
         if s.startswith('/') and not s.startswith('//'):
             s = s[1:]
 
         # accepted: 'c:x', 'c:/x', '//unc/root/x/y'
         p = pathlib.PureWindowsPath(s)
-        if p.anchor:
-            if not p.root:
-                raise ValueError('neither absolute nor relative: root is missing')
-            if not p.drive:
-                raise ValueError('neither absolute nor relative: drive is missing')
+        self._check_windows_path_anchor(p)
+
+        if p.is_reserved():
+            # not actually reserved for directory path, but this information is last after conversion
+            raise ValueError('file path is reserved: {}'.format(repr(str(p))))
 
         return p
 
@@ -250,7 +257,7 @@ class Path(metaclass=_PathMeta):
     else:
         raise TypeError("unknown 'Native' class")
 
-    def _as_string(self):
+    def as_string(self):
         s = str(self._path)
         if self.is_dir() and not s.endswith('/'):
             s += '/'
@@ -270,17 +277,17 @@ class Path(metaclass=_PathMeta):
     def __eq__(self, other):
         # on all platform, comparison is case sensitive
         other = self.__class__(other)
-        return (self._path, self._is_dir) == (other._path, other._is_dir)
+        return (self._cparts, self._is_dir) == (other._cparts, other._is_dir)
 
     def __lt__(self, other):
         other = self.__class__(other)
-        return (self._path, self._is_dir) < (other._path, other._is_dir)
+        return (self._cparts, self._is_dir) < (other._cparts, other._is_dir)
 
     def __hash__(self):
         return hash((self._path, self._is_dir))
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__qualname__, repr(self._as_string()))  # since Python 3.3
+        return '{}({})'.format(self.__class__.__qualname__, repr(self.as_string()))  # since Python 3.3
 
     def __str__(self):
         # make sure this object is not converted to a string where a native path is expected
@@ -322,7 +329,10 @@ class NoSpacePath(Path):
             raise ValueError('must not contain space')
 
 
-class PosixPath(Path): pass
+class PosixPath(Path):
+    def check_restriction_to_base(self):
+        if '\0' in str(self._path):
+            raise ValueError('must not contain NUL')
 
 
 class PortablePosixPath(PosixPath):
@@ -341,7 +351,7 @@ class PortablePosixPath(PosixPath):
         if self._path.anchor == '//':
             raise ValueError("non-standardized component starting with '//' not allowed")
 
-        for c in self._path.parts:
+        for c in self.parts:
             if c != '/':
                 if len(c) > self.MAX_COMPONENT_LENGTH:
                     raise ValueError('component must not contain more than {} characters'.format(
@@ -365,14 +375,36 @@ class PortablePosixPath(PosixPath):
 
 
 class WindowsPath(Path):
-    # TODO: Check supported Unicode range
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+    RESERVED_CHARACTERS = frozenset('\\"|?*<>:')  # besides: '/'
+
     def check_restriction_to_base(self):
-        p = self.pure_windows
-        if len(p.parts) > 1 and p.anchor and not p.root:
-            raise ValueError('root is missing')
-        for c in p.parts[1:]:  # except anchor
-            if pathlib.PureWindowsPath(c).is_reserved():
-                raise ValueError('component {} is reserved'.format(repr(c)))
+        for c in self._path.parts:
+            invalid_characters = set(c) & self.RESERVED_CHARACTERS
+            if invalid_characters:
+                raise ValueError("must not contain reserved characters: {0}".format(
+                    ','.join(repr(c) for c in sorted(invalid_characters))))
+
+        s = self.as_string()
+
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+        min_codepoint = ord(min(s))
+        if min_codepoint < 0x20:
+            raise ValueError(
+                "must not contain characters with codepoint lower than U+0020: "
+                "U+{:04X}".format(min_codepoint))
+
+        max_codepoint = ord(max(s))
+        if max_codepoint > 0xFFFF:
+            raise ValueError(
+                "must not contain characters with codepoint higher than U+FFFF: "
+                "U+{:04X}".format(max_codepoint))
+
+        p = pathlib.PureWindowsPath(self._path)
+        self._check_windows_path_anchor(p)
+
+        if not self.is_dir() and p.is_reserved():
+            raise ValueError('path is reserved')
 
 
 class PortableWindowsPath(WindowsPath):
@@ -386,6 +418,9 @@ class PortableWindowsPath(WindowsPath):
             if len(c) > self.MAX_COMPONENT_LENGTH:
                 raise ValueError('component must not contain more than {} characters'.format(
                     self.MAX_COMPONENT_LENGTH))
+            if c != '..' and c[-1] in ' .':
+                # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+                raise ValueError("component must not end with ' ' or '.'")
 
         n = len(str(p))
         if self.is_dir():

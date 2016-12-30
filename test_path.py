@@ -10,6 +10,7 @@ class TestConstruction(unittest.TestCase):
         self.assertEqual(repr(p), "Path('/x/../yz/u')")
         self.assertTrue(p.is_absolute())
 
+        # note: according to IEEE Std 1003.1-2008, §3.2, this is _not_ an absolute path:
         p = dlb.fs.Path('//x/y/../u')
         self.assertEqual(repr(p), "Path('//x/y/../u')")
         self.assertTrue(p.is_absolute())
@@ -57,6 +58,11 @@ class TestConstruction(unittest.TestCase):
             dlb.fs.Path('a/..', is_dir=False)
         self.assertEqual("cannot be the path of a non-directory: 'a/..'", str(cm.exception))
 
+    def test_backslash_is_normal_charactor(self):
+        p = dlb.fs.Path('a\\b')
+        self.assertEqual(repr(p), "Path('a\\\\b')")
+        self.assertEqual(len(p.parts), 1)
+
     def test_from_empty_string(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('')
@@ -66,6 +72,7 @@ class TestConstruction(unittest.TestCase):
         p = dlb.fs.Path('a/b/c')
         p2 = dlb.fs.Path(p)
         self.assertEqual(repr(p), "Path('a/b/c')")
+        self.assertEqual(repr(p2), "Path('a/b/c')")
 
     def test_from_pathlib(self):
         p = dlb.fs.Path(pathlib.PurePosixPath('/a/b/c'))
@@ -196,13 +203,22 @@ class TestOrderingAndComparison(unittest.TestCase):
         self.assertTrue(b == b)
         self.assertTrue(a != b)
 
-    def test_order(self):
+    def test_order_of_absolute(self):
         self.assertTrue(dlb.fs.Path('/a/y') < dlb.fs.Path('/a/y/'))
         self.assertTrue(dlb.fs.Path('/x/b/') < dlb.fs.Path('/x/b/c'))
         self.assertTrue(dlb.fs.Path('/x/b/c') < dlb.fs.Path('/x/b/c/'))
 
+    def test_order_of_relative(self):
+        self.assertTrue(dlb.fs.Path('a/y') < dlb.fs.Path('a/y/'))
+        self.assertTrue(dlb.fs.Path('x/b/') < dlb.fs.Path('x/b/c'))
+        self.assertTrue(dlb.fs.Path('x/b/c') < dlb.fs.Path('x/b/c/'))
+
+    def test_order_of_absolute_and_relative(self):
+        self.assertTrue(dlb.fs.Path('a/y') < dlb.fs.Path('/a/y'))
+        self.assertTrue(dlb.fs.Path('$/y') < dlb.fs.Path('/$/y'))
+
     def test_can_be_set_element(self):
-        s = set([dlb.fs.Path('/x/y/'), dlb.fs.Path('/x/y'), dlb.fs.Path('/a/..')])
+        s = {dlb.fs.Path('/x/y/'), dlb.fs.Path('/x/y'), dlb.fs.Path('/a/..')}
         self.assertEqual(len(s), 3)
 
 
@@ -284,9 +300,104 @@ class TestTransformation(unittest.TestCase):
             p[:-4]
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
 
+
 class TestDirectoryListing(unittest.TestCase):
 
     def test_error_on_nondir(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('./x').list()
         self.assertEqual("cannot list non-directory path: 'x'", str(cm.exception))
+
+
+class TestNative(unittest.TestCase):
+
+    def test_str_prefixes_relative_with_dot(self):
+        s = str(dlb.fs.Path('x').native)
+        self.assertEqual(s.replace('\\', '/'), './x')
+        self.assertEqual(str(dlb.fs.Path('.').native), '.')
+        self.assertEqual(str(dlb.fs.Path('..').native), '..')
+
+
+class TestNoSpaceRestrictions(unittest.TestCase):
+
+    def test_space_no_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.NoSpacePath('a b')
+        self.assertEqual("invalid path for 'NoSpacePath': 'a b' (must not contain space)", str(cm.exception))
+
+
+class TestPosixRestrictions(unittest.TestCase):
+
+    def test_null_not_permitted(self):
+        # IEEE Std 1003.1-2008, §3.170
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PosixPath('a\x00b')
+        self.assertEqual("invalid path for 'PosixPath': 'a\\x00b' (must not contain NUL)", str(cm.exception))
+
+
+class TestWindowsRestrictions(unittest.TestCase):
+
+    def test_backslash_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('a\\b')
+        self.assertEqual("invalid path for 'WindowsPath': 'a\\\\b' (must not contain reserved characters: '\\\\')",
+                         str(cm.exception))
+
+    def test_null_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('a\x00b')
+        self.assertEqual(
+            "invalid path for 'WindowsPath': 'a\\x00b' "
+            "(must not contain characters with codepoint lower than U+0020: U+0000)",
+            str(cm.exception))
+
+    def test_control_character_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('a\nb')
+        self.assertEqual(
+            "invalid path for 'WindowsPath': 'a\\nb' "
+            "(must not contain characters with codepoint lower than U+0020: U+000A)",
+            str(cm.exception))
+
+    def test_non_bmp_character_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('a\U00010000b')
+        self.assertEqual(
+            "invalid path for 'WindowsPath': 'a\U00010000b' "
+            "(must not contain characters with codepoint higher than U+FFFF: U+10000)",
+            str(cm.exception))
+
+    def test_colon_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('a/b:/c')
+        self.assertEqual("invalid path for 'WindowsPath': 'a/b:/c' (must not contain reserved characters: ':')",
+                         str(cm.exception))
+
+    def test_reserved_file_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('a/coM9')
+        self.assertEqual("invalid path for 'WindowsPath': 'a/coM9' (path is reserved)", str(cm.exception))
+        dlb.fs.WindowsPath('a/coM10')
+        p = dlb.fs.WindowsPath('a/coM9/')
+        with self.assertRaises(ValueError) as cm:
+            p.pure_windows
+        self.assertEqual("file path is reserved: 'a\\\\coM9'", str(cm.exception))
+
+    def test_space_or_dot_at_end_of_component_permitted(self):
+        dlb.fs.WindowsPath('a/b./c ')
+
+
+class TestPortableWindowsRestrictions(unittest.TestCase):
+
+    def test_space_at_end_of_component_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortableWindowsPath('a/b /c')
+        self.assertEqual("invalid path for 'PortableWindowsPath': 'a/b /c' (component must not end with ' ' or '.')",
+                         str(cm.exception))
+
+    def test_dot_at_end_of_component_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortableWindowsPath('a/b./c')
+        self.assertEqual("invalid path for 'PortableWindowsPath': 'a/b./c' (component must not end with ' ' or '.')",
+                         str(cm.exception))
+        dlb.fs.PortablePath('a/../c')

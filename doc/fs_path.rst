@@ -31,7 +31,7 @@ Path Objects
    On all platform the following properties hold:
 
    - ``'/'`` is used as a path component separator.
-   - Paths are absolute iff they start with ``'/'``.
+   - A paths is absolute iff it starts with ``'/'``; it is relative iff it is not absolute.
    - A component ``'..'`` means the parent directory of the path before it.
    - A component ``'.'`` means the directory of the path before it;
      a non-empty path with all such components removed is equivalent to the original one.
@@ -49,6 +49,7 @@ Path Objects
    Comparison is done case-sensitively and component-wise, observing the equivalence relations described below.
    A non-directory path is smaller than an otherwise identical directory path.
    If a directory path ``d`` is a prefix of another path `p`, then ``d`` < ``p``.
+   Any relative path is smaller than any absolute path.
 
    Usage example::
 
@@ -120,22 +121,28 @@ Path Objects
       :return: ``True`` iff this represents an absolute path.
       :rtype: bool
 
+      .. note::
+         While Posix_ considers paths starting with exactly to ``'/'`` *not* as absolute paths,
+         this class does (and so does :mod:`pathlib`).
+
+   .. method:: relative_to(other):
+
+      Returns a version of this path relative to the path represented by ``other``
+      (by removing ``other`` from the start of this path).
+
+      :rtype: ``self.__class__``
+
+      :raises ValueError: if this is a non-directory path
+      :raises ValueError: if ``other`` is not a prefix of this
+
    .. method:: iterdir(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
 
-      Yields path objects of the directory contents denoted by this path.
+      Yields all path objects of the directory contents denoted by this path and matched by the
+      name filters.
       The paths are sorted and duplicate-free.
       They are of type ``self.__class__`` if ``cls`` is ``None`` and of type ``cls`` if it is not.
 
-      ``name_filter`` and ``recurse_name_filter`` are *name filters*.
-      A name filter can be
-
-        - ``None`` --- no name matches this filter
-        - a callable ``c`` accepting exactly one argument --- a name ``n`` matches this filter iff ``bool(c(n))`` is ``True``
-        - a compiled regular expression ``r`` --- a name ``n`` matches this filter iff ``r.fullmatch(n))`` is not ``None``
-        - a non-empty regular expression string ``s``--- a name ``n`` matches this filter iff ``re.compile(s).fullmatch(n))`` is not ``None``
-        - an empty string --- every name matches this filter
-
-      The path of an existing filesystem object is yielded iff
+      The path of an existing filesystem object is eventually yielded iff
 
         - its name matches the name filter ``name_filter`` and
         - it is contained in a matched directory.
@@ -146,6 +153,15 @@ Path Objects
       of the director containing the symbolic link.
       If ``follow_symlinks`` is ``False`` or the target of the symbolic link does not exist,
       it is considered a non-directory.
+
+      ``name_filter`` and ``recurse_name_filter`` are *name filters*.
+      A name filter can be
+
+        - ``None`` --- no name matches this filter
+        - a callable ``c`` accepting exactly one argument --- a name ``n`` matches this filter iff ``bool(c(n))`` is ``True``
+        - a compiled regular expression ``r`` --- a name ``n`` matches this filter iff ``r.fullmatch(n))`` is not ``None``
+        - a non-empty regular expression string ``s``--- a name ``n`` matches this filter iff ``re.compile(s).fullmatch(n))`` is not ``None``
+        - an empty string --- every name matches this filter
 
       Example::
 
@@ -166,7 +182,7 @@ Path Objects
 
       Returns all paths yielded by :meth:`iterdir` as a sorted list.
 
-      Examples::
+      Example::
 
           >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
           [NoSpacePath('src/main.cpp'), NoSpacePath('src/Clock.cpp')]
@@ -175,7 +191,7 @@ Path Objects
 
       Returns all paths yielded by :meth:`iterdir_r` as a sorted list.
 
-      Examples::
+      Example::
 
           >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
           [NoSpacePath('main.cpp'), NoSpacePath('Clock.cpp')]
@@ -187,6 +203,14 @@ Path Objects
       The resulting path is absolute (with the same anchor) iff the slice starts at 0.
       The resulting path is a non-directory path iff it contains the last component and if
       this path is a non-directory path.
+
+      Examples::
+
+          >>> dlb.fs.Path('src/comp/lib/Core.cpp')[:-2]
+          Path('src/comp/'
+
+          >>> dlb.fs.Path('src/comp/..')[:-1]
+          Path('src/comp/'
 
       :param key: slice of components (indices into :attr:`parts`)
       :type key: :class:`slice`
@@ -338,16 +362,19 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: WindowsPath
 
-   A :class:`dlb.fs.Path` which represents a Microsoft Windows-compliant path in its least-constricted form,
-   which is either relative or absolute and does not contain components with reserved names (like ``NUL``).
+   A :class:`dlb.fs.Path` which represents a Microsoft Windows-compliant file or directory path in its
+   least-constricted form, which is either relative or absolute and is not a reserved non-directory path (e.g. ``NUL``).
+
    It cannot represent incomplete paths which are neither absolute nor relative to the current working
    directory (e.g. ``C:a\b`` and ``\\name``).
+   It cannot represent NTFS stream names, Win32 file namespaces or Win32 device namespaces.
 
 .. class:: PortableWindowsPath
 
    A :class:`dlb.fs.WindowsPath` which represents a Microsoft Windows-compliant path in its strictest form.
 
-   A component cannot be longer than 255 characters.
+   A component cannot end with ``' '`` or ``'.'`` (except ``'.'`` and ``'..'``) and
+   cannot be longer than 255 characters.
    The path cannot not be longer than 259 characters.
 
 .. class:: PortablePath
