@@ -1,5 +1,6 @@
 import re
 import os
+import stat
 import functools
 import pathlib  # since Python 3.4
 
@@ -9,7 +10,6 @@ __all__ = [
     'PortableWindowsPath', 'WindowsPath',
     'PortablePath'
 ]
-
 
 # cannot derive easily from pathlib.Path without defining non-API members
 class _Native:
@@ -81,6 +81,9 @@ class Path(metaclass=_PathMeta):
     def __init__(self, path, is_dir=None):
         if path is None:
             raise ValueError('invalid path: None')
+
+        if isinstance(path, _Native):
+            path = path.raw
 
         if isinstance(path, Path):
             self._path = path._path
@@ -209,10 +212,10 @@ class Path(metaclass=_PathMeta):
             yield p.relative_to(self)
 
     def list(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
-        return list(self.iterdir(name_filter, recurse_name_filter, follow_symlinks, cls))
+        return sorted(self.iterdir(name_filter, recurse_name_filter, follow_symlinks, cls))
 
     def list_r(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
-        return list(self.iterdir_r(name_filter, recurse_name_filter, follow_symlinks, cls))
+        return sorted(self.iterdir_r(name_filter, recurse_name_filter, follow_symlinks, cls))
 
     @property
     def _cparts(self):

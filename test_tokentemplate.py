@@ -595,3 +595,7 @@ class TestExpansion(unittest.TestCase):
 
         self.assertEqual(3, a.getitem_count)
         self.assertEqual(1, a.items_count)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -303,10 +303,124 @@ class TestTransformation(unittest.TestCase):
 
 class TestDirectoryListing(unittest.TestCase):
 
+    def setUp(self):
+        import tempfile
+        self.tmp_dir_obj = tempfile.TemporaryDirectory()
+        self.tmp_dir = dlb.fs.Path(dlb.fs.Path.Native(self.tmp_dir_obj.name), is_dir=True)
+        # TODO: remove .raw.
+        (self.tmp_dir / 'a1').native.raw.touch()
+        (self.tmp_dir / 'a2/').native.raw.mkdir()
+        (self.tmp_dir / 'b1').native.raw.touch()
+        (self.tmp_dir / 'b3').native.raw.touch()
+        (self.tmp_dir / 'b4').native.raw.touch()
+        (self.tmp_dir / 'b2/').native.raw.mkdir()
+        (self.tmp_dir / 'b2/c3/').native.raw.mkdir()
+        (self.tmp_dir / 'b2/c3/d1').native.raw.touch()
+        (self.tmp_dir / 'b2/c3/d2').native.raw.touch()
+
+    def tearDown(self):
+        self.tmp_dir_obj.cleanup()
+
     def test_error_on_nondir(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('./x').list()
         self.assertEqual("cannot list non-directory path: 'x'", str(cm.exception))
+
+    def test_listed_paths_are_complete_and_ordered(self):
+
+        expected_rel_paths = [dlb.fs.Path(s) for s in [
+            'a1',
+            'a2/',
+            'b1',
+            'b3',
+            'b4',
+            'b2/',
+            'b2/c3/',
+            'b2/c3/d1',
+            'b2/c3/d2'
+        ]]
+        expected_rel_paths.sort()
+
+        paths = self.tmp_dir.list(recurse_name_filter='')
+        rel_paths = self.tmp_dir.list_r(recurse_name_filter='')
+        self.assertEqual(set(rel_paths), set(expected_rel_paths))
+        self.assertEqual({p.relative_to(self.tmp_dir) for p in paths}, set(expected_rel_paths))
+
+        self.assertEqual(rel_paths, expected_rel_paths)
+        self.assertEqual([p.relative_to(self.tmp_dir) for p in paths], expected_rel_paths)
+
+    def test_namefilter_can_be_none(self):
+        rel_paths = self.tmp_dir.list_r(name_filter=None)
+        self.assertEqual(rel_paths, [])
+
+    def test_namefilter_can_be_empty_string(self):
+        expected_rel_paths = [dlb.fs.Path(s) for s in [
+            'a1',
+            'a2/',
+            'b1',
+            'b3',
+            'b4',
+            'b2/',
+        ]]
+        expected_rel_paths.sort()
+
+        rel_paths = self.tmp_dir.list_r(name_filter='')
+        self.assertEqual(rel_paths, expected_rel_paths)
+
+    def test_namefilter_can_be_regexp(self):
+        import re
+
+        expected_rel_paths = [dlb.fs.Path(s) for s in [
+            'b1',
+            'b3',
+            'b4',
+            'b2/',
+        ]]
+        expected_rel_paths.sort()
+
+        regexp_str = 'b[0-9]+'
+        rel_paths = self.tmp_dir.list_r(name_filter=regexp_str)
+        self.assertEqual(rel_paths, expected_rel_paths)
+
+        regexp_str = 'b[0-9]+'
+        rel_paths = self.tmp_dir.list_r(name_filter=re.compile(regexp_str))
+        self.assertEqual(rel_paths, expected_rel_paths)
+
+    def test_namefilter_can_be_callable(self):
+        expected_rel_paths = [dlb.fs.Path(s) for s in [
+            'a2/',
+            'b2/',
+            'b2/c3/d2'
+        ]]
+        expected_rel_paths.sort()
+
+        def f(n): return n.endswith('2')
+
+        rel_paths = self.tmp_dir.list_r(name_filter=f, recurse_name_filter='')
+        self.assertEqual(rel_paths, expected_rel_paths)
+
+    def test_error_on_invalid_namefilter(self):
+        with self.assertRaises(TypeError) as cm:
+            self.tmp_dir.list_r(name_filter=1, recurse_name_filter='')
+        self.assertEqual("invalid name filter: 1", str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            self.tmp_dir.list_r(name_filter=None, recurse_name_filter=2)
+        self.assertEqual("invalid name filter: 2", str(cm.exception))
+
+    def test_listed_paths_are_of_requested_class(self):
+        class MyPath(dlb.fs.Path):
+            pass
+
+        rel_paths = self.tmp_dir.list_r(name_filter='', cls=MyPath)
+
+        self.assertTrue(len(rel_paths) > 0)
+        self.assertEqual({isinstance(p, MyPath) for p in rel_paths}, {True})
+
+    def test_error_on_invalid_class(self):
+        with self.assertRaises(TypeError) as cm:
+            self.tmp_dir.list_r(cls=int)
+        self.assertEqual("'cls' must be None or a subclass of 'dlb.fs.Path'", str(cm.exception))
 
 
 class TestNative(unittest.TestCase):
@@ -316,6 +430,26 @@ class TestNative(unittest.TestCase):
         self.assertEqual(s.replace('\\', '/'), './x')
         self.assertEqual(str(dlb.fs.Path('.').native), '.')
         self.assertEqual(str(dlb.fs.Path('..').native), '..')
+
+    def test_restrictions_are_checked_exactly_once_when_converted_to_native(self):
+
+        class CheckCountingPath(dlb.fs.Path):
+            n = 0
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+            def check_restriction_to_base(self):
+                self.__class__.n += 1
+
+        p = CheckCountingPath('x')
+        self.assertEqual(CheckCountingPath.n, 1)
+
+        p.native
+        self.assertEqual(CheckCountingPath.n, 1)
+
+        CheckCountingPath.Native('x')
+        self.assertEqual(CheckCountingPath.n, 2)
 
 
 class TestNoSpaceRestrictions(unittest.TestCase):
@@ -401,3 +535,7 @@ class TestPortableWindowsRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'PortableWindowsPath': 'a/b./c' (component must not end with ' ' or '.')",
                          str(cm.exception))
         dlb.fs.PortablePath('a/../c')
+
+
+if __name__ == '__main__':
+    unittest.main()
