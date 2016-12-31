@@ -21,7 +21,7 @@ class _Native:
     def raw(self):
         return self._raw
 
-    def __fspath__(self):  # make this class a os.PathLike
+    def __fspath__(self):  # make this class a safer os.PathLike
         return str(self)
 
     def __str__(self):
@@ -36,7 +36,7 @@ class _Native:
         return 'Path.Native({})'.format(repr(str(self)))
 
     def __getattr__(self, item):
-        return getattr(pathlib.Path, item)
+        return getattr(self._raw, item)
 
 
 # http://stackoverflow.com/questions/13762231/python-metaclass-arguments

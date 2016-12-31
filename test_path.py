@@ -307,16 +307,15 @@ class TestDirectoryListing(unittest.TestCase):
         import tempfile
         self.tmp_dir_obj = tempfile.TemporaryDirectory()
         self.tmp_dir = dlb.fs.Path(dlb.fs.Path.Native(self.tmp_dir_obj.name), is_dir=True)
-        # TODO: remove .raw.
-        (self.tmp_dir / 'a1').native.raw.touch()
-        (self.tmp_dir / 'a2/').native.raw.mkdir()
-        (self.tmp_dir / 'b1').native.raw.touch()
-        (self.tmp_dir / 'b3').native.raw.touch()
-        (self.tmp_dir / 'b4').native.raw.touch()
-        (self.tmp_dir / 'b2/').native.raw.mkdir()
-        (self.tmp_dir / 'b2/c3/').native.raw.mkdir()
-        (self.tmp_dir / 'b2/c3/d1').native.raw.touch()
-        (self.tmp_dir / 'b2/c3/d2').native.raw.touch()
+        (self.tmp_dir / 'a1').native.touch()
+        (self.tmp_dir / 'a2/').native.mkdir()
+        (self.tmp_dir / 'b1').native.touch()
+        (self.tmp_dir / 'b3').native.touch()
+        (self.tmp_dir / 'b4').native.touch()
+        (self.tmp_dir / 'b2/').native.mkdir()
+        (self.tmp_dir / 'b2/c3/').native.mkdir()
+        (self.tmp_dir / 'b2/c3/d1').native.touch()
+        (self.tmp_dir / 'b2/c3/d2').native.touch()
 
     def tearDown(self):
         self.tmp_dir_obj.cleanup()
@@ -430,6 +429,11 @@ class TestNative(unittest.TestCase):
         self.assertEqual(s.replace('\\', '/'), './x')
         self.assertEqual(str(dlb.fs.Path('.').native), '.')
         self.assertEqual(str(dlb.fs.Path('..').native), '..')
+
+    def test_is_pathlike(self):
+        import os
+        p = dlb.fs.Path.Native('x')
+        self.assertTrue(isinstance(p, os.PathLike))
 
     def test_restrictions_are_checked_exactly_once_when_converted_to_native(self):
 
