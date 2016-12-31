@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '../src')
+
 from dlb.cmd.tmpl import TokensTemplate
 import collections
 import unittest
