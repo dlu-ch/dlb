@@ -145,6 +145,9 @@ class Path(metaclass=_PathMeta):
     def is_absolute(self):
         return self._path.is_absolute()
 
+    def is_normalized(self):
+        return '..' not in self.parts
+
     def relative_to(self, other):
         other = self.__class__(other)
         if not other.is_dir():
@@ -324,6 +327,12 @@ class AbsolutePath(Path):
     def check_restriction_to_base(self):
         if not self.is_absolute():
             raise ValueError('must be absolute')
+
+
+class NormalizedPath(Path):
+    def check_restriction_to_base(self):
+        if not self.is_normalized():
+            raise ValueError('must be normalized')
 
 
 class NoSpacePath(Path):

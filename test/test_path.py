@@ -459,9 +459,45 @@ class TestNative(unittest.TestCase):
         self.assertEqual(CheckCountingPath.n, 2)
 
 
+class TestRelativeRestrictions(unittest.TestCase):
+
+    def test_relative_permitted(self):
+        dlb.fs.RelativePath('a/b/c')
+
+    def test_absolute_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.RelativePath('/a/b/c')
+        self.assertEqual("invalid path for 'RelativePath': '/a/b/c' (must be relative)", str(cm.exception))
+
+
+class TestAbsoluteRestrictions(unittest.TestCase):
+
+    def test_absolute_permitted(self):
+        dlb.fs.AbsolutePath('/a/b/c')
+
+    def test_absolute_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.AbsolutePath('a/b/c')
+        self.assertEqual("invalid path for 'AbsolutePath': 'a/b/c' (must be absolute)", str(cm.exception))
+
+
+class TestAbsoluteRestrictions(unittest.TestCase):
+
+    def test_relative_permitted(self):
+        dlb.fs.NormalizedPath('/a/b/c')
+
+    def test_absolute_permitted(self):
+        dlb.fs.NormalizedPath('/a/b/c')
+
+    def test_absolute_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.NormalizedPath('a/../b')
+        self.assertEqual("invalid path for 'NormalizedPath': 'a/../b' (must be normalized)", str(cm.exception))
+
+
 class TestNoSpaceRestrictions(unittest.TestCase):
 
-    def test_space_no_permitted(self):
+    def test_space_not_permitted(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.NoSpacePath('a b')
         self.assertEqual("invalid path for 'NoSpacePath': 'a b' (must not contain space)", str(cm.exception))

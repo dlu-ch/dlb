@@ -125,6 +125,12 @@ Path Objects
          While Posix_ considers paths starting with exactly to ``'/'`` *not* as absolute paths,
          this class does (and so does :mod:`pathlib`).
 
+   .. method:: is_normalized()
+
+      :return: ``True`` iff this represents a normalized path
+               (i.e. it contains no ``'..'`` components)
+      :rtype: bool
+
    .. method:: relative_to(other):
 
       Returns a version of this path relative to the path represented by ``other``
@@ -322,6 +328,10 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 .. class:: AbsolutePath
 
    A :class:`dlb.fs.Path` which represents an absolute path.
+
+.. class:: NormalizedPath
+
+   A :class:`dlb.fs.Path` which represents a normalized path (without  ``'..'`` components).
 
 .. class:: NoSpacePath
 
