@@ -41,7 +41,10 @@ Example::
     with Context() as context:                                                    # (c)
 
         object_files = [                                                          # (d)
-           Compiler(source_file=p, object_file=Path('build/out/' + p + '.o')).run_in(context).object_file
+           Compiler(
+               source_file=p,
+               object_file=Path('build/out/' + p.as_string() + '.o')
+           ).run_in(context).object_file
            for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
         ]
 
