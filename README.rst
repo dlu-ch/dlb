@@ -1,4 +1,4 @@
-.. image:: ./logo.png
+.. image:: ./doc/logo.png
 
 dlb - explicit is better than implicit
 ======================================
