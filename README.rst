@@ -5,4 +5,7 @@ dlb is a `Pythonic <https://www.python.org/>`_ build tool which does not try to 
 to the build process.
 It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
 
-See doc/index.rst for more.
+
+dlb requires at least Python 3.6.
+
+See `here <http://dlb.readthedocs.io/en/latest/>`_ for more.
