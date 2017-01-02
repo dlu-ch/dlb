@@ -3,8 +3,8 @@
 dlb - explicit is better than implicit
 ======================================
 
-dlb is a `Pythonic <https://www.python.org/>`_ build tool which does not try to mimic Make_, but brings the benefits of
-object-oriented languages to the build process.
+dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool which does not try to mimic Make_,
+but brings the benefits of object-oriented languages to the build process.
 It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
 
 The most important task of a build system (and therefore of the writer of the build system's configuration files) are:
