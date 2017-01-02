@@ -1,3 +1,5 @@
+![Image of Yaktocat](doc/logo.png)
+
 dlb - explicit is better than implicit
 ======================================
 
