@@ -8,4 +8,7 @@ It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
 
 dlb requires at least Python 3.6.
 
-See here for more: http://dlb.readthedocs.io/
+See here for more:
+
+  - http://dlb.readthedocs.io/
+  - https://pypi.python.org/pypi

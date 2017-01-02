@@ -64,7 +64,8 @@ def get_version_from_git():
     commit_hash = m.group('hash')
 
     if commits_since_tag > 0:
-        version = '{}-dev{}+{}'.format(last_version, commits_since_tag, commit_hash[:4])
+        # PEP 440
+        version = '{}.dev{}+{}'.format(last_version, commits_since_tag, commit_hash[:4])
     else:
         version = last_version
 
