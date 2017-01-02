@@ -5,19 +5,9 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages
-# To use a consistent encoding
-from codecs import open
-from os import path
+import setuptools
 
-here = path.abspath(path.dirname(__file__))
-
-# Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
-
-setup(
+setuptools.setup(
     name='dlb',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
@@ -65,13 +55,12 @@ setup(
     # What does your project relate to?
     keywords='build development',
 
+    # https://docs.python.org/3/distutils/setupscript.html#listing-whole-packages
+    package_dir={'': 'src'},
+
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=['src/dlb', 'src/dlb/fs', 'src/dlb/cmd'],  # find_packages()
-
-    # Alternatively, if you want to distribute just a my_module.py, uncomment
-    # this:
-    #   py_modules=["my_module"],
+    packages=setuptools.find_packages(where='./src/'),
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
