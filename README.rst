@@ -11,4 +11,4 @@ dlb requires at least Python 3.6.
 See here for more:
 
   - https://dlb.readthedocs.io/
-  - https://pypi.python.org/pypi
+  - https://pypi.python.org/pypi/dlb

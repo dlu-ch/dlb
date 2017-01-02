@@ -8,7 +8,5 @@ test_dir=test
 
 (
     cd "./${test_dir:?}"  # as PyCharm does it
-    for f in test_*.py; do
-        "${PYTHON3:?}" -m unittest "$f"
-    done
+    "${PYTHON3:?}" -m unittest  # test discovery: since Python 3.2
 )
