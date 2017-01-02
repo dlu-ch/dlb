@@ -81,6 +81,7 @@ Content
 
    fs_path.rst
    cmd_tmp.rst
+   similar_tools.rst
 
 Indices and tables
 ==================
