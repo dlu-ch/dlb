@@ -542,7 +542,3 @@ class TestPortableWindowsRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'PortableWindowsPath': 'a/b./c' (component must not end with ' ' or '.')",
                          str(cm.exception))
         dlb.fs.PortablePath('a/../c')
-
-
-if __name__ == '__main__':
-    unittest.main()
