@@ -1,11 +1,9 @@
-.. image:: ./doc/logo.png
+|logo|
 
 Explicit is better than implicit
 ================================
 
-.. image:: https://travis-ci.org/dlu-ch/dlb.svg?branch=master
-   :alt: Build status (unittests)
-   :target: https://travis-ci.org/dlu-ch/dlb
+|batch-unittest| |batch-doc|
 
 dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool which does not try to mimic
 `Make <https://en.wikipedia.org/wiki/Make_%28software%29>`_, but brings the benefits of object-oriented languages
@@ -18,3 +16,13 @@ See here for more:
 
   - https://dlb.readthedocs.io/
   - https://pypi.python.org/pypi/dlb
+
+.. |logo| image:: ./doc/logo.png
+
+.. |batch-unittest| image:: https://travis-ci.org/dlu-ch/dlb.svg?branch=master
+   :alt: Build status (unittests)
+   :target: https://travis-ci.org/dlu-ch/dlb
+
+.. |batch-doc| image:: https://readthedocs.org/projects/dlb/badge/?version=latest
+   :alt: Documentation status (Sphinx)
+   :target: https://dlb.readthedocs.io/
