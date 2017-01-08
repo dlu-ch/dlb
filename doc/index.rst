@@ -83,7 +83,7 @@ Content
    :maxdepth: 2
 
    fs_path.rst
-   cmd_tmp.rst
+   cmd_tmpl.rst
    similar_tools.rst
 
 Indices and tables
