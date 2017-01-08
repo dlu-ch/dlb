@@ -481,8 +481,114 @@ Example:
 Module Contents
 ---------------
 
-.. automodule:: dlb.cmd.tmpl
-   :synopsis: Tokens templates.
-   :members:
-   :special-members:
-   :exclude-members: __weakref__
+.. class:: TokensTemplate
+
+    A :class:`TokensTemplate` represents a template - containing string literals and typed variable specifications -
+    which can later be expanded into a sequence of strings (tokens).
+    Sequence and mappings types are supported; they expand to 0 or more string token.
+    Once constructed, the template cannot be changed.
+
+    The template is an ordered tree whose leafs are *template strings*.
+    It is described by template strings and (arbitrarily deep nested) tuples of template strings
+    (forming the non-leaf nodes of the tree). The non-leaf nodes are called *template groups*.
+
+    Template groups are only significant if sequence- or mapping-like variables are used.
+    They allow the isolation of variables of different length and the building of "repetition groups".
+
+    Variable types and values are looked-up in roots.
+    Roots can be defined or protected between construction and :meth:`expand()`.
+    Once protected, a root cannot be defined.
+    Once defined, a root value cannot be changed.
+
+    Types can be looked-up in a different scope than values by explicitly calling :meth:`lookup_types()`.
+
+    See :ref:`tmpl-expansion-rules` for details.
+
+   .. method:: TokensTemplate(*args, **kwargs)
+
+      :type args: list(str | tuple)
+      :param args:
+         Each positional argument is a template group (a tree).
+         The non-leaf nodes are described by tuples of their children (template groups or template strings).
+
+   .. staticmethod:: escape_literal(literal)
+
+      Returns the token template string, which represents the literal *literal*.
+
+      For every string ``s``, the following is ``True``::
+
+          TokensTemplate(TokensTemplate.escape_literal(s)).expand() == [s]
+
+      :type literal: str
+      :param literal: string to escape
+      :rtype: str
+      :return: escaped ``literal``
+
+   .. method:: protect([objects-to-protect])
+
+      Add all arguments (which must be hashable) to the set of protected roots.
+
+      :return: ``self``
+      :raise ValueError: if any positional argument is ``None``
+
+   .. method:: define([roots])
+
+      Defines additional roots for the lookup of type and variable names.
+
+      The prefix or first component in a :class:`TokensTemplate` type or variable name is the root name.
+      Examples:
+
+      - The root in ``x.y.z`` is ``x`` (``y.z`` is looked-up in ``x``).
+      - The root in ``/Path`` is ``/`` (``Path`` is looked-up in ``/``).
+
+      The keys of keyword arguments define names of roots, their values the corresponding root objects or
+      :class:`LookupScope` instances.
+
+      At most one positional argument is accepted which must be a :class:`collections.abc.Mapping}`, mapping
+      additional root names (which must be strings) to root objects or :class:`LookupScope` instances.
+
+      :class:`LookupScope` instances are special: a name in the corresponding root is looked up in the frame
+      of the caller of :meth:`lookup_types()` and :meth:`expand()`, depending on the scope defined by the instance.
+
+      Valid root names are :token:`root_name`\ s:
+
+      .. productionlist:: tokenstmpl
+         root_name: `name` | `name_prefix`
+
+      :return: ``self``
+      :raise ValueError: if a root name is invalid
+      :raise ValueError: if a root is already defined or protected
+
+   .. method:: lookup_types(frames_up=0)
+
+      Looks up the types of all variable specifications (replaces previously looked-up types, if available).
+
+      :type frames_up: int
+      :param frames_up:
+         The frame to be considered as local. Frames below (more local) are never searched during lookup.
+         0 means the frame of the caller of this method, 1 means its enclosing frame etc.
+         Must be non-negative.
+      :return: ``self``
+
+      :raise NameError: if the root of the type name in a variable specification is not defined
+      :raise LookupError: if the type name in a variable specification is not found in its root
+      :raise TypeError: if the type name in a variable specification refers to an non-type object in its root
+
+   .. method:: expand(frames_up=0)
+
+      Expands this template to a list of tokens.
+      Variable specifications are replaced.
+      Each variable is evaluated at most once (exactly once, if successful).
+
+      :type frames_up: int
+      :param frames_up:
+         The frame to be considered as local. Frames below (more local) are never searched during lookup.
+         0 means the frame of the caller of this method, 1 means its enclosing frame etc.
+         Must be non-negative.
+      :rtype: list(str)
+      :return: expanded tokens
+
+      :raise NameError: if the root of the variable or type name in a variable specification is not defined
+      :raise LookupError: if the variable or type name in a variable specification is not found in its root
+      :raise TypeError: if the type name in a variable specification refers to an non-type object in its root
+      :raise ValueError: if the value of a variable violates the requirements declared in a variable specification
