@@ -25,6 +25,17 @@ class DependencyInheritanceTest(unittest.TestCase):
         self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
 
 
+class DependencyReprTest(unittest.TestCase):
+
+    def test_name_matches_nesting(self):
+        self.assertEqual(repr(Tool.Dependency), "<class 'dlb.cmd.tool.Tool.Dependency'>")
+        self.assertEqual(repr(Tool.Input), "<class 'dlb.cmd.tool.Tool.Input'>")
+        self.assertEqual(repr(Tool.Input.RegularFile), "<class 'dlb.cmd.tool.Tool.Input.RegularFile'>")
+        self.assertEqual(repr(Tool.Output), "<class 'dlb.cmd.tool.Tool.Output'>")
+        self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.cmd.tool.Tool.Output.RegularFile'>")
+        self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.cmd.tool.Tool.Intermediate'>")
+
+
 class AttributeDefineTest(unittest.TestCase):
 
     def test_can_define_execution_parameter(self):
@@ -109,6 +120,19 @@ class AttributeDefineTest(unittest.TestCase):
                     pass
         self.assertEqual(str(cm.exception), "must not be overwritten in a 'dlb.cmd.Tool': '__delattr__'")
 
+    def test_can_inherit_invalid_from_nontool(self):
+        class ATool(Tool):
+            pass
+
+        class X:
+            _X_y_Z = None
+            a_b_c = 1
+
+        class BTool(ATool, X):
+            pass
+
+        self.assertEqual(BTool.a_b_c, 1)
+
 
 class AttributeOverwritingTest(unittest.TestCase):
 
@@ -121,7 +145,7 @@ class AttributeOverwritingTest(unittest.TestCase):
 
         self.assertNotEqual(ATool.X, BTool.X)
 
-    def test_execution_parameters_can_be_overwritten_by_same_type(self):
+    def test_execution_parameters_cannot_be_overwritten_by_different_type(self):
         class ATool(Tool):
             X = 1
 
@@ -207,6 +231,16 @@ class ToolReprTest(unittest.TestCase):
     class BTool(ATool):
         map_file = Tool.Output.RegularFile(is_required=False)
 
+    class CTool(Tool):
+        source_file = Tool.Input.RegularFile()
+
+    class X:
+        _X_y_Z = None
+        a_b_c = 1
+
+    class DTool(CTool, X):
+        object_file = Tool.Output.RegularFile()
+
     def test_shows_name_and_dependency_rules(self):
         self.assertEqual(repr(Tool()), 'Tool()')
 
@@ -215,15 +249,10 @@ class ToolReprTest(unittest.TestCase):
 
         class CTool(Tool):
             pass
+
         self.assertEqual(repr(CTool()), "ToolReprTest.test_shows_name_and_dependency_rules.<locals>.CTool()")
 
+    def test_inherit_invalid_from_nontool(self):
 
-class DependencyReprTest(unittest.TestCase):
-
-    def test_name_matches_nesting(self):
-        self.assertEqual(repr(Tool.Dependency), "<class 'dlb.cmd.tool.Tool.Dependency'>")
-        self.assertEqual(repr(Tool.Input), "<class 'dlb.cmd.tool.Tool.Input'>")
-        self.assertEqual(repr(Tool.Input.RegularFile), "<class 'dlb.cmd.tool.Tool.Input.RegularFile'>")
-        self.assertEqual(repr(Tool.Output), "<class 'dlb.cmd.tool.Tool.Output'>")
-        self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.cmd.tool.Tool.Output.RegularFile'>")
-        self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.cmd.tool.Tool.Intermediate'>")
+        t = ToolReprTest.DTool(source_file='x.cpp', object_file='x.cpp.o')
+        self.assertEqual(repr(t), "ToolReprTest.DTool(source_file='x.cpp', object_file='x.cpp.o')")

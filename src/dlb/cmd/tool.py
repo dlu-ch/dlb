@@ -132,13 +132,13 @@ class _ToolMeta(type):
     def __init__(cls, name, bases, nmspc):
         super().__init__(name, bases, nmspc)
 
-        for attrib in ['__new__', '__init__', '__setattr__', '__delattr__']:
-            if attrib in cls.__dict__:
-                raise AttributeError("must not be overwritten in a 'dlb.cmd.Tool': {}".format(repr(attrib)))
+        # prevent attributes of _BaseTool from beeing overwritten
+        protected_attribs = (set(_BaseTool.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
+        attribs = set(cls.__dict__) & protected_attribs
+        if attribs:
+            raise AttributeError("must not be overwritten in a 'dlb.cmd.Tool': {}".format(repr(sorted(attribs)[0])))
 
         cls.check_own_attributes()
-        # TODO: prevent conflicting attributes in base classes
-
         super().__setattr__('_dependency_names', cls._get_dependency_names())
 
     def check_own_attributes(cls):
@@ -161,10 +161,11 @@ class _ToolMeta(type):
                     base_value = base_class.__dict__.get(name, None)
                     if base_value is not None and not base_value.is_superset_of(value):
                         # TODO: test
-                        raise TypeError(
-                            "class {c} overwrites attribute {a} of {b} with a value, which is not a compatible {t}".format(
-                                b=repr(base_class.__qualname__), c=repr(cls.__qualname__), a=repr(name),
-                                t=repr(type(base_value))))
+                        raise TypeError((
+                            "class {c} overwrites attribute {a} of {b} with a value, "
+                            "which is not a compatible {t}"
+                        ).format(b=repr(base_class.__qualname__), c=repr(cls.__qualname__), a=repr(name),
+                                 t=repr(type(base_value))))
             else:
                 raise AttributeError((
                     "invalid class attribute name: {} "
@@ -172,7 +173,6 @@ class _ToolMeta(type):
                     "like 'UPPER_CASE_WORD' or 'lower_case_word)").format(repr(name)))
 
     def _get_dependency_names(cls):
-        # TODO: test with non-Tool base classes
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
         pairs = [(-v.RANK, not v.is_required, n) for n, v in dependencies.items() if isinstance(v, Tool.Dependency)]
         pairs.sort()
