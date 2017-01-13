@@ -261,7 +261,9 @@ class TestNameLookup(unittest.TestCase):
 
             class B:
                 # globals and builtins found:
-                tmpl = TokensTemplate('{a:/TokensTemplate}', '{b:/str}').define({'/': TokensTemplate.LookupScope.GLOBAL})
+                tmpl = TokensTemplate(
+                    '{a:/TokensTemplate}',
+                    '{b:/str}').define({'/': TokensTemplate.LookupScope.GLOBAL})
                 tmpl.lookup_types()
                 self.assertEqual({('/', 'TokensTemplate'): TokensTemplate, ('/', 'str'): str},
                                  tmpl._type_by_name_components)
@@ -410,7 +412,8 @@ class TestExpansion(unittest.TestCase):
                          str(cm.exception))
 
         class A:
-            def __init__(self, x, y): pass
+            def __init__(self, x, y):
+                pass
 
         tmpl = TokensTemplate('{a:A}').define(A=A)
         with self.assertRaises(TypeError) as cm:
@@ -419,8 +422,11 @@ class TestExpansion(unittest.TestCase):
                          r"^node 0: cannot construct object of declared type 'A' from value 1 of variable 'a': .*")
 
         class B:
-            def __init__(self, x): pass
-            def __str__(self): pass
+            def __init__(self, x):
+                pass
+
+            def __str__(self):
+                pass
 
         tmpl = TokensTemplate('{b:B}').define(B=B)
         with self.assertRaises(TypeError) as cm:
@@ -456,7 +462,8 @@ class TestExpansion(unittest.TestCase):
         self.assertEqual(['<2>', '<3>'], tmpl.define(b1=[], b2=['2', '3']).expand())
 
         class C:
-            def __bool__(self): pass
+            def __bool__(self):
+                pass
 
         tmpl = TokensTemplate('{c:C+}').define(C=C)
         with self.assertRaises(TypeError) as cm:
@@ -465,7 +472,8 @@ class TestExpansion(unittest.TestCase):
                          r"^node 0: cannot convert object of declared type 'C' of variable 'c' to 'bool': .*")
 
         class D:
-            def __init__(self, x): pass
+            def __init__(self, x):
+                pass
 
         tmpl = TokensTemplate('{d:D!}').define(D=D)
         with self.assertRaises(TypeError) as cm:
@@ -511,7 +519,7 @@ class TestExpansion(unittest.TestCase):
         self.assertEqual(['-I', '1', '-I', '2', '-I', '3'], tmpl.define(a=[1, 2, 3]).expand())
 
         tmpl = TokensTemplate(('{a:[int]}',), ('{b:[int]}',)).define(int=int)
-        self.assertEqual(['1', '2', '1', '2', '3'], tmpl.define(a=[1, 2], b = [1, 2, 3]).expand())
+        self.assertEqual(['1', '2', '1', '2', '3'], tmpl.define(a=[1, 2], b=[1, 2, 3]).expand())
 
         tmpl = TokensTemplate('{a:[int]}', ('b', 'c'), '{a:[int]}').define(int=int)
         self.assertEqual(['1', 'b', 'c', '1', '2', 'b', 'c', '2'], tmpl.define(a=[1, 2]).expand())

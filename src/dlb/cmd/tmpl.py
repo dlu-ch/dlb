@@ -32,6 +32,7 @@ OPTS_REGEX = re.compile(r'^\+?!?\??\Z')
 def _node_path_to_str(path):
     return '.'.join([str(i) for i in path])
 
+
 def _name_components_to_str(components):
     c = components[0]
     s = '.'.join(components[1:])
@@ -40,8 +41,10 @@ def _name_components_to_str(components):
         c += '.'
     return c + s
 
+
 def _has_underscores(components):
     return any(c for c in components if c and c.startswith('_'))
+
 
 def _first_prefixed_name(unprocessed):
     n = 0
@@ -55,6 +58,7 @@ def _first_prefixed_name(unprocessed):
             components = [prefix] + components
         components = tuple(components)
     return components, n
+
 
 def _variable_message_format_dict(node_path, variable_spec, opt_postfix=''):
     postfix = opt_postfix
@@ -130,7 +134,7 @@ class _ScannedTemplateString:
                 if not var_name_components:
                     raise ValueError("{0}: variable name expected".format(node_msg()))
                 if _has_underscores(var_name_components):
-                    raise ValueError("{0}: variable name components must not start with '_'"\
+                    raise ValueError("{0}: variable name components must not start with '_'"
                                      .format(node_msg()))
                 unprocessed = unprocessed[n:]
 
@@ -157,7 +161,7 @@ class _ScannedTemplateString:
                         msg = "{0}: type name or container opening expected"
                     raise ValueError(msg.format(node_msg()))
                 if _has_underscores(type_name_components):
-                    raise ValueError("{0}: type name components must not start with '_'"\
+                    raise ValueError("{0}: type name components must not start with '_'"
                                      .format(node_msg()))
                 unprocessed = unprocessed[n:]
 
@@ -274,7 +278,7 @@ class TokensTemplate:
         if args:
             if len(args) > 1:
                 raise TypeError('define() takes at most 1 positional argument')
-            if not (isinstance(args[0], collections.abc.Mapping) and \
+            if not (isinstance(args[0], collections.abc.Mapping) and
                     all(isinstance(k, str) for k in args[0])):
                 raise TypeError('positional argument must be a mapping whose keys are strings')
             self._add_roots(args[0])
@@ -472,9 +476,10 @@ class TokensTemplate:
             if expanded_values is None and '!' in variable_spec.container_opts:
                 # replace None by list()
                 expanded_values = []
-            if expanded_values is None and not '?' in variable_spec.container_opts:
+            if expanded_values is None and '?' not in variable_spec.container_opts:
                 if none_because_empty:
-                    msg_tmpl = "{node_prefix}value of variable {var_name} (with container option '+', without '?') is empty"
+                    msg_tmpl = \
+                        "{node_prefix}value of variable {var_name} (with container option '+', without '?') is empty"
                 else:
                     msg_tmpl = "{node_prefix}value of variable {var_name} (without container option '?') is None"
                 raise ValueError(msg_tmpl.format(**_variable_message_format_dict(node_path, variable_spec)))
@@ -496,7 +501,7 @@ class TokensTemplate:
 
         # interpret type options (how to handle None and empty value)
         none_because_empty = False
-        if value is not None and '+' in variable_spec.type_opts :
+        if value is not None and '+' in variable_spec.type_opts:
             # treat 'empty value' as None
             try:
                 if not value:  # calls value.__bool__()
@@ -581,7 +586,7 @@ class TokensTemplate:
             obj = self._lookup_name(variable_spec.type_name_components, node_path, frames)
             if obj is not None and not isinstance(obj, type):
                 type_name = _name_components_to_str(variable_spec.type_name_components)
-                raise TypeError('node {0}: type name {1} refers to a non-type object'\
+                raise TypeError('node {0}: type name {1} refers to a non-type object'
                                 .format(_node_path_to_str(node_path), repr(type_name)))
             self._type_by_name_components[variable_spec.type_name_components] = obj
 
@@ -599,7 +604,7 @@ class TokensTemplate:
         """
         root_name = name_components[0]
         if root_name not in self._root_or_scope_by_name:
-            raise NameError('node {0}: root {1} not defined'\
+            raise NameError('node {0}: root {1} not defined'
                             .format(_node_path_to_str(node_path), repr(root_name)))
         root_or_scope = self._root_or_scope_by_name.get(root_name, None)
         nonroot_name_components = name_components[1:]

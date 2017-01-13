@@ -11,6 +11,7 @@ __all__ = [
     'PortablePath'
 ]
 
+
 # cannot derive easily from pathlib.Path without defining non-API members
 class _Native:
 
@@ -109,8 +110,8 @@ class Path(metaclass=_PathMeta):
             if not p:
                 raise ValueError("invalid path: ''")
             self._path = pathlib.PurePosixPath(p)  # '.' represented as empty path
-            self._is_dir = p.endswith('/') or p.endswith('/.') \
-                           or not self._path.parts or self._path.parts[-1:] == ('..',)
+            self._is_dir = \
+                p.endswith('/') or p.endswith('/.') or not self._path.parts or self._path.parts[-1:] == ('..',)
 
         if is_dir is not None:
             is_dir = bool(is_dir)
@@ -441,4 +442,5 @@ class PortableWindowsPath(WindowsPath):
             raise ValueError('must not contain more than {} characters'.format(self.MAX_PATH_LENGTH))
 
 
-class PortablePath(PortablePosixPath, PortableWindowsPath, RelativePath): pass
+class PortablePath(PortablePosixPath, PortableWindowsPath, RelativePath):
+    pass

@@ -398,7 +398,8 @@ class TestDirectoryListing(unittest.TestCase):
         ]]
         expected_rel_paths.sort()
 
-        def f(n): return n.endswith('2')
+        def f(n):
+            return n.endswith('2')
 
         rel_paths = self.tmp_dir.list_r(name_filter=f, recurse_name_filter='')
         self.assertEqual(rel_paths, expected_rel_paths)

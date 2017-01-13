@@ -31,7 +31,7 @@ class _Dependency:
         return self._is_required
 
     def is_superset_of(self, other):
-        # TODO: implement
+        # TODO: test
         return isinstance(other, self.__class__)
 
     def validate(self, value):
@@ -69,6 +69,9 @@ class _PathDependencyMixin:
         if not issubclass(cls, dlb.fs.Path):
             raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = cls
+
+    def is_superset_of(self, other):
+        return super().is_superset_of(other) and issubclass(other._path_cls, self._path_cls)
 
     def validate(self, value):
         value = super().validate(value)

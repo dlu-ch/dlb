@@ -25,21 +25,6 @@ class DependencyInheritanceTest(unittest.TestCase):
         self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
 
 
-class DependencyValidationTest(unittest.TestCase):
-
-    def test_abstract_dependency_raises(self):
-        with self.assertRaises(NotImplementedError):
-            Tool.AbstractDependency.validate(0)
-        with self.assertRaises(NotImplementedError):
-            Tool.Input.validate(0)
-        with self.assertRaises(NotImplementedError):
-            Tool.Intermediate.validate(0)
-        with self.assertRaises(NotImplementedError):
-            Tool.Output.validate(0)
-
-    def test_concrete_dependency_checks_if_required(self):
-        pass #???
-
 class DependencyReprTest(unittest.TestCase):
 
     def test_name_matches_class(self):
@@ -59,9 +44,13 @@ class DependencyValidationTest(unittest.TestCase):
 
     def test_abstract_dependency_validation_raises(self):
         with self.assertRaises(NotImplementedError):
-            Tool.Dependency().validate(1)
+            Tool.Dependency().validate(0)
         with self.assertRaises(NotImplementedError):
-            Tool.Input().validate(1)
+            Tool.Input().validate(0)
+        with self.assertRaises(NotImplementedError):
+            Tool.Intermediate().validate(0)
+        with self.assertRaises(NotImplementedError):
+            Tool.Output().validate(0)
 
     def test_non_is_not_valid_for_required(self):
         self.assertIsNone(Tool.Input.RegularFile(is_required=False).validate(None))
