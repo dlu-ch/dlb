@@ -30,9 +30,8 @@ class _Dependency:
     def is_required(self):
         return self._is_required
 
-    def is_superset_of(self, other):
-        # TODO: test
-        return isinstance(other, self.__class__)
+    def is_more_restrictive_than(self, other):
+        return isinstance(self, other.__class__)
 
     def validate(self, value):
         raise NotImplementedError
@@ -70,8 +69,8 @@ class _PathDependencyMixin:
             raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = cls
 
-    def is_superset_of(self, other):
-        return super().is_superset_of(other) and issubclass(other._path_cls, self._path_cls)
+    def is_more_restrictive_than(self, other):
+        return super().is_more_restrictive_than(other) and issubclass(self._path_cls, other._path_cls)
 
     def validate(self, value):
         value = super().validate(value)
@@ -183,11 +182,11 @@ class _ToolMeta(type):
     def __init__(cls, name, bases, nmspc):
         super().__init__(name, bases, nmspc)
 
-        # prevent attributes of _BaseTool from being overwritten
+        # prevent attributes of _BaseTool from being overridden
         protected_attribs = (set(_BaseTool.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
         attribs = set(cls.__dict__) & protected_attribs
         if attribs:
-            raise AttributeError("must not be overwritten in a 'dlb.cmd.Tool': {}".format(repr(sorted(attribs)[0])))
+            raise AttributeError("must not be overridden in a 'dlb.cmd.Tool': {}".format(repr(sorted(attribs)[0])))
 
         cls.check_own_attributes()
         super().__setattr__('_dependency_names', cls._get_dependency_names())
@@ -197,14 +196,13 @@ class _ToolMeta(type):
             if RESERVED_NAME_REGEX.match(name):
                 pass
             elif EXECUTION_PARAMETER_NAME_REGEX.match(name):
-                # if overwritten: must be instance of type of overwritten attribute
+                # if overridden: must be instance of type of overridden attribute
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
                     if base_value is not None and not isinstance(value, type(base_value)):
                         raise TypeError(
-                            "class {c} overwrites attribute {a} of class {b} with a value which is not a {t}".format(
-                                b=repr(base_class.__qualname__), c=repr(cls.__qualname__), a=repr(name),
-                                t=repr(type(base_value))))
+                            "attribute {} of base class may only be overridden with a value which is a {}"
+                            .format(repr(name), repr(type(base_value))))
             elif DEPENDENCY_NAME_REGEX.match(name):
                 if not (isinstance(value, _BaseTool.Dependency) and type(value) != _BaseTool.Dependency):
                     raise TypeError(
@@ -212,13 +210,10 @@ class _ToolMeta(type):
                         .format(repr(name)))
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
-                    if base_value is not None and not base_value.is_superset_of(value):
-                        # TODO: test
-                        raise TypeError((
-                            "class {c} overwrites attribute {a} of {b} with a value, "
-                            "which is not a compatible {t}"
-                        ).format(b=repr(base_class.__qualname__), c=repr(cls.__qualname__), a=repr(name),
-                                 t=repr(type(base_value))))
+                    if base_value is not None and not value.is_more_restrictive_than(base_value):
+                        raise TypeError(
+                            "attribute {} of base class may only be overridden by a {} at least as restrictive"
+                            .format(repr(name), repr(type(base_value))))
             else:
                 raise AttributeError((
                     "invalid class attribute name: {} "
