@@ -1,4 +1,5 @@
 import re
+import dlb.fs
 
 EXECUTION_PARAMETER_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
 assert EXECUTION_PARAMETER_NAME_REGEX.match('A')
@@ -19,6 +20,7 @@ __all__ = ['Tool']
 
 
 class _Dependency:
+    #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
     RANK = 0
 
     def __init__(self, is_required=True):
@@ -28,15 +30,12 @@ class _Dependency:
     def is_required(self):
         return self._is_required
 
-    @property
-    def obj(self):
-        raise NotImplementedError
-
     def is_superset_of(self, other):
+        # TODO: implement
         return isinstance(other, self.__class__)
 
     def validate(self, value):
-        return value
+        raise NotImplementedError
 
 
 class _OutputDependency(_Dependency):
@@ -51,45 +50,60 @@ class _InputDependency(_Dependency):
     RANK = 3
 
 
-class _RegularInputFileDependency(_InputDependency):
+# list this as last class before abstract dependency class in base class list
+class _ConcreteDependencyMixin:
+    def validate(self, value):
+        # do _not_ call super().validate() here!
+        if self.is_required and value is None:
+            raise ValueError('required dependency must not be None')
+        return value
+
+
+class _PathDependencyMixin:
+    def __init__(self, cls=dlb.fs.Path, **kwargs):
+        super().__init__(**kwargs)
+        if not issubclass(cls, dlb.fs.Path):
+            raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
+        self._path_cls = cls
+
+    def validate(self, value):
+        value = super().validate(value)
+        return self._path_cls(value) if value is not None else None
+
+
+class _DirectoryDependencyMixin(_PathDependencyMixin):
+    def validate(self, value):
+        value = super().validate(value)
+        if value is not None and not value.is_dir():
+            raise ValueError('non-directory path not valid for directory dependency: {}'.format(repr(value)))
+        return value
+
+
+class _NonDirectoryDependencyMixin(_PathDependencyMixin):
+    def validate(self, value):
+        value = super().validate(value)
+        if value is not None and value.is_dir():
+            raise ValueError('directory path not valid for non-directory dependency: {}'.format(repr(value)))
+        return value
+
+
+class _RegularInputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependency):
     pass
 
 
-class _InputDirectoryDependency(_InputDependency):
+class _InputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependency):
     pass
 
 
-class _RegularOutputFileDependency(_OutputDependency):
+class _RegularOutputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependency):
     pass
 
 
-class _OutputDirectoryDependency(_OutputDependency):
+class _OutputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependency):
     pass
 
 
 class _BaseTool:
-
-    Dependency = _Dependency
-    Dependency.__qualname__ = 'Tool.Dependency'
-
-    Input = _InputDependency
-    Input.__qualname__ = 'Tool.Input'
-
-    Input.RegularFile = _RegularInputFileDependency
-    Input.RegularFile.__qualname__ = Input.__qualname__ + '.RegularFile'
-    Input.Directory = _InputDirectoryDependency
-    Input.Directory.__qualname__ = Input.__qualname__ + '.Directory'
-
-    Output = _OutputDependency
-    Output.__qualname__ = 'Tool.Output'
-
-    Output.RegularFile = _RegularOutputFileDependency
-    Output.RegularFile.__qualname__ = Output.__qualname__ + '.RegularFile'
-    Output.Directory = _OutputDirectoryDependency
-    Output.Directory.__qualname__ = Output.__qualname__ + '.Directory'
-
-    Intermediate = _IntermediateDependency
-    Intermediate.__qualname__ = 'Tool.Intermediate'
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -127,6 +141,27 @@ class _BaseTool:
         return '{}({})'.format(self.__class__.__qualname__, args)
 
 
+def _inject_nested_class_into(owner, cls, name, owner_qualname=None):
+    setattr(owner, name, cls)
+    cls.__name__ = name
+    if owner_qualname is None:
+        owner_qualname = owner.__qualname__
+    cls.__qualname__ = owner_qualname + '.' + name
+
+
+_inject_nested_class_into(_BaseTool, _Dependency, 'Dependency', 'Tool')
+_inject_nested_class_into(_BaseTool, _InputDependency, 'Input', 'Tool')
+_inject_nested_class_into(_BaseTool, _OutputDependency, 'Output', 'Tool')
+_inject_nested_class_into(_BaseTool, _IntermediateDependency, 'Intermediate', 'Tool')
+
+_inject_nested_class_into(_BaseTool.Input, _RegularInputFileDependency, 'RegularFile')
+_inject_nested_class_into(_BaseTool.Input, _InputDirectoryDependency, 'Directory')
+_inject_nested_class_into(_BaseTool.Output, _RegularOutputFileDependency, 'RegularFile')
+_inject_nested_class_into(_BaseTool.Output, _OutputDirectoryDependency, 'Directory')
+
+del _inject_nested_class_into
+
+
 class _ToolMeta(type):
 
     def __init__(cls, name, bases, nmspc):
@@ -155,8 +190,10 @@ class _ToolMeta(type):
                                 b=repr(base_class.__qualname__), c=repr(cls.__qualname__), a=repr(name),
                                 t=repr(type(base_value))))
             elif DEPENDENCY_NAME_REGEX.match(name):
-                if not isinstance(value, _Dependency):
-                    raise TypeError("the value of {} must be a 'dlb.cmd.Tool.Dependency'".format(repr(name)))
+                if not (isinstance(value, _BaseTool.Dependency) and type(value) != _BaseTool.Dependency):
+                    raise TypeError(
+                        "the value of {} must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'"
+                            .format(repr(name)))
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
                     if base_value is not None and not base_value.is_superset_of(value):

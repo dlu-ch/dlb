@@ -25,7 +25,26 @@ class DependencyInheritanceTest(unittest.TestCase):
         self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
 
 
+class DependencyValidationTest(unittest.TestCase):
+
+    def test_abstract_dependency_raises(self):
+        with self.assertRaises(NotImplementedError):
+            Tool.AbstractDependency.validate(0)
+        with self.assertRaises(NotImplementedError):
+            Tool.Input.validate(0)
+        with self.assertRaises(NotImplementedError):
+            Tool.Intermediate.validate(0)
+        with self.assertRaises(NotImplementedError):
+            Tool.Output.validate(0)
+
+    def test_concrete_dependency_checks_if_required(self):
+        pass #???
+
 class DependencyReprTest(unittest.TestCase):
+
+    def test_name_matches_class(self):
+        self.assertEqual(Tool.Dependency.__name__, 'Dependency')
+        self.assertEqual(Tool.Input.__name__, 'Input')
 
     def test_name_matches_nesting(self):
         self.assertEqual(repr(Tool.Dependency), "<class 'dlb.cmd.tool.Tool.Dependency'>")
@@ -34,6 +53,45 @@ class DependencyReprTest(unittest.TestCase):
         self.assertEqual(repr(Tool.Output), "<class 'dlb.cmd.tool.Tool.Output'>")
         self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.cmd.tool.Tool.Output.RegularFile'>")
         self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.cmd.tool.Tool.Intermediate'>")
+
+
+class DependencyValidationTest(unittest.TestCase):
+
+    def test_abstract_dependency_validation_raises(self):
+        with self.assertRaises(NotImplementedError):
+            Tool.Dependency().validate(1)
+        with self.assertRaises(NotImplementedError):
+            Tool.Input().validate(1)
+
+    def test_non_is_not_valid_for_required(self):
+        self.assertIsNone(Tool.Input.RegularFile(is_required=False).validate(None))
+        with self.assertRaises(ValueError) as cm:
+            Tool.Input.RegularFile(is_required=True).validate(None)
+        self.assertEqual(str(cm.exception), 'required dependency must not be None')
+
+        self.assertIsNone(Tool.Output.Directory(is_required=False).validate(None))
+        with self.assertRaises(ValueError) as cm:
+            Tool.Output.Directory(is_required=True).validate(None)
+        self.assertEqual(str(cm.exception), 'required dependency must not be None')
+
+    def test_path_dependency_returns_path(self):
+        import dlb.fs
+
+        self.assertEqual(Tool.Input.RegularFile().validate('a/b'), dlb.fs.Path('a/b'))
+        self.assertEqual(Tool.Input.Directory().validate('a/b/'), dlb.fs.Path('a/b/'))
+
+        self.assertEqual(Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath).validate('a/b'), dlb.fs.NoSpacePath('a/b'))
+        with self.assertRaises(ValueError):
+            Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath).validate('a /b')
+
+    def test_dir_is_not_valid_for_non_dir_dependency(self):
+        with self.assertRaises(ValueError) as cm:
+            Tool.Input.RegularFile().validate('a/b/')
+        self.assertEqual(str(cm.exception), "directory path not valid for non-directory dependency: Path('a/b/')")
+
+        with self.assertRaises(ValueError) as cm:
+            Tool.Input.Directory().validate('a/b')
+        self.assertEqual(str(cm.exception), "non-directory path not valid for directory dependency: Path('a/b')")
 
 
 class AttributeDefineTest(unittest.TestCase):
@@ -93,7 +151,16 @@ class AttributeDefineTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = None
-        self.assertEqual(str(cm.exception), "the value of 'x_y_z' must be a 'dlb.cmd.Tool.Dependency'")
+        self.assertEqual(
+            str(cm.exception),
+            "the value of 'x_y_z' must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'")
+
+        with self.assertRaises(TypeError) as cm:
+            class ATool(Tool):
+                x_y_z = Tool.Dependency()
+        self.assertEqual(
+            str(cm.exception),
+            "the value of 'x_y_z' must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'")
 
     def test_some_methods_cannot_be_overwritten(self):
         with self.assertRaises(AttributeError) as cm:
@@ -245,7 +312,9 @@ class ToolReprTest(unittest.TestCase):
         self.assertEqual(repr(Tool()), 'Tool()')
 
         t = ToolReprTest.BTool(source_file='x.cpp', object_file='x.cpp.o')
-        self.assertEqual(repr(t), "ToolReprTest.BTool(source_file='x.cpp', object_file='x.cpp.o', map_file=None)")
+        self.assertEqual(
+            repr(t),
+            "ToolReprTest.BTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'), map_file=None)")
 
         class CTool(Tool):
             pass
@@ -255,4 +324,4 @@ class ToolReprTest(unittest.TestCase):
     def test_inherit_invalid_from_nontool(self):
 
         t = ToolReprTest.DTool(source_file='x.cpp', object_file='x.cpp.o')
-        self.assertEqual(repr(t), "ToolReprTest.DTool(source_file='x.cpp', object_file='x.cpp.o')")
+        self.assertEqual(repr(t), "ToolReprTest.DTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'))")
