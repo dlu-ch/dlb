@@ -38,14 +38,17 @@ class _Dependency:
         raise NotImplementedError
 
 
+# noinspection PyAbstractClass
 class _OutputDependency(_Dependency):
     RANK = 1
 
 
+# noinspection PyAbstractClass
 class _IntermediateDependency(_Dependency):
     RANK = 2
 
 
+# noinspection PyAbstractClass
 class _InputDependency(_Dependency):
     RANK = 3
 
@@ -59,6 +62,7 @@ class _ConcreteDependencyMixin:
         return value
 
 
+# noinspection PyUnresolvedReferences,PyArgumentList
 class _PathDependencyMixin:
     def __init__(self, cls=dlb.fs.Path, **kwargs):
         super().__init__(**kwargs)
@@ -103,6 +107,7 @@ class _OutputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyM
     pass
 
 
+# noinspection PyProtectedMember,PyUnresolvedReferences
 class _BaseTool:
 
     def __init__(self, **kwargs):
@@ -149,14 +154,22 @@ def _inject_nested_class_into(owner, cls, name, owner_qualname=None):
     cls.__qualname__ = owner_qualname + '.' + name
 
 
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool, _Dependency, 'Dependency', 'Tool')
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool, _InputDependency, 'Input', 'Tool')
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool, _OutputDependency, 'Output', 'Tool')
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool, _IntermediateDependency, 'Intermediate', 'Tool')
 
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool.Input, _RegularInputFileDependency, 'RegularFile')
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool.Input, _InputDirectoryDependency, 'Directory')
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool.Output, _RegularOutputFileDependency, 'RegularFile')
+# noinspection PyTypeChecker
 _inject_nested_class_into(_BaseTool.Output, _OutputDirectoryDependency, 'Directory')
 
 del _inject_nested_class_into
@@ -167,7 +180,7 @@ class _ToolMeta(type):
     def __init__(cls, name, bases, nmspc):
         super().__init__(name, bases, nmspc)
 
-        # prevent attributes of _BaseTool from beeing overwritten
+        # prevent attributes of _BaseTool from being overwritten
         protected_attribs = (set(_BaseTool.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
         attribs = set(cls.__dict__) & protected_attribs
         if attribs:
@@ -193,7 +206,7 @@ class _ToolMeta(type):
                 if not (isinstance(value, _BaseTool.Dependency) and type(value) != _BaseTool.Dependency):
                     raise TypeError(
                         "the value of {} must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'"
-                            .format(repr(name)))
+                        .format(repr(name)))
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
                     if base_value is not None and not base_value.is_superset_of(value):
