@@ -156,10 +156,12 @@ class TestConversionFromAnToPurePath(unittest.TestCase):
 
     def test_incomplete_windowspath_are_inhibited(self):
         with self.assertRaises(ValueError) as cm:
+            # noinspection PyStatementEffect
             dlb.fs.Path('/c:').pure_windows
         self.assertEqual("neither absolute nor relative: root is missing", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
+            # noinspection PyStatementEffect
             dlb.fs.Path('//name').pure_windows
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
@@ -292,6 +294,7 @@ class TestTransformation(unittest.TestCase):
         self.assertEqual(p[:-3], dlb.fs.Path('/'))
 
         with self.assertRaises(ValueError) as cm:
+            # noinspection PyStatementEffect
             p[:-4]
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
 
@@ -302,6 +305,7 @@ class TestTransformation(unittest.TestCase):
         self.assertEqual(p[:-2], dlb.fs.Path('//u/'))
         self.assertEqual(p[:-3], dlb.fs.Path('//'))
         with self.assertRaises(ValueError) as cm:
+            # noinspection PyStatementEffect
             p[:-4]
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
 
@@ -455,6 +459,7 @@ class TestNative(unittest.TestCase):
         p = CheckCountingPath('x')
         self.assertEqual(CheckCountingPath.n, 1)
 
+        # noinspection PyStatementEffect
         p.native
         self.assertEqual(CheckCountingPath.n, 1)
 
@@ -484,7 +489,7 @@ class TestAbsoluteRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'AbsolutePath': 'a/b/c' (must be absolute)", str(cm.exception))
 
 
-class TestAbsoluteRestrictions(unittest.TestCase):
+class TestNormalizedRestrictions(unittest.TestCase):
 
     def test_relative_permitted(self):
         dlb.fs.NormalizedPath('/a/b/c')
@@ -560,6 +565,7 @@ class TestWindowsRestrictions(unittest.TestCase):
         dlb.fs.WindowsPath('a/coM10')
         p = dlb.fs.WindowsPath('a/coM9/')
         with self.assertRaises(ValueError) as cm:
+            # noinspection PyStatementEffect
             p.pure_windows
         self.assertEqual("file path is reserved: 'a\\\\coM9'", str(cm.exception))
 

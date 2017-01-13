@@ -91,16 +91,20 @@ class AttributeDefineTest(unittest.TestCase):
             X = 2
             X_Y_Z = '?'
             A3_B = None
+        del ATool
 
     def test_can_define_dependency(self):
         class ATool(Tool):
             source_file = Tool.Input.RegularFile()
             object_file = Tool.Output.RegularFile()
+        del ATool
 
     def test_can_define_classmethod(self):
         class ATool(Tool):
             pass
+        del ATool
 
+    # noinspection PyUnusedLocal,PyRedeclaration
     def test_cannot_define_other(self):
         tmpl = (
             "invalid class attribute name: {} (every class attribute of a 'dlb.cmd.Tool' must be named "
@@ -136,6 +140,7 @@ class AttributeDefineTest(unittest.TestCase):
                 x_ = None
         self.assertEqual(str(cm.exception), tmpl.format(repr('x_')))
 
+    # noinspection PyUnusedLocal,PyRedeclaration
     def test_lowercase_attribute_must_be_concrete_dependency(self):
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
@@ -151,6 +156,7 @@ class AttributeDefineTest(unittest.TestCase):
             str(cm.exception),
             "the value of 'x_y_z' must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'")
 
+    # noinspection PyUnusedLocal,PyRedeclaration
     def test_some_methods_cannot_be_overridden(self):
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
@@ -192,6 +198,7 @@ class AttributeDefineTest(unittest.TestCase):
 
 class ExecutionParameterOverridingTest(unittest.TestCase):
 
+    # noinspection PyUnusedLocal
     def test_can_only_be_overridden_with_same_type(self):
         class ATool(Tool):
             X = 1
@@ -211,6 +218,7 @@ class ExecutionParameterOverridingTest(unittest.TestCase):
 
 class DependencyRuleOverridingTest(unittest.TestCase):
 
+    # noinspection PyUnusedLocal,PyRedeclaration
     def test_can_only_be_overridden_with_more_restrictive(self):
         import dlb.fs
 

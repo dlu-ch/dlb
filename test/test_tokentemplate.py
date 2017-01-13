@@ -19,7 +19,7 @@ class TestModule(unittest.TestCase):
 class TestSyntax(unittest.TestCase):
 
     def test_invalid_type(self):
-        with self.assertRaises(TypeError) as cm:
+        with self.assertRaises(TypeError):
             TokensTemplate(None)
 
         with self.assertRaises(TypeError) as cm:
@@ -36,6 +36,7 @@ class TestSyntax(unittest.TestCase):
 
     def test_recursive_list(self):
         l = ['a', 'b']
+        # noinspection PyTypeChecker
         l.append(l)
         l2 = ['c', l]
         with self.assertRaises(TypeError) as cm:
@@ -247,6 +248,7 @@ class TestNameLookup(unittest.TestCase):
                          str(cm.exception))
 
     def test_lookup_types(self):
+        # noinspection PyUnusedLocal
         u = int
         tmpl = TokensTemplate('{x:str}', '{y:/u}')
         tmpl.define({'/': tmpl.LookupScope.KNOWN}, str=str)
@@ -254,6 +256,7 @@ class TestNameLookup(unittest.TestCase):
         self.assertIs(tmpl, tmpl.lookup_types())
         self.assertEqual({('str',): str, ('/', 'u'): int}, tmpl._type_by_name_components)
 
+        # noinspection PyUnusedLocal
         class A:
 
             v = float
@@ -413,7 +416,7 @@ class TestExpansion(unittest.TestCase):
 
         class A:
             def __init__(self, x, y):
-                pass
+                del x, y
 
         tmpl = TokensTemplate('{a:A}').define(A=A)
         with self.assertRaises(TypeError) as cm:
@@ -423,7 +426,7 @@ class TestExpansion(unittest.TestCase):
 
         class B:
             def __init__(self, x):
-                pass
+                del x
 
             def __str__(self):
                 pass
@@ -473,7 +476,7 @@ class TestExpansion(unittest.TestCase):
 
         class D:
             def __init__(self, x):
-                pass
+                del x
 
         tmpl = TokensTemplate('{d:D!}').define(D=D)
         with self.assertRaises(TypeError) as cm:

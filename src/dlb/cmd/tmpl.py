@@ -11,11 +11,11 @@ LITERAL_REGEX = re.compile(r'([^{}]|{{|}})+', re.DOTALL)
 
 # only Python 2 identifiers (no non-ASCII characters)
 ROOT_NAME_REGEX = re.compile(  # if x is matched by this, then x + '_' must be matched by PREFIXED_NAME_REGEX
-    r'^((?P<prefix>[/\<>^|;#$%&*=]+)|(?P<name>[A-Za-z][A-Za-z_0-9]*))\Z'
+    r'^((?P<prefix>[/<>^|;#$%&*=]+)|(?P<name>[A-Za-z][A-Za-z_0-9]*))\Z'
 )
 
 PREFIXED_NAME_REGEX = re.compile(
-    r'(?P<prefix>[/\<>^|;#$%&*=]*)'
+    r'(?P<prefix>[/<>^|;#$%&*=]*)'
     r'(?P<name>[A-Za-z_][A-Za-z_0-9]*(\.[A-Za-z_][A-Za-z_0-9]*)*)', re.DOTALL)
 assert PREFIXED_NAME_REGEX.match('x.y.z').group() == 'x.y.z'
 assert PREFIXED_NAME_REGEX.match('/#x.y').group('prefix') == '/#'
@@ -379,7 +379,6 @@ class TokensTemplate:
                 if isinstance(multi_value, list):
                     multiplicity = len(multi_value)
                     if variable_spec is None:
-                        common_multiplicity = multiplicity
                         variable_spec = part
                     elif multiplicity != common_multiplicity:
                         var_name1 = _name_components_to_str(variable_spec.var_name_components)
