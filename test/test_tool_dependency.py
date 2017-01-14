@@ -32,25 +32,26 @@ class ReprTest(unittest.TestCase):
         self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.cmd.tool.Tool.Intermediate'>")
 
     def test_name_contains_multiplicity(self):
-        self.assertEqual(Tool.Input[:].__name__, 'Input[:]')
-        self.assertEqual(Tool.Input[:].__qualname__, 'Tool.Input[:]')
+        D = Tool.Input.Directory
+        self.assertEqual(D[:].__name__, 'Directory[:]')
+        self.assertEqual(D[:].__qualname__, 'Tool.Input.Directory[:]')
 
-        self.assertEqual(Tool.Input[2:].__name__, 'Input[2:]')
-        self.assertEqual(Tool.Input[:2].__name__, 'Input[:2]')
-        self.assertEqual(Tool.Input[10:20:2].__name__, 'Input[10:19:2]')
-        self.assertEqual(Tool.Input[2].__name__, 'Input[2]')
+        self.assertEqual(D[2:].__name__, 'Directory[2:]')
+        self.assertEqual(D[:2].__name__, 'Directory[:2]')
+        self.assertEqual(D[10:20:2].__name__, 'Directory[10:19:2]')
+        self.assertEqual(D[2].__name__, 'Directory[2]')
 
 
 class ValidationWithoutMultiplicityTest(unittest.TestCase):
 
-    def test_abstract_dependency_validation_raises(self):
-        with self.assertRaises(NotImplementedError):
+    def test_abstract_dependency_cannot_be_validated(self):
+        with self.assertRaises(AttributeError):
             Tool.Dependency().validate(0)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(AttributeError):
             Tool.Input().validate(0)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(AttributeError):
             Tool.Intermediate().validate(0)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(AttributeError):
             Tool.Output().validate(0)
 
     def test_non_is_not_valid_for_required(self):
@@ -88,17 +89,19 @@ class ValidationWithoutMultiplicityTest(unittest.TestCase):
 class ValidationWithMultiplicityTest(unittest.TestCase):
 
     def test_value_must_be_iterable(self):
+        D = Tool.Input.Directory
+
         with self.assertRaises(TypeError):
-            Tool.Dependency[:]().validate(1)
+            D[:]().validate(1)
 
         with self.assertRaises(TypeError) as cm:
-            Tool.Dependency[:]().validate('abc')
+            D[:]().validate('abc')
         self.assertEqual(
             str(cm.exception),
             'since dependency role has a multiplicity, value must be iterable (other than string)')
 
     def test_element_count_must_match_multiplicity(self):
-        D = Tool.Input.RegularFile
+        D = Tool.Input.Directory
 
         with self.assertRaises(ValueError) as cm:
             D[2:]().validate([])
@@ -107,33 +110,37 @@ class ValidationWithMultiplicityTest(unittest.TestCase):
             'value has 0 elements, but minimum multiplicity is 2')
 
         with self.assertRaises(ValueError) as cm:
-            D[0:4:2]().validate(['1', '2', '3'])
+            D[0:4:2]().validate(['1/', '2/', '3/'])
         self.assertEqual(
             str(cm.exception),
             'value has 3 elements, but maximum multiplicity is 2')
 
         with self.assertRaises(ValueError) as cm:
-            D[1::2]().validate(['1', '2'])
+            D[1::2]().validate(['1/', '2/'])
         self.assertEqual(
             str(cm.exception),
             'value has 2 elements, but multiplicity must be an integer multiple of 2 above 1')
 
     def test_each_element_is_validated(self):
+        D = Tool.Input.Directory
+
         with self.assertRaises(ValueError):
-            Tool.Input.Directory[:]().validate(['a', 'b/'])
+            D[:]().validate(['a', 'b/'])
         with self.assertRaises(ValueError):
-            Tool.Input.Directory[:]().validate(['a/', 'b'])
+            D[:]().validate(['a/', 'b'])
 
     def test_element_must_not_be_none_even_if_dependency_role_not_required(self):
+        D = Tool.Input.Directory
         with self.assertRaises(ValueError) as cm:
-            Tool.Input.Directory[:](is_required=False).validate([None])
+            D[:](is_required=False).validate([None])
         self.assertEqual(str(cm.exception), 'required dependency must not be None')
 
     def test_duplicate_free_cannot_contain_duplicates(self):
+        D = Tool.Input.Directory
         paths = ['1/', '2/', '1/']
-        Tool.Input.Directory[:](is_duplicate_free=False).validate(paths)
+        D[:](is_duplicate_free=False).validate(paths)
         with self.assertRaises(ValueError) as cm:
-            Tool.Input.Directory[:](is_duplicate_free=True).validate(paths)
+            D[:](is_duplicate_free=True).validate(paths)
         self.assertEqual(str(cm.exception), "dependency must be duplicate-free, but contains Path('1/') more than once")
 
 
@@ -141,41 +148,45 @@ class ValidationWithMultiplicityTest(unittest.TestCase):
 class MultiplicityTest(unittest.TestCase):
 
     def test_no_multiplicity(self):
-        M = Tool.Dependency
-        self.assertIsNone(M.multiplicity)
+        D = Tool.Input.Directory
+        self.assertIsNone(D.multiplicity)
 
-        self.assertTrue(M.is_multiplicity_valid(None))
-        self.assertFalse(M.is_multiplicity_valid(0))
-        self.assertFalse(M.is_multiplicity_valid(1))
+        self.assertTrue(D.is_multiplicity_valid(None))
+        self.assertFalse(D.is_multiplicity_valid(0))
+        self.assertFalse(D.is_multiplicity_valid(1))
 
     def test_int_multiplicity(self):
-        M = Tool.Dependency[0]
+        D = Tool.Input.Directory
+
+        M = D[0]
         self.assertFalse(M.is_multiplicity_valid(-1))
         self.assertTrue(M.is_multiplicity_valid(0))
         self.assertFalse(M.is_multiplicity_valid(1))
 
-        M = Tool.Dependency[100]
+        M = D[100]
         self.assertFalse(M.is_multiplicity_valid(99))
         self.assertTrue(M.is_multiplicity_valid(100))
         self.assertFalse(M.is_multiplicity_valid(101))
 
     def test_slice_multiplicity(self):
-        M = Tool.Dependency[2:]
+        D = Tool.Input.Directory
+
+        M = D[2:]
         self.assertFalse(M.is_multiplicity_valid(1))
         self.assertTrue(M.is_multiplicity_valid(2))
         self.assertTrue(M.is_multiplicity_valid(3))
 
-        M = Tool.Dependency[:2]
+        M = D[:2]
         self.assertTrue(M.is_multiplicity_valid(0))
         self.assertTrue(M.is_multiplicity_valid(1))
         self.assertFalse(M.is_multiplicity_valid(2))
 
-        M = Tool.Dependency[:]
+        M = D[:]
         self.assertTrue(M.is_multiplicity_valid(0))
         self.assertTrue(M.is_multiplicity_valid(1))
         self.assertTrue(M.is_multiplicity_valid(100))
 
-        M = Tool.Dependency[1::5]
+        M = D[1::5]
         self.assertFalse(M.is_multiplicity_valid(0))
         self.assertTrue(M.is_multiplicity_valid(1))
         self.assertFalse(M.is_multiplicity_valid(2))
@@ -184,33 +195,37 @@ class MultiplicityTest(unittest.TestCase):
         self.assertFalse(M.is_multiplicity_valid(7))
 
     def test_nonint_multiplicity(self):
+        D = Tool.Input.Directory
         with self.assertRaises(TypeError) as cm:
-            Tool.Dependency[:].is_multiplicity_valid('')
+            D[:].is_multiplicity_valid('')
         self.assertEqual(str(cm.exception), 'multiplicity must be None or integer')
 
     def test_is_normalized(self):
-        self.assertEqual(
-            Tool.Input.Directory[:].multiplicity,
-            Tool.Input.Directory[0::].multiplicity)
+        D = Tool.Input.Directory
 
         self.assertEqual(
-            Tool.Input.Directory[2].multiplicity,
-            Tool.Input.Directory[2:3].multiplicity)
+            D[:].multiplicity,
+            D[0::].multiplicity)
 
         self.assertEqual(
-            Tool.Input.Directory[100:0].multiplicity,
-            Tool.Input.Directory[0].multiplicity)
+            D[2].multiplicity,
+            D[2:3].multiplicity)
 
         self.assertEqual(
-            Tool.Input.Directory[10:15:10].multiplicity,
-            Tool.Input.Directory[10].multiplicity)
+            D[100:0].multiplicity,
+            D[0].multiplicity)
 
         self.assertEqual(
-            Tool.Input.Directory[10:55:10].multiplicity,
-            Tool.Input.Directory[10:51:10].multiplicity)
+            D[10:15:10].multiplicity,
+            D[10].multiplicity)
+
+        self.assertEqual(
+            D[10:55:10].multiplicity,
+            D[10:51:10].multiplicity)
 
     def test_cannot_be_nested(self):
+        D = Tool.Input.Directory
         with self.assertRaises(TypeError) as cm:
             # noinspection PyStatementEffect
-            Tool.Dependency[:][:]
+            D[:][:]
         self.assertEqual(str(cm.exception), 'dependency role with multiplicity is not subscriptable')

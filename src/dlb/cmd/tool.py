@@ -19,7 +19,7 @@ assert not RESERVED_NAME_REGEX.match('__init')
 __all__ = ['Tool']
 
 
-class _DependencyMeta(type):
+class _ConcreteDependencyMixinMeta(type):
 
     @property
     def multiplicity(cls):
@@ -75,22 +75,14 @@ class _DependencyMeta(type):
         return MultipleDependency
 
 
-class _Dependency(metaclass=_DependencyMeta):
-    #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
-    RANK = 0
-
+# list this as last class before abstract dependency class in base class list
+class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
     #: None or slice.
     #: if slice: Exactly every multiplicity which is contained in this slice is valid (step must not be non-positive)
     _multiplicity = None
 
     def __init__(self, is_required=True):
-        #: checked by _ConcreteDependencyMixin
         self._is_required = is_required
-
-    @property
-    def is_concrete(self):
-        # TODO: document
-        return False
 
     @property
     def is_required(self):
@@ -101,9 +93,6 @@ class _Dependency(metaclass=_DependencyMeta):
         return isinstance(self, other.__class__) \
                and not (other.is_required and not self.is_required) \
                and (self.__class__.multiplicity is None) == (other.__class__.multiplicity is None)
-
-    def validate(self, value):
-        raise NotImplementedError
 
     @classmethod
     def _check_multiplicity(cls, n):
@@ -130,68 +119,6 @@ class _Dependency(metaclass=_DependencyMeta):
             cls._check_multiplicity(n)
         except ValueError:
             return False
-        return True
-
-
-class _MultipleDependencyBase(_Dependency):
-    #: Subclass of _Dependency for each element
-    _element_dependency = None
-
-    def __init__(self, is_required=True, is_duplicate_free=False, **kwargs):
-        super().__init__(is_required=is_required)
-        self._is_duplicate_free = is_duplicate_free
-        # noinspection PyCallingNonCallable
-        self._element_prototype = self.__class__._element_dependency(is_required=True, **kwargs)
-
-    def validate(self, value):
-        if value is None:
-            return self._element_prototype.validate(value)
-
-        if self.__class__.multiplicity is not None and isinstance(value, str):  # for safety
-            raise TypeError('since dependency role has a multiplicity, value must be iterable (other than string)')
-        value = tuple(self._element_prototype.validate(v) for v in value)
-
-        self.__class__._check_multiplicity(len(value))
-
-        if self._is_duplicate_free:
-            prefix = []
-            for v in value:
-                if v in prefix:
-                    raise ValueError(
-                        'dependency must be duplicate-free, but contains {} more than once'.format(repr(v)))
-                prefix.append(v)
-
-        return value
-
-    @property
-    def is_concrete(self):
-        return self._element_prototype.is_concrete
-
-    def is_more_restrictive_than(self, other):
-        # only compare if multiplicity os None or not
-        return super().is_more_restrictive_than(other) \
-               and self._element_prototype.is_more_restrictive_than(other._element_prototype)
-
-
-# noinspection PyAbstractClass
-class _OutputDependency(_Dependency):
-    RANK = 1
-
-
-# noinspection PyAbstractClass
-class _IntermediateDependency(_Dependency):
-    RANK = 2
-
-
-# noinspection PyAbstractClass
-class _InputDependency(_Dependency):
-    RANK = 3
-
-
-# list this as last class before abstract dependency class in base class list
-class _ConcreteDependencyMixin:
-    @property
-    def is_concrete(self):
         return True
 
     def validate(self, value):
@@ -231,6 +158,61 @@ class _NonDirectoryDependencyMixin(_PathDependencyMixin):
         if value is not None and value.is_dir():
             raise ValueError('directory path not valid for non-directory dependency: {}'.format(repr(value)))
         return value
+
+
+class _Dependency():
+    #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
+    RANK = 0
+
+
+# noinspection PyAbstractClass
+class _InputDependency(_Dependency):
+    RANK = 3
+
+
+# noinspection PyAbstractClass
+class _IntermediateDependency(_Dependency):
+    RANK = 2
+
+
+# noinspection PyAbstractClass
+class _OutputDependency(_Dependency):
+    RANK = 1
+
+
+class _MultipleDependencyBase(_ConcreteDependencyMixin, _Dependency):
+    #: Subclass of _Dependency for each element
+    _element_dependency = None
+
+    def __init__(self, is_required=True, is_duplicate_free=False, **kwargs):
+        super().__init__(is_required=is_required)
+        self._is_duplicate_free = is_duplicate_free
+        # noinspection PyCallingNonCallable
+        self._element_prototype = self.__class__._element_dependency(is_required=True, **kwargs)
+
+    def validate(self, value):
+        value = super().validate(value)
+
+        if self.__class__.multiplicity is not None and isinstance(value, str):  # for safety
+            raise TypeError('since dependency role has a multiplicity, value must be iterable (other than string)')
+        value = tuple(self._element_prototype.validate(v) for v in value)
+
+        self.__class__._check_multiplicity(len(value))
+
+        if self._is_duplicate_free:
+            prefix = []
+            for v in value:
+                if v in prefix:
+                    raise ValueError(
+                        'dependency must be duplicate-free, but contains {} more than once'.format(repr(v)))
+                prefix.append(v)
+
+        return value
+
+    def is_more_restrictive_than(self, other):
+        # only compare if multiplicity os None or not
+        return super().is_more_restrictive_than(other) \
+               and self._element_prototype.is_more_restrictive_than(other._element_prototype)
 
 
 class _RegularInputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependency):
@@ -344,7 +326,7 @@ class _ToolMeta(type):
                             "attribute {} of base class may only be overridden with a value which is a {}"
                             .format(repr(name), repr(type(base_value))))
             elif DEPENDENCY_NAME_REGEX.match(name):
-                if not (isinstance(value, _ToolBase.Dependency) and value.is_concrete):
+                if not (isinstance(value, _ToolBase.Dependency) and isinstance(value, _ConcreteDependencyMixin)):
                     raise TypeError(
                         "the value of {} must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'"
                         .format(repr(name)))

@@ -91,9 +91,6 @@ class AttributeDefineTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = Tool.Dependency[:]()
-        self.assertEqual(
-            str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'")
 
     # noinspection PyUnusedLocal,PyRedeclaration
     def test_some_methods_cannot_be_overridden(self):
