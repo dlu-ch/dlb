@@ -31,6 +31,15 @@ class ReprTest(unittest.TestCase):
         self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.cmd.tool.Tool.Output.RegularFile'>")
         self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.cmd.tool.Tool.Intermediate'>")
 
+    def test_name_contains_multiplicity(self):
+        self.assertEqual(Tool.Input[:].__name__, 'Input[:]')
+        self.assertEqual(Tool.Input[:].__qualname__, 'Tool.Input[:]')
+
+        self.assertEqual(Tool.Input[2:].__name__, 'Input[2:]')
+        self.assertEqual(Tool.Input[:2].__name__, 'Input[:2]')
+        self.assertEqual(Tool.Input[10:20:2].__name__, 'Input[10:19:2]')
+        self.assertEqual(Tool.Input[2].__name__, 'Input[2]')
+
 
 class ValidationWithoutMultiplicityTest(unittest.TestCase):
 

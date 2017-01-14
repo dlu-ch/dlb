@@ -88,11 +88,18 @@ class AttributeDefineTest(unittest.TestCase):
             str(cm.exception),
             "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'")
 
+        with self.assertRaises(TypeError) as cm:
+            class ATool(Tool):
+                x_y_z = Tool.Dependency[:]()
+        self.assertEqual(
+            str(cm.exception),
+            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'")
+
     # noinspection PyUnusedLocal,PyRedeclaration
     def test_some_methods_cannot_be_overridden(self):
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
-                def __new__(self):
+                def __new__(cls):
                     pass
         self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.cmd.Tool': '__new__'")
 
@@ -143,49 +150,102 @@ class ExecutionParameterOverridingTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             class CTool(ATool):
                 X = ''
-        self.assertRegex(
+        self.assertEqual(
             str(cm.exception),
-            r"^attribute 'X' of base class may only be overridden with a value which is a <class 'int'>$")
+            "attribute 'X' of base class may only be overridden with a value which is a <class 'int'>")
 
 
 class DependencyRuleOverridingTest(unittest.TestCase):
 
-    # noinspection PyUnusedLocal,PyRedeclaration
-    def test_can_only_be_overridden_with_more_restrictive(self):
-        import dlb.fs
-
+    # noinspection PyUnusedLocal
+    def test_can_override_with_same(self):
         class ATool(Tool):
             source_file = Tool.Input.RegularFile()
 
         class BTool(ATool):
             source_file = Tool.Input.RegularFile()
 
-        class CTool(ATool):  # ok, cls is more restrictive
+    # noinspection PyUnusedLocal
+    def test_cannot_override_input_with_output(self):
+        class ATool(Tool):
+            source_file = Tool.Input.RegularFile()
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                source_file = Tool.Output.RegularFile()
+        self.assertEqual(
+            str(cm.exception),
+            "attribute 'source_file' of base class may only be overridden by a "
+            "<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive")
+
+    # noinspection PyUnusedLocal
+    def test_cannot_override_file_with_director(self):
+        class ATool(Tool):
+            source_file = Tool.Input.RegularFile()
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                source_file = Tool.Input.Directory()
+        self.assertEqual(
+            str(cm.exception),
+            "attribute 'source_file' of base class may only be overridden by a "
+            "<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive")
+
+    # noinspection PyUnusedLocal
+    def test_can_only_override_path_with_more_restrictive_path(self):
+        import dlb.fs
+
+        class ATool(Tool):
+            source_file = Tool.Input.RegularFile()
+
+        class BTool(ATool):  # ok, cls is more restrictive
             source_file = Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath)
 
         with self.assertRaises(TypeError) as cm:
-            class DTool(ATool):
-                source_file = Tool.Output.RegularFile()
-        self.assertRegex(
-            str(cm.exception),
-            r"^attribute 'source_file' of base class may only be overridden by a "
-            r"<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive$")
-
-        with self.assertRaises(TypeError) as cm:
-            class DTool(ATool):
-                source_file = Tool.Input.Directory()
-        self.assertRegex(
-            str(cm.exception),
-            r"^attribute 'source_file' of base class may only be overridden by a "
-            r"<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive$")
-
-        with self.assertRaises(TypeError) as cm:
-            class DTool(CTool):  # cls is less restrictive
+            class DTool(BTool):  # cls is less restrictive
                 source_file = Tool.Input.RegularFile()
+        self.assertEqual(
+            str(cm.exception),
+            "attribute 'source_file' of base class may only be overridden by a "
+            "<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive")
+
+    # noinspection PyUnusedLocal
+    def test_can_only_override_nonrequired_with_required(self):
+        class ATool(Tool):
+            source_file = Tool.Input.RegularFile(is_required=False)
+
+        class BTool(ATool):  # ok, is_required=True is more restrictive than (is_required=False
+            source_file = Tool.Input.RegularFile(is_required=True)
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(BTool):
+                source_file = Tool.Input.RegularFile(is_required=False)
         self.assertRegex(
             str(cm.exception),
             r"^attribute 'source_file' of base class may only be overridden by a "
             r"<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive$")
+
+    # noinspection PyUnusedLocal
+    def test_can_only_override_with_similar_multiplicity(self):
+        class ATool(Tool):
+            source_files = Tool.Input.RegularFile[1:]()
+            linked_file = Tool.Output.RegularFile()
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                source_files = Tool.Input.RegularFile()
+        self.assertEqual(
+            str(cm.exception),
+            "attribute 'source_files' of base class may only be overridden by a "
+            "<class 'dlb.cmd.tool.Tool.Input.RegularFile[1:]'> at least as restrictive")
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                linked_file = Tool.Output.RegularFile[:]()
+        self.assertEqual(
+            str(cm.exception),
+            "attribute 'linked_file' of base class may only be overridden by a "
+            "<class 'dlb.cmd.tool.Tool.Output.RegularFile'> at least as restrictive")
 
 
 class WriteProtectionTest(unittest.TestCase):

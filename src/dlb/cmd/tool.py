@@ -21,6 +21,10 @@ __all__ = ['Tool']
 
 class _DependencyMeta(type):
 
+    @property
+    def multiplicity(cls):
+        return cls._multiplicity
+
     def __getitem__(cls, multiplicity):
         if cls.multiplicity is not None:
             raise TypeError('dependency role with multiplicity is not subscriptable')
@@ -57,11 +61,18 @@ class _DependencyMeta(type):
             _element_dependency = cls
             _multiplicity = slice(start, stop, step)
 
-        return MultipleDependency
+        if stop is not None and stop == start + 1:
+            suffix = str(start)
+        else:
+            suffix = (str(start) if start else '') + ':' + (str(stop) if stop is not None else '')
+            if step > 1:
+                suffix += ':' + str(step)
+        suffix = '[{}]'.format(suffix)
 
-    @property
-    def multiplicity(cls):
-        return cls._multiplicity
+        MultipleDependency.__name__ = cls.__name__ + suffix
+        MultipleDependency.__qualname__ = cls.__qualname__ + suffix
+
+        return MultipleDependency
 
 
 class _Dependency(metaclass=_DependencyMeta):
@@ -87,8 +98,9 @@ class _Dependency(metaclass=_DependencyMeta):
         return self._is_required
 
     def is_more_restrictive_than(self, other):
-        # TODO: include is_required, is_concrete
-        return isinstance(self, other.__class__)
+        return isinstance(self, other.__class__) \
+               and not (other.is_required and not self.is_required) \
+               and (self.__class__.multiplicity is None) == (other.__class__.multiplicity is None)
 
     def validate(self, value):
         raise NotImplementedError
@@ -149,14 +161,12 @@ class _MultipleDependencyBase(_Dependency):
 
     @property
     def is_concrete(self):
-        # TODO: test
         return self._element_prototype.is_concrete
 
     def is_more_restrictive_than(self, other):
-        # TODO: test
-        # TODO: include is_required, is_concrete
-        return isinstance(self, other.__class__) and \
-            self._element_prototype.is_more_restrictive_than(other._element_prototype)
+        # only compare if multiplicity os None or not
+        return super().is_more_restrictive_than(other) \
+               and self._element_prototype.is_more_restrictive_than(other._element_prototype)
 
 
 # noinspection PyAbstractClass
