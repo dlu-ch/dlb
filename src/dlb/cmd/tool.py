@@ -154,8 +154,12 @@ class _MultipleDependencyBase(_Dependency):
         self.__class__._check_multiplicity(len(value))
 
         if self._is_duplicate_free:
-            # TODO: implement
-            pass
+            prefix = []
+            for v in value:
+                if v in prefix:
+                    raise ValueError(
+                        'dependency must be duplicate-free, but contains {} more than once'.format(repr(v)))
+                prefix.append(v)
 
         return value
 

@@ -129,6 +129,13 @@ class ValidationWithMultiplicityTest(unittest.TestCase):
             Tool.Input.Directory[:](is_required=False).validate([None])
         self.assertEqual(str(cm.exception), 'required dependency must not be None')
 
+    def test_duplicate_free_cannot_contain_duplicates(self):
+        paths = ['1/', '2/', '1/']
+        Tool.Input.Directory[:](is_duplicate_free=False).validate(paths)
+        with self.assertRaises(ValueError) as cm:
+            Tool.Input.Directory[:](is_duplicate_free=True).validate(paths)
+        self.assertEqual(str(cm.exception), "dependency must be duplicate-free, but contains Path('1/') more than once")
+
 
 # noinspection PyPep8Naming
 class MultiplicityTest(unittest.TestCase):
