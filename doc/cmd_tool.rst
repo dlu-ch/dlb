@@ -17,11 +17,11 @@ Tool Objects
 
 .. class:: Tool
 
-   A tool declares its *dependency roles* (e.g. ``'map_file_dependency'``) and *execution parameters*
-   (e.g. ``'DO_INCLUDE_DEBUG_INFO'``, ``'PAPER_FORMAT'``) as class attributes.
+   A tool declares its *dependency roles* (e.g. ``map_file_dependency``) and *execution parameters*
+   (e.g. ``DO_INCLUDE_DEBUG_INFO``, ``PAPER_FORMAT``) as class attributes.
 
    Every tool instance assigns concrete objects for the tool's dependency roles
-   (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``'map_file_dependency'``),
+   (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file_dependency``),
    while the execution parameters are the same of all instances of the some tool.
 
-   A new tool ``'T'`` can be defined by inheriting from one or more other tools.
+   A new tool ``T`` can be defined by inheriting from one or more other tools.
