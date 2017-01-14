@@ -21,22 +21,10 @@ __all__ = ['Tool']
 
 class _DependencyMeta(type):
 
-    # TODO:
-    #    # slice applied to sequence of all non-negative integers -> set of allowed number of elements
-    #    log_files = Tool.Output.RegularFile[:]()     # >= 0
-    #    log_files = Tool.Output.RegularFile[:2]()    # <= 2
-    #    log_files = Tool.Output.RegularFile[2:]()    # >= 2
-    #    log_files = Tool.Output.RegularFile[2]()     # 2
-    #    log_files = Tool.Output.RegularFile[1:3]()   # 1 .. 2
-    #
-    #    Tool.Output.RegularFile[1] == Tool.Output.RegularFile
-    #    Tool.Output.RegularFile[1:2] == Tool.Output.RegularFile
-    #    Tool.Output.RegularFile[100:0] == Tool.Output.RegularFile[0]
-    #    Tool.Output.RegularFile[...][...]  -> AttributeError
-
-    # TODO: Tool.Input.Directory()[:] or Tool.Input.Directory[:]()?
-
     def __getitem__(cls, multiplicity):
+        if cls.multiplicity is not None:
+            raise TypeError('dependency role with multiplicity is not subscriptable')
+
         if isinstance(multiplicity, int):
             multiplicity = slice(multiplicity, multiplicity + 1)
         elif not isinstance(multiplicity, slice):
@@ -45,15 +33,24 @@ class _DependencyMeta(type):
         step = 1 if multiplicity.step is None else int(multiplicity.step)
         if step <= 0:
             raise ValueError('slice step must be positive')
-        start = 1 if multiplicity.start is None else int(multiplicity.start)
+        start = 0 if multiplicity.start is None else int(multiplicity.start)
         if start < 0:
             raise ValueError('minimum multiplicity (start of slice) must be non-negative')
         stop = None if multiplicity.stop is None else max(start, int(multiplicity.stop))
+
+        if stop is not None:
+            # make stop the maximum + 1
+            stop = ((stop - start - 1) // step) * step + start + 1
+
+        if stop is not None and start < stop <= start + step:  # is start the only element?
+            stop = start + 1
+            step = 1
         if stop == start:
-            start = stop = 0
+            start = 0
+            stop = 1
 
         assert start >= 0
-        assert stop is None or stop >= start
+        assert stop is None or stop > start
         assert step > 0
 
         class MultipleDependency(_MultipleDependencyBase):
@@ -62,20 +59,31 @@ class _DependencyMeta(type):
 
         return MultipleDependency
 
+    @property
+    def multiplicity(cls):
+        return cls._multiplicity
+
 
 class _Dependency(metaclass=_DependencyMeta):
     #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
     RANK = 0
 
+    #: None or slice.
+    #: if slice: Exactly every multiplicity which is contained in this slice is valid (step must not be non-positive)
+    _multiplicity = None
+
     def __init__(self, is_required=True):
+        #: checked by _ConcreteDependencyMixin
         self._is_required = is_required
 
     @property
     def is_concrete(self):
+        # TODO: document
         return False
 
     @property
     def is_required(self):
+        # TODO: document
         return self._is_required
 
     def is_more_restrictive_than(self, other):
@@ -85,13 +93,37 @@ class _Dependency(metaclass=_DependencyMeta):
     def validate(self, value):
         raise NotImplementedError
 
+    @classmethod
+    def _check_multiplicity(cls, n):
+        m = cls.multiplicity
+        if m is None:
+            if n is not None:
+                raise ValueError('dependency role has no multiplicity')
+        else:
+            if n < m.start:
+                raise ValueError('value has {} elements, but minimum multiplicity is {}'.format(n, m.start))
+            if m.stop is not None and n >= m.stop:
+                raise ValueError('value has {} elements, but maximum multiplicity is {}'.format(n, m.stop - 1))
+            if (n - m.start) % m.step != 0:
+                raise ValueError(
+                    'value has {} elements, but multiplicity must be an integer multiple of {} above {}'
+                    .format(n, m.step, m.start))
+
+    @classmethod
+    def is_multiplicity_valid(cls, n):
+        # TODO: document
+        if not (n is None or isinstance(n, int)):
+            raise TypeError('multiplicity must be None or integer')
+        try:
+            cls._check_multiplicity(n)
+        except ValueError:
+            return False
+        return True
+
 
 class _MultipleDependencyBase(_Dependency):
     #: Subclass of _Dependency for each element
     _element_dependency = None
-
-    #: Exactly every multiplicity which is contained in this slice is valid (step must not be non-positive)
-    _multiplicity = slice(0, None, None)
 
     def __init__(self, is_required=True, is_duplicate_free=False, **kwargs):
         super().__init__(is_required=is_required)
@@ -102,19 +134,12 @@ class _MultipleDependencyBase(_Dependency):
     def validate(self, value):
         if value is None:
             return self._element_prototype.validate(value)
-        if isinstance(value, str):  # for safety
-            raise TypeError('iterable over characters???')
+
+        if self.__class__.multiplicity is not None and isinstance(value, str):  # for safety
+            raise TypeError('since dependency role has a multiplicity, value must be iterable (other than string)')
         value = tuple(self._element_prototype.validate(v) for v in value)
 
-        # check multiplicity
-        n = len(value)
-        multiplicity = self.__class__._multiplicity
-        if n < multiplicity.start:
-            raise ValueError('iterable of at least {} elements expected???'.format(multiplicity.start))
-        if multiplicity.stop is not None and n >= multiplicity.stop:
-            raise ValueError('iterable of at most {} elements expected???'.format(multiplicity.stop - 1))
-        if (n - multiplicity.start) % multiplicity.step != 0:
-            raise ValueError('iterable of {}??? expected???'.format(multiplicity.stop - 1))
+        self.__class__._check_multiplicity(len(value))
 
         if self._is_duplicate_free:
             # TODO: implement
