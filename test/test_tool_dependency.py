@@ -17,6 +17,7 @@ class InheritanceTest(unittest.TestCase):
         self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
 
 
+# noinspection PyPep8Naming
 class ReprTest(unittest.TestCase):
 
     def test_name_matches_class(self):
@@ -229,3 +230,9 @@ class MultiplicityTest(unittest.TestCase):
             # noinspection PyStatementEffect
             D[:][:]
         self.assertEqual(str(cm.exception), 'dependency role with multiplicity is not subscriptable')
+
+    def test_classes_for_same_multiplicity_are_identical(self):
+        D = Tool.Input.Directory
+        self.assertIs(D[:], D[:])
+        self.assertIs(D[1], D[1:2])
+        self.assertTrue(issubclass(D[:], D[:]))

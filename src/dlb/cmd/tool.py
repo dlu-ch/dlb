@@ -15,12 +15,14 @@ RESERVED_NAME_REGEX = re.compile('^__[^_].*[^_]?__$')
 assert RESERVED_NAME_REGEX.match('__init__')
 assert not RESERVED_NAME_REGEX.match('__init')
 
-
 __all__ = ['Tool']
 
 
-class _ConcreteDependencyMixinMeta(type):
+#: key: (cls_id, (start, stop, step)), value: mult_class
+_classes_with_multiplicity = {}
 
+
+class _ConcreteDependencyMixinMeta(type):
     @property
     def multiplicity(cls):
         return cls._multiplicity
@@ -57,9 +59,18 @@ class _ConcreteDependencyMixinMeta(type):
         assert stop is None or stop > start
         assert step > 0
 
-        class MultipleDependency(_MultipleDependencyBase):
-            _element_dependency = cls
-            _multiplicity = slice(start, stop, step)
+        m = (start, stop, step)
+        k = (id(cls), m)
+
+        # noinspection PyPep8Naming
+        MultipleDependency = _classes_with_multiplicity.get(k)
+
+        if MultipleDependency is None:
+            class MultipleDependency(_MultipleDependencyBase):
+                _element_dependency = cls
+                _multiplicity = slice(*m)
+
+        _classes_with_multiplicity[k] = MultipleDependency
 
         if stop is not None and stop == start + 1:
             suffix = str(start)
@@ -90,9 +101,11 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
         return self._is_required
 
     def is_more_restrictive_than(self, other):
-        return isinstance(self, other.__class__) \
-               and not (other.is_required and not self.is_required) \
-               and (self.__class__.multiplicity is None) == (other.__class__.multiplicity is None)
+        return (
+            isinstance(self, other.__class__)
+            and not (other.is_required and not self.is_required)
+            and (self.__class__.multiplicity is None) == (other.__class__.multiplicity is None)
+        )
 
     @classmethod
     def _check_multiplicity(cls, n):
@@ -160,7 +173,7 @@ class _NonDirectoryDependencyMixin(_PathDependencyMixin):
         return value
 
 
-class _Dependency():
+class _Dependency:
     #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
     RANK = 0
 
@@ -211,8 +224,10 @@ class _MultipleDependencyBase(_ConcreteDependencyMixin, _Dependency):
 
     def is_more_restrictive_than(self, other):
         # only compare if multiplicity os None or not
-        return super().is_more_restrictive_than(other) \
-               and self._element_prototype.is_more_restrictive_than(other._element_prototype)
+        return (
+            super().is_more_restrictive_than(other)
+            and self._element_prototype.is_more_restrictive_than(other._element_prototype)
+        )
 
 
 class _RegularInputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependency):
@@ -233,7 +248,6 @@ class _OutputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyM
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class _ToolBase:
-
     def __init__(self, **kwargs):
         super().__init__()
 
@@ -277,7 +291,6 @@ def _inject_nested_class_into(owner, cls, name, owner_qualname=None):
         owner_qualname = owner.__qualname__
     cls.__qualname__ = owner_qualname + '.' + name
 
-
 # noinspection PyTypeChecker
 _inject_nested_class_into(_ToolBase, _Dependency, 'Dependency', 'Tool')
 # noinspection PyTypeChecker
@@ -300,7 +313,6 @@ del _inject_nested_class_into
 
 
 class _ToolMeta(type):
-
     def __init__(cls, name, bases, nmspc):
         super().__init__(name, bases, nmspc)
 
