@@ -19,7 +19,51 @@ assert not RESERVED_NAME_REGEX.match('__init')
 __all__ = ['Tool']
 
 
-class _Dependency:
+class _DependencyMeta(type):
+
+    # TODO:
+    #    # slice applied to sequence of all non-negative integers -> set of allowed number of elements
+    #    log_files = Tool.Output.RegularFile[:]()     # >= 0
+    #    log_files = Tool.Output.RegularFile[:2]()    # <= 2
+    #    log_files = Tool.Output.RegularFile[2:]()    # >= 2
+    #    log_files = Tool.Output.RegularFile[2]()     # 2
+    #    log_files = Tool.Output.RegularFile[1:3]()   # 1 .. 2
+    #
+    #    Tool.Output.RegularFile[1] == Tool.Output.RegularFile
+    #    Tool.Output.RegularFile[1:2] == Tool.Output.RegularFile
+    #    Tool.Output.RegularFile[100:0] == Tool.Output.RegularFile[0]
+    #    Tool.Output.RegularFile[...][...]  -> AttributeError
+
+    # TODO: Tool.Input.Directory()[:] or Tool.Input.Directory[:]()?
+
+    def __getitem__(cls, multiplicity):
+        if isinstance(multiplicity, int):
+            multiplicity = slice(multiplicity, multiplicity + 1)
+        elif not isinstance(multiplicity, slice):
+            raise TypeError("dependency role multiplicity must be int oder slice of int")
+
+        step = 1 if multiplicity.step is None else int(multiplicity.step)
+        if step <= 0:
+            raise ValueError('slice step must be positive')
+        start = 1 if multiplicity.start is None else int(multiplicity.start)
+        if start < 0:
+            raise ValueError('minimum multiplicity (start of slice) must be non-negative')
+        stop = None if multiplicity.stop is None else max(start, int(multiplicity.stop))
+        if stop == start:
+            start = stop = 0
+
+        assert start >= 0
+        assert stop is None or stop >= start
+        assert step > 0
+
+        class MultipleDependency(_MultipleDependencyBase):
+            _element_dependency = cls
+            _multiplicity = slice(start, stop, step)
+
+        return MultipleDependency
+
+
+class _Dependency(metaclass=_DependencyMeta):
     #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
     RANK = 0
 
@@ -27,14 +71,67 @@ class _Dependency:
         self._is_required = is_required
 
     @property
+    def is_concrete(self):
+        return False
+
+    @property
     def is_required(self):
         return self._is_required
 
     def is_more_restrictive_than(self, other):
+        # TODO: include is_required, is_concrete
         return isinstance(self, other.__class__)
 
     def validate(self, value):
         raise NotImplementedError
+
+
+class _MultipleDependencyBase(_Dependency):
+    #: Subclass of _Dependency for each element
+    _element_dependency = None
+
+    #: Exactly every multiplicity which is contained in this slice is valid (step must not be non-positive)
+    _multiplicity = slice(0, None, None)
+
+    def __init__(self, is_required=True, is_duplicate_free=False, **kwargs):
+        super().__init__(is_required=is_required)
+        self._is_duplicate_free = is_duplicate_free
+        # noinspection PyCallingNonCallable
+        self._element_prototype = self.__class__._element_dependency(is_required=True, **kwargs)
+
+    def validate(self, value):
+        if value is None:
+            return self._element_prototype.validate(value)
+        if isinstance(value, str):  # for safety
+            raise TypeError('iterable over characters???')
+        value = tuple(self._element_prototype.validate(v) for v in value)
+
+        # check multiplicity
+        n = len(value)
+        multiplicity = self.__class__._multiplicity
+        if n < multiplicity.start:
+            raise ValueError('iterable of at least {} elements expected???'.format(multiplicity.start))
+        if multiplicity.stop is not None and n >= multiplicity.stop:
+            raise ValueError('iterable of at most {} elements expected???'.format(multiplicity.stop - 1))
+        if (n - multiplicity.start) % multiplicity.step != 0:
+            raise ValueError('iterable of {}??? expected???'.format(multiplicity.stop - 1))
+
+        if self._is_duplicate_free:
+            # TODO: implement
+            pass
+
+        return value
+
+    @property
+    def is_concrete(self):
+        # TODO: test
+        return self._element_prototype.is_concrete
+
+    def is_more_restrictive_than(self, other):
+        # TODO: test
+        # TODO: include is_required, is_concrete
+        return isinstance(self, other.__class__) and \
+            self._element_prototype.is_more_restrictive_than(other._element_prototype)
 
 
 # noinspection PyAbstractClass
@@ -54,6 +151,10 @@ class _InputDependency(_Dependency):
 
 # list this as last class before abstract dependency class in base class list
 class _ConcreteDependencyMixin:
+    @property
+    def is_concrete(self):
+        return True
+
     def validate(self, value):
         # do _not_ call super().validate() here!
         if self.is_required and value is None:
@@ -65,7 +166,7 @@ class _ConcreteDependencyMixin:
 class _PathDependencyMixin:
     def __init__(self, cls=dlb.fs.Path, **kwargs):
         super().__init__(**kwargs)
-        if not issubclass(cls, dlb.fs.Path):
+        if not (isinstance(cls, type) and issubclass(cls, dlb.fs.Path)):
             raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = cls
 
@@ -110,7 +211,7 @@ class _OutputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyM
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
-class _BaseTool:
+class _ToolBase:
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -123,7 +224,7 @@ class _BaseTool:
                 role = getattr(self.__class__, name)
             except AttributeError:
                 raise TypeError(
-                    '{} is not a dependency role of {} (these are: {})'.format(
+                    '{} is not a dependency role of {}: {}'.format(
                         repr(name),
                         repr(self.__class__.__qualname__),
                         ', '.join(repr(n) for n in dependency_names))) from None
@@ -133,7 +234,7 @@ class _BaseTool:
         for name in sorted(set(dependency_names) - assigned_names):
             role = getattr(self.__class__, name)
             if role.is_required:
-                raise TypeError("missing keyword parameter for dependency role {}".format(repr(name)))
+                raise TypeError("missing keyword parameter for dependency role: {}".format(repr(name)))
             object.__setattr__(self, name, None)
 
     def __setattr__(self, name, value):
@@ -157,22 +258,22 @@ def _inject_nested_class_into(owner, cls, name, owner_qualname=None):
 
 
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool, _Dependency, 'Dependency', 'Tool')
+_inject_nested_class_into(_ToolBase, _Dependency, 'Dependency', 'Tool')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool, _InputDependency, 'Input', 'Tool')
+_inject_nested_class_into(_ToolBase, _InputDependency, 'Input', 'Tool')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool, _OutputDependency, 'Output', 'Tool')
+_inject_nested_class_into(_ToolBase, _OutputDependency, 'Output', 'Tool')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool, _IntermediateDependency, 'Intermediate', 'Tool')
+_inject_nested_class_into(_ToolBase, _IntermediateDependency, 'Intermediate', 'Tool')
 
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool.Input, _RegularInputFileDependency, 'RegularFile')
+_inject_nested_class_into(_ToolBase.Input, _RegularInputFileDependency, 'RegularFile')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool.Input, _InputDirectoryDependency, 'Directory')
+_inject_nested_class_into(_ToolBase.Input, _InputDirectoryDependency, 'Directory')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool.Output, _RegularOutputFileDependency, 'RegularFile')
+_inject_nested_class_into(_ToolBase.Output, _RegularOutputFileDependency, 'RegularFile')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_BaseTool.Output, _OutputDirectoryDependency, 'Directory')
+_inject_nested_class_into(_ToolBase.Output, _OutputDirectoryDependency, 'Directory')
 
 del _inject_nested_class_into
 
@@ -182,8 +283,8 @@ class _ToolMeta(type):
     def __init__(cls, name, bases, nmspc):
         super().__init__(name, bases, nmspc)
 
-        # prevent attributes of _BaseTool from being overridden
-        protected_attribs = (set(_BaseTool.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
+        # prevent attributes of _ToolBase from being overridden
+        protected_attribs = (set(_ToolBase.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
         attribs = set(cls.__dict__) & protected_attribs
         if attribs:
             raise AttributeError("must not be overridden in a 'dlb.cmd.Tool': {}".format(repr(sorted(attribs)[0])))
@@ -204,9 +305,9 @@ class _ToolMeta(type):
                             "attribute {} of base class may only be overridden with a value which is a {}"
                             .format(repr(name), repr(type(base_value))))
             elif DEPENDENCY_NAME_REGEX.match(name):
-                if not (isinstance(value, _BaseTool.Dependency) and type(value) != _BaseTool.Dependency):
+                if not (isinstance(value, _ToolBase.Dependency) and value.is_concrete):
                     raise TypeError(
-                        "the value of {} must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'"
+                        "the value of {} must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'"
                         .format(repr(name)))
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
@@ -234,5 +335,5 @@ class _ToolMeta(type):
         raise AttributeError
 
 
-class Tool(_BaseTool, metaclass=_ToolMeta):
+class Tool(_ToolBase, metaclass=_ToolMeta):
     pass

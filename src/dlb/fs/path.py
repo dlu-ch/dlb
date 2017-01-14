@@ -180,7 +180,7 @@ class Path(metaclass=_PathMeta):
 
         if cls is None:
             cls = self.__class__
-        if not issubclass(cls, Path):
+        if not (isinstance(cls, type) and issubclass(cls, Path)):
             raise TypeError("'cls' must be None or a subclass of 'dlb.fs.Path'")
 
         dir_paths_to_recurse = [Path(self)]
@@ -300,11 +300,11 @@ class Path(metaclass=_PathMeta):
         # make sure this object is not converted to a string where a native path is expected
         raise NotImplementedError("use 'repr()' or 'native' instead")
 
-    def __getitem__(self, key):
-        if not isinstance(key, slice):
+    def __getitem__(self, item):
+        if not isinstance(item, slice):
             raise TypeError("slice of component indices expected (use 'parts' for single components)")
         n = len(self.parts)
-        start, stop, step = key.indices(n)
+        start, stop, step = item.indices(n)
         assert 0 <= start <= n
         assert -1 <= stop <= n
         if start == 0 and stop >= n and step == 1:

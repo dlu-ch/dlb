@@ -147,14 +147,14 @@ class AttributeDefineTest(unittest.TestCase):
                 x_y_z = None
         self.assertEqual(
             str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'")
+            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'")
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = Tool.Dependency()
         self.assertEqual(
             str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a (strict) subclass of 'dlb.cmd.Tool.Dependency'")
+            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'")
 
     # noinspection PyUnusedLocal,PyRedeclaration
     def test_some_methods_cannot_be_overridden(self):
@@ -233,7 +233,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
 
         with self.assertRaises(TypeError) as cm:
             class DTool(ATool):
-                source_file = Tool.Output()
+                source_file = Tool.Output.RegularFile()
         self.assertRegex(
             str(cm.exception),
             r"^attribute 'source_file' of base class may only be overridden by a "
@@ -254,6 +254,20 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             str(cm.exception),
             r"^attribute 'source_file' of base class may only be overridden by a "
             r"<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive$")
+
+
+class DependencyRuleMultiplicityTest(unittest.TestCase):
+
+    # TODO: complete
+    def test_xxx(self):
+        Tool.Input.Directory(is_required=False).validate(None)
+        Tool.Input.Directory[2:](is_required=False).validate(['1/', '2/'])
+        Tool.Input.Directory[2](is_required=False).validate(['1/', '2/'])
+
+    def test_element_must_not_be_none_even_if_dependency_role_not_required(self):
+        with self.assertRaises(ValueError) as cm:
+            Tool.Input.Directory[:](is_required=False).validate([None])
+        self.assertEqual(str(cm.exception), 'required dependency must not be None')
 
 
 class WriteProtectionTest(unittest.TestCase):
@@ -310,15 +324,15 @@ class ConstructionTest(unittest.TestCase):
     def test_must_have_parameter_for_required_dependencies(self):
         with self.assertRaises(TypeError) as cm:
             ConstructionTest.BTool(source_file='x.cpp')
-        self.assertEqual(str(cm.exception), "missing keyword parameter for dependency role 'object_file'")
+        self.assertEqual(str(cm.exception), "missing keyword parameter for dependency role: 'object_file'")
 
     def test_must_not_have_parameter_for_undeclared_dependencies(self):
         with self.assertRaises(TypeError) as cm:
             ConstructionTest.BTool(temporary_file='x.cpp.o._')
         self.assertRegex(
             str(cm.exception),
-            r"^'temporary_file' is not a dependency role of .* "
-            r"\(these are: 'source_file', 'object_file', 'map_file'\)$")
+            r"^'temporary_file' is not a dependency role of .*: "
+            r"'source_file', 'object_file', 'map_file'$")
 
 
 class ToolReprTest(unittest.TestCase):
