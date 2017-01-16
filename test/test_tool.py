@@ -79,18 +79,18 @@ class AttributeDefineTest(unittest.TestCase):
                 x_y_z = None
         self.assertEqual(
             str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'")
+            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.DependencyRole'")
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
-                x_y_z = Tool.Dependency()
+                x_y_z = Tool.DependencyRole()
         self.assertEqual(
             str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'")
+            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.DependencyRole'")
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
-                x_y_z = Tool.Dependency[:]()
+                x_y_z = Tool.DependencyRole[:]()
 
     # noinspection PyUnusedLocal,PyRedeclaration
     def test_some_methods_cannot_be_overridden(self):

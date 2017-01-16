@@ -10,10 +10,10 @@ import unittest
 class InheritanceTest(unittest.TestCase):
 
     def test_hierarchy_matches_nesting(self):
-        self.assertTrue(issubclass(Tool.Input, Tool.Dependency))
+        self.assertTrue(issubclass(Tool.Input, Tool.DependencyRole))
         self.assertTrue(issubclass(Tool.Input.RegularFile, Tool.Input))
 
-        self.assertTrue(issubclass(Tool.Output, Tool.Dependency))
+        self.assertTrue(issubclass(Tool.Output, Tool.DependencyRole))
         self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
 
 
@@ -21,11 +21,11 @@ class InheritanceTest(unittest.TestCase):
 class ReprTest(unittest.TestCase):
 
     def test_name_matches_class(self):
-        self.assertEqual(Tool.Dependency.__name__, 'Dependency')
+        self.assertEqual(Tool.DependencyRole.__name__, 'DependencyRole')
         self.assertEqual(Tool.Input.__name__, 'Input')
 
     def test_name_matches_nesting(self):
-        self.assertEqual(repr(Tool.Dependency), "<class 'dlb.cmd.tool.Tool.Dependency'>")
+        self.assertEqual(repr(Tool.DependencyRole), "<class 'dlb.cmd.tool.Tool.DependencyRole'>")
         self.assertEqual(repr(Tool.Input), "<class 'dlb.cmd.tool.Tool.Input'>")
         self.assertEqual(repr(Tool.Input.RegularFile), "<class 'dlb.cmd.tool.Tool.Input.RegularFile'>")
         self.assertEqual(repr(Tool.Output), "<class 'dlb.cmd.tool.Tool.Output'>")
@@ -223,6 +223,10 @@ class MultiplicityTest(unittest.TestCase):
         self.assertEqual(
             D[10:55:10].multiplicity,
             D[10:51:10].multiplicity)
+
+    def test_is_same_on_class_and_instance(self):
+        D = Tool.Input.Directory
+        self.assertEqual(D.multiplicity, D().multiplicity)
 
     def test_cannot_be_nested(self):
         D = Tool.Input.Directory

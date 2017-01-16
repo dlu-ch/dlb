@@ -66,7 +66,7 @@ class _ConcreteDependencyMixinMeta(type):
         MultipleDependency = _classes_with_multiplicity.get(k)
 
         if MultipleDependency is None:
-            class MultipleDependency(_MultipleDependencyBase):
+            class MultipleDependency(_MultipleDependencyRoleBase):
                 _element_dependency = cls
                 _multiplicity = slice(*m)
 
@@ -86,7 +86,7 @@ class _ConcreteDependencyMixinMeta(type):
         return MultipleDependency
 
 
-# list this as last class before abstract dependency class in base class list
+# list this as last class before abstract dependency role class in base class list
 class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
     #: None or slice.
     #: if slice: Exactly every multiplicity which is contained in this slice is valid (step must not be non-positive)
@@ -97,8 +97,11 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
 
     @property
     def is_required(self):
-        # TODO: document
         return self._is_required
+
+    @property
+    def multiplicity(self):
+        return self.__class__.multiplicity
 
     def is_more_restrictive_than(self, other):
         return (
@@ -125,7 +128,6 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
 
     @classmethod
     def is_multiplicity_valid(cls, n):
-        # TODO: document
         if not (n is None or isinstance(n, int)):
             raise TypeError('multiplicity must be None or integer')
         try:
@@ -173,27 +175,27 @@ class _NonDirectoryDependencyMixin(_PathDependencyMixin):
         return value
 
 
-class _Dependency:
+class _DependencyRole:
     #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
-    RANK = 0
+    _RANK = 0
 
 
 # noinspection PyAbstractClass
-class _InputDependency(_Dependency):
-    RANK = 3
+class _InputDependencyRole(_DependencyRole):
+    _RANK = 3
 
 
 # noinspection PyAbstractClass
-class _IntermediateDependency(_Dependency):
-    RANK = 2
+class _IntermediateDependencyRole(_DependencyRole):
+    _RANK = 2
 
 
 # noinspection PyAbstractClass
-class _OutputDependency(_Dependency):
-    RANK = 1
+class _OutputDependencyRole(_DependencyRole):
+    _RANK = 1
 
 
-class _MultipleDependencyBase(_ConcreteDependencyMixin, _Dependency):
+class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
     #: Subclass of _Dependency for each element
     _element_dependency = None
 
@@ -230,19 +232,19 @@ class _MultipleDependencyBase(_ConcreteDependencyMixin, _Dependency):
         )
 
 
-class _RegularInputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependency):
+class _RegularInputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependencyRole):
     pass
 
 
-class _InputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependency):
+class _InputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependencyRole):
     pass
 
 
-class _RegularOutputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependency):
+class _RegularOutputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependencyRole):
     pass
 
 
-class _OutputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependency):
+class _OutputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependencyRole):
     pass
 
 
@@ -272,6 +274,10 @@ class _ToolBase:
                 raise TypeError("missing keyword parameter for dependency role: {}".format(repr(name)))
             object.__setattr__(self, name, None)
 
+    def run_in_context(self):
+        # TODO: implement, document
+        raise NotImplementedError
+
     def __setattr__(self, name, value):
         raise AttributeError
 
@@ -292,13 +298,13 @@ def _inject_nested_class_into(owner, cls, name, owner_qualname=None):
     cls.__qualname__ = owner_qualname + '.' + name
 
 # noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _Dependency, 'Dependency', 'Tool')
+_inject_nested_class_into(_ToolBase, _DependencyRole, 'DependencyRole', 'Tool')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _InputDependency, 'Input', 'Tool')
+_inject_nested_class_into(_ToolBase, _InputDependencyRole, 'Input', 'Tool')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _OutputDependency, 'Output', 'Tool')
+_inject_nested_class_into(_ToolBase, _OutputDependencyRole, 'Output', 'Tool')
 # noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _IntermediateDependency, 'Intermediate', 'Tool')
+_inject_nested_class_into(_ToolBase, _IntermediateDependencyRole, 'Intermediate', 'Tool')
 
 # noinspection PyTypeChecker
 _inject_nested_class_into(_ToolBase.Input, _RegularInputFileDependency, 'RegularFile')
@@ -338,9 +344,9 @@ class _ToolMeta(type):
                             "attribute {} of base class may only be overridden with a value which is a {}"
                             .format(repr(name), repr(type(base_value))))
             elif DEPENDENCY_NAME_REGEX.match(name):
-                if not (isinstance(value, _ToolBase.Dependency) and isinstance(value, _ConcreteDependencyMixin)):
+                if not (isinstance(value, _ToolBase.DependencyRole) and isinstance(value, _ConcreteDependencyMixin)):
                     raise TypeError(
-                        "the value of {} must be an instance of a concrete subclass of 'dlb.cmd.Tool.Dependency'"
+                        "the value of {} must be an instance of a concrete subclass of 'dlb.cmd.Tool.DependencyRole'"
                         .format(repr(name)))
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
@@ -356,7 +362,7 @@ class _ToolMeta(type):
 
     def _get_dependency_names(cls):
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
-        pairs = [(-v.RANK, not v.is_required, n) for n, v in dependencies.items() if isinstance(v, Tool.Dependency)]
+        pairs = [(-v._RANK, not v.is_required, n) for n, v in dependencies.items() if isinstance(v, _DependencyRole)]
         pairs.sort()
         # order: input - intermediate - output, required first
         return tuple(p[-1] for p in pairs)

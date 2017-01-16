@@ -233,6 +233,14 @@ man_pages = [
 # If true, show URL addresses after external links.
 #man_show_urls = False
 
-
 autodoc_member_order = 'bysource'
 graphviz_output_format = 'svg'
+graphviz_dot_args = [
+    '-Nfontname=Helvetica',
+    '-Nfontsize=10',
+    '-Nshape=box',
+    '-Nstyle="setlinewidth(0.5)"'
+    '-Earrowhead=empty',
+    '-Earrowsize=0.7',
+    '-Estyle="setlinewidth(0.5)"'
+]
