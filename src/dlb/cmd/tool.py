@@ -96,12 +96,12 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
     #: if slice: Exactly every multiplicity which is contained in this slice is valid (step must not be non-positive)
     _multiplicity = None
 
-    def __init__(self, is_required=True):
-        self._is_required = is_required
+    def __init__(self, required=True):
+        self._required = required
 
     @property
-    def is_required(self):
-        return self._is_required
+    def required(self):
+        return self._required
 
     @property
     def multiplicity(self):
@@ -110,7 +110,7 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
     def is_more_restrictive_than(self, other):
         return (
             isinstance(self, other.__class__)
-            and not (other.is_required and not self.is_required)
+            and not (other.required and not self.required)
             and (self.__class__.multiplicity is None) == (other.__class__.multiplicity is None)
         )
 
@@ -142,7 +142,7 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
 
     def validate(self, value):
         # do _not_ call super().validate() here!
-        if self.is_required and value is None:
+        if self.required and value is None:
             raise ValueError('required dependency must not be None')
         return value
 
@@ -203,11 +203,11 @@ class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
     #: Subclass of _Dependency for each element
     _element_dependency = None
 
-    def __init__(self, is_required=True, is_duplicate_free=False, **kwargs):
-        super().__init__(is_required=is_required)
-        self._is_duplicate_free = is_duplicate_free
+    def __init__(self, required=True, unique=False, **kwargs):
+        super().__init__(required=required)
+        self._unique = unique
         # noinspection PyCallingNonCallable
-        self._element_prototype = self.__class__._element_dependency(is_required=True, **kwargs)
+        self._element_prototype = self.__class__._element_dependency(required=True, **kwargs)
 
     def validate(self, value):
         value = super().validate(value)
@@ -218,7 +218,7 @@ class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
 
         self.__class__._check_multiplicity(len(value))
 
-        if self._is_duplicate_free:
+        if self._unique:
             prefix = []
             for v in value:
                 if v in prefix:
@@ -274,7 +274,7 @@ class _ToolBase:
 
         for name in sorted(set(dependency_names) - assigned_names):
             role = getattr(self.__class__, name)
-            if role.is_required:
+            if role.required:
                 raise TypeError("missing keyword parameter for dependency role: {}".format(repr(name)))
             object.__setattr__(self, name, None)
 
@@ -366,7 +366,7 @@ class _ToolMeta(type):
 
     def _get_dependency_names(cls):
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
-        pairs = [(-v._RANK, not v.is_required, n) for n, v in dependencies.items() if isinstance(v, _DependencyRole)]
+        pairs = [(-v._RANK, not v.required, n) for n, v in dependencies.items() if isinstance(v, _DependencyRole)]
         pairs.sort()
         # order: input - intermediate - output, required first
         return tuple(p[-1] for p in pairs)

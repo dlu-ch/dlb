@@ -62,14 +62,14 @@ class ValidationWithoutMultiplicityTest(unittest.TestCase):
             Tool.Output().validate(0)
 
     def test_non_is_not_valid_for_required(self):
-        self.assertIsNone(Tool.Input.RegularFile(is_required=False).validate(None))
+        self.assertIsNone(Tool.Input.RegularFile(required=False).validate(None))
         with self.assertRaises(ValueError) as cm:
-            Tool.Input.RegularFile(is_required=True).validate(None)
+            Tool.Input.RegularFile(required=True).validate(None)
         self.assertEqual(str(cm.exception), 'required dependency must not be None')
 
-        self.assertIsNone(Tool.Output.Directory(is_required=False).validate(None))
+        self.assertIsNone(Tool.Output.Directory(required=False).validate(None))
         with self.assertRaises(ValueError) as cm:
-            Tool.Output.Directory(is_required=True).validate(None)
+            Tool.Output.Directory(required=True).validate(None)
         self.assertEqual(str(cm.exception), 'required dependency must not be None')
 
     def test_path_dependency_returns_path(self):
@@ -139,15 +139,15 @@ class ValidationWithMultiplicityTest(unittest.TestCase):
     def test_element_must_not_be_none_even_if_dependency_role_not_required(self):
         D = Tool.Input.Directory
         with self.assertRaises(ValueError) as cm:
-            D[:](is_required=False).validate([None])
+            D[:](required=False).validate([None])
         self.assertEqual(str(cm.exception), 'required dependency must not be None')
 
     def test_duplicate_free_cannot_contain_duplicates(self):
         D = Tool.Input.Directory
         paths = ['1/', '2/', '1/']
-        D[:](is_duplicate_free=False).validate(paths)
+        D[:](unique=False).validate(paths)
         with self.assertRaises(ValueError) as cm:
-            D[:](is_duplicate_free=True).validate(paths)
+            D[:](unique=True).validate(paths)
         self.assertEqual(str(cm.exception), "dependency must be duplicate-free, but contains Path('1/') more than once")
 
 

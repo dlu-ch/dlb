@@ -41,7 +41,7 @@ Tool Objects
       class Linker(dlb.cmd.Tool):
          object_files = dlb.cmd.Tool.Input.RegularFile[1:]()
          linked_file = dlb.cmd.Tool.Output.RegularFile()
-         map_file = dlb.cmd.Tool.Output.RegularFile(is_required=False)
+         map_file = dlb.cmd.Tool.Output.RegularFile(required=False)
 
       compiler = Compiler(source_file='main.cpp', object_file='main.cpp.o')
       linker = Linker(object_files=[compiler.object_file], linked_file='main')
@@ -167,8 +167,8 @@ Concrete dependency rule classes support the following methods and attributes:
 
    More precisely:
    If ``Cdrc`` is a concrete dependency rule class without a multiplicity,
-   every instance ``Cdrc[multiplicity](is_required=..., **kwargs)`` only accepts (finite) iterables other than strings
-   as dependencies, where every member of the iterable is accepted by ``Cdrc(is_required=True, **kwargs)``
+   every instance ``Cdrc[multiplicity](required=..., **kwargs)`` only accepts (finite) iterables other than strings
+   as dependencies, where every member of the iterable is accepted by ``Cdrc(required=True, **kwargs)``
    and the length ``n`` of the iterable matches the multiplicity.
 
    If ``multiplicity`` is an integer, ``n`` matches the multiplicity if and only if ``n == multiplicity``.
@@ -224,10 +224,14 @@ Concrete dependency rule classes support the following methods and attributes:
 
 Concrete dependency rule objects support the following methods and attributes:
 
-.. method:: cdr.__init__(is_required=True, **kwargs)
+.. method:: cdr.__init__(required=True, [unique=False,] **kwargs)
 
-   :param is_required: Does this dependency require a dependency (other than ``None``)?
-   :type is_required: bool
+   :param required: Does this dependency role require a dependency (other than ``None``)?
+   :type required: bool
+   :param unique:
+       (Only if the class has a multiplicity)
+       Must the dependency of this dependency role be an iterable representing a duplicate-free sequence?
+   :type unique: bool
 
 .. method:: cdr.validate(value)
 
@@ -235,9 +239,9 @@ Concrete dependency rule objects support the following methods and attributes:
    :return: The validated ``value``.
 
    :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
-   :raise ValueError: If :attr:`is_required` is ``True`` and ``value`` is ``None``
+   :raise ValueError: If :attr:`required` is ``True`` and ``value`` is ``None``
 
-.. attribute:: cdr.is_required
+.. attribute:: cdr.required
 
    Does this dependency role require a dependency (other than ``None``)?
 
@@ -245,7 +249,7 @@ Concrete dependency rule objects support the following methods and attributes:
 
 .. attribute:: cdr.multiplicity
 
-   The multiplicity of the dependency rule (read-only).
+   The multiplicity of the dependency role (read-only).
 
 .. method:: cdr.is_more_restrictive_than(other)
 

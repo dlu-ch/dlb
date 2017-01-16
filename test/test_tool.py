@@ -209,14 +209,14 @@ class DependencyRuleOverridingTest(unittest.TestCase):
     # noinspection PyUnusedLocal
     def test_can_only_override_nonrequired_with_required(self):
         class ATool(Tool):
-            source_file = Tool.Input.RegularFile(is_required=False)
+            source_file = Tool.Input.RegularFile(required=False)
 
-        class BTool(ATool):  # ok, is_required=True is more restrictive than (is_required=False
-            source_file = Tool.Input.RegularFile(is_required=True)
+        class BTool(ATool):  # ok, required=True is more restrictive than (required=False
+            source_file = Tool.Input.RegularFile(required=True)
 
         with self.assertRaises(TypeError) as cm:
             class CTool(BTool):
-                source_file = Tool.Input.RegularFile(is_required=False)
+                source_file = Tool.Input.RegularFile(required=False)
         self.assertRegex(
             str(cm.exception),
             r"^attribute 'source_file' of base class may only be overridden by a "
@@ -280,7 +280,7 @@ class ConstructionTest(unittest.TestCase):
         object_file = Tool.Output.RegularFile()
 
     class BTool(ATool):
-        map_file = Tool.Output.RegularFile(is_required=False)
+        map_file = Tool.Output.RegularFile(required=False)
 
     def test_tool_can_be_constructed_without_parameters(self):
         Tool()
@@ -317,7 +317,7 @@ class ReprTest(unittest.TestCase):
         object_file = Tool.Output.RegularFile()
 
     class BTool(ATool):
-        map_file = Tool.Output.RegularFile(is_required=False)
+        map_file = Tool.Output.RegularFile(required=False)
 
     class CTool(Tool):
         source_file = Tool.Input.RegularFile()
