@@ -16,6 +16,12 @@ class InheritanceTest(unittest.TestCase):
         self.assertTrue(issubclass(Tool.Output, Tool.DependencyRole))
         self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
 
+    def test_multiplicity_inherits_nonconcrete_base(self):
+        self.assertTrue(issubclass(Tool.Input.Directory[:], Tool.Input))
+        self.assertFalse(issubclass(Tool.Input.Directory[:], Tool.Input.Directory))
+        self.assertTrue(issubclass(Tool.Output.Directory[:], Tool.Output))
+        self.assertFalse(issubclass(Tool.Output.Directory[:], Tool.Output.Directory))
+
 
 # noinspection PyPep8Naming
 class ReprTest(unittest.TestCase):

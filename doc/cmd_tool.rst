@@ -199,6 +199,14 @@ Concrete dependency rule classes support the following methods and attributes:
        >>> dlb.cmd.Tool.Output.Directory[:] is dlb.cmd.Tool.Output.Directory[:]
        True
 
+   ``Cdrc[multiplicity]`` is a subclass of all direct subclasses of ``dlb.cmd.Tool.DependencyRole``
+   of which ``Cdrc`` is a subclass::
+
+       >>> issubclass(dlb.cmd.Tool.Output.Directory[:], dlb.cmd.Tool.Output)
+       True
+       >>> issubclass(dlb.cmd.Tool.Output.Directory[:], dlb.cmd.Tool.Output.Directory)
+       False
+
    :param multiplicity: non-negative integer or slice with a non-negative ``start`` and a positive ``step``
    :type multiplicity: int | slice(int)
    :return: ``Cdrc`` with ``Cdrc.multiplicity`` according to  ``multiplicity``

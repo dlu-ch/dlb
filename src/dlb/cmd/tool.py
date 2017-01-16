@@ -66,7 +66,11 @@ class _ConcreteDependencyMixinMeta(type):
         MultipleDependency = _classes_with_multiplicity.get(k)
 
         if MultipleDependency is None:
-            class MultipleDependency(_MultipleDependencyRoleBase):
+            bases = []
+            for c in cls.__mro__:
+                if _DependencyRole in c.__bases__:
+                    bases.append(c)
+            class MultipleDependency(_MultipleDependencyRoleBase, *bases):
                 _element_dependency = cls
                 _multiplicity = slice(*m)
 
