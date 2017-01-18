@@ -108,15 +108,15 @@ They are classified according to their meaning to the tool:
    After the execution of the tool it must exist.
 
 These classes are used for structure only; the have no meaningful attribute or methods.
-Concrete dependencies can only be assigned to *concrete dependency rules*.
+Concrete dependencies can only be assigned to *concrete dependency roles*.
 The according classes are inner classes of :class:`dlb.cmd.Tool.Input`, :class:`dlb.cmd.Tool.Intermediate` and
 :class:`dlb.cmd.Tool.Output` and derived from these.
-Example: :class:`dlb.cmd.Tool.Output.Directory` is a concrete output dependency rule
+Example: :class:`dlb.cmd.Tool.Output.Directory` is a concrete output dependency role
 (a subclass of :class:`dlb.cmd.Tool.Output`).
 
 
 Concrete Dependency Role Classes and Objects
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------
 
 Their objects are used to declare dependency roles in tools (subclasses of :class:`dlb.cmd.Tool`).
 
@@ -129,6 +129,7 @@ Their objects are used to declare dependency roles in tools (subclasses of :clas
 
        "dlb.cmd.Tool.Input.RegularFile" -> "dlb.cmd.Tool.Input";
        "dlb.cmd.Tool.Input.Directory" -> "dlb.cmd.Tool.Input";
+       "dlb.cmd.Tool.Input.EnvVar" -> "dlb.cmd.Tool.Input";
 
        "dlb.cmd.Tool.Output.RegularFile" -> "dlb.cmd.Tool.Output";
        "dlb.cmd.Tool.Output.Directory" -> "dlb.cmd.Tool.Output";
@@ -138,10 +139,10 @@ Their objects are used to declare dependency roles in tools (subclasses of :clas
        "dlb.cmd.Tool.Output" -> "dlb.cmd.Tool.DependencyRole";
    }
 
-Concrete dependency rules can have a *multiplicity*.
-A dependency rule with a multiplicity describes a sequence of the same dependency rule without.
-The multiplicity expresses the set of the length of the  of members the sequence can take. This set is expressed as a slice
-or a single integer.
+Concrete dependency roles can have a *multiplicity*.
+A dependency role with a multiplicity describes a sequence of the same dependency rule without.
+The multiplicity expresses the set of the length of the of members the sequence can take.
+This set is expressed as a slice or a single integer.
 
 Example::
 
@@ -152,24 +153,24 @@ Example::
     example.include_search_paths  # (Path('build/out/Generated/'), Path('src/Implementation/'))
 
 
-Concrete dependency rule classes support the following methods and attributes:
+Concrete dependency role classes support the following methods and attributes:
 
 .. attribute:: Cdrc.multiplicity
 
-   The multiplicity of the dependency rule (read-only).
+   The multiplicity of the dependency role (read-only).
 
    Is ``None`` or slice of integers with a non-negative ``start`` and a positive ``step``.
 
 .. method:: Cdrc.__getitem__(multiplicity)
 
-   Returns a dependency rule class, which is identical to ``Cdrc``, but has the multiplicity described
+   Returns a dependency role class, which is identical to ``Cdrc``, but has the multiplicity described
    by ``multiplicity``.
 
    More precisely:
-   If ``Cdrc`` is a concrete dependency rule class without a multiplicity,
-   every instance ``Cdrc[multiplicity](required=..., **kwargs)`` only accepts (finite) iterables other than strings
-   as dependencies, where every member of the iterable is accepted by ``Cdrc(required=True, **kwargs)``
-   and the length ``n`` of the iterable matches the multiplicity.
+   If ``Cdrc`` is a concrete dependency role class without a multiplicity,
+   every instance ``Cdrc[multiplicity](required=..., **kwargs)`` only accepts sequences other than strings
+   as dependencies, where every member of the sequence is accepted by ``Cdrc(required=True, **kwargs)``
+   and the length ``n`` of the sequence matches the multiplicity.
 
    If ``multiplicity`` is an integer, ``n`` matches the multiplicity if and only if ``n == multiplicity``.
 
@@ -216,13 +217,13 @@ Concrete dependency rule classes support the following methods and attributes:
 
 .. method:: Cdrc.is_multiplicity_valid(n)
 
-   :param n: ``None`` or length of iterable
+   :param n: ``None`` or length of sequence
    :type n: None | int
    :return:  ``True`` if ``n`` matches the multiplicity of ``Cdrc``
    :rtype: bool
 
 
-Concrete dependency rule objects support the following methods and attributes:
+Concrete dependency role objects support the following methods and attributes:
 
 .. method:: cdr.__init__(required=True, [unique=False,] **kwargs)
 
@@ -235,7 +236,7 @@ Concrete dependency rule objects support the following methods and attributes:
 
 .. method:: cdr.validate(value)
 
-   :param value: The concrete dependency to validate.
+   :param value: The concrete dependency to validate
    :return: The validated ``value``.
 
    :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
@@ -256,3 +257,144 @@ Concrete dependency rule objects support the following methods and attributes:
    Is this dependency role considered more restrictive than the dependency role ``other``?
 
    :rtype: bool
+
+
+Concrete Input Dependency Role Classes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++-------------------------------------------+---------------------------------------------+------------------------------------------------------------------------------------------+
+| Dependency role class                     | Keyword arguments of constructor            | Example                                                                                  |
+|                                           +----------------+----------------------------+                                                                                          |
+|                                           | Name           | Default value              |                                                                                          |
++===========================================+================+============================+==========================================================================================+
+| :class:`dlb.cmd.Tool.Input.RegularFile`   | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
+|                                           +----------------+----------------------------+ >>>    source_files = dlb.cmd.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)         |
+|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(source_files=['src/main.cpp'])                                           |
+|                                           |                |                            | >>> tool.source_files                                                                    |
+|                                           |                |                            | (NoSpacePath('src/main.cpp'),)                                                           |
++-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
+| :class:`dlb.cmd.Tool.Input.Directory`     | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
+|                                           +----------------+----------------------------+ >>>    cache_directory = dlb.cmd.Tool.Input.Directory(required=False)                    |
+|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(cache_directory='/tmp/')                                                 |
+|                                           |                |                            | >>> tool.cache_directory                                                                 |
+|                                           |                |                            | Path('tmp/')                                                                             |
++-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
+| :class:`dlb.cmd.Tool.Input.EnvVar`        | ``name``       |                            | >>> class Tool(dlb.cmd.Tool):                                                            |
+|                                           +----------------+----------------------------+ >>>    path_envvar = dlb.cmd.Tool.Input.EnvVar(name='PATH', propagate=True)              |
+|                                           | ``required``   | ``True``                   | >>>    country = dlb.cmd.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})') |
+|                                           |                |                            | >>>    uid = dlb.cmd.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))       |
+|                                           +----------------+----------------------------+ >>> tool = Tool()                                                                        |
+|                                           | ``propagate``  | ``False``                  | >>> tool.path_envvar                                                                     |
+|                                           +----------------+----------------------------+ PropagatedEnvVar(name='PATH', value='/usr/bin:/usr/local/bin')                           |
+|                                           | ``validator``  | ``None``                   | >>> tool.country                                                                         |
+|                                           |                |                            | 'CH'                                                                                     |
+|                                           |                |                            | >>> tool.uid                                                                             |
+|                                           |                |                            | 789                                                                                      |
++-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
+
+.. class:: dlb.cmd.Tool.Input.RegularFile
+
+   .. method:: RegularFile(required=True, cls=dlb.fs.Path)
+
+      Constructs a dependency role for a regular file.
+      The dependency is the file's path as an instance of ``cls``.
+
+      :param required: Does this dependency role require a dependency (other than ``None``)?
+      :type required: bool
+      :param cls: Class to be used to represent the path
+      :type cls: dlb.fs.Path
+
+.. class:: dlb.cmd.Tool.Input.Directory
+
+   .. method:: Directory(required=True, cls=dlb.fs.Path)
+
+      Constructs a dependency role for directory.
+      The dependency is the directory's path as an instance of ``cls``.
+
+      :param required: Does this dependency role require a dependency (other than ``None``)?
+      :type required: bool
+      :param cls: Class to be used to represent the path
+      :type cls: dlb.fs.Path
+
+.. class:: dlb.cmd.Tool.Input.EnvVar
+
+   .. method:: EnvVar(name, required=True, propagate=False, validator=None)
+
+      Constructs a dependency role for an environment variable.
+
+      The value of the environment variable named ``name`` (as a string or ``None`` if not defined)
+      is validated by ``validator``.
+
+      If ``propagate`` is ``False``, its validated value is assigned to the dependency of this
+      dependency role.
+
+      If ``propagate`` is ``True``, a :class:`dlb.cmd.PropagatedEnvVar` is assigned to the dependency of this
+      dependency role with ``name`` assigned to ``name`` and ``value`` assigned to the
+      unchanged value of the environment variable.
+
+      :param name: Name of the environment variable
+      :type name: str
+      :param required: Does this dependency role require a dependency (other than ``None``)?
+      :type required: bool
+      :param propagate: Propagate the environment variable`s value unchanged to the dependency of this dependecy role?
+      :type propagate: bool
+      :param validator:
+          If ``None``, every value is considered valid and the validated value is the unmodified value.
+
+          If a (regular expression) string or a compiled regular expression, the value is considered value if and only
+          if the entire value matches the regular expression.
+          If so, the content of a selected group formed the validated value.
+          The selected group is the the named group with the "smallest" name,
+          the first unnamed group or the entire value, respectively, in that order.
+
+          If a callable, its is called with the value as its only argument.
+          Its return value becomes the validated value.
+
+      :type validator: None | str | regex | callable
+
+
+Concrete Output Dependency Role Classes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
++-------------------------------------------+---------------------------------------------+------------------------------------------------------------------------------------------+
+| Dependency role class                     | Keyword arguments of constructor            | Example                                                                                  |
+|                                           +----------------+----------------------------+                                                                                          |
+|                                           | Name           | Default value              |                                                                                          |
++===========================================+================+============================+==========================================================================================+
+| :class:`dlb.cmd.Tool.Output.RegularFile`  | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
+|                                           +----------------+----------------------------+ >>>    object_file = dlb.cmd.Tool.Output.RegularFile(cls=dlb.fs.NoSpacePath)             |
+|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(object_file=['main.cpp.o'])                                              |
+|                                           |                |                            | >>> tool.object_file                                                                     |
+|                                           |                |                            | (NoSpacePath('main.cpp.o'),)                                                             |
++-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
+| :class:`dlb.cmd.Tool.Output.Directory`    | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
+|                                           +----------------+----------------------------+ >>>    html_root_directory = dlb.cmd.Tool.Output.Directory(required=False)               |
+|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(html_root_directory='html/')                                             |
+|                                           |                |                            | >>> tool.html_root_directory                                                             |
+|                                           |                |                            | Path('      html/')                                                                      |
++-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
+
+
+.. class:: dlb.cmd.Tool.Output.RegularFile
+
+   .. method:: RegularFile(required=True, cls=dlb.fs.Path)
+
+      Constructs a dependency role for a regular file.
+      The dependency is the file's path as an instance of ``cls``.
+
+      :param required: Does this dependency role require a dependency (other than ``None``)?
+      :type required: bool
+      :param cls: Class to be used to represent the path
+      :type cls: dlb.fs.Path
+
+.. class:: dlb.cmd.Tool.Output.Directory
+
+   .. method:: Directory(required=True, cls=dlb.fs.Path)
+
+      Constructs a dependency role for directory.
+      The dependency is the directory's path as an instance of ``cls``.
+
+      :param required: Does this dependency role require a dependency (other than ``None``)?
+      :type required: bool
+      :param cls: Class to be used to represent the path
+      :type cls: dlb.fs.Path
