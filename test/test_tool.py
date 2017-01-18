@@ -11,7 +11,7 @@ class TestModule(unittest.TestCase):
 
     def test_import(self):
         import dlb.cmd.tool
-        self.assertEqual(['Tool'], dlb.cmd.tool.__all__)
+        self.assertEqual(['Tool', 'PropagatedEnvVar'], dlb.cmd.tool.__all__)
         self.assertTrue('Tool' in dir(dlb.cmd))
 
 
@@ -282,6 +282,9 @@ class ConstructionTest(unittest.TestCase):
     class BTool(ATool):
         map_file = Tool.Output.RegularFile(required=False)
 
+    class CTool(Tool):
+        envvar = Tool.Input.EnvVar(name='XYZ', required=False)
+
     def test_tool_can_be_constructed_without_parameters(self):
         Tool()
 
@@ -299,7 +302,7 @@ class ConstructionTest(unittest.TestCase):
     def test_must_have_parameter_for_required_dependencies(self):
         with self.assertRaises(TypeError) as cm:
             ConstructionTest.BTool(source_file='x.cpp')
-        self.assertEqual(str(cm.exception), "missing keyword parameter for dependency role: 'object_file'")
+        self.assertEqual(str(cm.exception), "missing keyword parameter for required dependency role: 'object_file'")
 
     def test_must_not_have_parameter_for_undeclared_dependencies(self):
         with self.assertRaises(TypeError) as cm:
@@ -308,6 +311,20 @@ class ConstructionTest(unittest.TestCase):
             str(cm.exception),
             r"^'temporary_file' is not a dependency role of .*: "
             r"'source_file', 'object_file', 'map_file'$")
+
+    def test_must_envvar_has_initial_of_environment(self):
+        os.environ['XYZ'] = 'abc'
+        self.assertEqual(ConstructionTest.CTool().envvar, 'abc')
+
+        del os.environ['XYZ']
+        self.assertIsNone(ConstructionTest.CTool().envvar)
+
+    def test_must_not_have_parameter_for_role_with_initial(self):
+        with self.assertRaises(TypeError) as cm:
+            ConstructionTest.CTool(envvar='uvw')
+        self.assertEqual(
+            str(cm.exception),
+            "dependency role 'envvar' with automatic initialization must not be initialized by keyword parameter")
 
 
 class ReprTest(unittest.TestCase):

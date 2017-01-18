@@ -1,4 +1,6 @@
 import re
+import collections
+import os
 import dlb.fs
 
 EXECUTION_PARAMETER_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
@@ -15,7 +17,13 @@ RESERVED_NAME_REGEX = re.compile('^__[^_].*[^_]?__$')
 assert RESERVED_NAME_REGEX.match('__init__')
 assert not RESERVED_NAME_REGEX.match('__init')
 
-__all__ = ['Tool']
+__all__ = [
+    'Tool',
+    'PropagatedEnvVar'
+]
+
+
+PropagatedEnvVar = collections.namedtuple('PropagatedEnvVar', ['name', 'value'])
 
 
 #: key: (cls_id, (start, stop, step)), value: mult_class
@@ -48,7 +56,7 @@ class _ConcreteDependencyMixinMeta(type):
             # make stop the maximum + 1
             stop = ((stop - start - 1) // step) * step + start + 1
 
-        if stop is not None and start < stop <= start + step:  # is start the only element?
+        if stop is not None and start < stop <= start + step:  # is start the only member?
             stop = start + 1
             step = 1
         if stop == start:
@@ -70,8 +78,9 @@ class _ConcreteDependencyMixinMeta(type):
             for c in cls.__mro__:
                 if _DependencyRole in c.__bases__:
                     bases.append(c)
+
             class MultipleDependency(_MultipleDependencyRoleBase, *bases):
-                _element_dependency = cls
+                _member_role_class = cls
                 _multiplicity = slice(*m)
 
         _classes_with_multiplicity[k] = MultipleDependency
@@ -122,12 +131,12 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
                 raise ValueError('dependency role has no multiplicity')
         else:
             if n < m.start:
-                raise ValueError('value has {} elements, but minimum multiplicity is {}'.format(n, m.start))
+                raise ValueError('value has {} members, but minimum multiplicity is {}'.format(n, m.start))
             if m.stop is not None and n >= m.stop:
-                raise ValueError('value has {} elements, but maximum multiplicity is {}'.format(n, m.stop - 1))
+                raise ValueError('value has {} members, but maximum multiplicity is {}'.format(n, m.stop - 1))
             if (n - m.start) % m.step != 0:
                 raise ValueError(
-                    'value has {} elements, but multiplicity must be an integer multiple of {} above {}'
+                    'value has {} members, but multiplicity must be an integer multiple of {} above {}'
                     .format(n, m.step, m.start))
 
     @classmethod
@@ -139,6 +148,9 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
         except ValueError:
             return False
         return True
+
+    def initial(self):
+        return NotImplemented
 
     def validate(self, value):
         # do _not_ call super().validate() here!
@@ -200,21 +212,21 @@ class _OutputDependencyRole(_DependencyRole):
 
 
 class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
-    #: Subclass of _Dependency for each element
-    _element_dependency = None
+    #: Subclass of _Dependency for each member
+    _member_role_class = None
 
     def __init__(self, required=True, unique=False, **kwargs):
         super().__init__(required=required)
         self._unique = unique
         # noinspection PyCallingNonCallable
-        self._element_prototype = self.__class__._element_dependency(required=True, **kwargs)
+        self._member_role_prototype = self.__class__._member_role_class(required=True, **kwargs)
 
     def validate(self, value):
         value = super().validate(value)
 
         if self.__class__.multiplicity is not None and isinstance(value, str):  # for safety
             raise TypeError('since dependency role has a multiplicity, value must be iterable (other than string)')
-        value = tuple(self._element_prototype.validate(v) for v in value)
+        value = tuple(self._member_role_prototype.validate(v) for v in value)
 
         self.__class__._check_multiplicity(len(value))
 
@@ -232,7 +244,7 @@ class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
         # only compare if multiplicity os None or not
         return (
             super().is_more_restrictive_than(other)
-            and self._element_prototype.is_more_restrictive_than(other._element_prototype)
+            and self._member_role_prototype.is_more_restrictive_than(other._member_role_prototype)
         )
 
 
@@ -242,6 +254,65 @@ class _RegularInputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDepende
 
 class _InputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependencyRole):
     pass
+
+
+class _InputEnvVarDependency(_ConcreteDependencyMixin, _InputDependencyRole):
+
+    def __init__(self, name, validator=None, propagate=False, **kwargs):
+        super().__init__(**kwargs)
+
+        if not (isinstance(name, str) and str):
+            raise TypeError("'var_name' must be a non-empty string")
+
+        if validator is None:
+            validator = '.*'
+        if isinstance(validator, str):
+            validator = re.compile(validator)
+        elif isinstance(validator, type(re.compile(''))):
+            pass
+        elif callable(validator):
+            pass
+        else:
+            raise TypeError("'validator' must be None, string, compiled regular expressed or callable")
+
+        self._name = name
+
+        self._validator = validator
+        self._propagate = propagate
+
+    def validate(self, value):
+        validated_value = super().validate(value)
+
+        if validated_value is not None:
+            if callable(self._validator):
+                validated_value = self._validator(validated_value)
+            else:
+                m = self._validator.fullmatch(validated_value)
+                if not m:
+                    raise ValueError(
+                        'value does not match validator regular expression: {}'.format(repr(validated_value)))
+
+                # return only validates/possibly modifiy value
+                groups = m.groupdict()
+                if groups:
+                    # of all named groups: pick the group with the "smallest" name
+                    validated_value = groups[sorted(groups)[0]]
+                else:
+                    # of all unnamed groups: pick the first one
+                    groups = m.groups()
+                    if groups:
+                        validated_value = groups[0]
+
+        if self._propagate:
+            # propagate name and unchanged value
+            value = PropagatedEnvVar(name=self._name, value=value)
+        else:
+            value = validated_value
+
+        return value
+
+    def initial(self):
+        return os.environ.get(self._name)
 
 
 class _RegularOutputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependencyRole):
@@ -258,24 +329,37 @@ class _ToolBase:
         super().__init__()
 
         dependency_names = self.__class__._dependency_names
-        assigned_names = set()
 
+        # assign initial dependency to all dependency roles which provide one
+        dependency_names_to_assign = set()
+        for name in dependency_names:
+            role = getattr(self.__class__, name)
+            dependency = role.initial()
+            if dependency is NotImplemented:
+                dependency_names_to_assign.add(name)
+            else:
+                object.__setattr__(self, name, role.validate(dependency))
+
+        names_of_assigned = set()
         for name, value in kwargs.items():
-            try:
-                role = getattr(self.__class__, name)
-            except AttributeError:
-                raise TypeError(
-                    '{} is not a dependency role of {}: {}'.format(
-                        repr(name),
-                        repr(self.__class__.__qualname__),
-                        ', '.join(repr(n) for n in dependency_names))) from None
+            if name not in dependency_names_to_assign:
+                if name in dependency_names:
+                    raise TypeError(
+                        'dependency role {} with automatic initialization must not be initialized by keyword parameter'
+                        .format(repr(name)))
+                else:
+                    raise TypeError(
+                        '{} is not a dependency role of {}: {}'.format(
+                            repr(name), repr(self.__class__.__qualname__),
+                            ', '.join(repr(n) for n in dependency_names)))
+            role = getattr(self.__class__, name)
             object.__setattr__(self, name, role.validate(value))
-            assigned_names.add(name)
+            names_of_assigned.add(name)
 
-        for name in sorted(set(dependency_names) - assigned_names):
+        for name in sorted(set(dependency_names_to_assign) - names_of_assigned):
             role = getattr(self.__class__, name)
             if role.required:
-                raise TypeError("missing keyword parameter for dependency role: {}".format(repr(name)))
+                raise TypeError("missing keyword parameter for required dependency role: {}".format(repr(name)))
             object.__setattr__(self, name, None)
 
     def run_in_context(self):
@@ -314,6 +398,8 @@ _inject_nested_class_into(_ToolBase, _IntermediateDependencyRole, 'Intermediate'
 _inject_nested_class_into(_ToolBase.Input, _RegularInputFileDependency, 'RegularFile')
 # noinspection PyTypeChecker
 _inject_nested_class_into(_ToolBase.Input, _InputDirectoryDependency, 'Directory')
+# noinspection PyTypeChecker
+_inject_nested_class_into(_ToolBase.Input, _InputEnvVarDependency, 'EnvVar')
 # noinspection PyTypeChecker
 _inject_nested_class_into(_ToolBase.Output, _RegularOutputFileDependency, 'RegularFile')
 # noinspection PyTypeChecker

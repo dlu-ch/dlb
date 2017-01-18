@@ -1,6 +1,5 @@
 import re
 import os
-import stat
 import functools
 import pathlib  # since Python 3.4
 

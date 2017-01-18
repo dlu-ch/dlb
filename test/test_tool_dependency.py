@@ -3,7 +3,9 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-from dlb.cmd.tool import Tool
+from dlb.cmd.tool import Tool, PropagatedEnvVar
+import re
+import os
 import unittest
 
 
@@ -91,6 +93,47 @@ class ValidationWithoutMultiplicityTest(unittest.TestCase):
             Tool.Input.Directory().validate('a/b')
         self.assertEqual(str(cm.exception), "non-directory path not valid for directory dependency: Path('a/b')")
 
+    def test_path_dependency_initialized_to_notimplemented(self):
+        self.assertIs(Tool.Input.RegularFile().initial(), NotImplemented)
+
+    def test_envvar_initial_is_from_environ(self):
+        os.environ['XYZ'] = 'abc'
+        self.assertEqual(Tool.Input.EnvVar(name='XYZ').initial(), 'abc')
+
+    def test_envvar_regex_validator_requires_fullmatch(self):
+        with self.assertRaises(ValueError) as cm:
+            Tool.Input.EnvVar(name='XYZ', validator='b').validate('abc')
+        self.assertEqual(str(cm.exception), "value does not match validator regular expression: 'abc'")
+
+    def test_envvar_regex_validator_selects_group(self):
+        self.assertEqual(Tool.Input.EnvVar(name='XYZ', validator=None).validate('abc'), 'abc')
+        self.assertEqual(Tool.Input.EnvVar(name='XYZ', validator='.(?P<beta>.)(?P<alpha>.)').validate('abc'), 'c')
+        self.assertEqual(Tool.Input.EnvVar(name='XYZ', validator=re.compile('.(.)(.)')).validate('abc'), 'b')
+        self.assertEqual(Tool.Input.EnvVar(name='XYZ', validator='.{3}').validate('abc'), 'abc')
+        self.assertIsNone(Tool.Input.EnvVar(name='XYZ', validator='.{3}', required=None).validate(None))
+
+    def test_envvar_callable_validator_mast_not_raise(self):
+        def validator(value):
+            return int(value, 10)
+        with self.assertRaises(ValueError):
+            Tool.Input.EnvVar(name='XYZ', validator=validator).validate('abc')
+
+    def test_envvar_callable_validator_selects_return_value(self):
+        def validator(value):
+            return int(value, 16)
+        self.assertEqual(Tool.Input.EnvVar(name='XYZ', validator=validator).validate('cafe'), 51966)
+
+    def test_propagated_envvar_value_is_unchanged(self):
+        self.assertEqual(
+            Tool.Input.EnvVar(name='XYZ', propagate=True, validator='.(.)(.)').validate('abc'),
+            PropagatedEnvVar(name='XYZ', value='abc'))
+        self.assertEqual(
+            Tool.Input.EnvVar(name='XYZ', propagate=True, validator='.(.)(.)', required=False).validate(None),
+            PropagatedEnvVar(name='XYZ', value=None))
+        self.assertEqual(
+            Tool.Input.EnvVar(name='XYZ', propagate=True, validator=lambda v: 123).validate('abc'),
+            PropagatedEnvVar(name='XYZ', value='abc'))
+
 
 # noinspection PyPep8Naming
 class ValidationWithMultiplicityTest(unittest.TestCase):
@@ -107,28 +150,28 @@ class ValidationWithMultiplicityTest(unittest.TestCase):
             str(cm.exception),
             'since dependency role has a multiplicity, value must be iterable (other than string)')
 
-    def test_element_count_must_match_multiplicity(self):
+    def test_member_count_must_match_multiplicity(self):
         D = Tool.Input.Directory
 
         with self.assertRaises(ValueError) as cm:
             D[2:]().validate([])
         self.assertEqual(
             str(cm.exception),
-            'value has 0 elements, but minimum multiplicity is 2')
+            'value has 0 members, but minimum multiplicity is 2')
 
         with self.assertRaises(ValueError) as cm:
             D[0:4:2]().validate(['1/', '2/', '3/'])
         self.assertEqual(
             str(cm.exception),
-            'value has 3 elements, but maximum multiplicity is 2')
+            'value has 3 members, but maximum multiplicity is 2')
 
         with self.assertRaises(ValueError) as cm:
             D[1::2]().validate(['1/', '2/'])
         self.assertEqual(
             str(cm.exception),
-            'value has 2 elements, but multiplicity must be an integer multiple of 2 above 1')
+            'value has 2 members, but multiplicity must be an integer multiple of 2 above 1')
 
-    def test_each_element_is_validated(self):
+    def test_each_member_is_validated(self):
         D = Tool.Input.Directory
 
         with self.assertRaises(ValueError):
@@ -136,7 +179,7 @@ class ValidationWithMultiplicityTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             D[:]().validate(['a/', 'b'])
 
-    def test_element_must_not_be_none_even_if_dependency_role_not_required(self):
+    def test_member_must_not_be_none_even_if_dependency_role_not_required(self):
         D = Tool.Input.Directory
         with self.assertRaises(ValueError) as cm:
             D[:](required=False).validate([None])
