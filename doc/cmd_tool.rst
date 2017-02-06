@@ -104,7 +104,7 @@ They are classified according to their meaning to the tool:
 
    A :class:`dlb.cmd.Tool.DependencyRole` which describes an output dependency of a tool.
 
-   The dDependency (e.g. a file) is removed before the tool is not executed.
+   The dependency (e.g. a file) is removed before the tool is not executed.
    After the execution of the tool it must exist.
 
 These classes are used for structure only; the have no meaningful attribute or methods.

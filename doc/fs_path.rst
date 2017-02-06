@@ -122,7 +122,7 @@ Path Objects
       :rtype: bool
 
       .. note::
-         While Posix_ considers paths starting with exactly to ``'/'`` *not* as absolute paths,
+         While Posix_ considers paths starting with exactly two ``'/'`` *not* as absolute paths,
          this class does (and so does :mod:`pathlib`).
 
    .. method:: is_normalized()
@@ -191,7 +191,7 @@ Path Objects
       Example::
 
           >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
-          [NoSpacePath('src/main.cpp'), NoSpacePath('src/Clock.cpp')]
+          [NoSpacePath('src/Clock.cpp'), NoSpacePath('src/main.cpp')]
 
    .. method:: list_r(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
 
@@ -200,7 +200,7 @@ Path Objects
       Example::
 
           >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
-          [NoSpacePath('main.cpp'), NoSpacePath('Clock.cpp')]
+          [NoSpacePath('Clock.cpp'), NoSpacePath('main.cpp')]
 
    .. method:: __getitem__(key):
 
