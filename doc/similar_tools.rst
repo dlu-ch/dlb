@@ -21,6 +21,7 @@ Examples are:
     - `Apache Ant <http://ant.apache.org/>`_ (XML, Java-centric)
     - `SCons <http://scons.org/>`_ (Python, based on the Perl-script `Cons <https://www.gnu.org/software/cons/stable/cons.html>`_)
     - https://pypi.python.org/pypi/doit/ (Python)
+    - http://mesonbuild.com/ (Python)
     - https://pypi.python.org/pypi/faff/ (Python, "An input file similar to a Makefile defines rules")
     - https://pypi.python.org/pypi/Aap/ (Python)
     - https://pypi.python.org/pypi/pyb/ (Python, "Modelled after Ant")
@@ -30,7 +31,7 @@ Examples are:
     - https://pypi.python.org/pypi/buildit/ (Python, .ini-file syntax to describe rules)
     - `Bruce Eckel's builder.py <http://www.artima.com/weblogs/viewpost.jsp?thread=241209>`_ (Python)
 
-Of these, SCons and doit are closest to goals of this project.
+Of these, SCons and doit are closest to the goals of this project.
 
 
 Tools based on directory structure
@@ -44,5 +45,25 @@ based on this structure.
 Examples are:
 
     - `Apache Maven <https://maven.apache.org/>`_ (XML, Java-centric)
-    - http://www.pantsbuild.org/
+    - https://www.pantsbuild.org/
     - http://www.buildout.org/
+
+
+Why explicit is better than implicit
+------------------------------------
+
+`Some argue <https://taint.org/2011/02/18/001527a.html>`_, that restricting the expressiveness and power of the
+language used to describe a build process is a good thing. I disagree.
+
+A tailored DSL is a good thing exactly as long as you use it as foreseen by its creators.
+A two-line example may be impressive as a demonstration, but real-live projects look different.
+
+If a certain task is repetitive enough to be described by static content (e.g. an XML file), there's nothing wrong in
+doing so. But this situation does not call for a restriction of the language - it calls for an (optional) easy way
+to interpret the static content.
+
+In restricting the language instead, you usually lose first:
+
+ - The possibility to *debug* the build process with powerful tools
+ - The possibility to *extend* the build tool by aspects not anticipated by its creators
+ - The possibility to *adapt* a certain behaviour of the build tool without replacing large parts of it
