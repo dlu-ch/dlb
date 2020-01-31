@@ -3,11 +3,11 @@
 .. module:: dlb.cmd
    :synopsis: Dependency-Aware Command-Line Tools
 
-This module provides classes to represent tools to be executed during the build process -
-the workhorses of every build tool.
+This module provides classes to represent tools to be executed during the build process (typically by calling
+:term:`dynamic helpers <dynamic helper>` like compiler binaries).
 
-Every :term:`tool` is represented by a subclass of :class:`dlb.cmd.Tool` that describes its abstract behaviour and the way it
-is run (e.g. meaning of commandline and output, interaction with file system and environment variables).
+Every :term:`tool` is represented by a subclass of :class:`dlb.cmd.Tool` that describes its abstract behaviour and the
+way it is run (e.g. meaning of commandline and output, interaction with file system and environment variables).
 Tools are usually parametrized by dependency roles (e.g. input files) and execution parameters.
 
 Each :term:`tool instance` represents a concrete behaviour and can be run in an active context.
@@ -22,7 +22,7 @@ Tools are customized by inheritance and defining class attributes.
 Tool Objects
 ------------
 
-.. class:: dlb.cmd.Tool
+.. class:: Tool
 
    A tool declares its *dependency roles* (e.g. ``map_file_dependency``) and *execution parameters*
    (e.g. ``DO_INCLUDE_DEBUG_INFO``, ``PAPER_FORMAT``) as class attributes.
@@ -88,25 +88,25 @@ Dependency roles of tools (subclasses of :class:`Tool`) are instances of subclas
 
 They are classified according to their meaning to the tool:
 
-.. class:: dlb.cmd.Tool.DependencyRole
+.. class:: Tool.DependencyRole
 
    Base class of all dependency roles.
 
-.. class:: dlb.cmd.Tool.Input
+.. class:: Tool.Input
 
    A :class:`dlb.cmd.Tool.DependencyRole` which describes an input dependency of a tool.
 
    The :term:`tool instance` must be rerun if it (e.g. the content of a file) has changed compared to the state before
    it was executed.
 
-.. class:: dlb.cmd.Tool.Intermediate
+.. class:: Tool.Intermediate
 
    A :class:`dlb.cmd.Tool.DependencyRole` which describes an intermediate dependency of a tool.
 
    Such a dependency (e.g. a directory for caching) is expected not to be accessed while the tool instance
    is running.
 
-.. class:: dlb.cmd.Tool.Output
+.. class:: Tool.Output
 
    A :class:`dlb.cmd.Tool.DependencyRole` which describes an output dependency of a tool.
 
@@ -298,7 +298,7 @@ Concrete Input Dependency Role Classes
 |                                           |                |                            | 789                                                                                        |
 +-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
 
-.. class:: dlb.cmd.Tool.Input.RegularFile
+.. class:: Tool.Input.RegularFile
 
    .. method:: RegularFile(required=True, cls=dlb.fs.Path)
 
@@ -310,7 +310,7 @@ Concrete Input Dependency Role Classes
       :param cls: Class to be used to represent the path
       :type cls: dlb.fs.Path
 
-.. class:: dlb.cmd.Tool.Input.Directory
+.. class:: Tool.Input.Directory
 
    .. method:: Directory(required=True, cls=dlb.fs.Path)
 
@@ -322,7 +322,7 @@ Concrete Input Dependency Role Classes
       :param cls: Class to be used to represent the path
       :type cls: dlb.fs.Path
 
-.. class:: dlb.cmd.Tool.Input.EnvVar
+.. class:: Tool.Input.EnvVar
 
    .. method:: EnvVar(name, required=True, propagate=False, validator=None)
 
@@ -381,7 +381,7 @@ Concrete Output Dependency Role Classes
 +-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
 
 
-.. class:: dlb.cmd.Tool.Output.RegularFile
+.. class:: Tool.Output.RegularFile
 
    .. method:: RegularFile(required=True, cls=dlb.fs.Path)
 
@@ -393,7 +393,7 @@ Concrete Output Dependency Role Classes
       :param cls: Class to be used to represent the path
       :type cls: dlb.fs.Path
 
-.. class:: dlb.cmd.Tool.Output.Directory
+.. class:: Tool.Output.Directory
 
    .. method:: Directory(required=True, cls=dlb.fs.Path)
 

@@ -3,9 +3,10 @@
 dlb - explicit is better than implicit
 ======================================
 
-dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool which does not try to mimic Make_,
-but brings the benefits of object-oriented languages to the build process.
-It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
+dlb is a `Pythonic`_ build tool which does not try to mimic Make_, but brings the benefits of object-oriented languages
+to the build process.
+
+It is inspired by `djb's redo`_, but takes a more dynamic approach.
 
 A build system *generates files* in a filesystem, mostly with the help of *external tools*.
 Its most important tasks (and therefore of the writer of the build system's configuration files) are:
@@ -16,11 +17,11 @@ Its most important tasks (and therefore of the writer of the build system's conf
 - make the build fast by omitting unnecessary redos
 - control the build by command line arguments
 
-That's the areas where dlb wants to be strong - all this in a precisely specified way, with emphasis an correctness,
+That's the areas where dlb wants to be strong - all this in a precisely specified way, with emphasis on correctness,
 reliability and robustness.
 
 dlb does not try to hide its Python personality.
-Instead dlb build scripts are just Python scripts importing the ``dlb`` module and using its functionality.
+Instead dlb build scripts are just Python scripts importing the :mod:`dlb` module and using its functionality.
 There is no magic code before or after the script.
 
 Since dlb build scripts are Python scripts, you can easily analyse, run or debug them in your favorite Python IDE.
@@ -58,30 +59,24 @@ Example::
 
 Explanation:
 
-a.  Restrict paths to ones without spaces, usable on Windows and Posix systems.
-    The attempt to construct such a ``Path`` object for a path violating these restrictions leads to an exception.
+a.  *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
+    The attempt to construct such a ``Path`` object for a path violating these restrictions leads to an exception
+    (helps to enforce portability).
 
-    This is useful to enforce portability where necessary.
+#.  *Configure* some tools of the toolchain by subclassing and redefining attributes.
 
-#.  Configure some tools of the toolchain by subclassing and redefining attributes.
+#.  Create a *context*. A context describes how subprocesses (e.g. the compiler) are executed.
 
-#.  Create a context object.
+#.  *Compile* all ``.cpp`` files in directory ``src/X/`` and its subdirectories into object files.
 
-    A context object describes how subprocesses (e.g. the compiler) are started.
-    It also stores the state of inputs and outputs, which are used to determine
-    whether a run is necessary or not.
+    Compiling also means: automatically find all included files and remember them as input dependencies for future
+    runs of dlb.
+    ``run_in_context()`` executes the compiler only when :term:`redo` is necessary (e.g. because one of its include files
+    has changed). Otherwise is does almost nothing.
 
-#.  Compile all ``.cpp`` files in directory ``src/X/`` and its subdirectories into object files.
+#.  *Link* these object files into an executable file.
 
-    Compiling also means: automatically find all included files and store them as inputs for future executions.
-    ``run_in_context()`` runs the compiler only if not all outputs exist or if an input, the tool or the context
-    has changed.
-
-#.  Link these object files into an executable file.
-
-#.  Output the size of the executable file.
-
-.. _Make: https://en.wikipedia.org/wiki/Make_%28software%29
+#.  Output the *size of the executable file*.
 
 Content
 =======
@@ -89,6 +84,9 @@ Content
 .. toctree::
    :maxdepth: 2
 
+   usage.rst
+   glossary.rst
+   toplevelspec.rst
    fs_path.rst
    cmd_tmpl.rst
    cmd_tool.rst
@@ -101,3 +99,6 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. _Make: https://en.wikipedia.org/wiki/Make_%28software%29
+.. _`djb's redo`: https://cr.yp.to/redo.html
+.. _`Pythonic`: https://www.python.org/dev/peps/pep-0020/
