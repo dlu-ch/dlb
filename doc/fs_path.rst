@@ -388,5 +388,5 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 .. class:: PortablePath
 
 .. _POSIX:
-.. _ISO 1003.1-2008: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/contents.html
+.. _ISO 1003.1-2008: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/contents.html
 .. _hashable: https://docs.python.org/3/glossary.html#term-hashable

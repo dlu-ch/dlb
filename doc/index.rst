@@ -7,7 +7,8 @@ dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool whic
 but brings the benefits of object-oriented languages to the build process.
 It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
 
-The most important task of a build system (and therefore of the writer of the build system's configuration files) are:
+A build system *generates files* in a filesystem, mostly with the help of *external tools*.
+Its most important tasks (and therefore of the writer of the build system's configuration files) are:
 
 - collect and transform filesystem paths
 - call tool binaries (e.g. compilers) with context-dependent command line arguments
@@ -15,7 +16,8 @@ The most important task of a build system (and therefore of the writer of the bu
 - make the build fast by omitting unnecessary redos
 - control the build by command line arguments
 
-That's the areas where dlb wants to be strong.
+That's the areas where dlb wants to be strong - all this in a precisely specified way, with emphasis an correctness,
+reliability and robustness.
 
 dlb does not try to hide its Python personality.
 Instead dlb build scripts are just Python scripts importing the ``dlb`` module and using its functionality.

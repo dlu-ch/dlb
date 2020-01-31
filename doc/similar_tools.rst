@@ -6,7 +6,7 @@ There is a plethora of build tools.
 See for example
 
   - https://en.wikipedia.org/wiki/List_of_build_automation_software
-  - https://pypi.python.org/pypi?:action=browse&show=all&c=405&c=408
+  - https://pypi.org/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Build+Tools
 
 
 Tools based on declared dependency rules
@@ -19,17 +19,17 @@ Examples are:
 
     - `Make <https://en.wikipedia.org/wiki/Make_%28software%29>`_
     - `Apache Ant <http://ant.apache.org/>`_ (XML, Java-centric)
-    - `SCons <http://scons.org/>`_ (Python, based on the Perl-script `Cons <https://www.gnu.org/software/cons/stable/cons.html>`_)
-    - https://pypi.python.org/pypi/doit/ (Python)
-    - http://mesonbuild.com/ (Python)
-    - https://pypi.python.org/pypi/faff/ (Python, "An input file similar to a Makefile defines rules")
-    - https://pypi.python.org/pypi/Aap/ (Python)
-    - https://pypi.python.org/pypi/pyb/ (Python, "Modelled after Ant")
-    - https://pypi.python.org/pypi/csbuild/ (Python, for fast incremental building of C(++) projects)
-    - https://pypi.python.org/pypi/mkcode/ (Python)
-    - https://pypi.python.org/pypi/bold/ (Python, C-centric)
-    - https://pypi.python.org/pypi/buildit/ (Python, .ini-file syntax to describe rules)
-    - `Bruce Eckel's builder.py <http://www.artima.com/weblogs/viewpost.jsp?thread=241209>`_ (Python)
+    - `SCons <https://scons.org/>`_ (Python, based on the Perl-script `Cons <https://www.gnu.org/software/cons/stable/cons.html>`_)
+    - https://pypi.org/project/doit/ (Python)
+    - https://mesonbuild.com/ (Python)
+    - https://pypi.org/project/faff/ (Python, "An input file similar to a Makefile defines rules")
+    - https://pypi.org/project/Aap/ (Python)
+    - https://pypi.org/project/pyb/ (Python, "Modelled after Ant")
+    - https://pypi.org/project/csbuild/ (Python, for fast incremental building of C(++) projects)
+    - https://pypi.org/project/mkcode/ (Python)
+    - https://pypi.org/project/bold/ (Python, C-centric)
+    - https://pypi.org/project/buildit/ (Python, .ini-file syntax to describe rules)
+    - `Bruce Eckel's builder.py <https://www.artima.com/weblogs/viewpost.jsp?thread=241209>`_ (Python)
 
 Of these, SCons and doit are closest to the goals of this project.
 

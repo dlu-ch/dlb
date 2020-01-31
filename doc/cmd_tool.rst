@@ -3,13 +3,20 @@
 .. module:: dlb.cmd
    :synopsis: Dependency-Aware Command-Line Tools
 
-This module provides classes to represent tools to be executed during the build process.
+This module provides classes to represent tools to be executed during the build process -
+the workhorses of every build tool.
 
-*Tools* are the workhorses of every build tools.
+Every :term:`tool` is represented by a subclass of :class:`dlb.cmd.Tool` that describes its abstract behaviour and the way it
+is run (e.g. meaning of commandline and output, interaction with file system and environment variables).
+Tools are usually parametrized by dependency roles (e.g. input files) and execution parameters.
 
-In dlb, tools are classes derived from :class:`dlb.cmd.Tool`.
-Tool instances are immutable and hashable;
-tools are customized by inheritance and defining class attributes.
+Each :term:`tool instance` represents a concrete behaviour and can be run in an active context.
+Running a tool results in an awaitable result object.
+
+Tool instances are immutable and hashable and fast to construct; the heavy lifting takes place while the
+:term:`tool instance is running<tool instance>`.
+
+Tools are customized by inheritance and defining class attributes.
 
 
 Tool Objects
@@ -89,25 +96,24 @@ They are classified according to their meaning to the tool:
 
    A :class:`dlb.cmd.Tool.DependencyRole` which describes an input dependency of a tool.
 
-   The tool is not executed if such a dependency (e.g. a file) does not exist.
-   The tool must be rerun if it (e.g. the content of a file) has changed compared to the state before it
-   was executed.
+   The :term:`tool instance` must be rerun if it (e.g. the content of a file) has changed compared to the state before
+   it was executed.
 
 .. class:: dlb.cmd.Tool.Intermediate
 
    A :class:`dlb.cmd.Tool.DependencyRole` which describes an intermediate dependency of a tool.
 
-   Such a dependency (e.g. a directory for caching) is expected not to be accessed while the tool
-   is executed.
+   Such a dependency (e.g. a directory for caching) is expected not to be accessed while the tool instance
+   is running.
 
 .. class:: dlb.cmd.Tool.Output
 
    A :class:`dlb.cmd.Tool.DependencyRole` which describes an output dependency of a tool.
 
-   The dependency (e.g. a file) is removed before the tool is not executed.
+   The dependency (e.g. a file) is removed before the tool instance starts running if it exists.
    After the execution of the tool it must exist.
 
-These classes are used for structure only; the have no meaningful attribute or methods.
+These classes are used for structure only; they have no meaningful attributes or methods.
 Concrete dependencies can only be assigned to *concrete dependency roles*.
 The according classes are inner classes of :class:`dlb.cmd.Tool.Input`, :class:`dlb.cmd.Tool.Intermediate` and
 :class:`dlb.cmd.Tool.Output` and derived from these.
@@ -139,7 +145,7 @@ Their objects are used to declare dependency roles in tools (subclasses of :clas
        "dlb.cmd.Tool.Output" -> "dlb.cmd.Tool.DependencyRole";
    }
 
-Concrete dependency roles can have a *multiplicity*.
+A concrete dependency role can have a *multiplicity*.
 A dependency role with a multiplicity describes a sequence of the same dependency rule without.
 The multiplicity expresses the set of the length of the of members the sequence can take.
 This set is expressed as a slice or a single integer.
@@ -262,35 +268,35 @@ Concrete dependency role objects support the following methods and attributes:
 Concrete Input Dependency Role Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------------+---------------------------------------------+------------------------------------------------------------------------------------------+
-| Dependency role class                     | Keyword arguments of constructor            | Example                                                                                  |
-|                                           +----------------+----------------------------+                                                                                          |
-|                                           | Name           | Default value              |                                                                                          |
-+===========================================+================+============================+==========================================================================================+
-| :class:`dlb.cmd.Tool.Input.RegularFile`   | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
-|                                           +----------------+----------------------------+ >>>    source_files = dlb.cmd.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)         |
-|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(source_files=['src/main.cpp'])                                           |
-|                                           |                |                            | >>> tool.source_files                                                                    |
-|                                           |                |                            | (NoSpacePath('src/main.cpp'),)                                                           |
-+-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
-| :class:`dlb.cmd.Tool.Input.Directory`     | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
-|                                           +----------------+----------------------------+ >>>    cache_directory = dlb.cmd.Tool.Input.Directory(required=False)                    |
-|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(cache_directory='/tmp/')                                                 |
-|                                           |                |                            | >>> tool.cache_directory                                                                 |
-|                                           |                |                            | Path('tmp/')                                                                             |
-+-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
-| :class:`dlb.cmd.Tool.Input.EnvVar`        | ``name``       |                            | >>> class Tool(dlb.cmd.Tool):                                                            |
-|                                           +----------------+----------------------------+ >>>    path_envvar = dlb.cmd.Tool.Input.EnvVar(name='PATH', propagate=True)              |
-|                                           | ``required``   | ``True``                   | >>>    country = dlb.cmd.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})') |
-|                                           |                |                            | >>>    uid = dlb.cmd.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))       |
-|                                           +----------------+----------------------------+ >>> tool = Tool()                                                                        |
-|                                           | ``propagate``  | ``False``                  | >>> tool.path_envvar                                                                     |
-|                                           +----------------+----------------------------+ PropagatedEnvVar(name='PATH', value='/usr/bin:/usr/local/bin')                           |
-|                                           | ``validator``  | ``None``                   | >>> tool.country                                                                         |
-|                                           |                |                            | 'CH'                                                                                     |
-|                                           |                |                            | >>> tool.uid                                                                             |
-|                                           |                |                            | 789                                                                                      |
-+-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
++-------------------------------------------+---------------------------------------------+--------------------------------------------------------------------------------------------+
+| Dependency role class                     | Keyword arguments of constructor            | Example                                                                                    |
+|                                           +----------------+----------------------------+                                                                                            |
+|                                           | Name           | Default value              |                                                                                            |
++===========================================+================+============================+============================================================================================+
+| :class:`dlb.cmd.Tool.Input.RegularFile`   | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                              |
+|                                           +----------------+----------------------------+ >>>    source_files = dlb.cmd.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)           |
+|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(source_files=['src/main.cpp'])                                             |
+|                                           |                |                            | >>> tool.source_files                                                                      |
+|                                           |                |                            | (NoSpacePath('src/main.cpp'),)                                                             |
++-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
+| :class:`dlb.cmd.Tool.Input.Directory`     | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                              |
+|                                           +----------------+----------------------------+ >>>    cache_directory = dlb.cmd.Tool.Input.Directory(required=False)                      |
+|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(cache_directory='/tmp/')                                                   |
+|                                           |                |                            | >>> tool.cache_directory                                                                   |
+|                                           |                |                            | Path('tmp/')                                                                               |
++-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
+| :class:`dlb.cmd.Tool.Input.EnvVar`        | ``name``       |                            | >>> class Tool(dlb.cmd.Tool):                                                              |
+|                                           +----------------+----------------------------+ >>>    path_envvar = dlb.cmd.Tool.Input.EnvVar(name='PATH', propagate=True)                |
+|                                           | ``required``   | ``True``                   | >>>    territory = dlb.cmd.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})') |
+|                                           |                |                            | >>>    uid = dlb.cmd.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))         |
+|                                           +----------------+----------------------------+ >>> tool = Tool()                                                                          |
+|                                           | ``propagate``  | ``False``                  | >>> tool.path_envvar                                                                       |
+|                                           +----------------+----------------------------+ PropagatedEnvVar(name='PATH', value='/usr/bin:/usr/local/bin')                             |
+|                                           | ``validator``  | ``None``                   | >>> tool.territory                                                                         |
+|                                           |                |                            | 'CH'                                                                                       |
+|                                           |                |                            | >>> tool.uid                                                                               |
+|                                           |                |                            | 789                                                                                        |
++-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
 
 .. class:: dlb.cmd.Tool.Input.RegularFile
 
