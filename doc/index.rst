@@ -59,25 +59,25 @@ Example::
 
 Explanation:
 
-a.  *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
-    The attempt to construct such a ``Path`` object for a path violating these restrictions leads to an exception
-    (helps to enforce portability).
+a. *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
+   The attempt to construct such a ``Path`` object for a path violating these restrictions leads to an exception
+   (helps to enforce portability).
 
-#.  *Configure* some tools of the toolchain by subclassing and redefining attributes.
+#. *Configure* some tools of the toolchain by subclassing and redefining attributes.
 
-#.  Create a *context*. A context describes how subprocesses (e.g. of the compiler) are executed and how
-    diagnostic messages are handled.
+#. Create a *context*. A context describes how subprocesses (e.g. of the compiler) are executed and how
+   diagnostic messages are handled.
 
-#.  *Compile* all ``.cpp`` files in directory ``src/X/`` and its subdirectories into object files.
+#. *Compile* all ``.cpp`` files in directory ``src/X/`` and its subdirectories into object files.
 
-    Compiling also means: automatically find all included files and remember them as input dependencies for future
-    runs of dlb.
-    ``run()`` executes the compiler only when :term:`redo` is necessary (e.g. because one of its include files
-    has changed). Otherwise is does almost nothing.
+   Compiling also means: automatically find all included files and remember them as input dependencies for future
+   runs of dlb.
+   ``run()`` executes the compiler only when :term:`redo` is necessary (e.g. because one of its include files
+   has changed). Otherwise is does almost nothing.
 
-#.  *Link* these object files into an executable file.
+#. *Link* these object files into an executable file.
 
-#.  Output the *size of the executable file*.
+#. Output the *size of the executable file*.
 
 Content
 =======

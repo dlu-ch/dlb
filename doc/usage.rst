@@ -11,112 +11,112 @@ Use them as a starting point for most efficient and reliable operation. [#make1]
 Setup a working tree
 ^^^^^^^^^^^^^^^^^^^^
 
-  - Place the entire :term:`working tree` on the same file system with a decently fine
-    :term:`effective mtime resolution` (no courser than 100 ms). XFS or Ext4 are fine. Avoid FAT32. [#workingtreefs1]_
+ - Place the entire :term:`working tree` on the same file system with a decently fine
+   :term:`effective mtime resolution` (no courser than 100 ms). XFS or Ext4 are fine. Avoid FAT32. [#workingtreefs1]_
 
-    Make sure the filesystem is mounted with "normal" (immediate) update of :term:`mtime`
-    (e.g. without `lazytime` for Ext4). [#mountoption1]_
+   Make sure the filesystem is mounted with "normal" (immediate) update of :term:`mtime`
+   (e.g. without `lazytime` for Ext4). [#mountoption1]_
 
-  - Place all inputs (that are only read by tool instances) in a filesystem tree in the :term:`working tree` that is not
-    modified by tool instances.
+ - Place all inputs (that are only read by tool instances) in a filesystem tree in the :term:`working tree` that is not
+   modified by tool instances.
 
-    This is not required, but good practice.
-    It also enables you to use operating system specific possibility to protect the build against accidental changes
-    of input files.
-    For example: Protect the inputs from change by a transparent read-only filesystem mounted on top of it during the
-    build.
+   This is not required, but good practice.
+   It also enables you to use operating system specific possibility to protect the build against accidental changes
+   of input files.
+   For example: Protect the inputs from change by a transparent read-only filesystem mounted on top of it during the
+   build.
 
 
-  - Do not use symbolic links in the managed tree to filesystem objects not in the same managed tree.
+ - Do not use symbolic links in the managed tree to filesystem objects not in the same managed tree.
 
 
 Run dlb
 ^^^^^^^
 
-  - Do not modify the :term:`management tree` unless told so by dlb. [#managementtree1]_
+ - Do not modify the :term:`management tree` unless told so by dlb. [#managementtree1]_
 
-  - Do not modify the :term:`mtime` of filesystem objects in the :term:`working tree` *manually* while
-    :term:`dlb is running <run of dlb>`. [#touch1]_
+ - Do not modify the :term:`mtime` of filesystem objects in the :term:`working tree` *manually* while
+   :term:`dlb is running <run of dlb>`. [#touch1]_
 
-  - Do not modify the content of filesystem objects in the :term:`managed tree` *on purpose* while
-    :term:`dlb is running <run of dlb>`, if they are used as inputs or outputs of a tool instance.
+ - Do not modify the content of filesystem objects in the :term:`managed tree` *on purpose* while
+   :term:`dlb is running <run of dlb>`, if they are used as inputs or outputs of a tool instance.
 
-    Yes, I know: it happens a lot by mistake when editing source files.
+   Yes, I know: it happens a lot by mistake when editing source files.
 
-    dlb itself is designed to be relatively robust to such modifications.
-    As long as the size of modified regular file changes or the :term:`working tree time` is monotonic, there is no
-    :term:`redo miss` in the current or in any future :term:`run of dlb`. [#managedtree1]_ [#make3]_
+   dlb itself is designed to be relatively robust to such modifications.
+   As long as the size of modified regular file changes or the :term:`working tree time` is monotonic, there is no
+   :term:`redo miss` in the current or in any future :term:`run of dlb`. [#managedtree1]_ [#make3]_
 
-    However, many external tools cannot guarantee proper behaviour if some of their input files are changed while they
-    are being executed (e.g. a compiler working on multiple input files).
+   However, many external tools cannot guarantee proper behaviour if some of their input files are changed while they
+   are being executed (e.g. a compiler working on multiple input files).
 
-  - Avoid :command:`mv` to replace regular files; is does not update its target's :term:`mtime`.
+ - Avoid :command:`mv` to replace regular files; is does not update its target's :term:`mtime`.
 
-    Use :command:`cp` instead.
+   Use :command:`cp` instead.
 
-  - Be careful when you modify inputs of a :term:`tool instance` via `mmap`. [#mmap1]_
+ - Be careful when you modify inputs of a :term:`tool instance` via `mmap`. [#mmap1]_
 
-  - Do not put the system time used as :term:`working tree's system time` back *on purpose* while
-    :term:`dlb is running <run of dlb>` or while you are modifying the :term:`managed tree`. [#workingtreetime]_
+ - Do not put the system time used as :term:`working tree's system time` back *on purpose* while
+   :term:`dlb is running <run of dlb>` or while you are modifying the :term:`managed tree`. [#workingtreetime]_
 
 
 Write scripts and tools
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-  - Do not modify the :term:`managed tree` in a :term:`script` inside a :term:`root context`, e.g. by calling
-    :func:`shutil.rmtree()` directly. [#managedtree1]_
+ - Do not modify the :term:`managed tree` in a :term:`script` inside a :term:`root context`, e.g. by calling
+   :func:`shutil.rmtree()` directly. [#managedtree1]_
 
-    Use :term:`tool instances <tool instance>` instead.
+   Use :term:`tool instances <tool instance>` instead.
 
-  - It is safe to modify the :term:`managed tree` immediately after a :term:`run of dlb` is completed (e.g. in the same
-    :term:`script`, without risking a :term:`redo miss` [#make2]_
+ - It is safe to modify the :term:`managed tree` immediately after a :term:`run of dlb` is completed (e.g. in the same
+   :term:`script`, without risking a :term:`redo miss` [#make2]_
 
-  - Do not use (explicit) multithreading. Use :py:mod:`asyncio` instead.
+ - Do not use (explicit) multithreading. Use :py:mod:`asyncio` instead.
 
-  - Do not use multiple hierarchical :term:`scripts <script>` (where one calls another).
-    This would be error-prone an inefficient.
-    Use scripts only on the top-level.
+ - Do not use multiple hierarchical :term:`scripts <script>` (where one calls another).
+   This would be error-prone an inefficient.
+   Use scripts only on the top-level.
 
-  - Split large :term:`scripts<script>` into small modules that are imported by the script.
-    You can place these modules in the directory they control.
+ - Split large :term:`scripts<script>` into small modules that are imported by the script.
+   You can place these modules in the directory they control.
 
-  - Use only *one* :term:`root context` and nest all other contexts inside
-    (even in modules imported inside this context). [#rootcontext1]_
+ - Use only *one* :term:`root context` and nest all other contexts inside
+   (even in modules imported inside this context). [#rootcontext1]_
 
-    Do::
+   Do::
 
-        import dlb.cmd
-        ...
-        with dlb.cmd.Context():
-            with dlb.cmd.Context():
-                ...
-            with dlb.cmd.Context():
-                ...
-            import build_subsystem_a  # contains 'with dlb.cmd.Context(): ... '
+       import dlb.cmd
+       ...
+       with dlb.cmd.Context():
+           with dlb.cmd.Context():
+               ...
+           with dlb.cmd.Context():
+               ...
+           import build_subsystem_a  # contains 'with dlb.cmd.Context(): ... '
 
 
-    Don't::
+   Don't::
 
-        import dlb.cmd
-        ...
+       import dlb.cmd
+       ...
 
-        with dlb.cmd.Context():
-           ...  # context manager exit is artificially delayed as necessary according to the
-                # filesystem's effective mtime resolution
+       with dlb.cmd.Context():
+          ...  # context manager exit is artificially delayed as necessary according to the
+               # filesystem's effective mtime resolution
 
-        with dlb.cmd.Context():
-           ...  # context manager exit is artificially delayed as necessary according to the
-                # filesystem's effective mtime resolution (again)
+       with dlb.cmd.Context():
+          ...  # context manager exit is artificially delayed as necessary according to the
+               # filesystem's effective mtime resolution (again)
 
-  - Use context to serialize groups of running tool instances, even when running in parallel [#serialize1]_::
+ - Use context to serialize groups of running tool instances, even when running in parallel [#serialize1]_::
 
-        with dlb.cmd.Context(max_tool_processes=4):
-            ...
+       with dlb.cmd.Context(max_tool_processes=4):
+           ...
 
-        ...  #  all running tool instances are completed here
+       ...  #  all running tool instances are completed here
 
-        with dlb.cmd.Context():
-            ...
+       with dlb.cmd.Context():
+           ...
 
 
 Layout of working tree
@@ -189,19 +189,19 @@ example):
 .. _Make: https://en.wikipedia.org/wiki/Make_%28software%29
 
 .. [#make1]
-    Although they are not formally specified, Make_ has by design much stricter requirements and much looser guarantees.
+   Although they are not formally specified, Make_ has by design much stricter requirements and much looser guarantees.
 .. [#workingtreefs1] |assumption-f1|, |assumption-t3|
 .. [#mountoption1] |assumption-f2|, |assumption-f3|, |assumption-f4|
 .. [#managementtree1] |assumption-a1|
 .. [#managedtree1]
-    |assumption-a2|, |guarantee-d1|, |guarantee-d2|, |guarantee-d3|
+   |assumption-a2|, |guarantee-d1|, |guarantee-d2|, |guarantee-d3|
 .. [#make3]
-    Make_ is very vulnerable to this.
-    Even with a monotonically increasing :term:`working tree time`, the inputs (sources of a rule) must not be changed
-    from the moment its recipe's execution is started until the next increase of the :term:`working tree time` after
-    the recipe's execution is completed.
-    Otherwise, there is a :term:`redo miss` in every future run - until the :term:`working tree time` a an input is
-    changed again in a way that does not cause a redo miss.
+   Make_ is very vulnerable to this.
+   Even with a monotonically increasing :term:`working tree time`, the inputs (sources of a rule) must not be changed
+   from the moment its recipe's execution is started until the next increase of the :term:`working tree time` after
+   the recipe's execution is completed.
+   Otherwise, there is a :term:`redo miss` in every future run - until the :term:`working tree time` a an input is
+   changed again in a way that does not cause a redo miss.
 .. [#make2] This is not the case with Make_.
 .. [#rootcontext1] |guarantee-t2|
 .. [#workingtreetime] |assumption-t2| |guarantee-d1|, |guarantee-d3|
