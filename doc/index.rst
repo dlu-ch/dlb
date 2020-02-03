@@ -88,8 +88,10 @@ Content
    glossary.rst
    toplevelspec.rst
    fs_path.rst
-   cmd_tmpl.rst
+   cmd_context.rst
    cmd_tool.rst
+   cmd_tmpl.rst
+   diagnostics.rst
    similar_tools.rst
 
 Indices and tables
