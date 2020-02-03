@@ -116,7 +116,7 @@ Filesystems behaviour of working tree
 .. _assumption-f1:
 .. |assumption-f1| replace:: :ref:`A-F1 <assumption-f1>`
 
-**A-F1** (same filesystem)
+**A-F1** (one filesystem)
     Every filesystem object :file:`{w}/{p}`, where :file:`{w}` is the path of the :term:`working tree`'s root and
     :file:`{p}` is a relative path without :file:`..` components, resides on the same (local or remote) file system.
 

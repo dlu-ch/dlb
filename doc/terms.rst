@@ -135,8 +135,8 @@ Terms
         :term:`redo miss` for any :term:`tool instance` in the current run or any future :term:`run of dlb`.
 
     benign managed tree modification
-        A modification of in the :term:`managed tree` is called a benign managed tree modification, if it
-        consist only of an arbitrary number of the following actions in any order:
+        A modification of the :term:`managed tree` is benign, if it consist only of an arbitrary number of the
+        following actions in any order:
 
           - Remove or create a filesystem object
             (this includes symbolic links and hard links)
@@ -144,7 +144,7 @@ Terms
 
         Examples of modifications of the managed tree that or no benign managed tree modification:
 
-           - Replace a regular file by an other one with :command:`mv`
+           - Replace a regular file by any other one with :command:`mv`
              (does not :term:`update mtime <mtime update>` of the target)
            - Swap two directories
            - Set the :term:`mtime` of a filesystem object to something different from the current working tree time

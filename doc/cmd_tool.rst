@@ -1,7 +1,7 @@
-:mod:`dlb.cmd.tool` --- Dependency-Aware Command-Line Tools
-===========================================================
+:mod:`dlb.cmd.tool` --- Dependency-aware tool execution
+=======================================================
 .. module:: dlb.cmd
-   :synopsis: Dependency-Aware Command-Line Tools
+   :synopsis: Dependency-aware tool execution
 
 This module provides classes to represent tools to be executed during the build process (typically by calling
 :term:`dynamic helpers <dynamic helper>` like compiler binaries).
@@ -65,7 +65,7 @@ Tool Objects
       >>> compiler.object_file  # dependency
       Path('main.cpp.o')
 
-   .. method:: run_in_context()
+   .. method:: run()
 
 
 Dependency Role Classes

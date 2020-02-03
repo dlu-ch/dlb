@@ -11,8 +11,8 @@ Use them as a starting point for most efficient and reliable operation. [#make1]
 Setup a working tree
 ^^^^^^^^^^^^^^^^^^^^
 
-  - Place the entire :term:`working tree` on the same file system with a decently fine effective :term:`mtime`
-    resolution (no courser than 100 ms). XFS or Ext4 are fine. Avoid FAT32. [#workingtreefs1]_
+  - Place the entire :term:`working tree` on the same file system with a decently fine
+    :term:`effective mtime resolution` (no courser than 100 ms). XFS or Ext4 are fine. Avoid FAT32. [#workingtreefs1]_
 
     Make sure the filesystem is mounted with "normal" (immediate) update of :term:`mtime`
     (e.g. without `lazytime` for Ext4). [#mountoption1]_

@@ -1,4 +1,4 @@
-Similar Tools
+Similar tools
 =============
 
 There is a plethora of build tools.
@@ -38,7 +38,7 @@ Tools based on directory structure
 ----------------------------------
 
 Some build tools are specialized in organizing large projects, fetching files from different
-sources, packaging and publish the build products.
+sources, packaging and publishing the build products.
 They usually do so by imposing a certain directory structure and assign files a give meaning
 based on this structure.
 

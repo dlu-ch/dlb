@@ -46,14 +46,14 @@ Example::
            Compiler(
                source_file=p,
                object_file=Path('build/out/' + p.as_string() + '.o')
-           ).run_in_context().object_file
+           ).run().object_file
            for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
         ]
 
         linker = Linker(
             object_files=object_files,
             linked_file=Path('build/out/example')                                 # (e)
-        ).run_in_context()
+        ).run()
 
         print('Size:', linker.linked_file.native.stat().st_size, 'B')             # (f)
 
@@ -65,13 +65,14 @@ a.  *Restrict paths* to ones without spaces, usable on Windows and Posix systems
 
 #.  *Configure* some tools of the toolchain by subclassing and redefining attributes.
 
-#.  Create a *context*. A context describes how subprocesses (e.g. the compiler) are executed.
+#.  Create a *context*. A context describes how subprocesses (e.g. of the compiler) are executed and how
+    diagnostic messages are handled.
 
 #.  *Compile* all ``.cpp`` files in directory ``src/X/`` and its subdirectories into object files.
 
     Compiling also means: automatically find all included files and remember them as input dependencies for future
     runs of dlb.
-    ``run_in_context()`` executes the compiler only when :term:`redo` is necessary (e.g. because one of its include files
+    ``run()`` executes the compiler only when :term:`redo` is necessary (e.g. because one of its include files
     has changed). Otherwise is does almost nothing.
 
 #.  *Link* these object files into an executable file.
@@ -85,7 +86,7 @@ Content
    :maxdepth: 2
 
    usage.rst
-   glossary.rst
+   terms.rst
    toplevelspec.rst
    fs_path.rst
    cmd_context.rst
