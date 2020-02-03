@@ -416,7 +416,7 @@ class _ToolMeta(type):
         protected_attribs = (set(_ToolBase.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
         attribs = set(cls.__dict__) & protected_attribs
         if attribs:
-            raise AttributeError("must not be overridden in a 'dlb.cmd.Tool': {}".format(repr(sorted(attribs)[0])))
+            raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attribs)[0])))
 
         cls.check_own_attributes()
         super().__setattr__('_dependency_names', cls._get_dependency_names())
@@ -436,7 +436,7 @@ class _ToolMeta(type):
             elif DEPENDENCY_NAME_REGEX.match(name):
                 if not (isinstance(value, _ToolBase.DependencyRole) and isinstance(value, _ConcreteDependencyMixin)):
                     raise TypeError(
-                        "the value of {} must be an instance of a concrete subclass of 'dlb.cmd.Tool.DependencyRole'"
+                        "the value of {} must be an instance of a concrete subclass of 'dlb.ex.Tool.DependencyRole'"
                         .format(repr(name)))
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
@@ -447,7 +447,7 @@ class _ToolMeta(type):
             else:
                 raise AttributeError((
                     "invalid class attribute name: {} "
-                    "(every class attribute of a 'dlb.cmd.Tool' must be named "
+                    "(every class attribute of a 'dlb.ex.Tool' must be named "
                     "like 'UPPER_CASE_WORD' or 'lower_case_word)").format(repr(name)))
 
     def _get_dependency_names(cls):

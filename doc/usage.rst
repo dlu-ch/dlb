@@ -85,37 +85,37 @@ Write scripts and tools
 
    Do::
 
-       import dlb.cmd
+       import dlb.ex
        ...
-       with dlb.cmd.Context():
-           with dlb.cmd.Context():
+       with dlb.ex.Context():
+           with dlb.ex.Context():
                ...
-           with dlb.cmd.Context():
+           with dlb.ex.Context():
                ...
-           import build_subsystem_a  # contains 'with dlb.cmd.Context(): ... '
+           import build_subsystem_a  # contains 'with dlb.ex.Context(): ... '
 
 
    Don't::
 
-       import dlb.cmd
+       import dlb.ex
        ...
 
-       with dlb.cmd.Context():
+       with dlb.ex.Context():
           ...  # context manager exit is artificially delayed as necessary according to the
                # filesystem's effective mtime resolution
 
-       with dlb.cmd.Context():
+       with dlb.ex.Context():
           ...  # context manager exit is artificially delayed as necessary according to the
                # filesystem's effective mtime resolution (again)
 
  - Use context to serialize groups of running tool instances, even when running in parallel [#serialize1]_::
 
-       with dlb.cmd.Context(max_tool_processes=4):
+       with dlb.ex.Context(max_tool_processes=4):
            ...
 
        ...  #  all running tool instances are completed here
 
-       with dlb.cmd.Context():
+       with dlb.ex.Context():
            ...
 
 

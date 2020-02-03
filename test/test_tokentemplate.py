@@ -3,7 +3,7 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-from dlb.cmd.tmpl import TokensTemplate
+from dlb.ex.tmpl import TokensTemplate
 import collections
 import unittest
 
@@ -11,9 +11,9 @@ import unittest
 class TestModule(unittest.TestCase):
 
     def test_import(self):
-        import dlb.cmd.tmpl
-        self.assertEqual(['TokensTemplate'], dlb.cmd.tmpl.__all__)
-        self.assertTrue('TokensTemplate' in dir(dlb.cmd))
+        import dlb.ex.tmpl
+        self.assertEqual(['TokensTemplate'], dlb.ex.tmpl.__all__)
+        self.assertTrue('TokensTemplate' in dir(dlb.ex))
 
 
 class TestSyntax(unittest.TestCase):

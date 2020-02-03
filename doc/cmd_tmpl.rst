@@ -1,4 +1,4 @@
-:mod:`dlb.cmd.tmpl` --- Tokens templates
+:mod:`dlb.ex.tmpl` --- Tokens templates
 ========================================
 
 String-token based replacement engine which provides simple type checking (with ``isinstance()``)

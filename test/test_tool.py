@@ -3,16 +3,16 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-from dlb.cmd.tool import Tool
+from dlb.ex.tool import Tool
 import unittest
 
 
 class TestModule(unittest.TestCase):
 
     def test_import(self):
-        import dlb.cmd.tool
-        self.assertEqual(['Tool', 'PropagatedEnvVar'], dlb.cmd.tool.__all__)
-        self.assertTrue('Tool' in dir(dlb.cmd))
+        import dlb.ex.tool
+        self.assertEqual(['Tool', 'PropagatedEnvVar'], dlb.ex.tool.__all__)
+        self.assertTrue('Tool' in dir(dlb.ex))
 
 
 class AttributeDefineTest(unittest.TestCase):
@@ -39,7 +39,7 @@ class AttributeDefineTest(unittest.TestCase):
     # noinspection PyUnusedLocal,PyRedeclaration
     def test_cannot_define_other(self):
         tmpl = (
-            "invalid class attribute name: {} (every class attribute of a 'dlb.cmd.Tool' must be named "
+            "invalid class attribute name: {} (every class attribute of a 'dlb.ex.Tool' must be named "
             "like 'UPPER_CASE_WORD' or 'lower_case_word)"
         )
         with self.assertRaises(AttributeError) as cm:
@@ -79,14 +79,14 @@ class AttributeDefineTest(unittest.TestCase):
                 x_y_z = None
         self.assertEqual(
             str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.DependencyRole'")
+            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.DependencyRole'")
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = Tool.DependencyRole()
         self.assertEqual(
             str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.cmd.Tool.DependencyRole'")
+            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.DependencyRole'")
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
@@ -98,25 +98,25 @@ class AttributeDefineTest(unittest.TestCase):
             class ATool(Tool):
                 def __new__(cls):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.cmd.Tool': '__new__'")
+        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__new__'")
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
                 def __init__(self):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.cmd.Tool': '__init__'")
+        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__init__'")
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
                 def __setattr__(self):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.cmd.Tool': '__setattr__'")
+        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__setattr__'")
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
                 def __delattr__(self):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.cmd.Tool': '__delattr__'")
+        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__delattr__'")
 
     def test_can_inherit_invalid_from_nontool(self):
         class ATool(Tool):
@@ -173,7 +173,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive")
 
     # noinspection PyUnusedLocal
     def test_cannot_override_file_with_director(self):
@@ -186,7 +186,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive")
 
     # noinspection PyUnusedLocal
     def test_can_only_override_path_with_more_restrictive_path(self):
@@ -204,7 +204,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive")
 
     # noinspection PyUnusedLocal
     def test_can_only_override_nonrequired_with_required(self):
@@ -220,7 +220,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
         self.assertRegex(
             str(cm.exception),
             r"^attribute 'source_file' of base class may only be overridden by a "
-            r"<class 'dlb.cmd.tool.Tool.Input.RegularFile'> at least as restrictive$")
+            r"<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive$")
 
     # noinspection PyUnusedLocal
     def test_can_only_override_with_similar_multiplicity(self):
@@ -234,7 +234,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "attribute 'source_files' of base class may only be overridden by a "
-            "<class 'dlb.cmd.tool.Tool.Input.RegularFile[1:]'> at least as restrictive")
+            "<class 'dlb.ex.tool.Tool.Input.RegularFile[1:]'> at least as restrictive")
 
         with self.assertRaises(TypeError) as cm:
             class CTool(ATool):
@@ -242,7 +242,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             "attribute 'linked_file' of base class may only be overridden by a "
-            "<class 'dlb.cmd.tool.Tool.Output.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.tool.Tool.Output.RegularFile'> at least as restrictive")
 
 
 class WriteProtectionTest(unittest.TestCase):

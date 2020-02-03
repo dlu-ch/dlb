@@ -286,7 +286,7 @@ Path Objects
    of ``P.Native``.
 
    These properties make subclasses of :class:`dlb.fs.Path.Native` well-suited for use in type specifications
-   of tokens templates (:class:`dlb.cmd.tmpl.TokensTemplate`).
+   of tokens templates (:class:`dlb.ex.tmpl.TokensTemplate`).
 
    Example (on a Posix system)::
 

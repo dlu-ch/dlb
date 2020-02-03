@@ -32,7 +32,7 @@ Tools (e.g. compiler/linker toolchains) are represented as classes. Adapting too
 Example::
 
     import dlb.fs
-    import dlb.cmd
+    import dlb.ex
     ...
 
     class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
@@ -40,7 +40,7 @@ Example::
     class Compiler(CppCompilerGcc): WARNINGS = ['all']                            # (b)
     class Linker(StaticLinkerGcc): pass
 
-    with dlb.cmd.Context():                                                       # (c)
+    with dlb.ex.Context():                                                        # (c)
 
         object_files = [                                                          # (d)
            Compiler(

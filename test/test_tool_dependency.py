@@ -3,7 +3,7 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-from dlb.cmd.tool import Tool, PropagatedEnvVar
+from dlb.ex.tool import Tool, PropagatedEnvVar
 import re
 import os
 import unittest
@@ -33,12 +33,12 @@ class ReprTest(unittest.TestCase):
         self.assertEqual(Tool.Input.__name__, 'Input')
 
     def test_name_matches_nesting(self):
-        self.assertEqual(repr(Tool.DependencyRole), "<class 'dlb.cmd.tool.Tool.DependencyRole'>")
-        self.assertEqual(repr(Tool.Input), "<class 'dlb.cmd.tool.Tool.Input'>")
-        self.assertEqual(repr(Tool.Input.RegularFile), "<class 'dlb.cmd.tool.Tool.Input.RegularFile'>")
-        self.assertEqual(repr(Tool.Output), "<class 'dlb.cmd.tool.Tool.Output'>")
-        self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.cmd.tool.Tool.Output.RegularFile'>")
-        self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.cmd.tool.Tool.Intermediate'>")
+        self.assertEqual(repr(Tool.DependencyRole), "<class 'dlb.ex.tool.Tool.DependencyRole'>")
+        self.assertEqual(repr(Tool.Input), "<class 'dlb.ex.tool.Tool.Input'>")
+        self.assertEqual(repr(Tool.Input.RegularFile), "<class 'dlb.ex.tool.Tool.Input.RegularFile'>")
+        self.assertEqual(repr(Tool.Output), "<class 'dlb.ex.tool.Tool.Output'>")
+        self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.ex.tool.Tool.Output.RegularFile'>")
+        self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.ex.tool.Tool.Intermediate'>")
 
     def test_name_contains_multiplicity(self):
         D = Tool.Input.Directory

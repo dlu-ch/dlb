@@ -1,12 +1,12 @@
-:mod:`dlb.cmd.tool` --- Dependency-aware tool execution
+:mod:`dlb.ex.tool` --- Dependency-aware tool execution
 =======================================================
-.. module:: dlb.cmd
+.. module:: dlb.ex
    :synopsis: Dependency-aware tool execution
 
 This module provides classes to represent tools to be executed during the build process (typically by calling
 :term:`dynamic helpers <dynamic helper>` like compiler binaries).
 
-Every :term:`tool` is represented by a subclass of :class:`dlb.cmd.Tool` that describes its abstract behaviour and the
+Every :term:`tool` is represented by a subclass of :class:`dlb.ex.Tool` that describes its abstract behaviour and the
 way it is run (e.g. meaning of commandline and output, interaction with file system and environment variables).
 Tools are usually parametrized by dependency roles (e.g. input files) and execution parameters.
 
@@ -31,7 +31,7 @@ Tool Objects
    (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file_dependency``),
    while the execution parameters are the same of all instances of the some tool.
 
-   Dependency roles are instances of subclasses of :class:`dlb.cmd.Tool.DependencyRole`.
+   Dependency roles are instances of subclasses of :class:`dlb.ex.Tool.DependencyRole`.
 
    A new tool can be defined by inheriting from one or more other tools.
    When overriding a dependency roles, its overriding value must be of the same type as the overridden value
@@ -40,15 +40,15 @@ Tool Objects
 
    Example::
 
-      class Compiler(dlb.cmd.Tool):
+      class Compiler(dlb.ex.Tool):
          WARNINGS = ('all',)
-         source_file = dlb.cmd.Tool.Input.RegularFile()
-         object_file = dlb.cmd.Tool.Output.RegularFile()
+         source_file = dlb.ex.Tool.Input.RegularFile()
+         object_file = dlb.ex.Tool.Output.RegularFile()
 
-      class Linker(dlb.cmd.Tool):
-         object_files = dlb.cmd.Tool.Input.RegularFile[1:]()
-         linked_file = dlb.cmd.Tool.Output.RegularFile()
-         map_file = dlb.cmd.Tool.Output.RegularFile(required=False)
+      class Linker(dlb.ex.Tool):
+         object_files = dlb.ex.Tool.Input.RegularFile[1:]()
+         linked_file = dlb.ex.Tool.Output.RegularFile()
+         map_file = dlb.ex.Tool.Output.RegularFile(required=False)
 
       compiler = Compiler(source_file='main.cpp', object_file='main.cpp.o')
       linker = Linker(object_files=[compiler.object_file], linked_file='main')
@@ -57,10 +57,10 @@ Tool Objects
    At construction of a tool, the dependencies given as keyword arguments to the constructor are validated by the
    tool's dependency roles and made accessible (for reading only) as an attribute with the name of the corresponding
    dependency role and a type determined by the dependency role
-   (e.g. :class:`dlb.fs.Path` for :class:`dlb.cmd.Tool.Input.RegularFile`)::
+   (e.g. :class:`dlb.fs.Path` for :class:`dlb.ex.Tool.Input.RegularFile`)::
 
       >>> Compiler.object_file  # dependency role
-      <dlb.cmd.tool.Tool.Input.RegularFile object at ...>
+      <dlb.ex.tool.Tool.Input.RegularFile object at ...>
 
       >>> compiler.object_file  # dependency
       Path('main.cpp.o')
@@ -72,7 +72,7 @@ Dependency Role Classes
 -----------------------
 
 Dependency roles of tools (subclasses of :class:`Tool`) are instances of subclasses of
-:class:`dlb.cmd.Tool.DependencyRole`.
+:class:`dlb.ex.Tool.DependencyRole`.
 
 .. graphviz::
 
@@ -81,9 +81,9 @@ Dependency roles of tools (subclasses of :class:`Tool`) are instances of subclas
        node [height=0.25];
        edge [arrowhead=empty];
 
-       "dlb.cmd.Tool.Input" -> "dlb.cmd.Tool.DependencyRole";
-       "dlb.cmd.Tool.Intermediate" -> "dlb.cmd.Tool.DependencyRole";
-       "dlb.cmd.Tool.Output" -> "dlb.cmd.Tool.DependencyRole";
+       "dlb.ex.Tool.Input" -> "dlb.ex.Tool.DependencyRole";
+       "dlb.ex.Tool.Intermediate" -> "dlb.ex.Tool.DependencyRole";
+       "dlb.ex.Tool.Output" -> "dlb.ex.Tool.DependencyRole";
    }
 
 They are classified according to their meaning to the tool:
@@ -94,37 +94,37 @@ They are classified according to their meaning to the tool:
 
 .. class:: Tool.Input
 
-   A :class:`dlb.cmd.Tool.DependencyRole` which describes an input dependency of a tool.
+   A :class:`dlb.ex.Tool.DependencyRole` which describes an input dependency of a tool.
 
    The :term:`tool instance` must be rerun if it (e.g. the content of a file) has changed compared to the state before
    it was executed.
 
 .. class:: Tool.Intermediate
 
-   A :class:`dlb.cmd.Tool.DependencyRole` which describes an intermediate dependency of a tool.
+   A :class:`dlb.ex.Tool.DependencyRole` which describes an intermediate dependency of a tool.
 
    Such a dependency (e.g. a directory for caching) is expected not to be accessed while the tool instance
    is running.
 
 .. class:: Tool.Output
 
-   A :class:`dlb.cmd.Tool.DependencyRole` which describes an output dependency of a tool.
+   A :class:`dlb.ex.Tool.DependencyRole` which describes an output dependency of a tool.
 
    The dependency (e.g. a file) is removed before the tool instance starts running if it exists.
    After the execution of the tool it must exist.
 
 These classes are used for structure only; they have no meaningful attributes or methods.
 Concrete dependencies can only be assigned to *concrete dependency roles*.
-The according classes are inner classes of :class:`dlb.cmd.Tool.Input`, :class:`dlb.cmd.Tool.Intermediate` and
-:class:`dlb.cmd.Tool.Output` and derived from these.
-Example: :class:`dlb.cmd.Tool.Output.Directory` is a concrete output dependency role
-(a subclass of :class:`dlb.cmd.Tool.Output`).
+The according classes are inner classes of :class:`dlb.ex.Tool.Input`, :class:`dlb.ex.Tool.Intermediate` and
+:class:`dlb.ex.Tool.Output` and derived from these.
+Example: :class:`dlb.ex.Tool.Output.Directory` is a concrete output dependency role
+(a subclass of :class:`dlb.ex.Tool.Output`).
 
 
 Concrete Dependency Role Classes and Objects
 --------------------------------------------
 
-Their objects are used to declare dependency roles in tools (subclasses of :class:`dlb.cmd.Tool`).
+Their objects are used to declare dependency roles in tools (subclasses of :class:`dlb.ex.Tool`).
 
 .. graphviz::
 
@@ -133,16 +133,16 @@ Their objects are used to declare dependency roles in tools (subclasses of :clas
        node [height=0.25];
        edge [arrowhead=empty];
 
-       "dlb.cmd.Tool.Input.RegularFile" -> "dlb.cmd.Tool.Input";
-       "dlb.cmd.Tool.Input.Directory" -> "dlb.cmd.Tool.Input";
-       "dlb.cmd.Tool.Input.EnvVar" -> "dlb.cmd.Tool.Input";
+       "dlb.ex.Tool.Input.RegularFile" -> "dlb.ex.Tool.Input";
+       "dlb.ex.Tool.Input.Directory" -> "dlb.ex.Tool.Input";
+       "dlb.ex.Tool.Input.EnvVar" -> "dlb.ex.Tool.Input";
 
-       "dlb.cmd.Tool.Output.RegularFile" -> "dlb.cmd.Tool.Output";
-       "dlb.cmd.Tool.Output.Directory" -> "dlb.cmd.Tool.Output";
+       "dlb.ex.Tool.Output.RegularFile" -> "dlb.ex.Tool.Output";
+       "dlb.ex.Tool.Output.Directory" -> "dlb.ex.Tool.Output";
 
-       "dlb.cmd.Tool.Input" -> "dlb.cmd.Tool.DependencyRole";
-       "dlb.cmd.Tool.Intermediate" -> "dlb.cmd.Tool.DependencyRole";
-       "dlb.cmd.Tool.Output" -> "dlb.cmd.Tool.DependencyRole";
+       "dlb.ex.Tool.Input" -> "dlb.ex.Tool.DependencyRole";
+       "dlb.ex.Tool.Intermediate" -> "dlb.ex.Tool.DependencyRole";
+       "dlb.ex.Tool.Output" -> "dlb.ex.Tool.DependencyRole";
    }
 
 A concrete dependency role can have a *multiplicity*.
@@ -152,8 +152,8 @@ This set is expressed as a slice or a single integer.
 
 Example::
 
-    class Example(dlb.cmd.Tool):
-        include_search_paths = dlb.cmd.Tool.Input.Directory[:]()  # a sequence of any number of dlb.cmd.Tool.Input.Directory
+    class Example(dlb.ex.Tool):
+        include_search_paths = dlb.ex.Tool.Input.Directory[:]()  # a sequence of any number of dlb.ex.Tool.Input.Directory
 
     example = Example(include_search_paths=['build/out/Generated/', 'src/Implementation/'])
     example.include_search_paths  # (Path('build/out/Generated/'), Path('src/Implementation/'))
@@ -185,33 +185,33 @@ Concrete dependency role classes support the following methods and attributes:
 
    Examples::
 
-        dlb.cmd.Tool.Output.Directory[3]         # a sequence of exactly three dlb.cmd.Tool.Output.Directory
-        dlb.cmd.Tool.Input.RegularFile[1:]       # a sequence of at least one dlb.cmd.Tool.Input.RegularFile
-        dlb.cmd.Tool.Output.RegularFile[:2]      # a sequence of at most one dlb.cmd.Tool.Output.RegularFile
-        dlb.cmd.Tool.Output.RegularFile[5:21:5]  # a sequence of dlb.cmd.Tool.Output.RegularFile of a length in {5, 15, 20}
+        dlb.ex.Tool.Output.Directory[3]         # a sequence of exactly three dlb.ex.Tool.Output.Directory
+        dlb.ex.Tool.Input.RegularFile[1:]       # a sequence of at least one dlb.ex.Tool.Input.RegularFile
+        dlb.ex.Tool.Output.RegularFile[:2]      # a sequence of at most one dlb.ex.Tool.Output.RegularFile
+        dlb.ex.Tool.Output.RegularFile[5:21:5]  # a sequence of dlb.ex.Tool.Output.RegularFile of a length in {5, 15, 20}
 
    The multiplicity is accessible as a read-only class and instance attribute:
 
-        >>> dlb.cmd.Tool.Output.Directory is None
+        >>> dlb.ex.Tool.Output.Directory is None
         True
-        >>> dlb.cmd.Tool.Output.Directory().multiplicity is None
+        >>> dlb.ex.Tool.Output.Directory().multiplicity is None
         True
-        >>> dlb.cmd.Tool.Output.Directory[3].multiplicity
+        >>> dlb.ex.Tool.Output.Directory[3].multiplicity
         slice(3, 4, 1)
-        >>> dlb.cmd.Tool.Output.Directory[3]().multiplicity
+        >>> dlb.ex.Tool.Output.Directory[3]().multiplicity
         slice(3, 4, 1)
 
    On every call with the same multiplicity the same class is returned::
 
-       >>> dlb.cmd.Tool.Output.Directory[:] is dlb.cmd.Tool.Output.Directory[:]
+       >>> dlb.ex.Tool.Output.Directory[:] is dlb.ex.Tool.Output.Directory[:]
        True
 
-   ``Cdrc[multiplicity]`` is a subclass of all direct subclasses of ``dlb.cmd.Tool.DependencyRole``
+   ``Cdrc[multiplicity]`` is a subclass of all direct subclasses of ``dlb.ex.Tool.DependencyRole``
    of which ``Cdrc`` is a subclass::
 
-       >>> issubclass(dlb.cmd.Tool.Output.Directory[:], dlb.cmd.Tool.Output)
+       >>> issubclass(dlb.ex.Tool.Output.Directory[:], dlb.ex.Tool.Output)
        True
-       >>> issubclass(dlb.cmd.Tool.Output.Directory[:], dlb.cmd.Tool.Output.Directory)
+       >>> issubclass(dlb.ex.Tool.Output.Directory[:], dlb.ex.Tool.Output.Directory)
        False
 
    :param multiplicity: non-negative integer or slice with a non-negative ``start`` and a positive ``step``
@@ -273,22 +273,22 @@ Concrete Input Dependency Role Classes
 |                                           +----------------+----------------------------+                                                                                            |
 |                                           | Name           | Default value              |                                                                                            |
 +===========================================+================+============================+============================================================================================+
-| :class:`dlb.cmd.Tool.Input.RegularFile`   | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                              |
-|                                           +----------------+----------------------------+ >>>    source_files = dlb.cmd.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)           |
+| :class:`dlb.ex.Tool.Input.RegularFile`    | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                               |
+|                                           +----------------+----------------------------+ >>>    source_files = dlb.ex.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)            |
 |                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(source_files=['src/main.cpp'])                                             |
 |                                           |                |                            | >>> tool.source_files                                                                      |
 |                                           |                |                            | (NoSpacePath('src/main.cpp'),)                                                             |
 +-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
-| :class:`dlb.cmd.Tool.Input.Directory`     | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                              |
-|                                           +----------------+----------------------------+ >>>    cache_directory = dlb.cmd.Tool.Input.Directory(required=False)                      |
+| :class:`dlb.ex.Tool.Input.Directory`      | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                               |
+|                                           +----------------+----------------------------+ >>>    cache_directory = dlb.ex.Tool.Input.Directory(required=False)                       |
 |                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(cache_directory='/tmp/')                                                   |
 |                                           |                |                            | >>> tool.cache_directory                                                                   |
 |                                           |                |                            | Path('tmp/')                                                                               |
 +-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
-| :class:`dlb.cmd.Tool.Input.EnvVar`        | ``name``       |                            | >>> class Tool(dlb.cmd.Tool):                                                              |
-|                                           +----------------+----------------------------+ >>>    path_envvar = dlb.cmd.Tool.Input.EnvVar(name='PATH', propagate=True)                |
-|                                           | ``required``   | ``True``                   | >>>    territory = dlb.cmd.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})') |
-|                                           |                |                            | >>>    uid = dlb.cmd.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))         |
+| :class:`dlb.ex.Tool.Input.EnvVar`         | ``name``       |                            | >>> class Tool(dlb.ex.Tool):                                                               |
+|                                           +----------------+----------------------------+ >>>    path_envvar = dlb.ex.Tool.Input.EnvVar(name='PATH', propagate=True)                 |
+|                                           | ``required``   | ``True``                   | >>>    territory = dlb.ex.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})')  |
+|                                           |                |                            | >>>    uid = dlb.ex.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))          |
 |                                           +----------------+----------------------------+ >>> tool = Tool()                                                                          |
 |                                           | ``propagate``  | ``False``                  | >>> tool.path_envvar                                                                       |
 |                                           +----------------+----------------------------+ PropagatedEnvVar(name='PATH', value='/usr/bin:/usr/local/bin')                             |
@@ -334,7 +334,7 @@ Concrete Input Dependency Role Classes
       If ``propagate`` is ``False``, its validated value is assigned to the dependency of this
       dependency role.
 
-      If ``propagate`` is ``True``, a :class:`dlb.cmd.PropagatedEnvVar` is assigned to the dependency of this
+      If ``propagate`` is ``True``, a :class:`dlb.ex.PropagatedEnvVar` is assigned to the dependency of this
       dependency role with ``name`` assigned to ``name`` and ``value`` assigned to the
       unchanged value of the environment variable.
 
@@ -367,14 +367,14 @@ Concrete Output Dependency Role Classes
 |                                           +----------------+----------------------------+                                                                                          |
 |                                           | Name           | Default value              |                                                                                          |
 +===========================================+================+============================+==========================================================================================+
-| :class:`dlb.cmd.Tool.Output.RegularFile`  | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
-|                                           +----------------+----------------------------+ >>>    object_file = dlb.cmd.Tool.Output.RegularFile(cls=dlb.fs.NoSpacePath)             |
+| :class:`dlb.ex.Tool.Output.RegularFile`   | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                             |
+|                                           +----------------+----------------------------+ >>>    object_file = dlb.ex.Tool.Output.RegularFile(cls=dlb.fs.NoSpacePath)              |
 |                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(object_file=['main.cpp.o'])                                              |
 |                                           |                |                            | >>> tool.object_file                                                                     |
 |                                           |                |                            | (NoSpacePath('main.cpp.o'),)                                                             |
 +-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
-| :class:`dlb.cmd.Tool.Output.Directory`    | ``required``   | ``True``                   | >>> class Tool(dlb.cmd.Tool):                                                            |
-|                                           +----------------+----------------------------+ >>>    html_root_directory = dlb.cmd.Tool.Output.Directory(required=False)               |
+| :class:`dlb.ex.Tool.Output.Directory`     | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                             |
+|                                           +----------------+----------------------------+ >>>    html_root_directory = dlb.ex.Tool.Output.Directory(required=False)                |
 |                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(html_root_directory='html/')                                             |
 |                                           |                |                            | >>> tool.html_root_directory                                                             |
 |                                           |                |                            | Path('      html/')                                                                      |

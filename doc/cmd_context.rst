@@ -1,6 +1,6 @@
-:class:`dlb.cmd.Context` --- Execution context for tool instances
+:class:`dlb.ex.Context` --- Execution context for tool instances
 =================================================================
-.. module:: dlb.cmd
+.. module:: dlb.ex
    :synopsis: Execution context for tool instances
 
 The (execution) context describes ???
@@ -12,12 +12,12 @@ The (execution) context describes ???
 
 Contexts can be nested::
 
-   import dlb.cmd
+   import dlb.ex
 
-   with dlb.cmd.Context():        # root context
-       with dlb.cmd.Context():
+   with dlb.ex.Context():        # root context
+       with dlb.ex.Context():
            ...
-       with dlb.cmd.Context():
+       with dlb.ex.Context():
            ...
 
 
@@ -34,12 +34,12 @@ Contexts can be nested::
 
       The current :term:`root context`.
 
-      :raises dlb.cmd.context.NoneActive:
+      :raises dlb.ex.context.NoneActive:
          if there is no root context because :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: active
 
       The current :term:`active context`.
 
-      :raises dlb.cmd.context.NoneActive:
+      :raises dlb.ex.context.NoneActive:
          if there is no :term:`active context` because :term:`dlb is not running <run of dlb>`).

@@ -7,7 +7,7 @@ Terms
       The execution of a part of a :term:`script` inside the same :term:`root context`.
 
    tool
-      Describes the abstract behaviour and the way a tool is run by a sub class of :class:`dlb.cmd.Tool`.
+      Describes the abstract behaviour and the way a tool is run by a sub class of :class:`dlb.ex.Tool`.
 
       It is concretized by instantiation.
 
@@ -63,12 +63,12 @@ Terms
       filesystem).
 
    active context
-      The innermost instance of :class:`dlb.cmd.Context` used as a context manager, if any.
+      The innermost instance of :class:`dlb.ex.Context` used as a context manager, if any.
 
       It begins with the call of :meth:`_enter__` and ends with the return of :meth:`__exit__`.
 
    root context
-      The outermost instance of :class:`dlb.cmd.Context` used as a context manager, if any.
+      The outermost instance of :class:`dlb.ex.Context` used as a context manager, if any.
 
    script
       A Python program that potentially creates an :term:`active context` at least once.
