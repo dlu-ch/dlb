@@ -118,7 +118,7 @@ class _RootSpecifics:
                 )
                 raise ManagementTreeError(msg) from None
 
-            self._mtime_probe = open(mtime_probe_path, 'xb')
+            self._mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
             probe_stat = os.lstat(mtime_probe_path)
             try:
                 probeu_stat = os.lstat(mtime_probeu_path)
@@ -154,13 +154,13 @@ class _RootSpecifics:
         pass
 
     def _delay_to_working_tree_time_change(self):
-        t0 = time.time_ns()
+        t0 = time.time()  # time_ns() not in Python 3.6
         wt0 = self.working_tree_time_ns
         while True:
             wt = self.working_tree_time_ns
             if wt != wt0:  # guarantee G-T2
                 break
-            if time.time_ns() - t0 > 10_000_000:  # at most 10 for s
+            if time.time() - t0 > 10.0:  # at most 10 for s
                 msg = (
                     'working tree time did not change for at least 10 s of system time\n'
                     '  | was the system time adjusted in this moment?'
