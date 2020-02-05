@@ -18,7 +18,7 @@ and improve the modularity and the ability to split large projects into smaller 
 Examples are:
 
  - `Make <https://en.wikipedia.org/wiki/Make_%28software%29>`_
- - `Apache Ant <http://ant.apache.org/>`_ (XML, Java-centric)
+ - `Apache Ant <https://ant.apache.org/>`_ (XML, Java-centric)
  - `SCons <https://scons.org/>`_ (Python, based on the Perl-script `Cons <https://www.gnu.org/software/cons/stable/cons.html>`_)
  - https://pypi.org/project/doit/ (Python)
  - https://mesonbuild.com/ (Python)

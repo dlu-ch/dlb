@@ -43,17 +43,17 @@ Contexts can be nested::
 
    Entering or exiting a context may raise the following exceptions:
 
-   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
-   | exception                           | meaning                                                                     | when                           |
-   +=====================================+=============================================================================+================================+
-   | :exc:`context.NoWorkingTreeError`   | the working directory is not a :term:`working tree`'s root                  | entering :term:`root context`  |
-   +-------------------------------------+-----------------------------------------------------------------------------+                                |
-   | :exc:`context.ManagementTreeError`  | the :term:`management tree` cannot be setup inside the :term:`working tree` |                                |
-   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
-   | :exc:`context.NestingError`         | the contexts are not properly nested                                        | exiting (any) context          |
-   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
-   | :exc:`context.WorkingTreeTimeError` | :term:`working tree time` behaved unexpectedly                              | exiting :term:`root context`   |
-   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | exception                                   | meaning                                                                     | when                           |
+   +=============================================+=============================================================================+================================+
+   | :exc:`.dlb.ex.context.NoWorkingTreeError`   | the working directory is not a :term:`working tree`'s root                  | entering :term:`root context`  |
+   +---------------------------------------------+-----------------------------------------------------------------------------+                                |
+   | :exc:`.dlb.ex.context.ManagementTreeError`  | the :term:`management tree` cannot be setup inside the :term:`working tree` |                                |
+   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`.dlb.ex.context.NestingError`         | the contexts are not properly nested                                        | exiting (any) context          |
+   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`.dlb.ex.context.WorkingTreeTimeError` | :term:`working tree time` behaved unexpectedly                              | exiting :term:`root context`   |
+   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
 
    .. note::
       Most attributes and methods are available "on the class" as well as "on the instance", and refer to the
@@ -70,13 +70,13 @@ Contexts can be nested::
 
       The current :term:`root context`.
 
-      :raises dlb.ex.context.NotRunning: if :term:`dlb is not running <run of dlb>`).
+      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: active
 
       The current :term:`active context`.
 
-      :raises dlb.ex.context.NotRunning: if :term:`dlb is not running <run of dlb>`).
+      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: root_path
 
@@ -84,7 +84,7 @@ Contexts can be nested::
 
       Same on class and instance.
 
-      :raises dlb.ex.context.NotRunning: if :term:`dlb is not running <run of dlb>`).
+      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: working_tree_time_ns
 
@@ -92,7 +92,7 @@ Contexts can be nested::
 
       Same on class and instance.
 
-      :raises dlb.ex.context.NotRunning: if :term:`dlb is not running <run of dlb>`).
+      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False) -> str
 
@@ -137,4 +137,4 @@ Contexts can be nested::
       :raises ValueError: if ``prefix`` is empty or contains a path separator.
       :raises FileExistsError: if all tried candidates already existed
 
-      :raises dlb.ex.context.NotRunning: if :term:`dlb is not running <run of dlb>`).
+      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).

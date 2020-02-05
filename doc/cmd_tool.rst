@@ -268,35 +268,35 @@ Concrete dependency role objects support the following methods and attributes:
 Concrete Input Dependency Role Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------------+---------------------------------------------+--------------------------------------------------------------------------------------------+
-| Dependency role class                     | Keyword arguments of constructor            | Example                                                                                    |
-|                                           +----------------+----------------------------+                                                                                            |
-|                                           | Name           | Default value              |                                                                                            |
-+===========================================+================+============================+============================================================================================+
-| :class:`dlb.ex.Tool.Input.RegularFile`    | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                               |
-|                                           +----------------+----------------------------+ >>>    source_files = dlb.ex.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)            |
-|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(source_files=['src/main.cpp'])                                             |
-|                                           |                |                            | >>> tool.source_files                                                                      |
-|                                           |                |                            | (NoSpacePath('src/main.cpp'),)                                                             |
-+-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
-| :class:`dlb.ex.Tool.Input.Directory`      | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                               |
-|                                           +----------------+----------------------------+ >>>    cache_directory = dlb.ex.Tool.Input.Directory(required=False)                       |
-|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(cache_directory='/tmp/')                                                   |
-|                                           |                |                            | >>> tool.cache_directory                                                                   |
-|                                           |                |                            | Path('tmp/')                                                                               |
-+-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
-| :class:`dlb.ex.Tool.Input.EnvVar`         | ``name``       |                            | >>> class Tool(dlb.ex.Tool):                                                               |
-|                                           +----------------+----------------------------+ >>>    path_envvar = dlb.ex.Tool.Input.EnvVar(name='PATH', propagate=True)                 |
-|                                           | ``required``   | ``True``                   | >>>    territory = dlb.ex.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})')  |
-|                                           |                |                            | >>>    uid = dlb.ex.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))          |
-|                                           +----------------+----------------------------+ >>> tool = Tool()                                                                          |
-|                                           | ``propagate``  | ``False``                  | >>> tool.path_envvar                                                                       |
-|                                           +----------------+----------------------------+ PropagatedEnvVar(name='PATH', value='/usr/bin:/usr/local/bin')                             |
-|                                           | ``validator``  | ``None``                   | >>> tool.territory                                                                         |
-|                                           |                |                            | 'CH'                                                                                       |
-|                                           |                |                            | >>> tool.uid                                                                               |
-|                                           |                |                            | 789                                                                                        |
-+-------------------------------------------+----------------+----------------------------+--------------------------------------------------------------------------------------------+
++-------------------------------------------+---------------------------------------------+
+| Dependency role class                     | Keyword arguments of constructor            |
+|                                           +----------------+----------------------------+
+|                                           | Name           | Default value              |
++===========================================+================+============================+
+| :class:`dlb.ex.Tool.Input.RegularFile`    | ``required``   | ``True``                   |
+|                                           +----------------+----------------------------+
+|                                           | ``cls``        | :class:`dlb.fs.Path`       |
+|                                           |                |                            |
+|                                           |                |                            |
++-------------------------------------------+----------------+----------------------------+
+| :class:`dlb.ex.Tool.Input.Directory`      | ``required``   | ``True``                   |
+|                                           +----------------+----------------------------+
+|                                           | ``cls``        | :class:`dlb.fs.Path`       |
+|                                           |                |                            |
+|                                           |                |                            |
++-------------------------------------------+----------------+----------------------------+
+| :class:`dlb.ex.Tool.Input.EnvVar`         | ``name``       |                            |
+|                                           +----------------+----------------------------+
+|                                           | ``required``   | ``True``                   |
+|                                           |                |                            |
+|                                           +----------------+----------------------------+
+|                                           | ``propagate``  | ``False``                  |
+|                                           +----------------+----------------------------+
+|                                           | ``validator``  | ``None``                   |
+|                                           |                |                            |
+|                                           |                |                            |
+|                                           |                |                            |
++-------------------------------------------+----------------+----------------------------+
 
 .. class:: Tool.Input.RegularFile
 
@@ -304,6 +304,14 @@ Concrete Input Dependency Role Classes
 
       Constructs a dependency role for a regular file.
       The dependency is the file's path as an instance of ``cls``.
+
+      Example::
+
+         >>> class Tool(dlb.ex.Tool):
+         >>>    source_files = dlb.ex.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)
+         >>> tool = Tool(source_files=['src/main.cpp'])
+         >>> tool.source_files
+         (NoSpacePath('src/main.cpp'),)
 
       :param required: Does this dependency role require a dependency (other than ``None``)?
       :type required: bool
@@ -316,6 +324,14 @@ Concrete Input Dependency Role Classes
 
       Constructs a dependency role for directory.
       The dependency is the directory's path as an instance of ``cls``.
+
+      Example::
+
+         >>> class Tool(dlb.ex.Tool):
+         >>>    cache_directory = dlb.ex.Tool.Input.Directory(required=False)
+         >>> tool = Tool(cache_directory='/tmp/')
+         >>> tool.cache_directory
+         Path('tmp/')
 
       :param required: Does this dependency role require a dependency (other than ``None``)?
       :type required: bool
@@ -337,6 +353,20 @@ Concrete Input Dependency Role Classes
       If ``propagate`` is ``True``, a :class:`dlb.ex.PropagatedEnvVar` is assigned to the dependency of this
       dependency role with ``name`` assigned to ``name`` and ``value`` assigned to the
       unchanged value of the environment variable.
+
+      Example::
+
+         >>> class Tool(dlb.ex.Tool):
+         >>>    path_envvar = dlb.ex.Tool.Input.EnvVar(name='PATH', propagate=True)
+         >>>    territory = dlb.ex.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})')
+         >>>    uid = dlb.ex.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))
+         >>> tool = Tool()
+         >>> tool.path_envvar
+         PropagatedEnvVar(name='PATH', value='/usr/bin:/usr/local/bin')
+         >>> tool.territory
+         'CH'
+         >>> tool.uid
+         789
 
       :param name: Name of the environment variable
       :type name: str
@@ -362,23 +392,23 @@ Concrete Input Dependency Role Classes
 Concrete Output Dependency Role Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------------+---------------------------------------------+------------------------------------------------------------------------------------------+
-| Dependency role class                     | Keyword arguments of constructor            | Example                                                                                  |
-|                                           +----------------+----------------------------+                                                                                          |
-|                                           | Name           | Default value              |                                                                                          |
-+===========================================+================+============================+==========================================================================================+
-| :class:`dlb.ex.Tool.Output.RegularFile`   | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                             |
-|                                           +----------------+----------------------------+ >>>    object_file = dlb.ex.Tool.Output.RegularFile(cls=dlb.fs.NoSpacePath)              |
-|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(object_file=['main.cpp.o'])                                              |
-|                                           |                |                            | >>> tool.object_file                                                                     |
-|                                           |                |                            | (NoSpacePath('main.cpp.o'),)                                                             |
-+-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
-| :class:`dlb.ex.Tool.Output.Directory`     | ``required``   | ``True``                   | >>> class Tool(dlb.ex.Tool):                                                             |
-|                                           +----------------+----------------------------+ >>>    html_root_directory = dlb.ex.Tool.Output.Directory(required=False)                |
-|                                           | ``cls``        | :class:`dlb.fs.Path`       | >>> tool = Tool(html_root_directory='html/')                                             |
-|                                           |                |                            | >>> tool.html_root_directory                                                             |
-|                                           |                |                            | Path('      html/')                                                                      |
-+-------------------------------------------+----------------+----------------------------+------------------------------------------------------------------------------------------+
++-------------------------------------------+---------------------------------------------+
+| Dependency role class                     | Keyword arguments of constructor            |
+|                                           +----------------+----------------------------+
+|                                           | Name           | Default value              |
++===========================================+================+============================+
+| :class:`dlb.ex.Tool.Output.RegularFile`   | ``required``   | ``True``                   |
+|                                           +----------------+----------------------------+
+|                                           | ``cls``        | :class:`dlb.fs.Path`       |
+|                                           |                |                            |
+|                                           |                |                            |
++-------------------------------------------+----------------+----------------------------+
+| :class:`dlb.ex.Tool.Output.Directory`     | ``required``   | ``True``                   |
+|                                           +----------------+----------------------------+
+|                                           | ``cls``        | :class:`dlb.fs.Path`       |
+|                                           |                |                            |
+|                                           |                |                            |
++-------------------------------------------+----------------+----------------------------+
 
 
 .. class:: Tool.Output.RegularFile
@@ -387,6 +417,14 @@ Concrete Output Dependency Role Classes
 
       Constructs a dependency role for a regular file.
       The dependency is the file's path as an instance of ``cls``.
+
+      Example:
+
+         >>> class Tool(dlb.ex.Tool):
+         >>>    object_file = dlb.ex.Tool.Output.RegularFile(cls=dlb.fs.NoSpacePath)
+         >>> tool = Tool(object_file=['main.cpp.o'])
+         >>> tool.object_file
+         (NoSpacePath('main.cpp.o'),)
 
       :param required: Does this dependency role require a dependency (other than ``None``)?
       :type required: bool
@@ -399,6 +437,14 @@ Concrete Output Dependency Role Classes
 
       Constructs a dependency role for directory.
       The dependency is the directory's path as an instance of ``cls``.
+
+      Example::
+
+         >>> class Tool(dlb.ex.Tool):
+         >>>    html_root_directory = dlb.ex.Tool.Output.Directory(required=False)
+         >>> tool = Tool(html_root_directory='html/')
+         >>> tool.html_root_directory
+         Path('      html/')
 
       :param required: Does this dependency role require a dependency (other than ``None``)?
       :type required: bool
