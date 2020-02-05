@@ -62,13 +62,17 @@ Terms
       It is caused by bugs of dlb or external helpers and violations of assumptions (e.g. on the behaviour of the
       filesystem).
 
-   active context
-      The innermost instance of :class:`dlb.ex.Context` used as a context manager, if any.
+   context
+      An (execution) context describes how running :term:`tool instances <tool instance>` shall interact with the
+      execution environment outside the :term:`working tree` and with each other.
 
-      It begins with the call of :meth:`_enter__` and ends with the return of :meth:`__exit__`.
+      It is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
+
+   active context
+      The innermost :term:`content`, if any.
 
    root context
-      The outermost instance of :class:`dlb.ex.Context` used as a context manager, if any.
+      The outermost :term:`content`, if any.
 
    script
       A Python program that potentially creates an :term:`active context` at least once.
