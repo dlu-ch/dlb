@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.ex
 import dlb.ex.context
 import tempfile
+import time
 import unittest
 
 
@@ -33,12 +34,31 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
                 self._temp_dir.cleanup()
 
 
-class ModuleTest(unittest.TestCase):
+class TechnicalInterfaceTest(unittest.TestCase):
 
     def test_import(self):
         import dlb.ex.context
         self.assertEqual(['Context'], dlb.ex.context.__all__)
         self.assertTrue('Tool' in dir(dlb.ex))
+
+    def test_attributes_of_contextmeta_and_rootsspecifics_to_not_clash(self):
+        rs = set(n for n in dlb.ex.context._RootSpecifics.__dict__ if not n.startswith('_'))
+        mc = set(n for n in dlb.ex.context._ContextMeta.__dict__ if not n.startswith('_'))
+        self.assertEqual(set(), rs.intersection(mc))
+
+    def test_public_attribute_are_readonly(self):
+        with self.assertRaises(AttributeError):
+            dlb.ex.Context.active = None
+        with self.assertRaises(AttributeError):
+            dlb.ex.Context.root = None
+
+        with self.assertRaises(AttributeError) as cm:
+            dlb.ex.Context.xyz = 1
+        self.assertEqual("public attributes of 'dlb.ex.Context' are read-only", str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            dlb.ex.Context().xyz = 1
+        self.assertEqual("public attributes of 'dlb.ex.Context' instances are read-only", str(cm.exception))
 
 
 class NestingTest(TemporaryDirectoryTestCase):
@@ -90,20 +110,9 @@ class ReuseTest(TemporaryDirectoryTestCase):
             pass
 
 
-class AttributeProtectionTest(unittest.TestCase):
-
-    def test_active_attribute_is_readonly(self):
-        with self.assertRaises(AttributeError):
-            dlb.ex.Context.active = None
-
-    def test_root_attribute_is_readonly(self):
-        with self.assertRaises(AttributeError):
-            dlb.ex.Context.root = None
-
-
 class WorkingTreeRequirementTest(TemporaryDirectoryTestCase):
 
-    def test_filenames_management_tree_are_portable(self):
+    def test_management_tree_paths_are_portable(self):
         import dlb.fs
         dlb.fs.PortablePath(dlb.ex.context._MANAGEMENTTREE_DIR_NAME)
         dlb.fs.PortablePath(dlb.ex.context._MTIME_PROBE_FILE_NAME)
@@ -205,18 +214,45 @@ class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
 
 class PathsTest(TemporaryDirectoryTestCase):
 
-    def test_paths_are_correct(self):
+    def test_paths_are_unavailable_without_active_context(self):
         os.mkdir('.dlbroot')
 
-        with dlb.ex.Context() as c:
-            self.assertEqual(os.path.abspath(os.getcwd()), c.root_path)
-            self.assertEqual(os.path.join(os.path.abspath(os.getcwd()), '.dlbroot', 't'), c.temporary_path)
-
-    def test_paths_inaccessible_without_active_context(self):
-        os.mkdir('.dlbroot')
+        with self.assertRaises(dlb.ex.context.NoneActiveError):
+            dlb.ex.Context.root_path
+        with self.assertRaises(dlb.ex.context.NoneActiveError):
+            dlb.ex.Context.temporary_path
 
         c = dlb.ex.Context()
         with self.assertRaises(dlb.ex.context.NoneActiveError) as cm:
             c.root_path
         with self.assertRaises(dlb.ex.context.NoneActiveError) as cm:
             c.temporary_path
+
+    def test_paths_are_correct(self):
+        os.mkdir('.dlbroot')
+
+        with dlb.ex.Context() as c:
+            self.assertEqual(os.path.abspath(os.getcwd()), c.root_path)
+            cl = dlb.ex.Context.root_path
+            self.assertEqual(c.root_path, cl)
+            self.assertEqual(os.path.join(os.path.abspath(os.getcwd()), '.dlbroot', 't'), c.temporary_path)
+
+
+class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
+
+    def test_time_is_are_unavailable_without_active_context(self):
+        os.mkdir('.dlbroot')
+
+        with self.assertRaises(dlb.ex.context.NoneActiveError):
+            dlb.ex.Context.working_tree_time_ns
+
+    def test_time_does_change_after_at_most_5secs(self):
+        os.mkdir('.dlbroot')
+
+        with dlb.ex.Context():
+            start_time = time.time_ns()
+            start_working_tree_time = dlb.ex.Context.working_tree_time_ns
+
+            while dlb.ex.Context.working_tree_time_ns <= start_working_tree_time:
+                self.assertLessEqual(time.time_ns() - start_time, 10_000_000)
+                time.sleep(0.02)  # typical effective working tree time resolution: 10 ms

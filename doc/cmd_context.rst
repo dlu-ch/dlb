@@ -40,12 +40,19 @@ Contexts can be nested::
    When the root context is entered the working directory of the Python process must be a :term:`working tree`'s root,
    which contains a directory :file:`.dlbroot`, that is not a symbolic link.
 
+   Most attributes and methods are available "on the class" and refer to the corresponding attribute of the
+   :term:`root context`::
+
+       with dlb.ex.Context as c:
+           ... = dlb.ex.Context.root_path   # preferred
+           ... c.root_path                  # also possible
+
    .. attribute:: root
 
       The current :term:`root context`.
 
       :raises dlb.ex.context.NoneActive:
-         if there is no root context because :term:`dlb is not running <run of dlb>`).
+         if there is no :term:`root context` because :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: active
 
@@ -58,17 +65,31 @@ Contexts can be nested::
 
       The absolute path to the :term:`working tree`'s root.
 
+      Same on class and instance.
+
       :raises dlb.ex.context.NoneActive:
-         if there is no :term:`active context` because :term:`dlb is not running <run of dlb>`).
+         if there is no :term:`root context` because :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: working_tree_time_ns
+
+      The current :term:`working tree time` in nanoseconds as an integer.
+
+      Same on class and instance.
+
+      :raises dlb.ex.context.NoneActive:
+         if there is no :term:`root context` because :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: temporary_path
 
       The absolute path to the temporary directory, located in the :term:`management tree`.
 
+      Same on class and instance.
+
       The temporary directory is guaranteed to created as an empty directory when the :term:`root context` is
       entered. Its is removed (with all its content) when the  :term:`root context` is exit.
 
-      Use the temporary directory to store intermediate files needed during the build.
+      Use the temporary directory to store intermediate filesystem objects meant to replace filesystem objects
+      in the :term:`managed tree` eventually. This guarantees a correct :term:`mtime` of the target.
 
       :raises dlb.ex.context.NoneActive:
-         if there is no :term:`active context` because :term:`dlb is not running <run of dlb>`).
+         if there is no :term:`root context` because :term:`dlb is not running <run of dlb>`).

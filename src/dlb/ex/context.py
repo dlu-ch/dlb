@@ -64,6 +64,17 @@ class _ContextMeta(type):
             raise NoneActiveError
         return _contexts[-1]
 
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError
+        a = getattr(self.root, name)  # delegate to root context
+        return a
+
+    def __setattr__(self, key, value):
+        if not key.startswith('_'):
+            raise AttributeError("public attributes of 'dlb.ex.Context' are read-only")
+        return super().__setattr__(key, value)
+
 
 class _RootSpecifics:
     def __init__(self):
@@ -125,6 +136,12 @@ class _RootSpecifics:
     def temporary_path(self):
         return os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIRNAME)
 
+    @property
+    def working_tree_time_ns(self):
+        self._mtime_probe.seek(0)
+        self._mtime_probe.write(b'0')  # updates mtime
+        return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
+
     def _open_or_create_rundb_exclusively(self, rundb_path):  # ???
         return None
 
@@ -151,13 +168,16 @@ class Context(metaclass=_ContextMeta):
         self._path_cls = path_cls
         self._root_specifics = None
 
-    @property
-    def root_path(self):
-        return self.__class__.root._root_specifics.root_path
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError
+        a = getattr(self.__class__.root._root_specifics, name)  # delegate to _RootSpecifics
+        return a
 
-    @property
-    def temporary_path(self):
-        return self.__class__.root._root_specifics.temporary_path
+    def __setattr__(self, key, value):
+        if not key.startswith('_'):
+            raise AttributeError("public attributes of 'dlb.ex.Context' instances are read-only")
+        return super().__setattr__(key, value)
 
     def __enter__(self):
         if not _contexts:
