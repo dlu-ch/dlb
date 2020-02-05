@@ -279,14 +279,14 @@ class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.working_tree_time_ns
 
-    def test_time_does_change_after_at_most_5secs(self):
+    def test_time_does_change_after_at_most_15secs(self):
         os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
             start_time = time.time()
             start_working_tree_time = dlb.ex.Context.working_tree_time_ns
 
-            while dlb.ex.Context.working_tree_time_ns != start_working_tree_time:
+            while dlb.ex.Context.working_tree_time_ns == start_working_tree_time:
                 self.assertLessEqual(time.time() - start_time, 15.0)
                 time.sleep(0.015)  # typical effective working tree time resolution: 10 ms
 
