@@ -1,6 +1,7 @@
 import os
 import os.path
 import stat
+import time
 import shutil
 import dlb.fs
 
@@ -22,6 +23,10 @@ class ManagementTreeError(Exception):
 
 
 class NoWorkingTreeError(Exception):
+    pass
+
+
+class WorkingTreeTimeError(Exception):
     pass
 
 
@@ -125,7 +130,7 @@ class _RootSpecifics:
             remove_filesystem_object(self.temporary_path, ignore_non_existing=True)
             os.mkdir(self.temporary_path)
         except Exception:
-            self.close()
+            self.close_and_unlock_if_open()
             raise
 
     @property
@@ -148,7 +153,22 @@ class _RootSpecifics:
     def _close_rundb(self):  # ???
         pass
 
-    def close(self):  # safe to call multiple times
+    def _delay_to_working_tree_time_change(self):
+        t0 = time.time_ns()
+        wt0 = self.working_tree_time_ns
+        while True:
+            wt = self.working_tree_time_ns
+            if wt != wt0:  # guarantee G-T2
+                break
+            if time.time_ns() - t0 > 10_000_000:  # at most 10 for s
+                msg = (
+                    'working tree time did not change for at least 10 s of system time\n'
+                    '  | was the system time adjusted in this moment?'
+                )
+                raise WorkingTreeTimeError(msg)
+            time.sleep(0.015)  # typical effective working tree time resolution: 10 ms
+
+    def close_and_unlock_if_open(self):  # safe to call multiple times
         # called while self is not an active context (note: an exception may already have happened)
         if self._mtime_probe:
             self._mtime_probe.close()
@@ -158,6 +178,22 @@ class _RootSpecifics:
         except:
             pass
         self._close_rundb()  # also: release lock
+
+    def cleanup_and_close(self):  # "normal" exit of root context (as far as it is special for root context)
+        first_exception = None
+
+        try:
+             self._delay_to_working_tree_time_change()
+        except Exception as e:
+             first_exception = e
+
+        try:
+            self.close_and_unlock_if_open()
+        except Exception as e:
+             first_exception = e
+
+        if first_exception:
+            raise first_exception
 
 
 class Context(metaclass=_ContextMeta):
@@ -190,5 +226,5 @@ class Context(metaclass=_ContextMeta):
             raise NestingError
         _contexts.pop()
         if self._root_specifics:
-            self._root_specifics.close()
+            self._root_specifics.cleanup_and_close()
             self._root_specifics = None

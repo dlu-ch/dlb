@@ -38,4 +38,8 @@ Each following line represents a detail related to the first line and starts wit
    I.e. the calls of :meth:`__exit__` did not occur in the opposite order of the corresponding calls of
    :meth:`__enter__`.
 
+.. exception:: WorkingTreeTimeError
+
+   Raised, when the :term:`working tree time` behaved unexpectedly.
+
 .. _Clang: http://clang.llvm.org/diagnostics.html

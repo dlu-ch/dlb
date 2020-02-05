@@ -38,28 +38,32 @@ Contexts can be nested::
 
       b. an inner context of the current :term:`active context`, otherwise.
 
-   When the root context is entered, the working directory of the Python process must be a :term:`working tree`'s root,
+   When a root context is entered, the working directory of the Python process must be a :term:`working tree`'s root,
    which contains a directory :file:`.dlbroot`, that is not a symbolic link.
 
-   Entering a :term:`root context` may raise the following exceptions:
+   Entering or exiting a context may raise the following exceptions:
 
-   +-------------------------------------+-----------------------------------------------------------------------------+
-   | exception                           | meaning                                                                     |
-   +=====================================+=============================================================================+
-   | :exc:`context.NoWorkingTreeError`   | the working directory is not a :term:`working tree`'s root                  |
-   +-------------------------------------+-----------------------------------------------------------------------------+
-   | :exc:`context.ManagementTreeError`  | the :term:`management tree` cannot be setup inside the :term:`working tree` |
-   +-------------------------------------+-----------------------------------------------------------------------------+
-   | :exc:`context.NestingError`         | the contexts are not properly nested                                        |
-   +-------------------------------------+-----------------------------------------------------------------------------+
+   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | exception                           | meaning                                                                     | when                           |
+   +=====================================+=============================================================================+================================+
+   | :exc:`context.NoWorkingTreeError`   | the working directory is not a :term:`working tree`'s root                  | entering :term:`root context`  |
+   +-------------------------------------+-----------------------------------------------------------------------------+                                |
+   | :exc:`context.ManagementTreeError`  | the :term:`management tree` cannot be setup inside the :term:`working tree` |                                |
+   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`context.NestingError`         | the contexts are not properly nested                                        | exiting (any) context          |
+   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`context.WorkingTreeTimeError` | :term:`working tree time` behaved unexpectedly                              | exiting :term:`root context`   |
+   +-------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
 
    .. note::
-      Most attributes and methods are available "on the class" and refer to the corresponding attribute of the
-      :term:`root context`::
+      Most attributes and methods are available "on the class" as well as "on the instance", and refer to the
+      corresponding attribute of the :term:`root context`::
 
-       with dlb.ex.Context as c:
-           ... = dlb.ex.Context.root_path   # preferred
-           ... c.root_path                  # also possible
+       with dlb.ex.Context:
+           with dlb.ex.Context as c:
+               ... = dlb.ex.Context.working_tree_time_ns   # preferred
+               ... c.root.working_tree_time_ns             # also possible
+               ... c.working_tree_time_ns                  # also possible
 
 
    .. attribute:: root
