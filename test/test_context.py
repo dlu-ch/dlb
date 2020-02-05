@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex
 import dlb.ex.context
+import stat
 import tempfile
 import time
 import unittest
@@ -137,6 +138,7 @@ class WorkingTreeRequirementTest(TemporaryDirectoryTestCase):
         os.mkdir('dlbroot_sysmlink_target')
         try:
             os.symlink('dlbroot_sysmlink_target', '.dlbroot', target_is_directory=True)
+            self.assertTrue(os.path.islink('.dlbroot'))
         except (NotImplementedError, PermissionError):  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None  # filesystem is not case-sensitive
@@ -153,49 +155,53 @@ class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
     def test_missing_filesystem_objects_are_created(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
-            os.path.isfile('.dlbroot/o')
-            os.path.isdir('.dlbroot/t')
+            self.assertTrue(os.path.isfile('.dlbroot/o'))
+            self.assertTrue(os.path.isdir('.dlbroot/t'))
 
-    def test_temp_dir_is_recreated(self):
+    def test_temp_dir_is_recreated_if_nonempty_directory(self):
         os.mkdir('.dlbroot')
 
         os.mkdir('.dlbroot/t')
         os.mkdir('.dlbroot/t/c')
         with open('.dlbroot/t/a', 'wb'): pass
         with open('.dlbroot/t/c/b', 'wb'): pass
-        oldsr = os.lstat('.dlbroot/t')
+
+        sr0 = os.stat('.dlbroot/t')
+        os.chmod('.dlbroot/t', stat.S_IMODE(sr0.st_mode) ^ stat.S_IXOTH)  # change permission
+        sr1 = os.stat('.dlbroot/t')
+        self.assertNotEqual(stat.S_IMODE(sr0.st_mode), stat.S_IMODE(sr1.st_mode))
 
         with dlb.ex.Context():
-            os.path.isdir('.dlbroot/t')
-            self.assertFalse(os.path.samestat(oldsr, os.lstat('.dlbroot/t')))
+            self.assertTrue(os.path.isdir('.dlbroot/t'))
+            self.assertTupleEqual((), tuple(os.listdir('.dlbroot/t')))
+            sr2 = os.stat('.dlbroot/t')
+            self.assertNotEqual(sr1, sr2)  # since inode could be reused, comparison of inodes would not work reliably
 
-    def test_temp_dir_symlink_is_recreated(self):
+    def test_temp_dir_is_recreated_if_symlink(self):
         os.mkdir('.dlbroot')
 
         os.mkdir('.dlbroot/t_sysmlink_target')
         try:
             os.symlink('.dlbroot/t_sysmlink_target', '.dlbroot/t', target_is_directory=True)
+            self.assertTrue(os.path.islink('.dlbroot/t'))
         except (NotImplementedError, PermissionError):  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None  # filesystem is not case-sensitive
 
-        oldsr = os.lstat('.dlbroot/t')
         with dlb.ex.Context():
-            os.path.isdir('.dlbroot/t')
-            self.assertFalse(os.path.samestat(oldsr, os.lstat('.dlbroot/t')))
+            self.assertTrue(os.path.isdir('.dlbroot/t'))
+            self.assertFalse(os.path.islink('.dlbroot/t'))
 
-    def test_mtime_probe_file_is_recreated(self):
+    def test_mtime_probe_file_is_recreated_if_directory(self):
         os.mkdir('.dlbroot')
 
         os.mkdir('.dlbroot/o')
         os.mkdir('.dlbroot/o/c')
         with open('.dlbroot/o/a', 'wb'): pass
         with open('.dlbroot/o/c/b', 'wb'): pass
-        oldsr = os.lstat('.dlbroot/o')
 
         with dlb.ex.Context():
             self.assertTrue(os.path.isfile('.dlbroot/o'))
-            self.assertFalse(os.path.samestat(oldsr, os.lstat('.dlbroot/o')))
 
     def test_mtime_probe_uppercase_file_is_removed(self):
         os.mkdir('.dlbroot')
