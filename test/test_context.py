@@ -257,14 +257,10 @@ class PathsTest(TemporaryDirectoryTestCase):
 
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.root_path
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.temporary_path
 
         c = dlb.ex.Context()
         with self.assertRaises(dlb.ex.context.NotRunningError) as cm:
             c.root_path
-        with self.assertRaises(dlb.ex.context.NotRunningError) as cm:
-            c.temporary_path
 
     def test_paths_are_correct(self):
         os.mkdir('.dlbroot')
@@ -273,7 +269,6 @@ class PathsTest(TemporaryDirectoryTestCase):
             self.assertEqual(os.path.abspath(os.getcwd()), c.root_path)
             cl = dlb.ex.Context.root_path
             self.assertEqual(c.root_path, cl)
-            self.assertEqual(os.path.join(os.path.abspath(os.getcwd()), '.dlbroot', 't'), c.temporary_path)
 
 
 class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
@@ -350,3 +345,67 @@ class ProcessLockTest(TemporaryDirectoryTestCase):
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
         )
         self.assertRegex(str(cm.exception), regex)
+
+
+class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
+
+    def test_creates_regular_file(self):
+        os.mkdir('.dlbroot')
+
+        with dlb.ex.Context():
+            t = os.path.join(dlb.ex.Context.root_path, '.dlbroot', 't')
+
+            p = dlb.ex.Context.create_temporary()
+            self.assertTrue(os.path.isfile(p))
+            self.assertEqual(t, os.path.dirname(p))
+
+            p = dlb.ex.Context.create_temporary(is_dir=False, suffix='.o', prefix='aha')
+            self.assertTrue(os.path.isfile(p))
+            self.assertEqual(t, os.path.dirname(p))
+            self.assertTrue(os.path.basename(p).startswith('aha'), p)
+            self.assertTrue(p.endswith('.o'), p)
+
+        self.assertFalse(os.path.exists('.dlbroot/t'))
+
+    def test_creates_directory(self):
+        os.mkdir('.dlbroot')
+
+        with dlb.ex.Context():
+            t = os.path.join(dlb.ex.Context.root_path, '.dlbroot', 't')
+            p = dlb.ex.Context.create_temporary(is_dir=True)
+            self.assertTrue(os.path.isdir(p))
+            self.assertEqual(t, os.path.dirname(p))
+
+            p = dlb.ex.Context.create_temporary(is_dir=True, suffix='.o', prefix='aha')
+            self.assertTrue(os.path.isdir(p))
+            self.assertEqual(t, os.path.dirname(p))
+            self.assertTrue(os.path.basename(p).startswith('aha'), p)
+            self.assertTrue(p.endswith('.o'), p)
+
+        self.assertFalse(os.path.exists('.dlbroot/t'))
+
+    def test_fails_for_if_not_running(self):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.Context.create_temporary()
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.Context.create_temporary(is_dir=True)
+
+    def test_fails_for_empty_prefix(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(prefix='')
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(is_dir=True, prefix='')
+
+    def test_fails_for_path_separator_in_prefix(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(prefix='x/')
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(is_dir=True, prefix='x/../')
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(suffix='x/')
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(is_dir=True, suffix='x/../')

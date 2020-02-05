@@ -2,6 +2,7 @@ import os
 import os.path
 import stat
 import time
+import tempfile
 import shutil
 import sqlite3
 import dlb.fs
@@ -153,8 +154,9 @@ class _RootSpecifics:
                 else:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
-                remove_filesystem_object(self.temporary_path, ignore_non_existing=True)
-                os.mkdir(self.temporary_path)
+                temporary_path = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+                remove_filesystem_object(temporary_path, ignore_non_existing=True)
+                os.mkdir(temporary_path)
 
                 rundb_path = os.path.join(management_tree_path, _RUNDB_FILE_NAME)
                 self._rundb_connection = self._open_or_create_rundb(rundb_path)
@@ -169,15 +171,26 @@ class _RootSpecifics:
             raise ManagementTreeError(msg) from None
 
     @property
-    def root_path(self):
+    def root_path(self) -> str:
         return self._working_tree_path
 
-    @property
-    def temporary_path(self):
-        return os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+    def create_temporary(self, suffix='', prefix='t', is_dir=False) -> str:
+        if not prefix:
+            raise ValueError("'prefix' must not be empty")
+        if os.path.sep in prefix or (os.path.altsep and os.path.altsep in prefix):
+            raise ValueError("'prefix' must not contain a path separator")
+        if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
+            raise ValueError("'prefix' must not contain a path separator")
+        assert self._working_tree_path  # better safe than sorry
+        t = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+        if is_dir:
+            p = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
+        else:
+            fd, p = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
+        return p
 
     @property
-    def working_tree_time_ns(self):
+    def working_tree_time_ns(self) -> int:
         self._mtime_probe.seek(0)
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
@@ -213,7 +226,8 @@ class _RootSpecifics:
         most_serious_exception = None
 
         try:
-            remove_filesystem_object(self.temporary_path, ignore_non_existing=True)
+            temporary_path = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+            remove_filesystem_object(temporary_path, ignore_non_existing=True)
         except Exception as e:
             most_serious_exception = e
 
@@ -232,7 +246,7 @@ class _RootSpecifics:
                 most_serious_exception = e
             self._rundb_connection = None
 
-        assert self._working_tree_path  # besser safe than sorry
+        assert self._working_tree_path  # better safe than sorry
         lock_dir_path = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _LOCK_DIRNAME)
         try:
             os.rmdir(lock_dir_path)  # unlock

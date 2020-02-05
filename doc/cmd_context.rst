@@ -94,17 +94,47 @@ Contexts can be nested::
 
       :raises dlb.ex.context.NotRunning: if :term:`dlb is not running <run of dlb>`).
 
-   .. attribute:: temporary_path
+   .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False) -> str
 
-      The absolute path to the temporary directory, located in the :term:`management tree`.
+      Creates a temporary regular file (for ``is_dir`` = ``False``) or a temporary directory (for ``is_dir`` = ``True``)
+      in the :term:`management tree` and returns is absolute path.
+
+      The file name will end with ``suffix`` (without an added dot) and begin with ``prefix``.
+
+      ``prefix`` must not be empty.
+      ``prefix`` and ``suffix`` must not contain an path separator.
+
+      ``suffix`` and ``prefix``, must be the same type.
+      If they are bytes, the returned name will be bytes instead of str.
+
+      Permissions:
+
+       - The regular file is readable and writable only by the creating user ID.
+         If the platform uses permission bits to indicate whether a file is executable, the file is executable by no one.
+
+       - The directory is readable, writable, and searchable only by the creating user ID.
 
       Same on class and instance.
 
-      The temporary directory is guaranteed to created as an empty directory when the :term:`root context` is
-      entered. Its is removed (with all its content) when the  :term:`root context` is exit.
+      .. note::
+         Use the temporary directory to store intermediate filesystem objects meant to replace filesystem objects
+         in the :term:`managed tree` eventually. This guarantees a correct :term:`mtime` of the target
+         (provided, the assumption :ref:`A-F1 <assumption-f1>` holds).
 
-      Use the temporary directory to store intermediate filesystem objects meant to replace filesystem objects
-      in the :term:`managed tree` eventually. This guarantees a correct :term:`mtime` of the target
-      (provided, the assumption :ref:`A-F1 <assumption-f1>` holds).
+      .. note::
+         The number of file name candidates tried for a given combination of ``prefix`` and ``suffix`` is limited by an
+         OS-dependent number. A best practise is therefore to remove the created regular file or directory manually
+         after use, although they are removed automatically when the :term:`root context` is exit.
+
+      :param suffix: suffix of the file name of the path
+      :type suffix: str | bytes
+
+      :param prefix: prefix of the file name of the path
+      :type prefix: str | bytes
+
+      :type is_dir: bool
+
+      :raises ValueError: if ``prefix`` is empty or contains a path separator.
+      :raises FileExistsError: if all tried candidates already existed
 
       :raises dlb.ex.context.NotRunning: if :term:`dlb is not running <run of dlb>`).
