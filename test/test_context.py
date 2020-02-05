@@ -215,6 +215,40 @@ class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
             self.assertTrue(os.path.isfile('.dlbroot/o'))
             self.assertFalse(os.path.exists('.dlbroot/O'))
 
+    def test_meaningful_exception_on_permission_error_while_setup(self):
+        os.mkdir('.dlbroot')
+        os.mkdir('.dlbroot/t')
+        os.mkdir('.dlbroot/t/c')
+
+        os.chmod('.dlbroot/t', 0o000)
+        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
+            with dlb.ex.Context():
+                pass
+        os.chmod('.dlbroot/t', 0o777)
+
+        regex = (
+            r"(?m)"
+            r"\Afailed to setup management tree for '.*'\n"
+            r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]t'.*\Z"
+        )
+        self.assertRegex(str(cm.exception), regex)
+
+    def test_meaningful_exception_on_permission_error_while_cleanup(self):
+        os.mkdir('.dlbroot')
+
+        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
+            with dlb.ex.Context():
+                os.mkdir('.dlbroot/t/c')
+                os.chmod('.dlbroot/t', 0o000)
+        os.chmod('.dlbroot/t', 0o777)
+
+        regex = (
+            r"(?m)"
+            r"\Afailed to cleanup management tree for '.*'\n"
+            r"  \| reason: .*'.+[/\\]\.dlbroot[/\\].*'.*\Z"
+        )
+        self.assertRegex(str(cm.exception), regex)
+
 
 class PathsTest(TemporaryDirectoryTestCase):
 
@@ -270,3 +304,49 @@ class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
             with dlb.ex.Context():
                 exit_time = dlb.ex.Context.working_tree_time_ns
             self.assertNotEqual(enter_time, exit_time)
+
+
+class RunDatabaseTest(TemporaryDirectoryTestCase):
+
+    def test_nonexisting_is_created(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            os.path.isfile('.dlbroot/runs.sqlite')
+
+
+class ProcessLockTest(TemporaryDirectoryTestCase):
+
+    def test_fail_if_lock_dir_exists(self):
+        os.mkdir('.dlbroot')
+        os.mkdir('.dlbroot/lock')
+
+        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
+            with dlb.ex.Context():
+                pass
+
+        regex = (
+            r"(?m)"
+            r"\Acannot aquire lock for exclusive access to working tree '.*'\n"
+            r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
+            r"  \| to break the lock \(if you are sure, no other dlb process is running\): "
+            r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
+        )
+        self.assertRegex(str(cm.exception), regex)
+
+    def test_meaningful_exception_on_permission_error(self):
+        os.mkdir('.dlbroot')
+
+        os.chmod('.dlbroot', 0o000)
+        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
+            with dlb.ex.Context():
+                pass
+        os.chmod('.dlbroot', 0o777)
+
+        regex = (
+            r"(?m)"
+            r"\Acannot aquire lock for exclusive access to working tree '.*'\n"
+            r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
+            r"  \| to break the lock \(if you are sure, no other dlb process is running\): "
+            r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
+        )
+        self.assertRegex(str(cm.exception), regex)
