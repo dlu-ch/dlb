@@ -69,10 +69,10 @@ Terms
       It is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
 
    active context
-      The innermost :term:`content`, if any.
+      The innermost :term:`context`, if any.
 
    root context
-      The outermost :term:`content`, if any.
+      The outermost :term:`context`, if any.
 
    script
       A Python program that potentially creates an :term:`active context` at least once.

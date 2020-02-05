@@ -63,13 +63,11 @@ class TechnicalInterfaceTest(unittest.TestCase):
 
 class NestingTest(TemporaryDirectoryTestCase):
 
-    def test_none_active_at_module_level(self):
-        with self.assertRaises(dlb.ex.context.NoneActiveError):
-            dlb.ex.Context.active
-
-    def test_no_root_at_module_level(self):
-        with self.assertRaises(dlb.ex.context.NoneActiveError):
+    def test_fails_if_not_running(self):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.root
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.Context.active
 
     def test_can_by_nested(self):
         os.mkdir('.dlbroot')
@@ -84,9 +82,9 @@ class NestingTest(TemporaryDirectoryTestCase):
             self.assertIs(dlb.ex.Context.active, c1)
             self.assertIs(dlb.ex.Context.root, c1)
 
-        with self.assertRaises(dlb.ex.context.NoneActiveError):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.active
-        with self.assertRaises(dlb.ex.context.NoneActiveError):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.root
 
     def test_nesting_error_is_detected(self):
@@ -119,7 +117,7 @@ class WorkingTreeRequirementTest(TemporaryDirectoryTestCase):
         dlb.fs.PortablePath(dlb.ex.context._RUNDB_FILE_NAME)
 
     def test_fails_if_dlbroot_does_not_exist(self):
-        with self.assertRaises(dlb.ex.context.NoWorkingTree) as cm:
+        with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
             with dlb.ex.Context(): pass
 
         self.assertIn(repr('.dlbroot'), str(cm.exception))
@@ -129,7 +127,7 @@ class WorkingTreeRequirementTest(TemporaryDirectoryTestCase):
         with open('.dlbroot', 'wb'):
             pass
 
-        with self.assertRaises(dlb.ex.context.NoWorkingTree) as cm:
+        with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
             with dlb.ex.Context(): pass
 
         self.assertIn(repr('.dlbroot'), str(cm.exception))
@@ -143,7 +141,7 @@ class WorkingTreeRequirementTest(TemporaryDirectoryTestCase):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None  # filesystem is not case-sensitive
 
-        with self.assertRaises(dlb.ex.context.NoWorkingTree) as cm:
+        with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
             with dlb.ex.Context(): pass
 
         self.assertIn(repr('.dlbroot'), str(cm.exception))
@@ -214,18 +212,18 @@ class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
 
 class PathsTest(TemporaryDirectoryTestCase):
 
-    def test_paths_are_unavailable_without_active_context(self):
+    def test_paths_are_unavailable_if_not_running(self):
         os.mkdir('.dlbroot')
 
-        with self.assertRaises(dlb.ex.context.NoneActiveError):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.root_path
-        with self.assertRaises(dlb.ex.context.NoneActiveError):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.temporary_path
 
         c = dlb.ex.Context()
-        with self.assertRaises(dlb.ex.context.NoneActiveError) as cm:
+        with self.assertRaises(dlb.ex.context.NotRunningError) as cm:
             c.root_path
-        with self.assertRaises(dlb.ex.context.NoneActiveError) as cm:
+        with self.assertRaises(dlb.ex.context.NotRunningError) as cm:
             c.temporary_path
 
     def test_paths_are_correct(self):
@@ -240,10 +238,10 @@ class PathsTest(TemporaryDirectoryTestCase):
 
 class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
 
-    def test_time_is_are_unavailable_without_active_context(self):
+    def test_time_is_unavailable_if_not_running(self):
         os.mkdir('.dlbroot')
 
-        with self.assertRaises(dlb.ex.context.NoneActiveError):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.working_tree_time_ns
 
     def test_time_does_change_after_at_most_5secs(self):

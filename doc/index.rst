@@ -3,7 +3,7 @@
 dlb - explicit is better than implicit
 ======================================
 
-dlb is a `Pythonic`_ build tool which does not try to mimic Make_, but brings the benefits of object-oriented languages
+dlb is a `Pythonic`_ build tool that does not try to mimic Make_, but brings the benefits of object-oriented languages
 to the build process.
 
 It is inspired by `djb's redo`_, but takes a more dynamic approach.

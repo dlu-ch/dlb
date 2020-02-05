@@ -13,7 +13,7 @@ class NestingError(Exception):
     pass
 
 
-class NoneActiveError(Exception):
+class NotRunningError(Exception):
     pass
 
 
@@ -21,7 +21,7 @@ class ManagementTreeError(Exception):
     pass
 
 
-class NoWorkingTree(Exception):
+class NoWorkingTreeError(Exception):
     pass
 
 
@@ -55,13 +55,13 @@ class _ContextMeta(type):
     @property
     def root(self):
         if not _contexts:
-            raise NoneActiveError
+            raise NotRunningError
         return _contexts[0]
 
     @property
     def active(self):
         if not _contexts:
-            raise NoneActiveError
+            raise NotRunningError
         return _contexts[-1]
 
     def __getattr__(self, name):
@@ -92,9 +92,9 @@ class _RootSpecifics:
         try:
             mode = os.lstat(management_tree_path).st_mode
         except FileNotFoundError:
-            raise NoWorkingTree(msg) from None
+            raise NoWorkingTreeError(msg) from None
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
-            raise NoWorkingTree(msg) from None
+            raise NoWorkingTreeError(msg) from None
 
         rundb_path = os.path.join(management_tree_path, _RUNDB_FILE_NAME)
         self._rundb = self._open_or_create_rundb_exclusively(rundb_path)  # serves as lock for all dlb processes
