@@ -271,10 +271,10 @@ class Path(metaclass=_PathMeta):
 
     def __truediv__(self, other):
         if not self.is_dir():
-            raise ValueError('cannot join with non-directory path: {}'.format(repr(self)))
+            raise ValueError('cannot append to non-directory path: {}'.format(repr(self)))
         other = self.__class__(other)
         if other.is_absolute():
-            raise ValueError('cannot join with absolute path: {}'.format(repr(other)))
+            raise ValueError('cannot append absolute path: {}'.format(repr(other)))
         return self.__class__(self._path / other._path, is_dir=other._is_dir)
 
     def __rtruediv__(self, other):

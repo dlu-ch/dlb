@@ -247,7 +247,7 @@ Path Objects
 
       This attribute cannot be written.
 
-      :rtype: :class:`Path.Native`
+      :rtype: :class:`.dlb.fs.Path.Native`
 
       :raises ValueError: if this path is not representable as :class:`Path.Native`
 
@@ -311,6 +311,8 @@ Path Objects
         with open(dlb.fs.NoSpacePath('/tmp/x/a').native) as f:
             ... = f.read()
 
+
+.. _restricting_paths:
 
 Restricting Paths
 -----------------

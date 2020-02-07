@@ -244,12 +244,12 @@ class TestTransformation(unittest.TestCase):
     def test_appending_relative_to_nondir_is_inhibited(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('../x') / dlb.fs.Path('a/b/c/d')
-        self.assertEqual("cannot join with non-directory path: Path('../x')", str(cm.exception))
+        self.assertEqual("cannot append to non-directory path: Path('../x')", str(cm.exception))
 
     def test_appending_absolute_to_dir_is_inhibited(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('..') / dlb.fs.Path('/a/b/c/d')
-        self.assertEqual("cannot join with absolute path: Path('/a/b/c/d')", str(cm.exception))
+        self.assertEqual("cannot append absolute path: Path('/a/b/c/d')", str(cm.exception))
 
     def test_relative_removes_prefix(self):
         p = dlb.fs.Path('../../a/b/c/../d/e/f/').relative_to('../../a/b/')
