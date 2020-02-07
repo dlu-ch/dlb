@@ -177,7 +177,8 @@ class _RootSpecifics:
                 remove_filesystem_object(temporary_path_str, ignore_non_existing=True)
                 os.mkdir(temporary_path_str)
 
-                self._rundb_connection = self._open_or_create_rundb((management_tree_path / _RUNDB_FILE_NAME).native)
+                rundb_path_str = str((management_tree_path / _RUNDB_FILE_NAME).native)
+                self._rundb_connection = self._open_or_create_rundb(rundb_path_str)
             except Exception:
                 self.close_and_unlock_if_open()
                 raise
