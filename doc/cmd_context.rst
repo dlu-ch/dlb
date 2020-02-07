@@ -21,14 +21,22 @@ Contexts can be nested::
 
    import dlb.ex
 
-   with dlb.ex.Context():        # root context
-       with dlb.ex.Context():
-           ...
-       with dlb.ex.Context():
-           ...
+   # no active context
+
+   with dlb.ex.Context():                # A: root context, outer context of B, C, D
+       # A is the active context
+       with dlb.ex.Context():            # B: inner context of A, outer context of C
+           # B is the active context
+           with dlb.ex.Context():        # C: inner context of A, B
+              # C is the active context
+       with dlb.ex.Context():            # D: inner context of A
+           # D is the active context
+       # A is the active context
+
+   # no active context
 
 
-.. class:: Context
+.. class:: Context(path_cls=dlb.fs.Path)
 
    An instance does nothing unless used as a :term:`python:context manager`.
 
@@ -41,6 +49,13 @@ Contexts can be nested::
    When a root context is entered, the working directory of the Python process must be a :term:`working tree`'s root,
    which contains a directory :file:`.dlbroot`, that is not a symbolic link.
 
+   When a context (root or not) is entered, the path of the :term:`working tree`'s root must be representable as
+   as ``path_cls``. This allows you to impose :ref:`restrictions <restricting_paths>` on the accepted paths.
+
+   :param path_cls: the subclass of :class:`dlb.fs.Path` to be used to represent the :term:`working tree`'s root
+   :type path_cls: dlb.fs.Path
+   :raises TypeError: if ``path_cls`` is not a subclass of :class:`dlb.fs.Path`
+
    Entering or exiting a context may raise the following exceptions:
 
    +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
@@ -49,6 +64,8 @@ Contexts can be nested::
    | :exc:`.dlb.ex.context.NoWorkingTreeError`   | the working directory is not a :term:`working tree`'s root                  | entering :term:`root context`  |
    +---------------------------------------------+-----------------------------------------------------------------------------+                                |
    | :exc:`.dlb.ex.context.ManagementTreeError`  | the :term:`management tree` cannot be setup inside the :term:`working tree` |                                |
+   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`ValueError`                           | the :term:`working tree`'s root path violates the requested restrictions    | entering (any) context         |
    +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
    | :exc:`.dlb.ex.context.NestingError`         | the contexts are not properly nested                                        | exiting (any) context          |
    +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
@@ -65,10 +82,13 @@ Contexts can be nested::
                ... c.root.working_tree_time_ns             # also possible
                ... c.working_tree_time_ns                  # also possible
 
+   The :class:`dlb.ex.Context` class supports the following methods and attributes:
 
    .. attribute:: root
 
       The current :term:`root context`.
+
+      Same on class and instance.
 
       :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -76,11 +96,24 @@ Contexts can be nested::
 
       The current :term:`active context`.
 
+      Same on class and instance.
+
+      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: path_cls
+
+      The subclass of :class:`.dlb.fs.Path` defined in the constructor.
+
+      When called on class, it refers to the :term:`root context`.
+
       :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: root_path
 
       The absolute path to the :term:`working tree`'s root.
+
+      It is an instance of ``dlb.ex.Context.root.path_cls`` and
+      is representable as an instance of ``path_cls`` of the :term:`active context` and every possible outer context.
 
       Same on class and instance.
 
@@ -94,7 +127,7 @@ Contexts can be nested::
 
       :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False) -> str
+   .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False)
 
       Creates a temporary regular file (for ``is_dir`` = ``False``) or a temporary directory (for ``is_dir`` = ``True``)
       in the :term:`management tree` and returns is absolute path.
@@ -104,15 +137,13 @@ Contexts can be nested::
       ``prefix`` must not be empty.
       ``prefix`` and ``suffix`` must not contain an path separator.
 
-      ``suffix`` and ``prefix``, must be the same type.
-      If they are bytes, the returned name will be bytes instead of str.
-
       Permissions:
 
-       - The regular file is readable and writable only by the creating user ID.
-         If the platform uses permission bits to indicate whether a file is executable, the file is executable by no one.
+       - A created regular file is readable and writable only by the creating user ID.
+         If the platform uses permission bits to indicate whether a file is executable, the file is executable by
+         no one.
 
-       - The directory is readable, writable, and searchable only by the creating user ID.
+       - A created directory is readable, writable, and searchable only by the creating user ID.
 
       Same on class and instance.
 
@@ -127,14 +158,18 @@ Contexts can be nested::
          after use, although they are removed automatically when the :term:`root context` is exit.
 
       :param suffix: suffix of the file name of the path
-      :type suffix: str | bytes
+      :type suffix: str
 
       :param prefix: prefix of the file name of the path
-      :type prefix: str | bytes
+      :type prefix: str
 
       :type is_dir: bool
 
-      :raises ValueError: if ``prefix`` is empty or contains a path separator.
+      :return: an instance ``p`` of :attr:`.dlb.ex.Context.path_cls` of with ``p.is_dir() = is_dir``.
+      :rtype: :class:`.dlb.fs.Path`
+
+      :raises ValueError:
+         if ``prefix`` is empty or the resulting path is not representable as a :attr:`.dlb.ex.Context.path_cls`
       :raises FileExistsError: if all tried candidates already existed
 
       :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).

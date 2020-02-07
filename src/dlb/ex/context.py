@@ -68,23 +68,23 @@ def remove_filesystem_object(path, ignore_non_existing=False):  # TODO implement
             raise
 
 
+def _get_root():
+    if not _contexts:
+        raise NotRunningError
+    return _contexts[0]
+
+
 class _ContextMeta(type):
-    @property
-    def root(self):
-        if not _contexts:
-            raise NotRunningError
-        return _contexts[0]
-
-    @property
-    def active(self):
-        if not _contexts:
-            raise NotRunningError
-        return _contexts[-1]
-
-    def __getattr__(self, name):
-        if name.startswith('_'):
-            raise AttributeError
-        a = getattr(self.root, name)  # delegate to root context
+    def __getattribute__(self, name):
+        refer = not name.startswith('_')
+        try:
+            a = super().__getattribute__(name)
+            refer = refer and isinstance(a, property)
+        except AttributeError:
+            if not refer:
+                raise
+        if refer:
+            a = getattr(_get_root(), name)  # delegate to root context
         return a
 
     def __setattr__(self, key, value):
@@ -94,23 +94,42 @@ class _ContextMeta(type):
 
 
 class _RootSpecifics:
-    def __init__(self):
+    def __init__(self, path_cls):
+        self._path_cls = path_cls
+
         # cwd must be a working tree`s root
-        self._working_tree_path = os.path.abspath(os.getcwd())
+        working_tree_path_str = os.path.abspath(os.getcwd())
+        try:
+            self._working_tree_path = path_cls(working_tree_path_str, is_dir=True)
+            if not os.path.samefile(working_tree_path_str, str(self._working_tree_path.native)):
+                msg = (
+                    f'current directory probably violates imposed path restrictions: {working_tree_path_str!r}\n'
+                    f'  | reason: path cannot be checked due to a dlb bug or a moved directory'
+                )
+                raise ValueError(msg)
+            working_tree_path_str = str(self._working_tree_path.native)
+        except (ValueError, OSError) as e:
+            msg = (  # assume that exception_to_string(e) include the working_tree_path
+                f'current directory violates imposed path restrictions\n'
+                f'  | reason: {exception_to_string(e)}\n'
+                f'  | move the working directory or choose a less restrictive path class for the root context'
+            )
+            raise ValueError(msg) from None
+
         self._is_working_tree_case_sensitive = True
         self._mtime_probe = None
         self._rundb_connection = None
 
-        management_tree_path = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME)
+        management_tree_path = self._working_tree_path  / (_MANAGEMENTTREE_DIR_NAME + '/')
 
         # 1. is this a working tree?
 
         msg = (
-            f'current directory is no working tree: {self._working_tree_path!r}\n'
-            f'  | a working tree must contain a directory {_MANAGEMENTTREE_DIR_NAME!r} that is not a symbolic link'
+            f'current directory is no working tree: {working_tree_path_str!r}\n'
+            f'  | reason: does not contain a directory {_MANAGEMENTTREE_DIR_NAME!r} that is not a symbolic link'
         )
         try:
-            mode = os.lstat(management_tree_path).st_mode
+            mode = os.lstat(management_tree_path.native).st_mode
         except Exception:
             raise NoWorkingTreeError(msg) from None
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
@@ -118,20 +137,20 @@ class _RootSpecifics:
 
         # 2. if yes: lock it
 
-        lock_dir_path = os.path.join(management_tree_path, _LOCK_DIRNAME)
+        lock_dir_path_str = str((management_tree_path / (_LOCK_DIRNAME + '/')).native)
         try:
             try:
-                mode = os.lstat(lock_dir_path).st_mode
+                mode = os.lstat(lock_dir_path_str).st_mode
                 if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
-                    remove_filesystem_object(lock_dir_path)
+                    remove_filesystem_object(lock_dir_path_str)
             except FileNotFoundError:
                 pass
-            os.mkdir(lock_dir_path)
+            os.mkdir(lock_dir_path_str)
         except OSError as e:
             msg = (
-                f'cannot aquire lock for exclusive access to working tree {self._working_tree_path!r}\n'
+                f'cannot aquire lock for exclusive access to working tree {working_tree_path_str!r}\n'
                 f'  | reason: {exception_to_string(e)}\n'
-                f'  | to break the lock (if you are sure, no other dlb process is running): remove {lock_dir_path!r}'
+                f'  | to break the lock (if you are sure no other dlb process is running): remove {lock_dir_path_str!r}'
             )
             raise ManagementTreeError(msg)
 
@@ -140,53 +159,64 @@ class _RootSpecifics:
         try:  # OSError in this block -> ManagementTreeError
             try:
                 # prepare o for mtime probing
-                mtime_probe_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME)
-                mtime_probeu_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME.upper())
-                remove_filesystem_object(mtime_probe_path, ignore_non_existing=True)
-                remove_filesystem_object(mtime_probeu_path, ignore_non_existing=True)
+                mtime_probe_path_str = str((management_tree_path / _MTIME_PROBE_FILE_NAME).native)
+                mtime_probeu_path_str = str((management_tree_path / _MTIME_PROBE_FILE_NAME.upper()).native)
+                remove_filesystem_object(mtime_probe_path_str, ignore_non_existing=True)
+                remove_filesystem_object(mtime_probeu_path_str, ignore_non_existing=True)
 
-                self._mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
-                probe_stat = os.lstat(mtime_probe_path)
+                self._mtime_probe = open(mtime_probe_path_str, 'xb')  # always a fresh file (no link to an existing one)
+                probe_stat = os.lstat(mtime_probe_path_str)
                 try:
-                    probeu_stat = os.lstat(mtime_probeu_path)
+                    probeu_stat = os.lstat(mtime_probeu_path_str)
                 except FileNotFoundError:
                     pass
                 else:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
-                temporary_path = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
-                remove_filesystem_object(temporary_path, ignore_non_existing=True)
-                os.mkdir(temporary_path)
+                temporary_path_str = str((management_tree_path / _MTIME_TEMPORARY_DIR_NAME).native)
+                remove_filesystem_object(temporary_path_str, ignore_non_existing=True)
+                os.mkdir(temporary_path_str)
 
-                rundb_path = os.path.join(management_tree_path, _RUNDB_FILE_NAME)
-                self._rundb_connection = self._open_or_create_rundb(rundb_path)
+                self._rundb_connection = self._open_or_create_rundb((management_tree_path / _RUNDB_FILE_NAME).native)
             except Exception:
                 self.close_and_unlock_if_open()
                 raise
         except (OSError, sqlite3.Error) as e:
             msg = (
-                f'failed to setup management tree for {self._working_tree_path!r}\n'
+                f'failed to setup management tree for {working_tree_path_str!r}\n'
                 f'  | reason: {exception_to_string(e)}'
             )
             raise ManagementTreeError(msg) from None
 
     @property
-    def root_path(self) -> str:
+    def root_path(self) -> dlb.fs.Path:
         return self._working_tree_path
 
-    def create_temporary(self, suffix='', prefix='t', is_dir=False) -> str:
+    def create_temporary(self, suffix='', prefix='t', is_dir=False) -> dlb.fs.Path:
+        if not isinstance(suffix, str) or not isinstance(prefix, str):
+            raise TypeError("'prefix' and 'suffix' must be str")
         if not prefix:
             raise ValueError("'prefix' must not be empty")
         if os.path.sep in prefix or (os.path.altsep and os.path.altsep in prefix):
             raise ValueError("'prefix' must not contain a path separator")
         if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
             raise ValueError("'prefix' must not contain a path separator")
-        assert self._working_tree_path  # better safe than sorry
-        t = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+
+        t = (self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')).native
+        is_dir = bool(is_dir)
         if is_dir:
-            p = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
+            p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
         else:
-            fd, p = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
+            fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
+        try:
+            p = self._path_cls(p_str, is_dir=is_dir)
+        except ValueError as e:
+            msg = (
+                f'path violates imposed path restrictions\n'
+                f'  | reason: {exception_to_string(e)}\n'
+                f"  | check specified 'prefix' and 'suffix'"
+            )
+            raise ValueError(msg) from None
         return p
 
     @property
@@ -226,8 +256,8 @@ class _RootSpecifics:
         most_serious_exception = None
 
         try:
-            temporary_path = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
-            remove_filesystem_object(temporary_path, ignore_non_existing=True)
+            temporary_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')
+            remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
         except Exception as e:
             most_serious_exception = e
 
@@ -246,10 +276,9 @@ class _RootSpecifics:
                 most_serious_exception = e
             self._rundb_connection = None
 
-        assert self._working_tree_path  # better safe than sorry
-        lock_dir_path = os.path.join(self._working_tree_path, _MANAGEMENTTREE_DIR_NAME, _LOCK_DIRNAME)
+        lock_dir_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _LOCK_DIRNAME + '/')
         try:
-            os.rmdir(lock_dir_path)  # unlock
+            os.rmdir(lock_dir_path.native)  # unlock
         except Exception:
             pass
 
@@ -272,7 +301,7 @@ class _RootSpecifics:
         if first_exception:
             if isinstance(first_exception, (OSError, sqlite3.Error)):
                 msg = (
-                    f'failed to cleanup management tree for {self._working_tree_path!r}\n'
+                    f'failed to cleanup management tree for {str(self._working_tree_path.native)!r}\n'
                     f'  | reason: {exception_to_string(first_exception)}'
                 )
                 raise ManagementTreeError(msg) from None
@@ -288,11 +317,27 @@ class Context(metaclass=_ContextMeta):
         self._path_cls = path_cls
         self._root_specifics = None
 
+    @property
+    def root(self):
+        return _get_root()
+
+    @property
+    def active(self):
+        if not _contexts:
+            raise NotRunningError
+        return _contexts[-1]
+
+    @property
+    def path_cls(self) -> dlb.fs.Path:
+        return self._path_cls
+
     def __getattr__(self, name):
-        if name.startswith('_'):
-            raise AttributeError
-        a = getattr(self.__class__.root._root_specifics, name)  # delegate to _RootSpecifics
-        return a
+        try:
+            if name.startswith('_'):
+                raise AttributeError
+            return getattr(_get_root()._root_specifics, name)  # delegate to _RootSpecifics
+        except AttributeError:
+            raise AttributeError(f'{self.__class__.__qualname__!r} object has no attribute {name!r}') from None
 
     def __setattr__(self, key, value):
         if not key.startswith('_'):
@@ -300,8 +345,18 @@ class Context(metaclass=_ContextMeta):
         return super().__setattr__(key, value)
 
     def __enter__(self):
-        if not _contexts:
-            self._root_specifics = _RootSpecifics()
+        if _contexts:
+            try:
+                self._path_cls(self.root_path)
+            except ValueError as e:
+                msg = (  # assume that exception_to_string(e) include the working_tree_path
+                    f"working tree's root path violates path restrictions imposed by this context\n"
+                    f'  | reason: {exception_to_string(e)}\n'
+                    f'  | move the working directory or choose a less restrictive path class for the root context'
+                )
+                raise ValueError(msg) from None
+        else:
+            self._root_specifics = _RootSpecifics(self._path_cls)
         _contexts.append(self)
         return self
 

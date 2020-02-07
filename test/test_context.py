@@ -11,6 +11,20 @@ import time
 import unittest
 
 
+class DirectoryChanger:
+    def __init__(self, path):
+        self._path = path
+
+    def __enter__(self):
+        self._original_path = os.getcwd()
+        os.chdir(self._path)
+        print(f'changed current working directory of process to {self._path!r}')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.chdir(self._original_path)
+        print(f'changed current working directory of process back to {self._original_path!r}')
+
+
 class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary directory during test
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -22,7 +36,7 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
         self._temp_dir = tempfile.TemporaryDirectory()
         try:
             os.chdir(self._temp_dir.name)
-            print(f'changed current working directory of process to {self._temp_dir.name}')
+            print(f'changed current working directory of process to {self._temp_dir.name!r}')
         except:
             self._temp_dir.cleanup()
 
@@ -30,7 +44,7 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
         if self._temp_dir:
             try:
                 os.chdir(self._original_cwd)
-                print(f'changed current working directory of process back to {self._original_cwd}')
+                print(f'changed current working directory of process back to {self._original_cwd!r}')
             finally:
                 self._temp_dir.cleanup()
 
@@ -75,10 +89,14 @@ class NestingTest(TemporaryDirectoryTestCase):
         with dlb.ex.Context() as c1:
             self.assertIs(dlb.ex.Context.active, c1)
             self.assertIs(dlb.ex.Context.root, c1)
+            self.assertIs(c1.active, c1)
+            self.assertIs(c1.root, c1)
 
             with dlb.ex.Context() as c2:
                 self.assertIs(dlb.ex.Context.active, c2)
                 self.assertIs(dlb.ex.Context.root, c1)
+                self.assertIs(c1.active, c2)
+                self.assertIs(c1.root, c1)
 
             self.assertIs(dlb.ex.Context.active, c1)
             self.assertIs(dlb.ex.Context.root, c1)
@@ -89,13 +107,36 @@ class NestingTest(TemporaryDirectoryTestCase):
             dlb.ex.Context.root
 
     def test_nesting_error_is_detected(self):
-        import dlb.ex.context
-
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
             with self.assertRaises(dlb.ex.context.NestingError):
                 with dlb.ex.Context():
                     dlb.ex.context._contexts.pop()
+
+    def test_meaningful_exception_on_attribute_error(self):
+        os.mkdir('.dlbroot')
+
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.Context.non_existing_attribute
+
+        with dlb.ex.Context() as c:
+            with self.assertRaises(AttributeError) as cm:
+                dlb.ex.Context._non_existing_attribute
+            self.assertEqual(str(cm.exception), "type object 'Context' has no attribute '_non_existing_attribute'")
+
+            with self.assertRaises(AttributeError) as cm:
+                c._non_existing_attribute
+            self.assertEqual(str(cm.exception), "'Context' object has no attribute '_non_existing_attribute'")
+
+            msg = "'Context' object has no attribute 'non_existing_attribute'"
+
+            with self.assertRaises(AttributeError) as cm:
+                dlb.ex.Context.non_existing_attribute
+            self.assertEqual(str(cm.exception), msg)
+
+            with self.assertRaises(AttributeError) as cm:
+                c.non_existing_attribute
+            self.assertEqual(str(cm.exception), msg)
 
 
 class ReuseTest(TemporaryDirectoryTestCase):
@@ -252,7 +293,7 @@ class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
 
 class PathsTest(TemporaryDirectoryTestCase):
 
-    def test_paths_are_unavailable_if_not_running(self):
+    def test_root_is_unavailable_if_not_running(self):
         os.mkdir('.dlbroot')
 
         with self.assertRaises(dlb.ex.context.NotRunningError):
@@ -262,13 +303,54 @@ class PathsTest(TemporaryDirectoryTestCase):
         with self.assertRaises(dlb.ex.context.NotRunningError) as cm:
             c.root_path
 
-    def test_paths_are_correct(self):
+    def test_root_is_correct(self):
         os.mkdir('.dlbroot')
 
         with dlb.ex.Context() as c:
-            self.assertEqual(os.path.abspath(os.getcwd()), c.root_path)
+            self.assertIsInstance(c.root_path, dlb.fs.Path)
+            self.assertEqual(os.path.abspath(os.getcwd()), str(c.root_path.native))
             cl = dlb.ex.Context.root_path
             self.assertEqual(c.root_path, cl)
+
+    def test_path_class_is_correct(self):
+        os.mkdir('.dlbroot')
+
+        with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
+            self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.NoSpacePath)
+            self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
+            with dlb.ex.Context(path_cls=dlb.fs.Path) as c:
+                self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.NoSpacePath)  # refers to root context
+                self.assertEqual(c.path_cls, dlb.fs.Path)
+                self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
+
+    def test_entering_fails_if_path_not_representabe(self):
+        os.mkdir('x y')
+
+        with DirectoryChanger('x y'):
+            os.mkdir('.dlbroot')
+
+            with self.assertRaises(ValueError) as cm:
+                with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
+                    pass
+            regex = (
+                r"(?m)"
+                r"\Acurrent directory violates imposed path restrictions\n"
+                r"  \| reason: .*NoSpacePath.*'.+'.*\n"
+                r"  \| move the working directory or choose a less restrictive path class for the root context\Z"
+            )
+            self.assertRegex(str(cm.exception), regex)
+
+            with dlb.ex.Context():  # no exception
+                with self.assertRaises(ValueError) as cm:
+                    with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
+                        pass
+            regex = (
+                r"(?m)"
+                r"\Aworking tree's root path violates path restrictions imposed by this context\n"
+                r"  \| reason: .*NoSpacePath.*'.+'.*\n"
+                r"  \| move the working directory or choose a less restrictive path class for the root context\Z"
+            )
+            self.assertRegex(str(cm.exception), regex)
 
 
 class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
@@ -323,7 +405,7 @@ class ProcessLockTest(TemporaryDirectoryTestCase):
             r"(?m)"
             r"\Acannot aquire lock for exclusive access to working tree '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
-            r"  \| to break the lock \(if you are sure, no other dlb process is running\): "
+            r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
         )
         self.assertRegex(str(cm.exception), regex)
@@ -341,7 +423,7 @@ class ProcessLockTest(TemporaryDirectoryTestCase):
             r"(?m)"
             r"\Acannot aquire lock for exclusive access to working tree '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
-            r"  \| to break the lock \(if you are sure, no other dlb process is running\): "
+            r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
         )
         self.assertRegex(str(cm.exception), regex)
@@ -353,17 +435,19 @@ class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
-            t = os.path.join(dlb.ex.Context.root_path, '.dlbroot', 't')
+            t = dlb.ex.Context.root_path / '.dlbroot/t'
 
             p = dlb.ex.Context.create_temporary()
-            self.assertTrue(os.path.isfile(p))
-            self.assertEqual(t, os.path.dirname(p))
+            self.assertIsInstance(p, dlb.fs.Path)
+            self.assertFalse(p.is_dir())
+            self.assertTrue(os.path.isfile(p.native))
+            self.assertEqual(t, os.path.dirname(p.native))
 
             p = dlb.ex.Context.create_temporary(is_dir=False, suffix='.o', prefix='aha')
-            self.assertTrue(os.path.isfile(p))
-            self.assertEqual(t, os.path.dirname(p))
-            self.assertTrue(os.path.basename(p).startswith('aha'), p)
-            self.assertTrue(p.endswith('.o'), p)
+            self.assertTrue(os.path.isfile(p.native))
+            self.assertEqual(t, os.path.dirname(p.native))
+            self.assertTrue(p.parts[-1].startswith('aha'), p)
+            self.assertTrue(p.parts[-1].endswith('.o'), p)
 
         self.assertFalse(os.path.exists('.dlbroot/t'))
 
@@ -371,16 +455,19 @@ class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
-            t = os.path.join(dlb.ex.Context.root_path, '.dlbroot', 't')
+            t = dlb.ex.Context.root_path / '.dlbroot/t'
             p = dlb.ex.Context.create_temporary(is_dir=True)
-            self.assertTrue(os.path.isdir(p))
-            self.assertEqual(t, os.path.dirname(p))
+            self.assertIsInstance(p, dlb.fs.Path)
+            self.assertTrue(p.is_dir())
+            self.assertTrue(os.path.isdir(p.native))
+            self.assertEqual(t, os.path.dirname(p.native))
 
             p = dlb.ex.Context.create_temporary(is_dir=True, suffix='.o', prefix='aha')
-            self.assertTrue(os.path.isdir(p))
-            self.assertEqual(t, os.path.dirname(p))
-            self.assertTrue(os.path.basename(p).startswith('aha'), p)
-            self.assertTrue(p.endswith('.o'), p)
+            self.assertIsInstance(p, dlb.fs.Path)
+            self.assertTrue(os.path.isdir(p.native))
+            self.assertEqual(t, os.path.dirname(p.native))
+            self.assertTrue(p.parts[-1].startswith('aha'), p)
+            self.assertTrue(p.parts[-1].endswith('.o'), p)
 
         self.assertFalse(os.path.exists('.dlbroot/t'))
 
@@ -389,6 +476,14 @@ class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
             dlb.ex.Context.create_temporary()
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.create_temporary(is_dir=True)
+
+    def test_fails_for_bytes_prefix_or_suffix(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            with self.assertRaises(TypeError):
+                dlb.ex.Context.create_temporary(prefix=b'x')
+            with self.assertRaises(TypeError):
+                dlb.ex.Context.create_temporary(suffix=b'y')
 
     def test_fails_for_empty_prefix(self):
         os.mkdir('.dlbroot')
@@ -409,3 +504,17 @@ class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
                 dlb.ex.Context.create_temporary(suffix='x/')
             with self.assertRaises(ValueError):
                 dlb.ex.Context.create_temporary(is_dir=True, suffix='x/../')
+
+    def test_fails_if_path_not_representabe(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
+            with self.assertRaises(ValueError) as cm:
+                dlb.ex.Context.create_temporary(suffix='x y')
+
+        regex = (
+            r"(?m)"
+            r"\Apath violates imposed path restrictions\n"
+            r"  \| reason: .*NoSpacePath.*'.+'.*\n"
+            r"  \| check specified 'prefix' and 'suffix'\Z"
+        )
+        self.assertRegex(str(cm.exception), regex)
