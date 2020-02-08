@@ -442,11 +442,19 @@ class _ToolMeta(type):
         # of the archive is also given.
 
         # frame relies based on best practises, correct information not guaranteed
-        try:
-            source_lineno = defining_frame.lineno
-            source_path = os.path.realpath(defining_frame.filename)
-            in_archive_path = None
+        source_lineno = defining_frame.lineno
+        if not os.path.isabs(defining_frame.filename):
+            msg = (
+                f"invalid tool definition: location of definition depends on current working directory\n"
+                f"  | class: {cls!r}\n"
+                f"  | source file: {defining_frame.filename!r}\n"
+                f"  | make sure the matching module search path is an absolute path when the defining module is imported"
+            )
+            raise DefinitionAmbiguityError(msg)
 
+        source_path = os.path.realpath(defining_frame.filename)
+        try:
+            in_archive_path = None
             if not os.path.isfile(source_path):
                 # zipimport:
                 #     https://www.python.org/dev/peps/pep-0273/:

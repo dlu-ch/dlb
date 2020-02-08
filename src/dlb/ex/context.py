@@ -135,6 +135,8 @@ class _RootSpecifics:
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
             raise NoWorkingTreeError(msg) from None
 
+        # TODO make sure the "calling" source file is in the managed tree
+
         # 2. if yes: lock it
 
         lock_dir_path_str = str((management_tree_path / (_LOCK_DIRNAME + '/')).native)

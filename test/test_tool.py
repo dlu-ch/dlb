@@ -1,6 +1,7 @@
 import sys
 import os.path
 here = os.path.dirname(__file__) or os.curdir
+sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import tempfile
@@ -8,6 +9,7 @@ import zipfile
 import dlb.ex.tool
 from dlb.ex.tool import Tool
 import unittest
+import tools_for_test
 
 
 class TestModule(unittest.TestCase):
@@ -368,9 +370,9 @@ class ReprTest(unittest.TestCase):
         self.assertEqual(repr(t), "ReprTest.DTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'))")
 
 
-class AmbiguityTest(unittest.TestCase):
+class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_of_tools_are_correct(self):
-        lineno = 373  # of this line
+        lineno = 375  # of this line
 
         class A(Tool):
             pass
@@ -388,7 +390,7 @@ class AmbiguityTest(unittest.TestCase):
     def test_location_in_zip_archive_is_correct(self):
         with tempfile.TemporaryDirectory() as tmp_dir_path:
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
-                with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w') as f:
+                with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w'):
                     pass
                 with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
                     f.write(
@@ -424,17 +426,16 @@ class AmbiguityTest(unittest.TestCase):
                 X = 1 if s else 2
             return A
 
-        B = f(False)
-        with self.assertRaises(dlb.ex.tool.DefinitionAmbiguityError) as cm:
-            C = f(True)
-
         regex = (
             r"(?m)"
             f"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
             f"  \| location: '.+':[0-9]+\n"
             f"  \| class: <class '.+'>\Z"
         )
-        self.assertRegex(str(cm.exception), regex)
+
+        B = f(False)
+        with self.assertRaisesRegex(dlb.ex.tool.DefinitionAmbiguityError, regex):
+            C = f(True)
 
     def test_definition_fails_for_two_equal_dynamic_definitions(self):
         def f(s):
@@ -442,13 +443,30 @@ class AmbiguityTest(unittest.TestCase):
                 pass
             return A
 
-        with self.assertRaises(dlb.ex.tool.DefinitionAmbiguityError) as cm:
-            B, C = f(False), f(True)
-
         regex = (
             r"(?m)"
             f"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
             f"  \| location: '.+':[0-9]+\n"
             f"  \| class: <class '.+'>\Z"
         )
-        self.assertRegex(str(cm.exception), regex)
+        with self.assertRaisesRegex(dlb.ex.tool.DefinitionAmbiguityError, regex):
+            _, _ = f(False), f(True)
+
+    def test_definition_fails_in_import_with_relative_search_path(self):
+        with open(os.path.join('z.py'), 'x') as f:
+            f.write(
+                'import dlb.ex\n'
+                'class A(dlb.ex.Tool): pass\n'
+            )
+
+        sys.path.insert(0, '.')  # !
+        regex = (
+            r"(?m)"
+            r"\Ainvalid tool definition: location of definition depends on current working directory\n"
+            r"  \| class: <class '.+'>\n"
+            r"  \| source file: '.+'\n"
+            r"  \| make sure the matching module search path is an absolute path when the defining module is imported\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.tool.DefinitionAmbiguityError, regex):
+            import z  # needs a name different from the already loaded modules
+        del sys.path[0]
