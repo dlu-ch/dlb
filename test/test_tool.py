@@ -387,8 +387,6 @@ class AmbiguityTest(unittest.TestCase):
 
     def test_location_in_zip_archive_is_correct(self):
         with tempfile.TemporaryDirectory() as tmp_dir_path:
-            tmp_dir_path = '/tmp/t'
-
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
                 with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w') as f:
                     pass
@@ -403,9 +401,9 @@ class AmbiguityTest(unittest.TestCase):
                     z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u/__init__.py')
                     z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u/v.py')
 
-        sys.path.insert(0, zip_file_path)
-        import u.v
-        del sys.path[0]
+            sys.path.insert(0, zip_file_path)
+            import u.v
+            del sys.path[0]
 
         self.assertEqual(u.v.A.definition_location, (os.path.realpath(zip_file_path), 'u/v.py', 2))
 
