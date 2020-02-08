@@ -1,6 +1,10 @@
+import sys
+assert sys.version_info >= (3, 6)
 import re
 import collections
 import os
+import typing
+import inspect
 import dlb.fs
 
 EXECUTION_PARAMETER_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
@@ -25,9 +29,15 @@ __all__ = [
 
 PropagatedEnvVar = collections.namedtuple('PropagatedEnvVar', ['name', 'value'])
 
-
 #: key: (cls_id, (start, stop, step)), value: mult_class
 _classes_with_multiplicity = {}
+
+# key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
+_tool_class_by_definition_location = {}
+
+
+class DefinitionAmbiguityError(SyntaxError):
+    pass
 
 
 class _ConcreteDependencyMixinMeta(type):
@@ -362,7 +372,7 @@ class _ToolBase:
                 raise TypeError("missing keyword parameter for required dependency role: {}".format(repr(name)))
             object.__setattr__(self, name, None)
 
-    def run_in_context(self):
+    def run(self):
         # TODO: implement, document
         raise NotImplementedError
 
@@ -413,13 +423,73 @@ class _ToolMeta(type):
         super().__init__(name, bases, nmspc)
 
         # prevent attributes of _ToolBase from being overridden
-        protected_attribs = (set(_ToolBase.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
-        attribs = set(cls.__dict__) & protected_attribs
-        if attribs:
-            raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attribs)[0])))
+        protected_attrs = (set(_ToolBase.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
+        attrs = set(cls.__dict__) & protected_attrs
+        if attrs:
+            raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
 
         cls.check_own_attributes()
         super().__setattr__('_dependency_names', cls._get_dependency_names())
+        location = cls._find_definition_location(inspect.stack(context=0)[1])
+        super().__setattr__('definition_location', location)
+        _tool_class_by_definition_location[location] = cls
+
+    def _find_definition_location(cls, defining_frame) -> typing.Tuple[str, typing.Optional[str], int]:
+        # Return the location, cls is defined.
+        # Raises DefinitionAmbiguityError, if the location is unknown or already a class with the same metaclass
+        # was defined at the same location (realpath of an existing source file and line number).
+        # If the source file is a zip archive with a filename ending in '.zip', the path relative to the root
+        # of the archive is also given.
+
+        # frame relies based on best practises, correct information not guaranteed
+        try:
+            source_lineno = defining_frame.lineno
+            source_path = os.path.realpath(defining_frame.filename)
+            in_archive_path = None
+
+            if not os.path.isfile(source_path):
+                # zipimport:
+                #     https://www.python.org/dev/peps/pep-0273/:
+                #         "only files *.py and *.py[co] are available for import"
+                #
+                #     The source file path of an object imported from a zip archive has the relative path inside the
+                #     archive appended to the path of the zip file (e.g. 'x.zip/y/z.py').
+                #     A module name must be a Python identifier, so it must not contain a '.'.
+                #     Therefore, the file path of the archive can always be determined unambiguously if the
+                #     archive's filename contains a '.'.
+                dir_path = os.path.dirname(source_path)
+
+                ext = '.zip'
+                i = dir_path.rfind(ext + os.path.sep)
+                if i <= 0:
+                    raise ValueError
+                source_path, in_archive_path = dir_path[:i + len(ext)], source_path[i + len(ext) + 1:]
+
+                if not os.path.isfile(source_path):
+                    raise ValueError
+                in_archive_path = os.path.normpath(in_archive_path)
+
+        except Exception:
+            raise
+            msg = (
+                f"invalid tool definition: location of definition is unknown\n"
+                f"  | class: {cls!r}\n"
+                f"  | define the class in a regular file or in a zip archived with '.zip'\n"
+                f"  | note also the importance of upper and lower case of module search paths on case-insensitive filesystems"
+            )
+            raise DefinitionAmbiguityError(msg) from None
+
+        location = source_path, in_archive_path, source_lineno
+        existing_location = _tool_class_by_definition_location.get(location)
+        if existing_location is not None:
+            msg = (
+                f"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
+                f"  | location: {source_path!r}:{source_lineno}\n"
+                f"  | class: {existing_location!r}"
+            )
+            raise DefinitionAmbiguityError(msg)
+
+        return location
 
     def check_own_attributes(cls):
         for name, value in cls.__dict__.items():

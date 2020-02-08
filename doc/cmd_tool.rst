@@ -38,6 +38,10 @@ Tool Objects
    and it must be at least as restrictive (e.g. if required dependency must not be overridden by a non-required one).
    When overriding an execution parameters, its overriding value must be of the same type as the overridden value.
 
+   Each subclass of :class:`dlb.ex.Tool` must be defined in a source code location unique for each subclass of
+   :class:`dlb.ex.Tool`. The definition raises :exc:`dlb.ex.tool.DefinitionAmbiguityError`, if its location is cannot
+   be determined or another subclass of :class:`dlb.ex.Tool` was defined before at the same location.
+
    Example::
 
       class Compiler(dlb.ex.Tool):
@@ -66,6 +70,25 @@ Tool Objects
       Path('main.cpp.o')
 
    .. method:: run()
+
+      Run the tool instance in the :term:`active context`.
+
+   .. attribute:: definition_location
+
+      The definition location of the class.
+
+      It is a tuple of the form (``file_path``, ``in_archive_path``, ``lineno``) and uniquely identifies each
+      subclass of :class:`dlb.ex.Tool`.
+
+      ``in_archive_path`` is ``None``, if the class was defined in an existing Python source file, and ``file_path`` is
+      the :func:`python:os.path.realpath()` of this file.
+
+      ``in_archive_path`` is the path relative of the source file in the zip archive, if the class was defined in an
+      existing zip archive with a filename ending in ``'.zip'`` (loaded by :mod:`python:zipimport`) and ``file_path`` is
+      the :func:`python:os.path.realpath()` of this zip archive.
+
+      ``lineno`` is the 1-based line number in the source file.
+
 
 
 Dependency Role Classes

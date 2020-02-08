@@ -3,6 +3,9 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
+import tempfile
+import zipfile
+import dlb.ex.tool
 from dlb.ex.tool import Tool
 import unittest
 
@@ -363,3 +366,91 @@ class ReprTest(unittest.TestCase):
 
         t = ReprTest.DTool(source_file='x.cpp', object_file='x.cpp.o')
         self.assertEqual(repr(t), "ReprTest.DTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'))")
+
+
+class AmbiguityTest(unittest.TestCase):
+    def test_location_of_tools_are_correct(self):
+        lineno = 373  # of this line
+
+        class A(Tool):
+            pass
+
+        class B(A):
+            pass
+
+        class C(A):
+            pass
+
+        self.assertEqual(A.definition_location, (os.path.realpath(__file__), None, lineno + 2))
+        self.assertEqual(B.definition_location, (os.path.realpath(__file__), None, lineno + 2 + 3))
+        self.assertEqual(C.definition_location, (os.path.realpath(__file__), None, lineno + 2 + 3 + 3))
+
+    def test_location_in_zip_archive_is_correct(self):
+        with tempfile.TemporaryDirectory() as tmp_dir_path:
+            tmp_dir_path = '/tmp/t'
+
+            with tempfile.TemporaryDirectory() as content_tmp_dir_path:
+                with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w') as f:
+                    pass
+                with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
+                    f.write(
+                        'import dlb.ex\n'
+                        'class A(dlb.ex.Tool): pass'
+                    )
+
+                zip_file_path = os.path.join(tmp_dir_path, 'abc.zip')
+                with zipfile.ZipFile(zip_file_path, 'w') as z:
+                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u/__init__.py')
+                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u/v.py')
+
+        sys.path.insert(0, zip_file_path)
+        import u.v
+        del sys.path[0]
+
+        self.assertEqual(u.v.A.definition_location, (os.path.realpath(zip_file_path), 'u/v.py', 2))
+
+    def test_definition_location_is_readonly(self):
+        class A(Tool):
+            pass
+
+        self.assertEqual(A.definition_location[0], os.path.realpath(__file__))
+
+        with self.assertRaises(AttributeError):
+            A.definition_location = 42
+
+        self.assertEqual(A.definition_location[0], os.path.realpath(__file__))
+
+    def test_definition_fails_for_two_different_dynamic_definitions(self):
+        def f(s):
+            class A(Tool):
+                X = 1 if s else 2
+            return A
+
+        B = f(False)
+        with self.assertRaises(dlb.ex.tool.DefinitionAmbiguityError) as cm:
+            C = f(True)
+
+        regex = (
+            r"(?m)"
+            f"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            f"  \| location: '.+':[0-9]+\n"
+            f"  \| class: <class '.+'>\Z"
+        )
+        self.assertRegex(str(cm.exception), regex)
+
+    def test_definition_fails_for_two_equal_dynamic_definitions(self):
+        def f(s):
+            class A(Tool):
+                pass
+            return A
+
+        with self.assertRaises(dlb.ex.tool.DefinitionAmbiguityError) as cm:
+            B, C = f(False), f(True)
+
+        regex = (
+            r"(?m)"
+            f"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            f"  \| location: '.+':[0-9]+\n"
+            f"  \| class: <class '.+'>\Z"
+        )
+        self.assertRegex(str(cm.exception), regex)

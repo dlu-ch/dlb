@@ -42,4 +42,11 @@ Each following line represents a detail related to the first line and starts wit
 
    Raised, when the :term:`working tree time` behaved unexpectedly.
 
+.. module:: dlb.ex.tool
+
+.. exception:: DefinitionAmbiguityError
+
+   Raised at the definition of a subclass of :class:`dlb.ex.Tool`, when the location is unknown or another subclass of
+   :class:`dlb.ex.Tool` was defined before at the same location.
+
 .. _Clang: http://clang.llvm.org/diagnostics.html
