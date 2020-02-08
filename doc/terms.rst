@@ -123,6 +123,16 @@ Terms
    ideal time
       The (strictly increasing) physical time at the place the dlb process is running.
 
+   managed tree path
+      The path of an existing filesystem object relative to the :term`managed tree`'s root, that contains no
+      symbolic links no :file:`..` components.
+
+   canonical-case path
+      A path whose components are all exactly as listed in their parent directory.
+
+      On a case-insensitive filesystem or directory, multiple paths that differ in case or character encoding can point
+      to the same filesystem object. Only one of them is a canonical-case path.
+
    run-database
       The database in the :term:`management tree` that stores information on the current and past
       :term:`runs of dlb <run of dlb>`, primarily related to dependencies.

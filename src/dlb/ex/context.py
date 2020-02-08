@@ -1,7 +1,11 @@
+import sys
+assert sys.version_info >= (3, 6)
 import os
 import os.path
+import pathlib
 import stat
 import time
+import typing
 import tempfile
 import shutil
 import sqlite3
@@ -100,7 +104,9 @@ class _RootSpecifics:
         # cwd must be a working tree`s root
         working_tree_path_str = os.path.abspath(os.getcwd())
         try:
-            self._working_tree_path = path_cls(working_tree_path_str, is_dir=True)
+            self._working_tree_path = path_cls(path_cls.Native(working_tree_path_str), is_dir=True)
+            self._real_working_tree_path = pathlib.Path(os.path.realpath(working_tree_path_str))
+                # TODO check if canonical-case path
             if not os.path.samefile(working_tree_path_str, str(self._working_tree_path.native)):
                 msg = (
                     f'current directory probably violates imposed path restrictions: {working_tree_path_str!r}\n'
@@ -226,6 +232,37 @@ class _RootSpecifics:
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
+    def get_managed_tree_path(self, path: typing.Union[str, dlb.fs.Path]) -> dlb.fs.Path:
+        is_dir = None
+        if isinstance(path, str):
+            native_path = pathlib.Path(path)  # path may be ''
+            seps = (os.path.sep, os.path.altsep)
+            if path[-1:] in seps or (path[-1:] == '.' and path[-2:-1] in seps) or \
+                    not native_path.parts or native_path.parts[-1:]  == ('..',):
+                is_dir = True
+        elif isinstance(path, dlb.fs.Path):
+            is_dir = path.is_dir()
+            native_path = path.native.raw
+        else:
+            raise TypeError("'path' must be 'str' or 'dlb.fs.Path'")
+
+        if not os.path.isabs(native_path):
+            native_path = os.path.join(self._real_working_tree_path, native_path)
+        native_path = pathlib.Path(os.path.realpath(native_path))
+        sr = os.lstat(native_path)
+        try:
+            rel_path = native_path.relative_to(self._real_working_tree_path)
+            if rel_path.parts[:1] in (('..',), (_MANAGEMENTTREE_DIR_NAME,)):
+                raise ValueError
+        except ValueError:
+            raise ValueError(f'path not in managed tree: {native_path!r}') from None
+
+        mtp = self._path_cls(self._path_cls.Native(rel_path), is_dir=stat.S_ISDIR(sr.st_mode))
+        if is_dir is not None and is_dir != mtp.is_dir():
+            raise ValueError(f"form of 'path' does not match the type of filesystem object: {str(mtp.native)!r}")
+
+        return mtp
+
     def _open_or_create_rundb(self, rundb_path):
         try:
             mode = os.lstat(rundb_path).st_mode
@@ -237,9 +274,15 @@ class _RootSpecifics:
         connection = sqlite3.connect(rundb_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
         return connection
 
-    def _delay_to_working_tree_time_change(self):
+    def _cleanup(self):
+        self._rundb_connection.commit()
+        temporary_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')
+        remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
+
+    def _cleanup_and_delay_to_working_tree_time_change(self):
         t0 = time.time()  # time_ns() not in Python 3.6
         wt0 = self.working_tree_time_ns
+        self._cleanup()  # seize the the day
         while True:
             wt = self.working_tree_time_ns
             if wt != wt0:  # guarantee G-T2
@@ -256,12 +299,6 @@ class _RootSpecifics:
         # called while self is not an active context (note: an exception may already have happened)
         most_serious_exception = None
 
-        try:
-            temporary_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')
-            remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
-        except Exception as e:
-            most_serious_exception = e
-
         if self._mtime_probe:
             try:
                 self._mtime_probe.close()
@@ -271,8 +308,7 @@ class _RootSpecifics:
 
         if self._rundb_connection:
             try:
-                # note: uncommitted changes are lost!
-                self._rundb_connection.close()
+                self._rundb_connection.close()  # note: uncommitted changes are lost!
             except Exception as e:
                 most_serious_exception = e
             self._rundb_connection = None
@@ -290,7 +326,7 @@ class _RootSpecifics:
         first_exception = None
 
         try:
-             self._delay_to_working_tree_time_change()
+             self._cleanup_and_delay_to_working_tree_time_change()
         except Exception as e:
              first_exception = e
 

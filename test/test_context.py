@@ -518,3 +518,96 @@ class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
             r"  \| check specified 'prefix' and 'suffix'\Z"
         )
         self.assertRegex(str(cm.exception), regex)
+
+
+class ManagedTreePathTest(TemporaryDirectoryTestCase):
+
+    def test_root_is_managed_tree_path(self):
+        os.mkdir('.dlbroot')
+        os.mkdir('a')
+        os.mkdir('a/b')
+        with open('a/b/c', 'w'):
+            pass
+
+        with dlb.ex.Context(dlb.fs.NoSpacePath):
+            p = dlb.ex.Context.get_managed_tree_path(dlb.ex.Context.root_path)
+
+            self.assertIsInstance(p, dlb.fs.NoSpacePath)
+
+            self.assertFalse(p.is_absolute())
+            self.assertTrue(p.is_normalized())
+            self.assertEqual(p, dlb.fs.Path('.', is_dir=True))
+
+            p = dlb.ex.Context.get_managed_tree_path(os.path.join(dlb.ex.Context.root_path.native.raw, 'a/b/'))
+            self.assertFalse(p.is_absolute())
+            self.assertTrue(p.is_normalized())
+            self.assertEqual(p, dlb.fs.Path('a/b', is_dir=True))
+
+            p = dlb.ex.Context.get_managed_tree_path(os.path.join(dlb.ex.Context.root_path.native.raw, 'a/b/c'))
+            self.assertFalse(p.is_absolute())
+            self.assertTrue(p.is_normalized())
+            self.assertEqual(p, dlb.fs.Path('a/b/c', is_dir=False))
+
+    def test_fails_on_nonexisting(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            with self.assertRaises(FileNotFoundError):
+                dlb.ex.Context.get_managed_tree_path('a/b')
+
+    def test_fails_on_parent(self):
+        os.mkdir('u')
+        with DirectoryChanger('u'):
+            os.mkdir('.dlbroot')
+            with dlb.ex.Context():
+                with self.assertRaises(ValueError):
+                    dlb.ex.Context.get_managed_tree_path('../')
+
+    def test_fails_on_management_tree(self):
+        os.mkdir('.dlbroot')
+        os.mkdir('.dlbroot/u')
+
+        with dlb.ex.Context():
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.get_managed_tree_path('.dlbroot')
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.get_managed_tree_path('.dlbroot/u')
+
+    def test_fail_if_dir_path_to_nondir(self):
+        os.mkdir('.dlbroot')
+        os.mkdir('d')
+        with open('f', 'w'):
+            pass
+
+        with dlb.ex.Context():
+            self.assertEqual(dlb.ex.Context.get_managed_tree_path(''), dlb.fs.Path('.'))
+            self.assertEqual(dlb.ex.Context.get_managed_tree_path('f/..'), dlb.fs.Path('.'))
+
+            regex = r"\Aform of 'path' does not match the type of filesystem object: '.*'\Z"
+            with self.assertRaisesRegex(ValueError, regex):
+                dlb.ex.Context.get_managed_tree_path('f/')
+            with self.assertRaisesRegex(ValueError, regex):
+                dlb.ex.Context.get_managed_tree_path('f/.')
+            with self.assertRaisesRegex(ValueError, regex):
+                dlb.ex.Context.get_managed_tree_path(dlb.fs.Path('f', is_dir=True))
+
+        with dlb.ex.Context():
+            dlb.ex.Context.get_managed_tree_path('d')  # ok (like POSIX path resolution)
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.get_managed_tree_path(dlb.fs.Path('d', is_dir=False))
+
+    def test_fail_if_unsupported_type(self):
+        os.mkdir('.dlbroot')
+
+        with dlb.ex.Context():
+            with self.assertRaises(TypeError) as cm:
+                dlb.ex.Context.get_managed_tree_path(3)
+            self.assertEqual(str(cm.exception), "'path' must be 'str' or 'dlb.fs.Path'")
+
+    def test_fail_if_unrepresentable(self):
+        os.mkdir('.dlbroot')
+        os.mkdir('a b')
+
+        with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
+            with self.assertRaises(ValueError) as cm:
+                dlb.ex.Context.get_managed_tree_path('a b')
+

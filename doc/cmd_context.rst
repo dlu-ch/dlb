@@ -173,3 +173,20 @@ Contexts can be nested::
       :raises FileExistsError: if all tried candidates already existed
 
       :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. method:: get_managed_tree_path(path)
+
+      Returns the :term:`managed tree path` of ``path``.
+
+      :param path: a native path (``str``) or an abstract path of any filesystem object
+      :type path: str | :class:`dlb.fs.Path`
+      :return:
+         an instance ``p`` of :attr:`.dlb.ex.Context.path_cls` of with ``p.is_absolute() == True`` and
+         ``p.is_normalized() == True``
+      :rtype: :class:`.dlb.fs.Path`
+
+      :raises FileExistsError: if ``path`` does not exist
+      :raises ValueError:
+         if ``path`` is not in the :term:`managed tree`, or the form of ``path`` does not match the type of
+         the filesystem object, or the resulting path is not representable as a :attr:`.dlb.ex.Context.path_cls`
+      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
