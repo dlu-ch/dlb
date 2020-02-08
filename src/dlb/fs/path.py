@@ -1,3 +1,5 @@
+import sys
+assert sys.version_info >= (3, 6)
 import re
 import os
 import functools
@@ -33,7 +35,7 @@ class _Native:
         return s
 
     def __repr__(self):
-        return 'Path.Native({})'.format(repr(str(self)))
+        return f'Path.Native({str(self)!r})'
 
     def __getattr__(self, item):
         return getattr(self._raw, item)
@@ -104,7 +106,7 @@ class Path(metaclass=_PathMeta):
                     raise TypeError("unknown subclass of 'pathlib.PurePath'")
             else:
                 # like pathlib
-                raise TypeError("argument should be a path or str object, not {}".format(repr(path.__class__)))
+                raise TypeError(f'argument should be a path or str object, not {path.__class__!r}')
 
             if not p:
                 raise ValueError("invalid path: ''")
@@ -115,8 +117,7 @@ class Path(metaclass=_PathMeta):
         if is_dir is not None:
             is_dir = bool(is_dir)
             if not is_dir and (not self._path.parts or self._path.parts[-1:] == ('..',)):
-                raise ValueError(
-                    'cannot be the path of a non-directory: {}'.format(repr(str(self._path))))
+                raise ValueError(f'cannot be the path of a non-directory: {str(self._path)!r}')
             self._is_dir = is_dir
 
         try:
@@ -125,10 +126,9 @@ class Path(metaclass=_PathMeta):
                     c.check_restriction_to_base(self)
         except ValueError as e:
             reason = str(e)
-            msg = "invalid path for {}: {}".format(
-                repr(self.__class__.__qualname__), repr(str(self._path)))
+            msg = f'invalid path for {self.__class__.__qualname__!r}: {str(self._path)!r}'
             if reason:
-                msg = '{} ({})'.format(msg, reason)
+                msg = f'{msg} ({reason})'
             raise ValueError(msg)
 
     @classmethod
@@ -151,13 +151,12 @@ class Path(metaclass=_PathMeta):
     def relative_to(self, other):
         other = self.__class__(other)
         if not other.is_dir():
-            raise ValueError(
-                'since {} is not a directory, a path cannot be relative to it'.format(repr(other)))
+            raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
         return self.__class__(self._path.relative_to(other._path), is_dir=self._is_dir)
 
     def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
         if not self.is_dir():
-            raise ValueError("cannot list non-directory path: {}".format(repr(self.as_string())))
+            raise ValueError(f'cannot list non-directory path: {self.as_string()!r}')
 
         def make_name_filter(f):
             if f is None:
@@ -172,7 +171,7 @@ class Path(metaclass=_PathMeta):
                     return lambda s: r.fullmatch(s)  # since Python 3.4
                 else:
                     return lambda s: True
-            raise TypeError('invalid name filter: {}'.format(repr(f)))
+            raise TypeError(f'invalid name filter: {f!r}')
 
         name_filter = make_name_filter(name_filter)
         recurse_name_filter = make_name_filter(recurse_name_filter)
@@ -244,7 +243,7 @@ class Path(metaclass=_PathMeta):
 
         if p.is_reserved():
             # not actually reserved for directory path, but this information is last after conversion
-            raise ValueError('file path is reserved: {}'.format(repr(str(p))))
+            raise ValueError(f'file path is reserved: {str(p)!r}')
 
         return p
 
@@ -271,10 +270,10 @@ class Path(metaclass=_PathMeta):
 
     def __truediv__(self, other):
         if not self.is_dir():
-            raise ValueError('cannot append to non-directory path: {}'.format(repr(self)))
+            raise ValueError(f'cannot append to non-directory path: {self!r}')
         other = self.__class__(other)
         if other.is_absolute():
-            raise ValueError('cannot append absolute path: {}'.format(repr(other)))
+            raise ValueError(f'cannot append absolute path: {other!r}')
         return self.__class__(self._path / other._path, is_dir=other._is_dir)
 
     def __rtruediv__(self, other):
@@ -293,7 +292,7 @@ class Path(metaclass=_PathMeta):
         return hash((self._path, self._is_dir))
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__qualname__, repr(self.as_string()))  # since Python 3.3
+        return f'{self.__class__.__qualname__}({self.as_string()!r})'
 
     def __str__(self):
         # make sure this object is not converted to a string where a native path is expected
@@ -366,8 +365,7 @@ class PortablePosixPath(PosixPath):
         for c in self.parts:
             if c != '/':
                 if len(c) > self.MAX_COMPONENT_LENGTH:
-                    raise ValueError('component must not contain more than {} characters'.format(
-                        self.MAX_COMPONENT_LENGTH))
+                    raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
 
                 # IEEE Std 1003.1-2008, section 4.7 Filename Portability
                 if c.startswith('-'):
@@ -383,7 +381,7 @@ class PortablePosixPath(PosixPath):
         if self.is_dir():
             n += 1
         if n > self.MAX_PATH_LENGTH:
-            raise ValueError('must not contain more than {} characters'.format(self.MAX_PATH_LENGTH))
+            raise ValueError(f'must not contain more than {self.MAX_PATH_LENGTH} characters')
 
 
 class WindowsPath(Path):
@@ -402,15 +400,11 @@ class WindowsPath(Path):
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
         min_codepoint = ord(min(s))
         if min_codepoint < 0x20:
-            raise ValueError(
-                "must not contain characters with codepoint lower than U+0020: "
-                "U+{:04X}".format(min_codepoint))
+            raise ValueError(f'must not contain characters with codepoint lower than U+0020: U+{min_codepoint:04X}')
 
         max_codepoint = ord(max(s))
         if max_codepoint > 0xFFFF:
-            raise ValueError(
-                "must not contain characters with codepoint higher than U+FFFF: "
-                "U+{:04X}".format(max_codepoint))
+            raise ValueError(f'must not contain characters with codepoint higher than U+FFFF: U+{max_codepoint:04X}')
 
         p = pathlib.PureWindowsPath(self._path)
         self._check_windows_path_anchor(p)
@@ -428,8 +422,7 @@ class PortableWindowsPath(WindowsPath):
         p = self.pure_windows
         for c in p.parts[1:]:  # except anchor
             if len(c) > self.MAX_COMPONENT_LENGTH:
-                raise ValueError('component must not contain more than {} characters'.format(
-                    self.MAX_COMPONENT_LENGTH))
+                raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
             if c != '..' and c[-1] in ' .':
                 # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
                 raise ValueError("component must not end with ' ' or '.'")
@@ -438,7 +431,7 @@ class PortableWindowsPath(WindowsPath):
         if self.is_dir():
             n += 1
         if n > self.MAX_PATH_LENGTH:
-            raise ValueError('must not contain more than {} characters'.format(self.MAX_PATH_LENGTH))
+            raise ValueError(f'must not contain more than {self.MAX_PATH_LENGTH} characters')
 
 
 class PortablePath(PortablePosixPath, PortableWindowsPath, RelativePath):
