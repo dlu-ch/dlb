@@ -5,12 +5,12 @@ Explicit is better than implicit
 
 |batch-unittest| |batch-doc|
 
-dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool which does not try to mimic
+dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool that does not try to mimic
 `Make <https://en.wikipedia.org/wiki/Make_%28software%29>`_, but brings the benefits of object-oriented languages
 to the build process.
 It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
 
-dlb requires at least Python 3.6.
+dlb requires at least Python 3.6 (and nothing else).
 
 See here for more:
 

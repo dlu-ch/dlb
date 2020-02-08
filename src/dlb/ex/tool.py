@@ -101,7 +101,7 @@ class _ConcreteDependencyMixinMeta(type):
             suffix = (str(start) if start else '') + ':' + (str(stop) if stop is not None else '')
             if step > 1:
                 suffix += ':' + str(step)
-        suffix = '[{}]'.format(suffix)
+        suffix = f'[{suffix}]'
 
         MultipleDependency.__name__ = cls.__name__ + suffix
         MultipleDependency.__qualname__ = cls.__qualname__ + suffix
@@ -141,13 +141,12 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
                 raise ValueError('dependency role has no multiplicity')
         else:
             if n < m.start:
-                raise ValueError('value has {} members, but minimum multiplicity is {}'.format(n, m.start))
+                raise ValueError(f'value has {n} members, but minimum multiplicity is {m.start}')
             if m.stop is not None and n >= m.stop:
-                raise ValueError('value has {} members, but maximum multiplicity is {}'.format(n, m.stop - 1))
+                raise ValueError(f'value has {n} members, but maximum multiplicity is {m.stop-1}')
             if (n - m.start) % m.step != 0:
-                raise ValueError(
-                    'value has {} members, but multiplicity must be an integer multiple of {} above {}'
-                    .format(n, m.step, m.start))
+                msg = f'value has {n} members, but multiplicity must be an integer multiple of {m.step} above {m.start}'
+                raise ValueError(msg)
 
     @classmethod
     def is_multiplicity_valid(cls, n):
@@ -189,7 +188,7 @@ class _DirectoryDependencyMixin(_PathDependencyMixin):
     def validate(self, value):
         value = super().validate(value)
         if value is not None and not value.is_dir():
-            raise ValueError('non-directory path not valid for directory dependency: {}'.format(repr(value)))
+            raise ValueError(f'non-directory path not valid for directory dependency: {value!r}')
         return value
 
 
@@ -197,7 +196,7 @@ class _NonDirectoryDependencyMixin(_PathDependencyMixin):
     def validate(self, value):
         value = super().validate(value)
         if value is not None and value.is_dir():
-            raise ValueError('directory path not valid for non-directory dependency: {}'.format(repr(value)))
+            raise ValueError(f'directory path not valid for non-directory dependency: {value!r}')
         return value
 
 
@@ -244,8 +243,7 @@ class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
             prefix = []
             for v in value:
                 if v in prefix:
-                    raise ValueError(
-                        'dependency must be duplicate-free, but contains {} more than once'.format(repr(v)))
+                    raise ValueError(f'dependency must be duplicate-free, but contains {v!r} more than once')
                 prefix.append(v)
 
         return value
@@ -299,10 +297,9 @@ class _InputEnvVarDependency(_ConcreteDependencyMixin, _InputDependencyRole):
             else:
                 m = self._validator.fullmatch(validated_value)
                 if not m:
-                    raise ValueError(
-                        'value does not match validator regular expression: {}'.format(repr(validated_value)))
+                    raise ValueError(f'value does not match validator regular expression: {validated_value!r}')
 
-                # return only validates/possibly modifiy value
+                # return only validates/possibly modify value
                 groups = m.groupdict()
                 if groups:
                     # of all named groups: pick the group with the "smallest" name
@@ -354,14 +351,14 @@ class _ToolBase:
         for name, value in kwargs.items():
             if name not in dependency_names_to_assign:
                 if name in dependency_names:
-                    raise TypeError(
-                        'dependency role {} with automatic initialization must not be initialized by keyword parameter'
-                        .format(repr(name)))
+                    msg = (
+                        f'dependency role {name!r} with automatic initialization must not be '
+                        f'initialized by keyword parameter'
+                    )
+                    raise TypeError(msg)
                 else:
-                    raise TypeError(
-                        '{} is not a dependency role of {}: {}'.format(
-                            repr(name), repr(self.__class__.__qualname__),
-                            ', '.join(repr(n) for n in dependency_names)))
+                    names = ', '.join(repr(n) for n in dependency_names)
+                    raise TypeError(f'{name!r} is not a dependency role of {self.__class__.__qualname__!r}: {names}')
             role = getattr(self.__class__, name)
             object.__setattr__(self, name, role.validate(value))
             names_of_assigned.add(name)
@@ -369,7 +366,7 @@ class _ToolBase:
         for name in sorted(set(dependency_names_to_assign) - names_of_assigned):
             role = getattr(self.__class__, name)
             if role.required:
-                raise TypeError("missing keyword parameter for required dependency role: {}".format(repr(name)))
+                raise TypeError(f'missing keyword parameter for required dependency role: {name!r}')
             object.__setattr__(self, name, None)
 
     def run(self):
@@ -385,7 +382,7 @@ class _ToolBase:
     def __repr__(self):
         names = self.__class__._dependency_names
         args = ', '.join('{}={}'.format(n, repr(getattr(self, n))) for n in names)
-        return '{}({})'.format(self.__class__.__qualname__, args)
+        return f'{self.__class__.__qualname__}({args})'
 
 
 def _inject_nested_class_into(owner, cls, name, owner_qualname=None):
@@ -508,25 +505,33 @@ class _ToolMeta(type):
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
                     if base_value is not None and not isinstance(value, type(base_value)):
-                        raise TypeError(
-                            "attribute {} of base class may only be overridden with a value which is a {}"
-                            .format(repr(name), repr(type(base_value))))
+                        msg = (
+                            f"attribute {name!r} of base class may only be overridden with a value "
+                            f"which is a {type(base_value)!r}"
+                        )
+                        raise TypeError(msg)
             elif DEPENDENCY_NAME_REGEX.match(name):
                 if not (isinstance(value, _ToolBase.DependencyRole) and isinstance(value, _ConcreteDependencyMixin)):
-                    raise TypeError(
-                        "the value of {} must be an instance of a concrete subclass of 'dlb.ex.Tool.DependencyRole'"
-                        .format(repr(name)))
+                    msg = (
+                        f"the value of {name!r} must be an instance of a concrete subclass of "
+                        f"'dlb.ex.Tool.DependencyRole'"
+                    )
+                    raise TypeError(msg)
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
                     if base_value is not None and not value.is_more_restrictive_than(base_value):
-                        raise TypeError(
-                            "attribute {} of base class may only be overridden by a {} at least as restrictive"
-                            .format(repr(name), repr(type(base_value))))
+                        msg = (
+                            f"attribute {name!r} of base class may only be overridden by "
+                            f"a {type(base_value)!r} at least as restrictive"
+                        )
+                        raise TypeError(msg)
             else:
-                raise AttributeError((
-                    "invalid class attribute name: {} "
-                    "(every class attribute of a 'dlb.ex.Tool' must be named "
-                    "like 'UPPER_CASE_WORD' or 'lower_case_word)").format(repr(name)))
+                msg = (
+                    f"invalid class attribute name: {name!r} "
+                    f"(every class attribute of a 'dlb.ex.Tool' must be named "
+                    f"like 'UPPER_CASE_WORD' or 'lower_case_word)"
+                )
+                raise AttributeError(msg)
 
     def _get_dependency_names(cls):
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}

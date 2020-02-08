@@ -117,21 +117,21 @@ They are classified according to their meaning to the tool:
 
 .. class:: Tool.Input
 
-   A :class:`dlb.ex.Tool.DependencyRole` which describes an input dependency of a tool.
+   A :class:`dlb.ex.Tool.DependencyRole` that describes an input dependency of a tool.
 
    The :term:`tool instance` must be rerun if it (e.g. the content of a file) has changed compared to the state before
    it was executed.
 
 .. class:: Tool.Intermediate
 
-   A :class:`dlb.ex.Tool.DependencyRole` which describes an intermediate dependency of a tool.
+   A :class:`dlb.ex.Tool.DependencyRole` that describes an intermediate dependency of a tool.
 
    Such a dependency (e.g. a directory for caching) is expected not to be accessed while the tool instance
    is running.
 
 .. class:: Tool.Output
 
-   A :class:`dlb.ex.Tool.DependencyRole` which describes an output dependency of a tool.
+   A :class:`dlb.ex.Tool.DependencyRole` that describes an output dependency of a tool.
 
    The dependency (e.g. a file) is removed before the tool instance starts running if it exists.
    After the execution of the tool it must exist.
