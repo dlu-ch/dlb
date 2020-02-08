@@ -1,52 +1,15 @@
 import sys
 import os.path
 here = os.path.dirname(__file__) or os.curdir
+sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex
 import dlb.ex.context
 import stat
-import tempfile
 import time
 import unittest
-
-
-class DirectoryChanger:
-    def __init__(self, path):
-        self._path = path
-
-    def __enter__(self):
-        self._original_path = os.getcwd()
-        os.chdir(self._path)
-        print(f'changed current working directory of process to {self._path!r}')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        os.chdir(self._original_path)
-        print(f'changed current working directory of process back to {self._original_path!r}')
-
-
-class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary directory during test
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._original_cwd = None
-        self._temp_dir = None
-
-    def setUp(self):
-        self._original_cwd = os.getcwd()
-        self._temp_dir = tempfile.TemporaryDirectory()
-        try:
-            os.chdir(self._temp_dir.name)
-            print(f'changed current working directory of process to {self._temp_dir.name!r}')
-        except:
-            self._temp_dir.cleanup()
-
-    def tearDown(self):
-        if self._temp_dir:
-            try:
-                os.chdir(self._original_cwd)
-                print(f'changed current working directory of process back to {self._original_cwd!r}')
-            finally:
-                self._temp_dir.cleanup()
+import tools_for_test
 
 
 class TechnicalInterfaceTest(unittest.TestCase):
@@ -76,7 +39,7 @@ class TechnicalInterfaceTest(unittest.TestCase):
         self.assertEqual("public attributes of 'dlb.ex.Context' instances are read-only", str(cm.exception))
 
 
-class NestingTest(TemporaryDirectoryTestCase):
+class NestingTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fails_if_not_running(self):
         with self.assertRaises(dlb.ex.context.NotRunningError):
@@ -139,7 +102,7 @@ class NestingTest(TemporaryDirectoryTestCase):
             self.assertEqual(str(cm.exception), msg)
 
 
-class ReuseTest(TemporaryDirectoryTestCase):
+class ReuseTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_context_can_be_reused(self):
         os.mkdir('.dlbroot')
@@ -150,7 +113,7 @@ class ReuseTest(TemporaryDirectoryTestCase):
             pass
 
 
-class WorkingTreeRequirementTest(TemporaryDirectoryTestCase):
+class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_management_tree_paths_are_portable(self):
         import dlb.fs
@@ -191,7 +154,7 @@ class WorkingTreeRequirementTest(TemporaryDirectoryTestCase):
         self.assertIn('working tree', str(cm.exception))
 
 
-class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
+class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_missing_filesystem_objects_are_created(self):
         os.mkdir('.dlbroot')
@@ -289,7 +252,7 @@ class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
         os.chmod('.dlbroot/t', 0o777)
 
 
-class PathsTest(TemporaryDirectoryTestCase):
+class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_root_is_unavailable_if_not_running(self):
         os.mkdir('.dlbroot')
@@ -324,7 +287,7 @@ class PathsTest(TemporaryDirectoryTestCase):
     def test_entering_fails_if_path_not_representabe(self):
         os.mkdir('x y')
 
-        with DirectoryChanger('x y'):
+        with tools_for_test.DirectoryChanger('x y'):
             os.mkdir('.dlbroot')
 
             regex = (
@@ -349,7 +312,7 @@ class PathsTest(TemporaryDirectoryTestCase):
                         pass
 
 
-class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
+class WorkingTreeTimeTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_time_is_unavailable_if_not_running(self):
         os.mkdir('.dlbroot')
@@ -379,7 +342,7 @@ class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
             self.assertNotEqual(enter_time, exit_time)
 
 
-class RunDatabaseTest(TemporaryDirectoryTestCase):
+class RunDatabaseTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_nonexisting_is_created(self):
         os.mkdir('.dlbroot')
@@ -387,7 +350,7 @@ class RunDatabaseTest(TemporaryDirectoryTestCase):
             os.path.isfile('.dlbroot/runs.sqlite')
 
 
-class ProcessLockTest(TemporaryDirectoryTestCase):
+class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fail_if_lock_dir_exists(self):
         os.mkdir('.dlbroot')
@@ -425,7 +388,7 @@ class ProcessLockTest(TemporaryDirectoryTestCase):
 
 
 
-class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
+class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_creates_regular_file(self):
         os.mkdir('.dlbroot')
@@ -514,7 +477,7 @@ class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
                 dlb.ex.Context.create_temporary(suffix='x y')
 
 
-class ManagedTreePathTest(TemporaryDirectoryTestCase):
+class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_root_is_managed_tree_path(self):
         os.mkdir('.dlbroot')
@@ -526,7 +489,7 @@ class ManagedTreePathTest(TemporaryDirectoryTestCase):
         with dlb.ex.Context(dlb.fs.NoSpacePath):
             p = dlb.ex.Context.get_managed_tree_path(dlb.ex.Context.root_path)
 
-            self.assertIsInstance(p, dlb.fs.NoSpacePath)
+            self.assertIs(p.__class__, dlb.fs.Path)
 
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
@@ -550,7 +513,7 @@ class ManagedTreePathTest(TemporaryDirectoryTestCase):
 
     def test_fails_on_parent(self):
         os.mkdir('u')
-        with DirectoryChanger('u'):
+        with tools_for_test.DirectoryChanger('u'):
             os.mkdir('.dlbroot')
             with dlb.ex.Context():
                 with self.assertRaises(ValueError):
@@ -596,12 +559,3 @@ class ManagedTreePathTest(TemporaryDirectoryTestCase):
             with self.assertRaises(TypeError) as cm:
                 dlb.ex.Context.get_managed_tree_path(3)
             self.assertEqual(str(cm.exception), "'path' must be 'str' or 'dlb.fs.Path'")
-
-    def test_fail_if_unrepresentable(self):
-        os.mkdir('.dlbroot')
-        os.mkdir('a b')
-
-        with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
-            with self.assertRaises(ValueError) as cm:
-                dlb.ex.Context.get_managed_tree_path('a b')
-

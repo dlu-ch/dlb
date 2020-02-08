@@ -165,7 +165,7 @@ Contexts can be nested::
 
       :type is_dir: bool
 
-      :return: an instance ``p`` of :attr:`.dlb.ex.Context.path_cls` of with ``p.is_dir() = is_dir``.
+      :return: an instance ``p`` of :attr:`.dlb.ex.Context.path_cls` with ``p.is_dir() = is_dir``
       :rtype: :class:`.dlb.fs.Path`
 
       :raises ValueError:
@@ -180,13 +180,11 @@ Contexts can be nested::
 
       :param path: a native path (``str``) or an abstract path of any filesystem object
       :type path: str | :class:`dlb.fs.Path`
-      :return:
-         an instance ``p`` of :attr:`.dlb.ex.Context.path_cls` of with ``p.is_absolute() == True`` and
-         ``p.is_normalized() == True``
+      :return: an path ``p`` with ``p.is_absolute() == True`` and ``p.is_normalized() == True``
       :rtype: :class:`.dlb.fs.Path`
 
       :raises FileExistsError: if ``path`` does not exist
       :raises ValueError:
          if ``path`` is not in the :term:`managed tree`, or the form of ``path`` does not match the type of
-         the filesystem object, or the resulting path is not representable as a :attr:`.dlb.ex.Context.path_cls`
+         the filesystem object, or the resulting path is not representable as a :attr:`.dlb.fs.Path`
       :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).

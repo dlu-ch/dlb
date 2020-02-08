@@ -39,18 +39,12 @@ class WorkingTreeTimeError(Exception):
 # a directory containing a directory with this name is considered a working tree of dlb
 _MANAGEMENTTREE_DIR_NAME = '.dlbroot'
 
-
 # a directory containing a directory with this name is considered a working tree of dlb
 _MTIME_PROBE_FILE_NAME = 'o'
 assert _MTIME_PROBE_FILE_NAME.upper() != _MTIME_PROBE_FILE_NAME
 
-
 _LOCK_DIRNAME = 'lock'
-
-
 _MTIME_TEMPORARY_DIR_NAME = 't'
-
-
 _RUNDB_FILE_NAME = 'runs.sqlite'
 
 
@@ -257,7 +251,7 @@ class _RootSpecifics:
         except ValueError:
             raise ValueError(f'path not in managed tree: {native_path!r}') from None
 
-        mtp = self._path_cls(self._path_cls.Native(rel_path), is_dir=stat.S_ISDIR(sr.st_mode))
+        mtp = dlb.fs.Path(rel_path, is_dir=stat.S_ISDIR(sr.st_mode))
         if is_dir is not None and is_dir != mtp.is_dir():
             raise ValueError(f"form of 'path' does not match the type of filesystem object: {str(mtp.native)!r}")
 
