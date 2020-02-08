@@ -262,33 +262,31 @@ class ManagementTreeSetupTest(TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot/t/c')
 
         os.chmod('.dlbroot/t', 0o000)
-        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
-            with dlb.ex.Context():
-                pass
-        os.chmod('.dlbroot/t', 0o777)
 
         regex = (
             r"(?m)"
             r"\Afailed to setup management tree for '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]t'.*\Z"
         )
-        self.assertRegex(str(cm.exception), regex)
+        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+            with dlb.ex.Context():
+                pass
+
+        os.chmod('.dlbroot/t', 0o777)
 
     def test_meaningful_exception_on_permission_error_while_cleanup(self):
         os.mkdir('.dlbroot')
-
-        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
-            with dlb.ex.Context():
-                os.mkdir('.dlbroot/t/c')
-                os.chmod('.dlbroot/t', 0o000)
-        os.chmod('.dlbroot/t', 0o777)
 
         regex = (
             r"(?m)"
             r"\Afailed to cleanup management tree for '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\].*'.*\Z"
         )
-        self.assertRegex(str(cm.exception), regex)
+        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+            with dlb.ex.Context():
+                os.mkdir('.dlbroot/t/c')
+                os.chmod('.dlbroot/t', 0o000)
+        os.chmod('.dlbroot/t', 0o777)
 
 
 class PathsTest(TemporaryDirectoryTestCase):
@@ -329,28 +327,26 @@ class PathsTest(TemporaryDirectoryTestCase):
         with DirectoryChanger('x y'):
             os.mkdir('.dlbroot')
 
-            with self.assertRaises(ValueError) as cm:
-                with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
-                    pass
             regex = (
                 r"(?m)"
                 r"\Acurrent directory violates imposed path restrictions\n"
                 r"  \| reason: .*NoSpacePath.*'.+'.*\n"
                 r"  \| move the working directory or choose a less restrictive path class for the root context\Z"
             )
-            self.assertRegex(str(cm.exception), regex)
+            with self.assertRaisesRegex(ValueError, regex):
+                with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
+                    pass
 
             with dlb.ex.Context():  # no exception
-                with self.assertRaises(ValueError) as cm:
+                regex = (
+                    r"(?m)"
+                    r"\Aworking tree's root path violates path restrictions imposed by this context\n"
+                    r"  \| reason: .*NoSpacePath.*'.+'.*\n"
+                    r"  \| move the working directory or choose a less restrictive path class for the root context\Z"
+                )
+                with self.assertRaisesRegex(ValueError, regex):
                     with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
                         pass
-            regex = (
-                r"(?m)"
-                r"\Aworking tree's root path violates path restrictions imposed by this context\n"
-                r"  \| reason: .*NoSpacePath.*'.+'.*\n"
-                r"  \| move the working directory or choose a less restrictive path class for the root context\Z"
-            )
-            self.assertRegex(str(cm.exception), regex)
 
 
 class WorkingTreeTimeTest(TemporaryDirectoryTestCase):
@@ -397,10 +393,6 @@ class ProcessLockTest(TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
         os.mkdir('.dlbroot/lock')
 
-        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
-            with dlb.ex.Context():
-                pass
-
         regex = (
             r"(?m)"
             r"\Acannot aquire lock for exclusive access to working tree '.*'\n"
@@ -408,16 +400,15 @@ class ProcessLockTest(TemporaryDirectoryTestCase):
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
         )
-        self.assertRegex(str(cm.exception), regex)
+        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+            with dlb.ex.Context():
+                pass
+
 
     def test_meaningful_exception_on_permission_error(self):
         os.mkdir('.dlbroot')
 
         os.chmod('.dlbroot', 0o000)
-        with self.assertRaises(dlb.ex.context.ManagementTreeError) as cm:
-            with dlb.ex.Context():
-                pass
-        os.chmod('.dlbroot', 0o777)
 
         regex = (
             r"(?m)"
@@ -426,7 +417,12 @@ class ProcessLockTest(TemporaryDirectoryTestCase):
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
         )
-        self.assertRegex(str(cm.exception), regex)
+        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+            with dlb.ex.Context():
+                pass
+
+        os.chmod('.dlbroot', 0o777)
+
 
 
 class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
@@ -508,16 +504,14 @@ class TemporaryFilesystemObjectsTest(TemporaryDirectoryTestCase):
     def test_fails_if_path_not_representabe(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
-            with self.assertRaises(ValueError) as cm:
+            regex = (
+                r"(?m)"
+                r"\Apath violates imposed path restrictions\n"
+                r"  \| reason: .*NoSpacePath.*'.+'.*\n"
+                r"  \| check specified 'prefix' and 'suffix'\Z"
+            )
+            with self.assertRaisesRegex(ValueError, regex):
                 dlb.ex.Context.create_temporary(suffix='x y')
-
-        regex = (
-            r"(?m)"
-            r"\Apath violates imposed path restrictions\n"
-            r"  \| reason: .*NoSpacePath.*'.+'.*\n"
-            r"  \| check specified 'prefix' and 'suffix'\Z"
-        )
-        self.assertRegex(str(cm.exception), regex)
 
 
 class ManagedTreePathTest(TemporaryDirectoryTestCase):
