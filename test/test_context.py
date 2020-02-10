@@ -72,7 +72,7 @@ class NestingTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_nesting_error_is_detected(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
-            with self.assertRaises(dlb.ex.context.NestingError):
+            with self.assertRaises(dlb.ex.context.ContextNestingError):
                 with dlb.ex.Context():
                     dlb.ex.context._contexts.pop()
 

@@ -17,7 +17,7 @@ __all__ = ['Context']
 _contexts = []
 
 
-class NestingError(Exception):
+class ContextNestingError(Exception):
     pass
 
 
@@ -34,6 +34,10 @@ class NoWorkingTreeError(Exception):
 
 
 class WorkingTreeTimeError(Exception):
+    pass
+
+
+class NonActiveContextAccessError(Exception):  # TODO find better name
     pass
 
 
@@ -56,7 +60,9 @@ def exception_to_string(e):
     return e.__class__.__qualname__
 
 
-def remove_filesystem_object(path, ignore_non_existing=False):  # TODO implement safer version (see ???)
+# TODO implement safer version (see ???)
+# TODO move to appropriate plae
+def remove_filesystem_object(path, ignore_non_existing=False):
     try:
         try:
             os.remove(path)  # does remove symlink
@@ -65,6 +71,144 @@ def remove_filesystem_object(path, ignore_non_existing=False):  # TODO implement
     except FileNotFoundError:
         if not ignore_non_existing:
             raise
+
+
+class _EnvVarDict:
+
+    def __init__(self, parent=None, top_value_by_name: typing.Optional[typing.Dict[str, str]]=None):
+        if not (parent is None or isinstance(parent, _EnvVarDict)):
+            raise TypeError
+
+        self._parent = parent
+        if parent is None:
+            self._top_value_by_name = {str(k): str(v) for k, v, in top_value_by_name.items()}
+            self._value_by_name = dict()
+        else:
+            self._top_value_by_name = dict()
+            self._value_by_name = dict(parent._value_by_name)  # type: typing.Dict[str, int]
+        self._restriction_by_name = dict()  # type: typing.Dict[str, re.Pattern]
+
+    def import_from_outer(self, name: str, restriction: typing.Union[str, re.Pattern], example: str):
+        self._check_non_empty_str(name=name)
+
+        if isinstance(restriction, str):
+            restriction = re.compile(restriction)
+        if not isinstance(restriction, re.Pattern):
+            raise TypeError("'restriction' must be regular expression (compiled or str)")
+        if not isinstance(example, str):
+            raise TypeError("'example' must be a str")
+
+        if not restriction.fullmatch(example):
+            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
+
+        self._check_if_env_of_active_context()
+
+        value = self._value_by_name.get(name)
+        if value is None:
+            # import from innermost outer context that has the environment variable defined
+            value = (self._parent._value_by_name if self._parent else self._top_value_by_name).get(name)
+            value_name = 'imported'
+        else:
+            value_name = 'current'
+
+        if not value is None:
+            if not restriction.fullmatch(value):
+                raise ValueError(f"{value_name} value invalid with respect to 'restriction': {value!r}")
+
+        self._restriction_by_name[name] = restriction  # cannot be removed, once defined!
+        if value is not None:
+            self._value_by_name[name] = value
+
+    def is_imported(self, name):
+        self._check_non_empty_str(name=name)
+        if name in self._restriction_by_name:
+            return True
+        return self._parent is not None and self._parent.is_imported(name)
+
+    def is_valid(self, name, value):
+        self._check_non_empty_str(name=name)
+        if not isinstance(value, str):
+            raise TypeError("'value' must be a str")
+        restriction = self._restriction_by_name.get(name)
+        if restriction is not None and not restriction.fullmatch(value):
+            return False
+        return self._parent is None or self._parent.is_valid(name, value)
+
+    def _check_non_empty_str(self, **kwargs):
+        for k, v in kwargs.items():
+            if not isinstance(v, str):
+                raise TypeError(f"{k!r} must be a str")
+            if not v:
+                raise ValueError(f"{k!r} must not be empty")
+
+    def _check_if_env_of_active_context(self):
+        if not (_contexts and _contexts[-1].env is self):
+            msg = (
+                "'env' of an inactive context must not be modified\n"
+                "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
+            )
+            raise NonActiveContextAccessError(msg)
+
+    # dictionary methods
+
+    def get(self, name: str, default=None):
+        self._check_non_empty_str(name=name)
+        return self._value_by_name.get(name, default)
+
+    def setdefault(self, name: str, default=str):
+        if not isinstance(default, str):
+            raise TypeError("'default' must be a str")
+        if name not in self:
+            self[name] = default
+
+    def items(self):
+        return self._value_by_name.items()
+
+    def __len__(self):
+        return self._value_by_name.__len__()
+
+    def __getitem__(self, name: str) -> str:
+        value = self.get(name)
+        if value is None:
+            msg = (
+                f"not a defined environment variable in the context: {name!r}\n"
+                f"  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
+            )
+            raise KeyError(msg)
+        return value
+
+    def __setitem__(self, name: str, value: str):
+        self._check_non_empty_str(name=name)
+        if not isinstance(value, str):
+            raise TypeError("'value' must be a str")
+
+        if not self.is_imported(name):
+            msg = (
+                f"environment variable not imported into context: {name!r}\n"
+                f"  | use 'dlb.ex.Context.active.env.import_from_outer()' first"
+            )
+            raise AttributeError(msg)
+
+        self._check_if_env_of_active_context()
+
+        if not self.is_valid(name, value):
+            raise ValueError(f"'value' invalid with respect to active or an outer context: {value!r}")
+
+        self._value_by_name[name] = value
+
+    def __delitem__(self, name):
+        self._check_non_empty_str(name=name)
+        self._check_if_env_of_active_context()
+        try:
+            del self._value_by_name[name]
+        except KeyError:
+            raise KeyError(f"not a defined environment variable in the context: {name!r}") from None
+
+    def __iter__(self):
+        return self._value_by_name.__iter__()
+
+    def __contains__(self, name):
+        return self._value_by_name.__contains__(name)
 
 
 def _get_root():
@@ -348,8 +492,9 @@ class Context(metaclass=_ContextMeta):
     def __init__(self, path_cls=dlb.fs.Path):
         if not (isinstance(path_cls, type) and issubclass(path_cls, dlb.fs.Path)):
             raise TypeError("'path_cls' is not a subclass of 'dlb.fs.Path'")
-        self._path_cls = path_cls
-        self._root_specifics = None
+        self._path_cls = path_cls  # type: dlb.fs.Path
+        self._root_specifics = None  # type: typing.Optional[_RootSpecifics]
+        self._env = None  # type: typing.Optional[_EnvVarDict]
 
     @property
     def root(self):
@@ -364,6 +509,11 @@ class Context(metaclass=_ContextMeta):
     @property
     def path_cls(self) -> dlb.fs.Path:
         return self._path_cls
+
+    @property
+    def env(self) -> _EnvVarDict:
+        self.active
+        return self._env
 
     def __getattr__(self, name):
         try:
@@ -389,15 +539,18 @@ class Context(metaclass=_ContextMeta):
                     f'  | move the working directory or choose a less restrictive path class for the root context'
                 )
                 raise ValueError(msg) from None
+            self._env = _EnvVarDict(_contexts[-1].env, None)
         else:
             self._root_specifics = _RootSpecifics(self._path_cls)
+            self._env = _EnvVarDict(None, os.environ)
         _contexts.append(self)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not (_contexts and _contexts[-1] == self):
-            raise NestingError
+            raise ContextNestingError
         _contexts.pop()
+        self._env = None
         if self._root_specifics:
             self._root_specifics.cleanup_and_close()
             self._root_specifics = None

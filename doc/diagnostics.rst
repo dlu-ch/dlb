@@ -32,7 +32,7 @@ Each following line represents a detail related to the first line and starts wit
 
    Raised, when an attempt to prepare or access the :term:`management tree` failed.
 
-.. exception:: NestingError
+.. exception:: ContextNestingError
 
    Raised, when some contexts were not properly nested.
    I.e. the calls of :meth:`__exit__` did not occur in the opposite order of the corresponding calls of
@@ -42,6 +42,11 @@ Each following line represents a detail related to the first line and starts wit
 
    Raised, when the :term:`working tree time` behaved unexpectedly.
 
+.. exception:: NonActiveContextAccessError
+
+   Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` is modified
+   while its associated :term`context` is not the :term:`active context`.
+
 .. module:: dlb.ex.tool
 
 .. exception:: DefinitionAmbiguityError
@@ -50,3 +55,4 @@ Each following line represents a detail related to the first line and starts wit
    :class:`dlb.ex.Tool` was defined before at the same location.
 
 .. _Clang: http://clang.llvm.org/diagnostics.html
+
