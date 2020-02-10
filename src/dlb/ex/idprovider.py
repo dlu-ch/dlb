@@ -1,10 +1,10 @@
 import sys
-assert sys.version_info >= (3, 6)
 import collections
 import typing
 import platform
 import marshal
 import dlb.ex
+assert sys.version_info >= (3, 6)
 
 
 PLATFORM_ID = marshal.dumps((platform.platform(), sys.hexversion, dlb.__VERSION__))

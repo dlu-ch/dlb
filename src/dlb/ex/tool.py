@@ -1,11 +1,12 @@
 import sys
-assert sys.version_info >= (3, 6)
 import re
 import collections
 import os
 import typing
 import inspect
 import dlb.fs
+assert sys.version_info >= (3, 6)
+
 
 EXECUTION_PARAMETER_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
 assert EXECUTION_PARAMETER_NAME_REGEX.match('A')

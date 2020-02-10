@@ -1,5 +1,5 @@
 import sys
-assert sys.version_info >= (3, 6)
+import re
 import os
 import os.path
 import pathlib
@@ -10,6 +10,7 @@ import tempfile
 import shutil
 import sqlite3
 import dlb.fs
+assert sys.version_info >= (3, 6)
 
 __all__ = ['Context']
 

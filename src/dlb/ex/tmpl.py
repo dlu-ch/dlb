@@ -1,8 +1,11 @@
+import sys
 import re
 import collections
 import collections.abc
 import enum
 import inspect
+assert sys.version_info >= (3, 6)
+
 
 __all__ = ['TokensTemplate']
 

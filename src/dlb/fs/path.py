@@ -1,9 +1,9 @@
 import sys
-assert sys.version_info >= (3, 6)
 import re
 import os
 import functools
 import pathlib  # since Python 3.4
+assert sys.version_info >= (3, 6)
 
 __all__ = [
     'Path', 'RelativePath', 'AbsolutePath', 'NormalizedPath', 'NoSpacePath',
