@@ -36,8 +36,8 @@ Contexts can be nested::
    # no active context
 
 
-:class:`dlb.ex.Context`
------------------------
+Context objects
+---------------
 
 .. class:: Context(path_cls=dlb.fs.Path)
 
@@ -196,8 +196,8 @@ Contexts can be nested::
 
    .. attribute:: env
 
-      Returns an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` that contains
-      all environment variables defined in this context.
+      Returns an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` with
+      this context as its associated :term:`context`.
 
       When called on class, it refers to the :term:`active context`.
 
@@ -209,135 +209,132 @@ Contexts can be nested::
 Environment variable dictionary objects
 ---------------------------------------
 
-   .. class:: Context.EnvVarDict(...)
+The environment variable dictionary object ``env`` returned by :attr:`c.env <Context.env>` for a :term:`context` ``c``
+is a dictionary-like object of all environment variables defined in this ``c``.
+``c`` is called the associated :term:`context` of ``env``.
 
-      The environment variable dictionary object ``env`` returned by :attr:`c.env` of a :term:`context` ``c`` is a
-      dictionary-like object of all environment variables defined in this ``c``.
-      ``c`` is called the associated :term:`context` of ``env``.
+In addition, the environment variable dictionary object manages the import of environment variables from
+environment variables of the outer :term:`context` and restriction of imported or assigned values in the
+form of regular expressions.
 
-      In addition to dictionary operations, the environment variable dictionary object manages the import of
-      environment variables from environment variables of the outer :term:`context` and restriction of imported or
-      assigned values in the form of regular expressions.
+The environment variables of the outer :term:`context` of the :term:`root context` is defined
+by :data:`python:os.environ`.
 
-      The environment variables of the outer :term:`context` of the :term:`root context` is defined
-      by :data:`python:os.environ`.
+Example::
 
-      Example::
+    # os.environ usually contains the environment variables in the shell that called the Python interpreter
 
-          # os.environ usually contains the environment variables in the shell that called the Python interpreter
+    with dlb.ex.Context():  # takes a snapshot of os.environ
 
-          with dlb.ex.Context():  # takes a snapshot of os.environ
+        # import the environment variable 'LANG' into the context
+        dlb.ex.Context.active.env.import_from_outer(
+            'LANG', restriction=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
 
-              # import the environment variable 'LANG' into the context
-              dlb.ex.Context.active.env.import_from_outer(
-                  'LANG', restriction=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
+        # now the environment variable is either undefined or matches the regular expression given
+        # (in this context and all future inner contexts)
 
-              # now the environment variable is either undefined or matches the regular expression given
-              # (in this context and all future inner contexts)
+        ... = dlb.ex.Context.active.env['LANG']
+            # value in snapshot of os.environ complying to the restriction or KeyError
 
-              ... = dlb.ex.Context.active.env['LANG']
-                  # value in snapshot of os.environ complying to the restriction or KeyError
+        dlb.ex.Context.active.env['LANG'] = 'de_AT'
 
-              dlb.ex.Context.active.env['LANG'] = 'de_AT'
+        with dlb.ex.Context():
 
-              with dlb.ex.Context():
+            # further restrict the value and make sure it is defined
+            dlb.ex.Context.active.env.import_from_outer(
+                'LANG', restriction='(?P<language>de).*', example='de_CH')
 
-                  # further restrict the value and make sure it is defined
-                  dlb.ex.Context.active.env.import_from_outer(
-                      'LANG', restriction='(?P<language>de).*', example='de_CH')
+            ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
+            del dlb.ex.Context.active.env['LANG']
 
-                  ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
-                  del dlb.ex.Context.active.env['LANG']
+            dlb.ex.Context.active.env['LANG'] = 'de_CH'
+            # dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # would raise ValueError
 
-                  dlb.ex.Context.active.env['LANG'] = 'de_CH'
-                  # dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # would raise ValueError
+        ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
 
-              ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
+        del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
+        dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
 
-              del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
-              dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
+Environment variable dictionary object support the following methods and attributes:
 
+.. method:: EnvVarDict.import_from_outer(name, restriction, value_if_undefined=None, example=None)
 
-      It support the following methods and attributes:
+   Sets the value of the environment variable named ``name`` from the innermost outer :term:`context` that
+   defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
 
-   .. method:: import_from_outer(name, restriction, value_if_undefined=None, example=None)
+   Also sets the importing restriction for the value of the environment variable; when it is or later becomes
+   defined, it regular expression ``restriction`` must match its value.
 
-      Sets the value of the environment variable named ``name`` from the innermost outer :term:`context` that
-      defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
+   The possible imported value and the importing restriction apply to the context and all its future inner contexts.
 
-      Also sets the importing restriction for the value of the environment variable; when it is or later becomes
-      defined, it regular expression ``restriction`` must match its value.
+   When called for a root contest, the environment variables are imported from :data:`python:os.environ` at the time
+   is was entered.
 
-      The possible imported value and the importing restriction apply to the context and all its future inner contexts.
+   :param name: (non-empty) name of the environment variable
+   :type name: str
+   :param restriction: regular expression with at least one named group
+   :type restriction: str | :class:`python.re.Pattern`
+   :param example: typical value of a environment variable, must match ``restriction``
+   :type example: str
 
-      When called for a root contest, the environment variables are imported from :data:`python:os.environ` at the time
-      is was entered.
+   :raises ValueError:
+      if an environment variable named ``name`` is defined in the associated or an outer :term:`context`
+      and ``restriction`` does not match its value
+   :raises .dlb.ex.context.NonActiveContextAccessError: if the associated context is not an :term:`active context`
 
-      :param name: (non-empty) name of the environment variable
-      :type name: str
-      :param restriction: regular expression with at least one named group
-      :type restriction: str | :class:`python.re.Pattern`
-      :param example: typical value of a environment variable, must match ``restriction``
-      :type example: str
+.. method:: EnvVarDict.is_imported(name)
 
-      :raises ValueError:
-         if an environment variable named ``name`` is defined in the associated or an outer :term:`context`
-         and ``restriction`` does not match its value
-      :raises .dlb.ex.context.NonActiveContextAccessError: if the associated context is not an :term:`active context`
+   Returns `True` if ``name`` is the name of an environment variable imported in the associated :term:`context`
+   or any of its outer contexts, else `False`.
 
-   .. method:: is_imported(name)
+   :param name: non-empty name of an environment variable
+   :type name: str
 
-      Returns `True` if ``name`` is the name of an environment variable imported in the associated :term:`context`
-      or any of its outer contexts, else `False`.
+   :raises TypeError: if ``name`` is not a string
+   :raises ValueError: if ``name`` is an empty string
 
-      :param name: non-empty name of an environment variable
-      :type name: str
+.. method:: EnvVarDict.get(name, default=None)
 
-      :raises TypeError: if ``name`` is not a string
-      :raises ValueError: if ``name`` is an empty string
+   Return its value if ``name`` is the name of a defined environment variable in the associated :term:`context`,
+   else ``default``.
 
-   .. method:: get(name, default=None)
+   :param name: non-empty name of an environment variable
+   :type name: str
 
-      Return its value if ``name`` is the name of a defined environment variable in the associated :term:`context`,
-      else ``default``.
+   :raises TypeError: if ``name`` is not a string
+   :raises ValueError: if ``name`` is an empty string
 
-      :param name: non-empty name of an environment variable
-      :type name: str
+.. method:: EnvVarDict.items()
 
-      :raises TypeError: if ``name`` is not a string
-      :raises ValueError: if ``name`` is an empty string
+   Returns a new view of the dictionary’s items (name, value) pairs of all defined environment variables.
 
-   .. method:: items()
+.. describe:: name in env
 
-      Returns a new view of the dictionary’s items (name, value) pairs of all defined environment variables.
+   Returns `True` if there is a environment variable named ``name`` defined in ``env``, else `False`.
 
-   .. describe:: name in env
+.. describe:: name not in env
 
-      Returns `True` if there is a environment variable named ``name`` defined in ``env``, else `False`.
+   Equivalent to ``not name in env``
 
-   .. describe:: name not in env
+.. describe:: env[name] = value
 
-      Equivalent to ``not name in env``
+   Defines an imported environment variable named ``name`` with value ``value`` in the associated :term:`context` and
+   all its future inner contexts.
 
-   .. describe:: env[name] = value
+   Raises :exc:`KeyError`, if *name* was not imported in the associated  :term:`context` or one of its outer contexts.
 
-      Defines an imported environment variable named ``name`` with value ``value`` in the associated :term:`context` and
-      all its future inner contexts.
+   Raises :exc:`ValueError`, if *name* was imported in the associated :term:`context` or one of its outer contexts,
+   but is invalid with respect to the restriction an importing context (can be this context and any outer context).
 
-      Raises :exc:`KeyError`, if *name* was not imported in the associated  :term:`context` or one of its outer contexts.
+   Raises :exc:`.dlb.ex.context.NonActiveContextAccessError`, if the associated context is not an
+   :term:`active context`.
 
-      Raises :exc:`ValueError`, if *name* was imported in the associated :term:`context` or one of its outer contexts,
-      but is invalid with respect to the restriction an importing context (can be this context and any outer context).
+.. describe:: del env[name]
 
-      Raises :exc:`.dlb.ex.context.NonActiveContextAccessError`, if the associated context is not an
-      :term:`active context`.
+   Undefines a defined environment variable named ``name`` in the associated :term:`context` and all its future
+   inner contexts.
 
-   .. describe:: del env[name]
+   Raises :exc:`KeyError`, if *name* is not defined in the :term:`context`.
 
-      Undefines a defined environment variable named ``name`` in the associated :term:`context` and all its future
-      inner contexts.
-
-      Raises :exc:`KeyError`, if *name* is not defined in the :term:`context`.
-
-      Raises :exc:`.dlb.ex.context.NonActiveContextAccessError`, if the associated context is not an
-      :term:`active context`.
+   Raises :exc:`.dlb.ex.context.NonActiveContextAccessError`, if the associated context is not an
+   :term:`active context`.

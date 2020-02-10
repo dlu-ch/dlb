@@ -19,7 +19,7 @@ Tool instances are immutable and hashable and fast to construct; the heavy lifti
 Tools are customized by inheritance and defining class attributes.
 
 
-Tool Objects
+Tool objects
 ------------
 
 .. class:: Tool
@@ -91,7 +91,7 @@ Tool Objects
 
 
 
-Dependency Role Classes
+Dependency role classes
 -----------------------
 
 Dependency roles of tools (subclasses of :class:`Tool`) are instances of subclasses of
@@ -144,7 +144,7 @@ Example: :class:`dlb.ex.Tool.Output.Directory` is a concrete output dependency r
 (a subclass of :class:`dlb.ex.Tool.Output`).
 
 
-Concrete Dependency Role Classes and Objects
+Concrete dependency role classes and objects
 --------------------------------------------
 
 Their objects are used to declare dependency roles in tools (subclasses of :class:`dlb.ex.Tool`).
@@ -288,7 +288,7 @@ Concrete dependency role objects support the following methods and attributes:
    :rtype: bool
 
 
-Concrete Input Dependency Role Classes
+Concrete input dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 +-------------------------------------------+---------------------------------------------+
@@ -412,7 +412,7 @@ Concrete Input Dependency Role Classes
       :type validator: None | str | regex | callable
 
 
-Concrete Output Dependency Role Classes
+Concrete output dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 +-------------------------------------------+---------------------------------------------+

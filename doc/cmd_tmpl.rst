@@ -7,7 +7,7 @@ It's primary intended use is command line compilation from file list etc.
 
 .. _tmpl-expansion-rules:
 
-Syntax and Expansion Rules
+Syntax and expansion rules
 --------------------------
 
 A template is an ordered tree whose leafs are *template strings* and whose non-leaf
@@ -478,7 +478,7 @@ Example:
                label="['/usr/bin/g++', '-x', 'c++', '-D', 'a=1', '-D', 'b=a', '--', './a/b', './u']"];
 
 
-Module Contents
+Module contents
 ---------------
 
 .. class:: TokensTemplate

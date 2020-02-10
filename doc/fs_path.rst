@@ -9,7 +9,7 @@ most prominently :class:`dlb.fs.Path` and its subclasses.
 .. inheritance-diagram:: dlb.fs.Path dlb.fs.RelativePath dlb.fs.AbsolutePath dlb.fs.NoSpacePath dlb.fs.PosixPath dlb.fs.PortablePosixPath dlb.fs.PortableWindowsPath dlb.fs.WindowsPath dlb.fs.PortablePath
 
 
-Path Objects
+Path objects
 ------------
 
 .. class:: Path
@@ -314,7 +314,7 @@ Path Objects
 
 .. _restricting_paths:
 
-Restricting Paths
+Restricting paths
 -----------------
 
 By subclassing :class:`dlb.fs.Path`, additional restrictions to the set of value values can be imposed
