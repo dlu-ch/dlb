@@ -7,11 +7,12 @@ This module provides classes to represent tools to be executed during the build 
 :term:`dynamic helpers <dynamic helper>` like compiler binaries).
 
 Every :term:`tool` is represented by a subclass of :class:`dlb.ex.Tool` that describes its abstract behaviour and the
-way it is run (e.g. meaning of commandline and output, interaction with file system and environment variables).
+way it is run (e.g. meaning of command line and output, interaction with file system and environment variables).
+
 Tools are usually parametrized by dependency roles (e.g. input files) and execution parameters.
 
 Each :term:`tool instance` represents a concrete behaviour and can be run in an active context.
-Running a tool results in an awaitable result object.
+Running a tool results in an :term:`python:awaitable` result object.
 
 Tool instances are immutable and hashable and fast to construct; the heavy lifting takes place while the
 :term:`tool instance is running<tool instance>`.
@@ -264,16 +265,25 @@ Concrete dependency role objects support the following methods and attributes:
        Must the dependency of this dependency role be an iterable representing a duplicate-free sequence?
    :type unique: bool
 
+.. method:: cdr.initial()
+
+   :return: The initial (default) value, if there is any.
+
+   :raise NotImplementedError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
+   :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
+
 .. method:: cdr.validate(value)
 
-   :param value: The concrete dependency to validate
-   :return: The validated ``value``.
+   :param value: The concrete dependency to convert and validate except ``None``
+   :type value: Any type the concrete dependency can convert to *T*
+   :return: The validated ``value`` of type *T*
 
    :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
 
 .. attribute:: cdr.required
 
-   Does this dependency role require a dependency (other than ``None``)?
+   Does this dependency role *require* a dependency of type *T* (i.e. than ``None``)?
+   If ``True``, the assigned value is never ``None``.
 
    :rtype: bool
 
@@ -291,35 +301,31 @@ Concrete dependency role objects support the following methods and attributes:
 Concrete input dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------------+---------------------------------------------+
-| Dependency role class                     | Keyword arguments of constructor            |
-|                                           +----------------+----------------------------+
-|                                           | Name           | Default value              |
-+===========================================+================+============================+
-| :class:`dlb.ex.Tool.Input.RegularFile`    | ``required``   | ``True``                   |
-|                                           +----------------+----------------------------+
-|                                           | ``cls``        | :class:`dlb.fs.Path`       |
-|                                           |                |                            |
-|                                           |                |                            |
-+-------------------------------------------+----------------+----------------------------+
-| :class:`dlb.ex.Tool.Input.Directory`      | ``required``   | ``True``                   |
-|                                           +----------------+----------------------------+
-|                                           | ``cls``        | :class:`dlb.fs.Path`       |
-|                                           |                |                            |
-|                                           |                |                            |
-+-------------------------------------------+----------------+----------------------------+
-| :class:`dlb.ex.Tool.Input.EnvVar`         | ``name``       |                            |
-|                                           +----------------+----------------------------+
-|                                           | ``required``   | ``True``                   |
-|                                           |                |                            |
-|                                           +----------------+----------------------------+
-|                                           | ``propagate``  | ``False``                  |
-|                                           +----------------+----------------------------+
-|                                           | ``validator``  | ``None``                   |
-|                                           |                |                            |
-|                                           |                |                            |
-|                                           |                |                            |
-+-------------------------------------------+----------------+----------------------------+
++-------------------------------------------+----------------------------------------------+
+| Dependency role class                     | Keyword arguments of constructor             |
+|                                           +-----------------+----------------------------+
+|                                           | Name            | Default value              |
++===========================================+=================+============================+
+| :class:`dlb.ex.Tool.Input.RegularFile`    | ``required``    | ``True``                   |
+|                                           +-----------------+----------------------------+
+|                                           | ``cls``         | :class:`dlb.fs.Path`       |
+|                                           |                 |                            |
+|                                           |                 |                            |
++-------------------------------------------+-----------------+----------------------------+
+| :class:`dlb.ex.Tool.Input.Directory`      | ``required``    | ``True``                   |
+|                                           +-----------------+----------------------------+
+|                                           | ``cls``         | :class:`dlb.fs.Path`       |
+|                                           |                 |                            |
+|                                           |                 |                            |
++-------------------------------------------+-----------------+----------------------------+
+| :class:`dlb.ex.Tool.Input.EnvVar`         | ``name``        |                            |
+|                                           +-----------------+----------------------------+
+|                                           | ``restriction`` |                            |
+|                                           +-----------------+----------------------------+
+|                                           | ``example``     |                            |
+|                                           +-----------------+----------------------------+
+|                                           | ``required``    | ``True``                   |
++-------------------------------------------+-----------------+----------------------------+
 
 .. class:: Tool.Input.RegularFile
 
@@ -363,53 +369,33 @@ Concrete input dependency role classes
 
 .. class:: Tool.Input.EnvVar
 
-   .. method:: EnvVar(name, required=True, propagate=False, validator=None)
+   .. method:: EnvVar(name, restriction, example, required=True)
 
       Constructs a dependency role for an environment variable.
 
       The value of the environment variable named ``name`` (as a string or ``None`` if not defined)
-      is validated by ``validator``.
+      is validated by matching it to the regular expression ``restriction``.
 
-      If ``propagate`` is ``False``, its validated value is assigned to the dependency of this
-      dependency role.
-
-      If ``propagate`` is ``True``, a :class:`dlb.ex.PropagatedEnvVar` is assigned to the dependency of this
-      dependency role with ``name`` assigned to ``name`` and ``value`` assigned to the
-      unchanged value of the environment variable.
+      If ``restriction`` contains at least one named group, the dictionary of all groups of the validated value
+      is assigned to the dependency of this dependency role.
+      Otherwise, the validate value of environment variable is assigned to the dependency of this dependency role.
 
       Example::
 
          >>> class Tool(dlb.ex.Tool):
-         >>>    path_envvar = dlb.ex.Tool.Input.EnvVar(name='PATH', propagate=True)
-         >>>    territory = dlb.ex.Tool.Input.EnvVar(name='LANG', validator='[a-z]{2}_([A-Z]{2})')
-         >>>    uid = dlb.ex.Tool.Input.EnvVar(name='UID', validator=lambda v: int(v, 10))
+         >>>    language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction='(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})')
          >>> tool = Tool()
-         >>> tool.path_envvar
-         PropagatedEnvVar(name='PATH', value='/usr/bin:/usr/local/bin')
-         >>> tool.territory
+         >>> tool.language['territory']
          'CH'
-         >>> tool.uid
-         789
 
-      :param name: Name of the environment variable
+      :param name: name of the environment variable
       :type name: str
+      :param restriction: regular expression
+      :type restriction: str | :class:`python:typing.Pattern`
+      :param example: typical value of a environment variable, ``restriction`` must match this
+      :type example: str
       :param required: Does this dependency role require a dependency (other than ``None``)?
       :type required: bool
-      :param propagate: Propagate the environment variable`s value unchanged to the dependency of this dependecy role?
-      :type propagate: bool
-      :param validator:
-          If ``None``, every value is considered valid and the validated value is the unmodified value.
-
-          If a (regular expression) string or a compiled regular expression, the value is considered value if and only
-          if the entire value matches the regular expression.
-          If so, the content of a selected group formed the validated value.
-          The selected group is the the named group with the "smallest" name,
-          the first unnamed group or the entire value, respectively, in that order.
-
-          If a callable, its is called with the value as its only argument.
-          Its return value becomes the validated value.
-
-      :type validator: None | str | regex | callable
 
 
 Concrete output dependency role classes

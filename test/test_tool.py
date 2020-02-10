@@ -16,7 +16,7 @@ class TestModule(unittest.TestCase):
 
     def test_import(self):
         import dlb.ex.tool
-        self.assertEqual(['Tool', 'PropagatedEnvVar'], dlb.ex.tool.__all__)
+        self.assertEqual(['Tool'], dlb.ex.tool.__all__)
         self.assertTrue('Tool' in dir(dlb.ex))
 
 
@@ -288,7 +288,7 @@ class ConstructionTest(unittest.TestCase):
         map_file = Tool.Output.RegularFile(required=False)
 
     class CTool(Tool):
-        envvar = Tool.Input.EnvVar(name='XYZ', required=False)
+        envvar = Tool.Input.EnvVar(name='XYZ', restriction='.*', example='', required=False)
 
     def test_tool_can_be_constructed_without_parameters(self):
         Tool()

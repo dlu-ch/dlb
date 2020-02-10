@@ -23,12 +23,8 @@ assert RESERVED_NAME_REGEX.match('__init__')
 assert not RESERVED_NAME_REGEX.match('__init')
 
 __all__ = [
-    'Tool',
-    'PropagatedEnvVar'
+    'Tool'
 ]
-
-
-PropagatedEnvVar = collections.namedtuple('PropagatedEnvVar', ['name', 'value'])
 
 #: key: (cls_id, (start, stop, step)), value: mult_class
 _classes_with_multiplicity = {}
@@ -160,12 +156,10 @@ class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
         return True
 
     def initial(self):
-        return NotImplemented
+        raise NotImplementedError
 
     def validate(self, value):
         # do _not_ call super().validate() here!
-        if self.required and value is None:
-            raise ValueError('required dependency must not be None')
         return value
 
 
@@ -182,13 +176,13 @@ class _PathDependencyMixin:
 
     def validate(self, value):
         value = super().validate(value)
-        return self._path_cls(value) if value is not None else None
+        return self._path_cls(value)
 
 
 class _DirectoryDependencyMixin(_PathDependencyMixin):
     def validate(self, value):
         value = super().validate(value)
-        if value is not None and not value.is_dir():
+        if not value.is_dir():
             raise ValueError(f'non-directory path not valid for directory dependency: {value!r}')
         return value
 
@@ -196,7 +190,7 @@ class _DirectoryDependencyMixin(_PathDependencyMixin):
 class _NonDirectoryDependencyMixin(_PathDependencyMixin):
     def validate(self, value):
         value = super().validate(value)
-        if value is not None and value.is_dir():
+        if value.is_dir():
             raise ValueError(f'directory path not valid for non-directory dependency: {value!r}')
         return value
 
@@ -231,7 +225,7 @@ class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
         # noinspection PyCallingNonCallable
         self._member_role_prototype = self.__class__._member_role_class(required=True, **kwargs)
 
-    def validate(self, value):
+    def validate(self, value) -> typing.Tuple:
         value = super().validate(value)
 
         if self.__class__.multiplicity is not None and isinstance(value, str):  # for safety
@@ -265,61 +259,43 @@ class _InputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMi
     pass
 
 
-class _InputEnvVarDependency(_ConcreteDependencyMixin, _InputDependencyRole):
+class _InputEnvVarDependency(_ConcreteDependencyMixin, _InputDependencyRole):  #???
 
-    def __init__(self, name, validator=None, propagate=False, **kwargs):
+    def __init__(self, name, restriction, example, **kwargs):
         super().__init__(**kwargs)
 
-        if not (isinstance(name, str) and str):
-            raise TypeError("'var_name' must be a non-empty string")
+        if not isinstance(name, str):
+            raise TypeError("'name' must be a str")
+        if not name:
+            raise ValueError("'name' must not be empty")
 
-        if validator is None:
-            validator = '.*'
-        if isinstance(validator, str):
-            validator = re.compile(validator)
-        elif isinstance(validator, type(re.compile(''))):
-            pass
-        elif callable(validator):
-            pass
-        else:
-            raise TypeError("'validator' must be None, string, compiled regular expressed or callable")
+        if isinstance(restriction, str):
+            restriction = re.compile(restriction)
+        if not isinstance(restriction, typing.Pattern):
+            raise TypeError("'restriction' must be regular expression (compiled or str)")
+        if not isinstance(example, str):
+            raise TypeError("'example' must be a str")
+
+        if not restriction.fullmatch(example):
+            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
 
         self._name = name
-
-        self._validator = validator
-        self._propagate = propagate
+        self._restriction = restriction  # regex
 
     def validate(self, value):
-        validated_value = super().validate(value)
+        validated_value = str(super().validate(value))
 
-        if validated_value is not None:
-            if callable(self._validator):
-                validated_value = self._validator(validated_value)
-            else:
-                m = self._validator.fullmatch(validated_value)
-                if not m:
-                    raise ValueError(f'value does not match validator regular expression: {validated_value!r}')
+        m = self._restriction.fullmatch(validated_value)
+        if not m:
+           raise ValueError(f'value does not match restriction regular expression: {validated_value!r}')
 
-                # return only validates/possibly modify value
-                groups = m.groupdict()
-                if groups:
-                    # of all named groups: pick the group with the "smallest" name
-                    validated_value = groups[sorted(groups)[0]]
-                else:
-                    # of all unnamed groups: pick the first one
-                    groups = m.groups()
-                    if groups:
-                        validated_value = groups[0]
+        # return only validates/possibly modify value
+        groups = m.groupdict()
+        if groups:
+            return groups
+        return validated_value
 
-        if self._propagate:
-            # propagate name and unchanged value
-            value = PropagatedEnvVar(name=self._name, value=value)
-        else:
-            value = validated_value
-
-        return value
-
-    def initial(self):
+    def initial(self) -> typing.Optional[str]:
         return os.environ.get(self._name)
 
 
@@ -338,15 +314,27 @@ class _ToolBase:
 
         dependency_names = self.__class__._dependency_names
 
-        # assign initial dependency to all dependency roles which provide one
+        # for a role representing something of type T:
+        #
+        #   role.initial()                    -> T
+        #   role.validate(typing.Optional[T]) -> typing.Union[typing.Any, NotImplemented]
+
+        # assign initial dependency to all dependency roles which provide one  -  role.initial()
         dependency_names_to_assign = set()
         for name in dependency_names:
             role = getattr(self.__class__, name)
-            dependency = role.initial()
-            if dependency is NotImplemented:
+            try:
+                value = role.initial()  # ??? != None
+            except NotImplementedError:
                 dependency_names_to_assign.add(name)
             else:
-                object.__setattr__(self, name, role.validate(dependency))
+                if value is None:
+                    if role.required:  # ??? kann nur von initial() kommen
+                        raise ValueError('required dependency must not be None')
+                    validated_value = value
+                else:
+                    validated_value = role.validate(value)
+                object.__setattr__(self, name, validated_value)
 
         names_of_assigned = set()
         for name, value in kwargs.items():
@@ -361,7 +349,13 @@ class _ToolBase:
                     names = ', '.join(repr(n) for n in dependency_names)
                     raise TypeError(f'{name!r} is not a dependency role of {self.__class__.__qualname__!r}: {names}')
             role = getattr(self.__class__, name)
-            object.__setattr__(self, name, role.validate(value))
+            if value is None:
+                validated_value = None
+                if role.required:
+                    raise ValueError('required dependency must not be None')
+            else:
+                validated_value = role.validate(value)
+            object.__setattr__(self, name, validated_value)
             names_of_assigned.add(name)
 
         for name in sorted(set(dependency_names_to_assign) - names_of_assigned):
