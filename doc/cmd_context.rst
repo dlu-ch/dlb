@@ -273,7 +273,7 @@ Environment variable dictionary object support the following methods and attribu
    :param name: (non-empty) name of the environment variable
    :type name: str
    :param restriction: regular expression with at least one named group
-   :type restriction: str | :class:`python.re.Pattern`
+   :type restriction: str | :class:`python:typing.Pattern`
    :param example: typical value of a environment variable, must match ``restriction``
    :type example: str
 

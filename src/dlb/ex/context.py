@@ -86,14 +86,14 @@ class _EnvVarDict:
         else:
             self._top_value_by_name = dict()
             self._value_by_name = dict(parent._value_by_name)  # type: typing.Dict[str, int]
-        self._restriction_by_name = dict()  # type: typing.Dict[str, re.Pattern]
+        self._restriction_by_name = dict()  # type: typing.Dict[str, typing.Pattern]
 
-    def import_from_outer(self, name: str, restriction: typing.Union[str, re.Pattern], example: str):
+    def import_from_outer(self, name: str, restriction: typing.Union[str, typing.Pattern], example: str):
         self._check_non_empty_str(name=name)
 
         if isinstance(restriction, str):
             restriction = re.compile(restriction)
-        if not isinstance(restriction, re.Pattern):
+        if not isinstance(restriction, typing.Pattern):
             raise TypeError("'restriction' must be regular expression (compiled or str)")
         if not isinstance(example, str):
             raise TypeError("'example' must be a str")
@@ -125,14 +125,14 @@ class _EnvVarDict:
             return True
         return self._parent is not None and self._parent.is_imported(name)
 
-    def is_valid(self, name, value):
+    def _is_valid(self, name, value):
         self._check_non_empty_str(name=name)
         if not isinstance(value, str):
             raise TypeError("'value' must be a str")
         restriction = self._restriction_by_name.get(name)
         if restriction is not None and not restriction.fullmatch(value):
             return False
-        return self._parent is None or self._parent.is_valid(name, value)
+        return self._parent is None or self._parent._is_valid(name, value)
 
     def _check_non_empty_str(self, **kwargs):
         for k, v in kwargs.items():
@@ -154,12 +154,6 @@ class _EnvVarDict:
     def get(self, name: str, default=None):
         self._check_non_empty_str(name=name)
         return self._value_by_name.get(name, default)
-
-    def setdefault(self, name: str, default=str):
-        if not isinstance(default, str):
-            raise TypeError("'default' must be a str")
-        if name not in self:
-            self[name] = default
 
     def items(self):
         return self._value_by_name.items()
@@ -191,7 +185,7 @@ class _EnvVarDict:
 
         self._check_if_env_of_active_context()
 
-        if not self.is_valid(name, value):
+        if not self._is_valid(name, value):
             raise ValueError(f"'value' invalid with respect to active or an outer context: {value!r}")
 
         self._value_by_name[name] = value
@@ -488,6 +482,8 @@ class _RootSpecifics:
 
 
 class Context(metaclass=_ContextMeta):
+
+    EnvVarDict = NotImplemented
 
     def __init__(self, path_cls=dlb.fs.Path):
         if not (isinstance(path_cls, type) and issubclass(path_cls, dlb.fs.Path)):
