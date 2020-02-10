@@ -1,6 +1,7 @@
-:mod:`dlb.ex` --- Execution of tool instances
-=============================================
-.. module:: dlb.ex
+:mod:`dlb.ex.context` --- Execution contexts
+============================================
+
+.. module:: dlb.ex.context
    :synopsis: Execution of tool instances
 
 An :term:`(execution) context <context>` describes how running :term:`tool instances <tool instance>` shall interact
@@ -61,19 +62,19 @@ Context objects
 
    Entering or exiting a context may raise the following exceptions:
 
-   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
-   | exception                                   | meaning                                                                     | when                           |
-   +=============================================+=============================================================================+================================+
-   | :exc:`.dlb.ex.context.NoWorkingTreeError`   | the working directory is not a :term:`working tree`'s root                  | entering :term:`root context`  |
-   +---------------------------------------------+-----------------------------------------------------------------------------+                                |
-   | :exc:`.dlb.ex.context.ManagementTreeError`  | the :term:`management tree` cannot be setup inside the :term:`working tree` |                                |
-   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
-   | :exc:`ValueError`                           | the :term:`working tree`'s root path violates the requested restrictions    | entering (any) context         |
-   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
-   | :exc:`.dlb.ex.context.ContextNestingError`  | the contexts are not properly nested                                        | exiting (any) context          |
-   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
-   | :exc:`.dlb.ex.context.WorkingTreeTimeError` | :term:`working tree time` behaved unexpectedly                              | exiting :term:`root context`   |
-   +---------------------------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   +-----------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | exception                   | meaning                                                                     | when                           |
+   +=============================+=============================================================================+================================+
+   | :exc:`NoWorkingTreeError`   | the working directory is not a :term:`working tree`'s root                  | entering :term:`root context`  |
+   +-----------------------------+-----------------------------------------------------------------------------+                                |
+   | :exc:`ManagementTreeError`  | the :term:`management tree` cannot be setup inside the :term:`working tree` |                                |
+   +-----------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`ValueError`           | the :term:`working tree`'s root path violates the requested restrictions    | entering (any) context         |
+   +-----------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`ContextNestingError`  | the contexts are not properly nested                                        | exiting (any) context          |
+   +-----------------------------+-----------------------------------------------------------------------------+--------------------------------+
+   | :exc:`WorkingTreeTimeError` | :term:`working tree time` behaved unexpectedly                              | exiting :term:`root context`   |
+   +------------------------------+-----------------------------------------------------------------------------+-------------------------------+
 
    .. note::
       Most attributes and methods are available "on the class" as well as "on the instance", and refer to the
@@ -93,7 +94,7 @@ Context objects
 
       Same on class and instance.
 
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: active
 
@@ -101,7 +102,7 @@ Context objects
 
       Same on class and instance.
 
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: path_cls
 
@@ -109,7 +110,7 @@ Context objects
 
       When called on class, it refers to the :term:`root context`.
 
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: root_path
 
@@ -120,7 +121,7 @@ Context objects
 
       Same on class and instance.
 
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: working_tree_time_ns
 
@@ -128,7 +129,7 @@ Context objects
 
       Same on class and instance.
 
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False)
 
@@ -174,8 +175,7 @@ Context objects
       :raises ValueError:
          if ``prefix`` is empty or the resulting path is not representable as a :attr:`.dlb.ex.Context.path_cls`
       :raises FileExistsError: if all tried candidates already existed
-
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: get_managed_tree_path(path)
 
@@ -192,7 +192,7 @@ Context objects
       :raises ValueError:
          if ``path`` is not in the :term:`managed tree`, or the form of ``path`` does not match the type of
          the filesystem object, or the resulting path is not representable as a :attr:`.dlb.fs.Path`
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: env
 
@@ -201,7 +201,7 @@ Context objects
 
       When called on class, it refers to the :term:`active context`.
 
-      :raises .dlb.ex.context.NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
 
 .. _environment_variable_dictionary_objects:
@@ -280,7 +280,7 @@ Environment variable dictionary object support the following methods and attribu
    :raises ValueError:
       if an environment variable named ``name`` is defined in the associated or an outer :term:`context`
       and ``restriction`` does not match its value
-   :raises .dlb.ex.context.NonActiveContextAccessError: if the associated context is not an :term:`active context`
+   :raises NonActiveContextAccessError: if the associated context is not an :term:`active context`
 
 .. method:: EnvVarDict.is_imported(name)
 
@@ -326,8 +326,7 @@ Environment variable dictionary object support the following methods and attribu
    Raises :exc:`ValueError`, if *name* was imported in the associated :term:`context` or one of its outer contexts,
    but is invalid with respect to the restriction an importing context (can be this context and any outer context).
 
-   Raises :exc:`.dlb.ex.context.NonActiveContextAccessError`, if the associated context is not an
-   :term:`active context`.
+   Raises :exc:`NonActiveContextAccessError`, if the associated context is not an :term:`active context`.
 
 .. describe:: del env[name]
 
@@ -336,5 +335,35 @@ Environment variable dictionary object support the following methods and attribu
 
    Raises :exc:`KeyError`, if *name* is not defined in the :term:`context`.
 
-   Raises :exc:`.dlb.ex.context.NonActiveContextAccessError`, if the associated context is not an
-   :term:`active context`.
+   Raises :exc:`NonActiveContextAccessError`, if the associated context is not an :term:`active context`.
+
+
+Exceptions
+----------
+
+.. exception:: NotRunningError
+
+   Raised, when an action requires a :term:`root context` while :term:`dlb was not running <run of dlb>`.
+
+.. exception:: NoWorkingTreeError
+
+   Raised, when the working directory of the calling process is not a :term:`working tree`'s root.
+
+.. exception:: ManagementTreeError
+
+   Raised, when an attempt to prepare or access the :term:`management tree` failed.
+
+.. exception:: ContextNestingError
+
+   Raised, when some contexts were not properly nested.
+   I.e. the calls of :meth:`__exit__` did not occur in the opposite order of the corresponding calls of
+   :meth:`__enter__`.
+
+.. exception:: WorkingTreeTimeError
+
+   Raised, when the :term:`working tree time` behaved unexpectedly.
+
+.. exception:: NonActiveContextAccessError
+
+   Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` is modified
+   while its associated :term`context` is not the :term:`active context`.

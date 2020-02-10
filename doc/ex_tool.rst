@@ -1,5 +1,5 @@
 :mod:`dlb.ex.tool` --- Dependency-aware tool execution
-=======================================================
+======================================================
 .. module:: dlb.ex
    :synopsis: Dependency-aware tool execution
 
@@ -38,9 +38,9 @@ Tool objects
    and it must be at least as restrictive (e.g. if required dependency must not be overridden by a non-required one).
    When overriding an execution parameters, its overriding value must be of the same type as the overridden value.
 
-   Each subclass of :class:`dlb.ex.Tool` must be defined in a source code location unique for each subclass of
-   :class:`dlb.ex.Tool`. The definition raises :exc:`dlb.ex.tool.DefinitionAmbiguityError`, if its location is cannot
-   be determined or another subclass of :class:`dlb.ex.Tool` was defined before at the same location.
+   Each subclass of :class:`dlb.ex.Tool` must be defined in a source code location unique among all subclasses of
+   :class:`dlb.ex.Tool`. The definition raises :exc:`DefinitionAmbiguityError`, if its location is cannot
+   be determined or if another subclass of :class:`dlb.ex.Tool` was defined before at the same location.
 
    Example::
 
@@ -77,8 +77,8 @@ Tool objects
 
       The definition location of the class.
 
-      It is a tuple of the form (``file_path``, ``in_archive_path``, ``lineno``) and uniquely identifies each
-      subclass of :class:`dlb.ex.Tool`.
+      It is a tuple of the form (``file_path``, ``in_archive_path``, ``lineno``) and uniquely identifies the tool
+      among all subclasses of :class:`dlb.ex.Tool`.
 
       ``in_archive_path`` is ``None``, if the class was defined in an existing Python source file, and ``file_path`` is
       the :func:`python:os.path.realpath()` of this file.
@@ -168,10 +168,11 @@ Their objects are used to declare dependency roles in tools (subclasses of :clas
        "dlb.ex.Tool.Output" -> "dlb.ex.Tool.DependencyRole";
    }
 
+
 A concrete dependency role can have a *multiplicity*.
 A dependency role with a multiplicity describes a sequence of the same dependency rule without.
-The multiplicity expresses the set of the length of the of members the sequence can take.
-This set is expressed as a slice or a single integer.
+The multiplicity expresses the set of all possible lengths (number of members) the sequence can take.
+This set is expressed as a slice or as a single integer.
 
 Example::
 
@@ -269,7 +270,6 @@ Concrete dependency role objects support the following methods and attributes:
    :return: The validated ``value``.
 
    :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
-   :raise ValueError: If :attr:`required` is ``True`` and ``value`` is ``None``
 
 .. attribute:: cdr.required
 
@@ -473,3 +473,12 @@ Concrete output dependency role classes
       :type required: bool
       :param cls: Class to be used to represent the path
       :type cls: dlb.fs.Path
+
+
+Exceptions
+----------
+
+.. exception:: DefinitionAmbiguityError
+
+   Raised at the definition of a subclass of :class:`dlb.ex.Tool`, when the location is unknown or another subclass of
+   :class:`dlb.ex.Tool` was defined before at the same location.

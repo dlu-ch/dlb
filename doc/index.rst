@@ -87,10 +87,11 @@ Content
    usage.rst
    terms.rst
    toplevelspec.rst
+   ex_context.rst
+   ex_tool.rst
+   ex_tmpl.rst
+
    fs_path.rst
-   cmd_context.rst
-   cmd_tool.rst
-   cmd_tmpl.rst
    diagnostics.rst
    similar_tools.rst
 

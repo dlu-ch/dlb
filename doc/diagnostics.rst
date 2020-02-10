@@ -7,7 +7,6 @@ Informative messages
 Clang_ shows what precision and expressiveness in diagnostic messages mean.
 
 
-
 Exceptions
 ----------
 
@@ -17,42 +16,6 @@ The first line is the summary.
 
 Each following line represents a detail related to the first line and starts with ``'  | '``.
 
-
-.. module:: dlb.ex.context
-
-.. exception:: NotRunningError
-
-   Raised, when an action requires a :term:`root context` while :term:`dlb was not running <run of dlb>`.
-
-.. exception:: NoWorkingTreeError
-
-   Raised, when the working directory of the calling process is not a :term:`working tree`'s root.
-
-.. exception:: ManagementTreeError
-
-   Raised, when an attempt to prepare or access the :term:`management tree` failed.
-
-.. exception:: ContextNestingError
-
-   Raised, when some contexts were not properly nested.
-   I.e. the calls of :meth:`__exit__` did not occur in the opposite order of the corresponding calls of
-   :meth:`__enter__`.
-
-.. exception:: WorkingTreeTimeError
-
-   Raised, when the :term:`working tree time` behaved unexpectedly.
-
-.. exception:: NonActiveContextAccessError
-
-   Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` is modified
-   while its associated :term`context` is not the :term:`active context`.
-
-.. module:: dlb.ex.tool
-
-.. exception:: DefinitionAmbiguityError
-
-   Raised at the definition of a subclass of :class:`dlb.ex.Tool`, when the location is unknown or another subclass of
-   :class:`dlb.ex.Tool` was defined before at the same location.
 
 .. _Clang: http://clang.llvm.org/diagnostics.html
 

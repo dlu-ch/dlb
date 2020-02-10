@@ -478,8 +478,8 @@ Example:
                label="['/usr/bin/g++', '-x', 'c++', '-D', 'a=1', '-D', 'b=a', '--', './a/b', './u']"];
 
 
-Module contents
----------------
+Template objects
+----------------
 
 .. class:: TokensTemplate
 
