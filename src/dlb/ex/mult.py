@@ -1,3 +1,4 @@
+import re
 import typing
 
 
@@ -91,6 +92,9 @@ class _MultiplicityHolderProxy:
     def __init__(self, element_class: type, multiplicity: typing.Optional[MultiplicityRange]):
         self._element_class = element_class
         self._multiplicity = multiplicity
+        s = '' if multiplicity is None else str(multiplicity)
+        self.__name__ = element_class.__name__ + s
+        self.__qualname__ = element_class.__qualname__  + s
 
     @property
     def element_class(self):
@@ -104,13 +108,21 @@ class _MultiplicityHolderProxy:
     def __getitem__(self, multiplicity):
         raise TypeError(f'{self._element_class.__name__!r} with multiplicity is not subscriptable')
 
+    def __repr__(self):
+        o = super().__repr__()
+        m = re.fullmatch('<(.+)>', o)
+        if not m:
+            return o
+        s = '' if self._multiplicity is None else str(self._multiplicity)
+        return f"<{m.group(1)} for {self._element_class!r} with multiplicity {s}>"
 
-class _MultiplicitiyHolderMeta(type):
+
+class _MultiplicityHolderMeta(type):
     def __getitem__(cls, multiplicity: typing.Union[int, slice]) -> _MultiplicityHolderProxy:
         return _MultiplicityHolderProxy(cls, MultiplicityRange(multiplicity))
 
 
-class MultiplicityHolder(metaclass=_MultiplicitiyHolderMeta):
+class MultiplicityHolder(metaclass=_MultiplicityHolderMeta):
     # A subclass T of _Multiplicity can be instantiated like this:
     #
     #   T(a=1)     ->   instance t of T with t.multiplicity = None

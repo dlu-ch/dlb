@@ -156,6 +156,24 @@ class TestMultiplicityHolder(unittest.TestCase):
         self.assertIsInstance(m, TestMultiplicityHolder.M)
         self.assertEqual(dlb.ex.mult.MultiplicityRange(slice(0, 3)), m.multiplicity)
 
+    def test_fails_for_nested_multiplicity(self):
+        with self.assertRaises(TypeError) as cm:
+            TestMultiplicityHolder.M[:3][2](1, b=2)
+        self.assertEqual("'M' with multiplicity is not subscriptable", str(cm.exception))
+
     def test_multiplicity_cannot_be_assigned(self):
         with self.assertRaises(AttributeError):
             TestMultiplicityHolder.M(1, b=2).multiplicity = None
+
+    def test_name_contains_multiplicity(self):
+        M = TestMultiplicityHolder.M[:3]
+        self.assertEqual(TestMultiplicityHolder.M.__name__ + '[:3]', M.__name__)
+        self.assertEqual(TestMultiplicityHolder.M.__qualname__ + '[:3]', M.__qualname__)
+
+    def test_repr_is_meaningful(self):
+        r = repr(TestMultiplicityHolder.M[:3])
+        regex = (
+            r"\A<dlb\.ex\.mult\._MultiplicityHolderProxy object at 0x[0-9a-fA-F]+ for "
+            r"<class 'test_mult\.TestMultiplicityHolder\.M'> with multiplicity \[:3\]>\Z"
+        )
+        self.assertRegex(r, regex)
