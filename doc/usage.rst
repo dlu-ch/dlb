@@ -17,15 +17,14 @@ Setup a working tree
    Make sure the filesystem is mounted with "normal" (immediate) update of :term:`mtime`
    (e.g. without `lazytime` for Ext4). [#mountoption1]_
 
- - Place all inputs (that are only read by tool instances) in a filesystem tree in the :term:`working tree` that is not
-   modified by tool instances.
+ - Place all input files (that are only read by tool instances) in a filesystem tree in the :term:`working tree`
+   that is not modified by tool instances.
 
    This is not required, but good practice.
    It also enables you to use operating system specific possibility to protect the build against accidental changes
    of input files.
-   For example: Protect the inputs from change by a transparent read-only filesystem mounted on top of it during the
-   build.
-
+   For example: Protect the input files from change by a transparent read-only filesystem mounted on top of it during
+   the build.
 
  - Do not use symbolic links in the managed tree to filesystem objects not in the same managed tree.
 
@@ -39,7 +38,8 @@ Run dlb
    :term:`dlb is running <run of dlb>`. [#touch1]_
 
  - Do not modify the content of filesystem objects in the :term:`managed tree` *on purpose* while
-   :term:`dlb is running <run of dlb>`, if they are used as inputs or outputs of a tool instance.
+   :term:`dlb is running <run of dlb>`, if they are used as input dependencies or output dependencies of a
+   tool instance.
 
    Yes, I know: it happens a lot by mistake when editing source files.
 
@@ -54,7 +54,7 @@ Run dlb
 
    Use :command:`cp` instead.
 
- - Be careful when you modify inputs of a :term:`tool instance` via `mmap`. [#mmap1]_
+ - Be careful when you modify a file via `mmap` that is an input dependency of a :term:`tool instance`. [#mmap1]_
 
  - Do not put the system time used as :term:`working tree's system time` back *on purpose* while
    :term:`dlb is running <run of dlb>` or while you are modifying the :term:`managed tree`. [#workingtreetime]_

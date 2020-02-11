@@ -27,8 +27,8 @@ For every assumption at set of acceptable effects of its violation is given:
 
    vulnerable
       The build becomes vulnerable to attacks.
-      Running tool instances might overwrite any filesystem object the process has permission to,
-      potentially with information generated during the build or stored in the working tree.
+      Running :term:`tool instances <tool instance>` might overwrite any filesystem object the process has permission
+      to, potentially with information generated during the build or stored in the working tree.
 
    redo-miss
       A :term:`redo miss` in the current or a future :term:`run of dlb` can occur.
@@ -78,7 +78,7 @@ Modification of the working tree
    Acceptable when violated:
 
     - |assumptionviolationeffect-obscure-fail|
-      (e.g. when a running tool instance "sees" an intermediate state of input files)
+      (e.g. when a running tool instance "sees" an intermediate state of files that are input dependencies)
     - |assumptionviolationeffect-vulnerable|
       (e.g. by a symlink attack)
     - |assumptionviolationeffect-graceful-fail|
@@ -244,7 +244,7 @@ Timing and concurrency
    Acceptable when violated:
 
     - |assumptionviolationeffect-redo-miss|
-      (the finer the :term:`effective mtime resolution` and the less frequent modification of inputs are,
+      (the finer the :term:`effective mtime resolution` and the less frequent modification of inputs files are,
       the less likely is a :term:`redo miss` due to this violation)
     - |assumptionviolationeffect-graceful-fail|
       (this is desirable since it forces correction before it can cause redo misses in the future)
@@ -263,8 +263,8 @@ Timing and concurrency
 .. _assumption-t4:
 .. |assumption-t4| replace:: :ref:`A-T4 <assumption-t4>`
 
-**A-T4** (working tree time of true inputs in the past)
-   The :term:`mtime` of every filesystem object in the managed tree that is an :term:`true input` of a
+**A-T4** (working tree time of true input dependencies in the past)
+   The :term:`mtime` of every filesystem object in the managed tree that is an :term:`true input dependency` of a
    :term:`tool instance` *t* is earlier than the time *t* starts running.
 
    Acceptable when violated:
@@ -279,7 +279,33 @@ Dependencies
 .. |assumption-d1| replace:: :ref:`A-D1 <assumption-d1>`
 
 **A-D1** (regular files)
-   Most of the filesystem objects in the managed tree that serve as inputs of tool instances are regular files.
+   Most of the filesystem objects in the managed tree that serve as input dependency of
+   :term:`tool instances <tool instance>` are regular files.
+
+.. _assumption-d2:
+.. |assumption-d2| replace:: :ref:`A-D2 <assumption-d2>`
+
+**A-D2** (no links to input dependencies)
+   A filesystem object in the :term:`managed tree` that serves as an input dependency of a :term:`tool instance`
+   has no hard link or symbolic link pointing to it in the :term:`managed tree`.
+
+   Acceptable when violated:
+
+    - |assumptionviolationeffect-redo-miss|
+    - |assumptionviolationeffect-graceful-fail|
+
+.. _assumption-d3:
+.. |assumption-d3| replace:: :ref:`A-D3 <assumption-d3>`
+
+**A-D3** (no implicit symbolic links in paths)
+   A filesystem object in the :term:`managed tree` that serves as a dependency of a :term:`tool instance` *t* does not
+   have a parent directory :file:`{p}` in its path that is a symbolic link, unless :file:`{p}` is an input dependency
+   of *t*.
+
+   Acceptable when violated:
+
+    - |assumptionviolationeffect-redo-miss|
+    - |assumptionviolationeffect-graceful-fail|
 
 
 Guarantees
@@ -298,7 +324,7 @@ Dependencies
    A :term:`benign managed tree modification` is :term:`redo-safe`,
    provided the assumptions |assumption-f1|, |assumption-f2|, |assumption-f3|, |assumption-f4| hold and the
    :term:`working tree time` is monotonically increasing (at least since the oldest :term:`mtime` of all
-   filesystem objects that are :term:`true inputs <true input>` of a :term:`tool instance`).
+   filesystem objects that are :term:`true input dependencies <true input dependency>` of a :term:`tool instance`).
 
    This is true even when assumption |assumption-a2| is violated.
 
@@ -306,7 +332,7 @@ Dependencies
 .. |guarantee-d2| replace:: :ref:`G-D2 <guarantee-d2>`
 
 **G-D2** (no redo miss when file size changes)
-   Modifying the content of a regular file in the managed tree while a tool instance is running (in violation of
+   Modifying the content of a regular file in the managed tree while a :term:`tool instance` is running (in violation of
    |assumption-a2|) is :term:`redo-safe` if it also changes the size of the regular file.
 
 .. _guarantee-d3:
@@ -315,7 +341,7 @@ Dependencies
 **G-D3** (redo miss unlikely when modification intervals relatively long)
    A :term:`benign managed tree modification` is likely to be :term:`redo-safe`,
    provided the assumptions |assumption-f1|, |assumption-f2|, |assumption-f3|, |assumption-f4| hold and
-   the "modification intervals are relatively long" for every filesystem object that is a :term:`true input`
+   the "modification intervals are relatively long" for every filesystem object that is a :term:`true input dependency`
    of a :term:`tool instance`.
 
    Here, a modification interval of a filesystem object *p* is considered to be relatively long if
