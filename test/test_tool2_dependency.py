@@ -274,3 +274,45 @@ class TestSingleOutputType(unittest.TestCase):
     def test_directory_returns_path(self):
         v = dlb.ex.tool2.dependency.DirectoryOutput(cls=dlb.fs.NoSpacePath).validate('a/b/', None)
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
+
+
+class TestCompatibility():
+    
+    def test_is_compatible_to_self(self):
+        Ds = [
+            dlb.ex.tool2.dependency.RegularFileInput,
+            dlb.ex.tool2.dependency.NonRegularFileInput,
+            dlb.ex.tool2.dependency.DirectoryInput,
+            dlb.ex.tool2.dependency.RegularFileOutput,
+            dlb.ex.tool2.dependency.NonRegularFileOutput,
+            dlb.ex.tool2.dependency.DirectoryOutput
+        ]
+
+        for D in Ds:
+            self.assertTrue(D().compatible_and_no_less_restrictive(D()))
+
+        d1 = dlb.ex.tool2.dependency.EnvVarInput(restriction=r'.', example='')
+        d2 = dlb.ex.tool2.dependency.EnvVarInput(restriction=r'.', example='')
+        self.assertTrue(d1.compatible_and_no_less_restrictive(d2))
+
+    def test_different_dependency_classes_are_not_compatible(self):
+        A = dlb.ex.tool2.dependency.RegularFileInput
+        B = dlb.ex.tool2.dependency.NonRegularFileInput
+        self.assertFalse(A().compatible_and_no_less_restrictive(B()))
+
+    def test_single_and_nonsingle_multiplicity_are_not_compatible(self):
+        A = dlb.ex.tool2.dependency.RegularFileInput
+        B = dlb.ex.tool2.dependency.RegularFileInput[:]
+        self.assertFalse(B().compatible_and_no_less_restrictive(A()))
+
+    def test_smaller_multiplicity_with_same_step_is_compatible(self):
+        A = dlb.ex.tool2.dependency.RegularFileInput[1:5]
+        B = dlb.ex.tool2.dependency.RegularFileInput[2:4]
+        self.assertFalse(A().compatible_and_no_less_restrictive(B()))
+        self.assertTrue(B().compatible_and_no_less_restrictive(A()))
+
+    def test_multiplicity_with_different_step_is_not_compatible(self):
+        A = dlb.ex.tool2.dependency.RegularFileInput[1:5]
+        B = dlb.ex.tool2.dependency.RegularFileInput[1:5:2]
+        self.assertFalse(A().compatible_and_no_less_restrictive(B()))
+        self.assertFalse(B().compatible_and_no_less_restrictive(A()))

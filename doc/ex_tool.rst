@@ -230,15 +230,18 @@ Concrete dependency role classes support the following methods and attributes:
 
       :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
 
-   .. method:: is_more_restrictive_than(other)
+   .. method:: compatible_and_no_less_restrictive(other)
 
-      Is this dependency role considered more restrictive than the dependency role ``other``?
+      Is this dependency role an instance of the same class as ``other`` with a multiplicity and properties no less
+      restrictive than the ones of ``other``?
 
+      :param other: reference dependency role
+      :type other: Tool.Dependency
       :rtype: bool
 
    .. attribute:: multiplicity
 
-      The multiplicity of the dependency role (read-only).
+      The multiplicity of the dependency role.
 
       Is ``None`` or a :class:`dlb.ex.mult.MultiplicityRange`.
 

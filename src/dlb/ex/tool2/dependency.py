@@ -27,6 +27,28 @@ class Dependency(dlb.ex.mult.MultiplicityHolder):
     def unique(self) -> bool:
         return self._unique
 
+    def compatible_and_no_less_restrictive(self, other) -> bool:
+        if not isinstance(self, other.__class__):
+            return False
+
+        if (self.multiplicity is None) != (other.multiplicity is None):
+            return False
+        if self.multiplicity is not None:
+            ss = self.multiplicity.as_slice
+            so = other.multiplicity.as_slice
+            if ss.step != so.step or ss.start < so.start or ss.stop > so.stop:
+                return False
+
+        if other.unique and not self.unique:
+            return False
+
+        if self.required != other.required:
+            return False
+        if self.explicit != other.explicit:
+            return False
+
+        return True
+
     # overwrite in base classes
     def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> typing.Hashable:
         if value is None:
@@ -88,6 +110,12 @@ class _FilesystemObjectMixin:
     def cls(self) -> dlb.fs.Path:
         return self._path_cls
 
+    def compatible_and_no_less_restrictive(self, other) -> bool:
+        if not super().compatible_and_no_less_restrictive(other):
+            return False
+
+        return issubclass(self.cls, other.cls)
+
     def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> dlb.fs.Path:
         value = super().validate_single(value, context)
         return self._path_cls(value)
@@ -101,6 +129,15 @@ class _FilesystemObjectInputMixin:
     @property
     def ignore_permission(self) -> bool:
         return self._ignore_permission
+
+    def compatible_and_no_less_restrictive(self, other) -> bool:
+        if not super().compatible_and_no_less_restrictive(other):
+            return False
+
+        if not other.ignore_permission and self.ignore_permission:
+            return False
+
+        return True
 
 
 class _NonDirectoryMixin(_FilesystemObjectMixin):
@@ -168,6 +205,12 @@ class EnvVarInput(Input):
     @property
     def example(self):
         return self._example
+
+    def compatible_and_no_less_restrictive(self, other) -> bool:
+        if not super().compatible_and_no_less_restrictive(other):
+            return False
+
+        return self.restriction == other.restriction  # ignore example
 
     def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> typing.Union[str, typing.Dict[str, str]]:
         # value is the name of an environment variable
