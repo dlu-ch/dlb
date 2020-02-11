@@ -98,7 +98,7 @@ Dependency classes
 A dependency class is a subclass of :class:`dlb.ex.Tool.Dependency`.
 Its instances describe *dependency roles* (as attributes of a :class:`Tool`).
 
-The :meth:`Dependency.validate()` methods of dependency classes are used by :term:`tool instances <tool instance>`
+The :meth:`Tool.Dependency.validate()` methods of dependency classes are used by :term:`tool instances <tool instance>`
 to create *concrete dependencies* from their constructor arguments.
 
 Each dependency role has an *multiplicity specification*:
@@ -142,10 +142,6 @@ abstract classes:
        "dlb.ex.Tool.Output" -> "dlb.ex.Tool.Dependency";
    }
 
-
-.. class:: Tool.Dependency
-
-   A dependency..
 
 .. class:: Tool.Input
 
@@ -204,7 +200,7 @@ from :class:`dlb.ex.Tool.Output`.
 
 Concrete dependency role classes support the following methods and attributes:
 
-.. class:: Dependency(required=True, explicit=True, unique=False, **kwargs)
+.. class:: Tool.Dependency(required=True, explicit=True, unique=True)
 
    If ``required`` is ``True``, a concrete dependency of this dependency role will never be ``None``.
 
@@ -228,6 +224,8 @@ Concrete dependency role classes support the following methods and attributes:
 
       :param value: The concrete dependency to convert and validate except ``None``
       :type value: Any type the concrete dependency can convert to *T*
+      :param context: The concrete dependency to convert and validate except ``None``
+      :type context: None | dlb.ex.Context
       :return: The validated ``value`` of type *T*
 
       :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
@@ -237,7 +235,6 @@ Concrete dependency role classes support the following methods and attributes:
       Is this dependency role considered more restrictive than the dependency role ``other``?
 
       :rtype: bool
-
 
    .. attribute:: multiplicity
 
@@ -249,36 +246,42 @@ Concrete dependency role classes support the following methods and attributes:
 Input dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------------+----------------------------------------------+
-| Dependency role class                     | Keyword arguments of constructor             |
-|                                           +-----------------+----------------------------+
-|                                           | Name            | Default value              |
-+===========================================+=================+============================+
-| :class:`dlb.ex.Tool.Input.RegularFile`    | ``required``    | ``True``                   |
-|                                           +-----------------+----------------------------+
-|                                           | ``cls``         | :class:`dlb.fs.Path`       |
-|                                           |                 |                            |
-|                                           |                 |                            |
-+-------------------------------------------+-----------------+----------------------------+
-| :class:`dlb.ex.Tool.Input.Directory`      | ``required``    | ``True``                   |
-|                                           +-----------------+----------------------------+
-|                                           | ``cls``         | :class:`dlb.fs.Path`       |
-|                                           |                 |                            |
-|                                           |                 |                            |
-+-------------------------------------------+-----------------+----------------------------+
-| :class:`dlb.ex.Tool.Input.EnvVar`         | ``name``        |                            |
-|                                           +-----------------+----------------------------+
-|                                           | ``restriction`` |                            |
-|                                           +-----------------+----------------------------+
-|                                           | ``example``     |                            |
-|                                           +-----------------+----------------------------+
-|                                           | ``required``    | ``True``                   |
-+-------------------------------------------+-----------------+----------------------------+
++--------------------------------------------+----------------------------------------------------+
+| Dependency role class                      | Keyword arguments of constructor                   |
+|                                            +-----------------------+----------------------------+
+|                                            | Name                  | Default value              |
++============================================+=======================+============================+
+| :class:`dlb.ex.Tool.Input.RegularFile`     | ``cls``               | :class:`dlb.fs.Path`       |
+|                                            +-----------------------+----------------------------+
+|                                            | ``ignore_permission`` | ``True``                   |
++--------------------------------------------+-----------------------+----------------------------+
+| :class:`dlb.ex.Tool.Input.NonRegularFile`  | ``cls``               | :class:`dlb.fs.Path`       |
+|                                            +-----------------------+----------------------------+
+|                                            | ``ignore_permission`` | ``True``                   |
++--------------------------------------------+-----------------------+----------------------------+
+| :class:`dlb.ex.Tool.Input.Directory`       | ``cls``               | :class:`dlb.fs.Path`       |
+|                                            +-----------------------+----------------------------+
+|                                            | ``ignore_permission`` | ``True``                   |
++--------------------------------------------+-----------------------+----------------------------+
+| :class:`dlb.ex.Tool.Input.EnvVar`          | ``restriction``       |                            |
+|                                            +-----------------------+----------------------------+
+|                                            | ``example``           |                            |
++--------------------------------------------+-----------------------+----------------------------+
 
-.. class:: Tool.Input.RegularFile(required=True, cls=dlb.fs.Path)
+In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
+keyword arguments of the constructor of :class:`Tool.Dependency`.
+
+
+.. class:: Tool.Input.RegularFile(cls=dlb.fs.Path)
 
    Constructs a dependency role for a regular file.
-   The dependency is the file's path as an instance of ``cls``.
+
+   If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
+   :term:`mtime` is considered a modification of the dependency.
+   Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
+
+   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
+   instance of ``cls``.
 
    Example::
 
@@ -288,15 +291,21 @@ Input dependency role classes
       >>> tool.source_files
       (NoSpacePath('src/main.cpp'),)
 
-   :param required: Does this dependency role require a dependency (other than ``None``)?
-   :type required: bool
-   :param cls: Class to be used to represent the path
+   :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
+   :param ignore_permission: ignore permission modifications?
+   :type ignore_permission: bool
 
-.. class:: Tool.Input.NonregularFile(required=True, cls=dlb.fs.Path)
+.. class:: Tool.Input.NonRegularFile(cls=dlb.fs.Path)
 
    Constructs a dependency role for a filesystem object, that is neither a directory nor a regular file.
-   The dependency is the file's path as an instance of ``cls``.
+
+   If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
+   :term:`mtime` is considered a modification of the dependency.
+   Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
+
+   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
+   instance of ``cls``.
 
    Example::
 
@@ -306,15 +315,21 @@ Input dependency role classes
       >>> tool.symlinks
       (NoSpacePath('src/current'),)
 
-   :param required: Does this dependency role require a dependency (other than ``None``)?
-   :type required: bool
-   :param cls: Class to be used to represent the path
+   :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
+   :param ignore_permission: ignore permission modifications?
+   :type ignore_permission: bool
 
-.. class:: Tool.Input.Directory(required=True, cls=dlb.fs.Path)
+.. class:: Tool.Input.Directory(cls=dlb.fs.Path)
 
    Constructs a dependency role for directory.
-   The dependency is the directory's path as an instance of ``cls``.
+
+   If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
+   :term:`mtime` is considered a modification of the dependency.
+   Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
+
+   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
+   as an instance of ``cls``.
 
    Example::
 
@@ -324,66 +339,67 @@ Input dependency role classes
       >>> tool.cache_directory
       Path('tmp/')
 
-   :param required: Does this dependency role require a dependency (other than ``None``)?
-   :type required: bool
-   :param cls: Class to be used to represent the path
+   :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
+   :param ignore_permission: ignore permission modifications?
+   :type ignore_permission: bool
 
-.. class:: Tool.Input.EnvVar(name, restriction, example, required=True)
+.. class:: Tool.Input.EnvVar(restriction, example)
 
    Constructs a dependency role for an environment variable.
 
    The value of the environment variable named ``name`` (as a string or ``None`` if not defined)
    is validated by matching it to the regular expression ``restriction``.
 
-   If ``restriction`` contains at least one named group, the dictionary of all groups of the validated value
-   is assigned to the dependency of this dependency role.
-   Otherwise, the validate value of environment variable is assigned to the dependency of this dependency role.
+   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is a string or
+   a dictionary of strings:
+
+      a. If ``restriction`` contains at least one named group: the dictionary of all groups of the validated value
+         of the environment variable.
+
+      b. Otherwise, the validated value of the environment variable.
 
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction='(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})')
-      >>> tool = Tool()
+      >>>    language = dlb.ex.Tool.Input.EnvVar(
+      >>>                   restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+      >>>                   example='sv_SE')
+      >>> tool = Tool(language='LANG')
       >>> tool.language['territory']
       'CH'
 
-   :param name: name of the environment variable
-   :type name: str
    :param restriction: regular expression
    :type restriction: str | :class:`python:typing.Pattern`
    :param example: typical value of a environment variable, ``restriction`` must match this
    :type example: str
-   :param required: Does this dependency role require a dependency (other than ``None``)?
-   :type required: bool
 
 
 Concrete output dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------------+---------------------------------------------+
-| Dependency role class                     | Keyword arguments of constructor            |
-|                                           +----------------+----------------------------+
-|                                           | Name           | Default value              |
-+===========================================+================+============================+
-| :class:`dlb.ex.Tool.Output.RegularFile`   | ``required``   | ``True``                   |
-|                                           +----------------+----------------------------+
-|                                           | ``cls``        | :class:`dlb.fs.Path`       |
-|                                           |                |                            |
-|                                           |                |                            |
-+-------------------------------------------+----------------+----------------------------+
-| :class:`dlb.ex.Tool.Output.Directory`     | ``required``   | ``True``                   |
-|                                           +----------------+----------------------------+
-|                                           | ``cls``        | :class:`dlb.fs.Path`       |
-|                                           |                |                            |
-|                                           |                |                            |
-+-------------------------------------------+----------------+----------------------------+
++--------------------------------------------+----------------------------------------------------+
+| Dependency role class                      | Keyword arguments of constructor                   |
+|                                            +-----------------------+----------------------------+
+|                                            | Name                  | Default value              |
++============================================+=======================+============================+
+| :class:`dlb.ex.Tool.Output.RegularFile`    | ``cls``               | :class:`dlb.fs.Path`       |
++--------------------------------------------+-----------------------+----------------------------+
+| :class:`dlb.ex.Tool.Output.NonRegularFile` | ``cls``               | :class:`dlb.fs.Path`       |
++--------------------------------------------+-----------------------+----------------------------+
+| :class:`dlb.ex.Tool.Output.Directory`      | ``cls``               | :class:`dlb.fs.Path`       |
++--------------------------------------------+-----------------------+----------------------------+
+
+In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
+keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 
-.. class:: Tool.Output.RegularFile(required=True, cls=dlb.fs.Path)
+.. class:: Tool.Output.RegularFile(cls=dlb.fs.Path)
 
    Constructs a dependency role for a regular file.
-   The dependency is the file's path as an instance of ``cls``.
+
+   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path
+   as an instance of ``cls``.
 
    Example:
 
@@ -393,15 +409,33 @@ Concrete output dependency role classes
       >>> tool.object_file
       (NoSpacePath('main.cpp.o'),)
 
-   :param required: Does this dependency role require a dependency (other than ``None``)?
-   :type required: bool
-   :param cls: Class to be used to represent the path
+   :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
 
-.. class:: Tool.Output.Directory(required=True, cls=dlb.fs.Path)
+.. class:: Tool.Output.NonRegularFile(cls=dlb.fs.Path)
+
+   Constructs a dependency role for a filesystem object, that is neither a directory nor a regular file.
+
+   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
+   instance of ``cls``.
+
+   Example::
+
+      >>> class Tool(dlb.ex.Tool):
+      >>>    symlinks = dlb.ex.Tool.Output.NonregularFile[:](cls=dlb.fs.NoSpacePath)
+      >>> tool = Tool(symlinks=['dist'])
+      >>> tool.symlinks
+      (NoSpacePath('src/current'),)
+
+   :param cls: class to be used to represent the path
+   :type cls: dlb.fs.Path
+
+.. class:: Tool.Output.Directory(cls=dlb.fs.Path)
 
    Constructs a dependency role for directory.
-   The dependency is the directory's path as an instance of ``cls``.
+
+   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
+   as an instance of ``cls``.
 
    Example::
 
@@ -409,11 +443,9 @@ Concrete output dependency role classes
       >>>    html_root_directory = dlb.ex.Tool.Output.Directory(required=False)
       >>> tool = Tool(html_root_directory='html/')
       >>> tool.html_root_directory
-      Path('      html/')
+      Path('html/')
 
-   :param required: Does this dependency role require a dependency (other than ``None``)?
-   :type required: bool
-   :param cls: Class to be used to represent the path
+   :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
 
 
