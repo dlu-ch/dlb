@@ -1,6 +1,17 @@
 :mod:`dlb.ex.tmpl` --- Tokens templates
 ========================================
 
+.. module:: dlb.ex.tmpl
+   :synopsis: Tokens templates
+
+.. note::
+
+   The entire documented content of this module is also available in :mod:`dlb.ex`.
+   For example, :class:`dlb.ex.tmpl.TokensTemplate` is also available by
+   :class:`dlb.ex.TokensTemplate <dlb.ex.tmpl.TokensTemplate>`.
+   The use of the latter is recommended.
+
+
 String-token based replacement engine which provides simple type checking (with ``isinstance()``)
 and support for iteration (and repetition) over sequences and mappings.
 It's primary intended use is command line compilation from file list etc.

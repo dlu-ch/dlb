@@ -4,6 +4,13 @@
 .. module:: dlb.ex.context
    :synopsis: Execution of tool instances
 
+.. note::
+
+   The entire documented content of this module is also available in :mod:`dlb.ex`.
+   For example, :class:`dlb.ex.context.Context` is also available by :class:`dlb.ex.Context <dlb.ex.context.Context>`.
+   The use of the latter is recommended.
+
+
 An :term:`(execution) context <context>` describes how running :term:`tool instances <tool instance>` shall interact
 with the execution environment outside the :term:`working tree` and with each other.
 E.g:
@@ -15,7 +22,7 @@ E.g:
 It also controls how diagnostic messages are handled and helps with filesystem abstraction
 (e.g. :term:`working tree time`, case sensitivity of names in the :term:`working tree`).
 
-A context is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
+A context is represented as an instance of :class:`dlb.ex.Context <dlb.ex.context.Context>` used as a context manager.
 The context is entered with the call of :meth:`_enter__` and exit with the return of :meth:`__exit__`.
 
 Contexts can be nested::
@@ -86,7 +93,7 @@ Context objects
                ... c.root.working_tree_time_ns             # also possible
                ... c.working_tree_time_ns                  # also possible
 
-   The :class:`dlb.ex.Context` class supports the following methods and attributes:
+   The :class:`Context` class supports the following methods and attributes:
 
    .. attribute:: root
 
@@ -116,7 +123,7 @@ Context objects
 
       The absolute path to the :term:`working tree`'s root.
 
-      It is an instance of ``dlb.ex.Context.root.path_cls`` and
+      It is an instance of :attr:`Context.root.path_cls <Context.path_cls>` and
       is representable as an instance of ``path_cls`` of the :term:`active context` and every possible outer context.
 
       Same on class and instance.
@@ -169,11 +176,11 @@ Context objects
 
       :type is_dir: bool
 
-      :return: an instance ``p`` of :attr:`.dlb.ex.Context.path_cls` with ``p.is_dir() = is_dir``
+      :return: an instance ``p`` of :attr:`Context.path_cls` with ``p.is_dir() = is_dir``
       :rtype: :class:`.dlb.fs.Path`
 
       :raises ValueError:
-         if ``prefix`` is empty or the resulting path is not representable as a :attr:`.dlb.ex.Context.path_cls`
+          if ``prefix`` is empty or the resulting path is not representable as a :attr:`Context.path_cls`
       :raises FileExistsError: if all tried candidates already existed
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 

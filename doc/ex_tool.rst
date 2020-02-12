@@ -4,11 +4,18 @@
 .. module:: dlb.ex.tool
    :synopsis: Dependency-aware tool execution
 
+.. note::
+
+   The entire documented content of this module is also available in :mod:`dlb.ex`.
+   For example, :class:`dlb.ex.tool.Tool` is also available by :class:`dlb.ex.Tool <dlb.ex.tool.Tool>`.
+   The use of the latter is recommended.
+
+
 This module provides classes to represent tools to be executed during the build process (typically by calling
 :term:`dynamic helpers <dynamic helper>` like compiler binaries).
 
-Every :term:`tool` is represented by a subclass of :class:`dlb.ex.Tool` that describes its abstract behaviour and the
-way it is run (e.g. meaning of command line and output, interaction with file system and environment variables).
+Every :term:`tool` is represented by a subclass of:class:`Tool` that describes its abstract behaviour and the way it
+is run (e.g. meaning of command line and output, interaction with file system and environment variables).
 
 Tools are usually parametrized by dependency roles (e.g. input files) and execution parameters.
 
@@ -33,16 +40,16 @@ Tool objects
    (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file_dependency``),
    while the execution parameters are the same of all instances of the some tool.
 
-   Dependency roles are instances of subclasses of :class:`dlb.ex.Tool.Dependency`.
+   Dependency roles are instances of subclasses of :class:`Tool.Dependency`.
 
    A new tool can be defined by inheriting from one or more other tools.
    When overriding a dependency roles, its overriding value must be of the same type as the overridden value
    and it must be at least as restrictive (e.g. if required dependency must not be overridden by a non-required one).
    When overriding an execution parameters, its overriding value must be of the same type as the overridden value.
 
-   Each subclass of :class:`dlb.ex.Tool` must be defined in a source code location unique among all subclasses of
-   :class:`dlb.ex.Tool`. The definition raises :exc:`DefinitionAmbiguityError`, if its location is cannot
-   be determined or if another subclass of :class:`dlb.ex.Tool` was defined before at the same location.
+   Each subclass of :class:`Tool` must be defined in a source code location unique among all subclasses of
+   :class:`Tool`. The definition raises :exc:`DefinitionAmbiguityError`, if its location is cannot
+   be determined or if another subclass of :class:`Tool` was defined before at the same location.
 
    Example::
 
@@ -63,10 +70,10 @@ Tool objects
    At construction of a tool, the dependencies given as keyword arguments to the constructor are validated by the
    tool's dependency roles and made accessible (for reading only) as an attribute with the name of the corresponding
    dependency role and a type determined by the dependency role
-   (e.g. :class:`dlb.fs.Path` for :class:`dlb.ex.Tool.Input.RegularFile`)::
+   (e.g. :class:`dlb.fs.Path` for :class:`Tool.Input.RegularFile`)::
 
       >>> Compiler.object_file  # dependency role
-      <dlb.ex.tool.Tool.Input.RegularFile object at ...>
+      <dlb.ex.Tool.Input.RegularFile object at ...>
 
       >>> compiler.object_file  # dependency
       Path('main.cpp.o')
@@ -80,7 +87,7 @@ Tool objects
       The definition location of the class.
 
       It is a tuple of the form (``file_path``, ``in_archive_path``, ``lineno``) and uniquely identifies the tool
-      among all subclasses of :class:`dlb.ex.Tool`.
+      among all subclasses of :class:`Tool`.
 
       ``in_archive_path`` is ``None``, if the class was defined in an existing Python source file, and ``file_path`` is
       the :func:`python:os.path.realpath()` of this file.
@@ -96,7 +103,7 @@ Tool objects
 Dependency classes
 ------------------
 
-A dependency class is a subclass of :class:`dlb.ex.Tool.Dependency`.
+A dependency class is a subclass of :class:`Tool.Dependency`.
 Its instances describe *dependency roles* (as attributes of a :class:`Tool`).
 
 The :meth:`Tool.Dependency.validate()` methods of dependency classes are used by :term:`tool instances <tool instance>`
@@ -146,7 +153,7 @@ abstract classes:
 
 .. class:: Tool.Input
 
-   A :class:`dlb.ex.Tool.Dependency` that describes an input dependency of a tool.
+   A :class:`Tool.Dependency` that describes an input dependency of a tool.
 
    The :term:`tool instance` must be :term:`redone <redo>` if it (e.g. the content of a file) has changed compared to
    the state before the last successful redo of the :term:`tool instance`.
@@ -155,15 +162,15 @@ abstract classes:
 
 .. class:: Tool.Intermediate
 
-   A :class:`dlb.ex.Tool.Dependency` that describes an intermediate dependency of a tool.
+   A :class:`Tool.Dependency` that describes an intermediate dependency of a tool.
 
    A :term:`redo` of a :term:`tool instance` may modify it in any possible way, provided this does not modify anything
-   (e.g. by followed symbolic links). that is not a :class:`dlb.ex.Tool.Intermediate` dependency or
-   a :class:`dlb.ex.Tool.Output` dependency of the same tool instance.
+   (e.g. by followed symbolic links). that is not a :class:`Tool.Intermediate` dependency or
+   a :class:`Tool.Output` dependency of the same tool instance.
 
 .. class:: Tool.Output
 
-   A :class:`dlb.ex.Tool.Dependency` that describes an output dependency of a tool.
+   A :class:`Tool.Dependency` that describes an output dependency of a tool.
 
    If ``explicit`` is ``True``, a running :term:`tool instance` will remove it before a :term:`redo`.
    A successful redo must generate it (e.g. create a regular file).
@@ -173,8 +180,8 @@ abstract classes:
 
 
 These are all abstract classes and contain inner classes derived from them.
-Example: :class:`dlb.ex.Tool.Output.Directory` is a non-abstract dependency class derived
-from :class:`dlb.ex.Tool.Output`.
+Example: :class:`Tool.Output.Directory` is a non-abstract dependency class derived
+from :class:`Tool.Output`.
 
 
 .. graphviz::
@@ -209,7 +216,7 @@ Concrete dependency role classes support the following methods and attributes:
    the the same member more than once (this is ignored if :attr:`multiplicity` is ``None``).
 
    If ``explicit`` is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
-   is created. Otherwise, it cannot and must not be, but automatically assigned by :meth:`dlb.ex.Tool.run()`.
+   is created. Otherwise, it cannot and must not be, but automatically assigned by :meth:`Tool.run()`.
 
    .. param required: is a value other than ``None`` required?
    .. type required: bool
@@ -228,7 +235,7 @@ Concrete dependency role classes support the following methods and attributes:
       :param value: The concrete dependency to convert and validate except ``None``
       :type value: Any type the concrete dependency can convert to *T*
       :param context: The concrete dependency to convert and validate except ``None``
-      :type context: None | dlb.ex.Context
+      :type context: None | :class:`dlb.ex.Context <dlb.ex.context.Context>`
       :return: The validated ``value`` of type *T*
 
       :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
@@ -252,27 +259,27 @@ Concrete dependency role classes support the following methods and attributes:
 Input dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+--------------------------------------------+----------------------------------------------------+
-| Dependency role class                      | Keyword arguments of constructor                   |
-|                                            +-----------------------+----------------------------+
-|                                            | Name                  | Default value              |
-+============================================+=======================+============================+
-| :class:`dlb.ex.Tool.Input.RegularFile`     | ``cls``               | :class:`dlb.fs.Path`       |
-|                                            +-----------------------+----------------------------+
-|                                            | ``ignore_permission`` | ``True``                   |
-+--------------------------------------------+-----------------------+----------------------------+
-| :class:`dlb.ex.Tool.Input.NonRegularFile`  | ``cls``               | :class:`dlb.fs.Path`       |
-|                                            +-----------------------+----------------------------+
-|                                            | ``ignore_permission`` | ``True``                   |
-+--------------------------------------------+-----------------------+----------------------------+
-| :class:`dlb.ex.Tool.Input.Directory`       | ``cls``               | :class:`dlb.fs.Path`       |
-|                                            +-----------------------+----------------------------+
-|                                            | ``ignore_permission`` | ``True``                   |
-+--------------------------------------------+-----------------------+----------------------------+
-| :class:`dlb.ex.Tool.Input.EnvVar`          | ``restriction``       |                            |
-|                                            +-----------------------+----------------------------+
-|                                            | ``example``           |                            |
-+--------------------------------------------+-----------------------+----------------------------+
++-------------------------------------+----------------------------------------------------+
+| Dependency role class               | Keyword arguments of constructor                   |
+|                                     +-----------------------+----------------------------+
+|                                     | Name                  | Default value              |
++=====================================+=======================+============================+
+| :class:`Tool.Input.RegularFile`     | ``cls``               | :class:`dlb.fs.Path`       |
+|                                     +-----------------------+----------------------------+
+|                                     | ``ignore_permission`` | ``True``                   |
++-------------------------------------+-----------------------+----------------------------+
+| :class:`Tool.Input.NonRegularFile`  | ``cls``               | :class:`dlb.fs.Path`       |
+|                                     +-----------------------+----------------------------+
+|                                     | ``ignore_permission`` | ``True``                   |
++-------------------------------------+-----------------------+----------------------------+
+| :class:`Tool.Input.Directory`       | ``cls``               | :class:`dlb.fs.Path`       |
+|                                     +-----------------------+----------------------------+
+|                                     | ``ignore_permission`` | ``True``                   |
++-------------------------------------+-----------------------+----------------------------+
+| :class:`Tool.Input.EnvVar`          | ``restriction``       |                            |
+|                                     +-----------------------+----------------------------+
+|                                     | ``example``           |                            |
++-------------------------------------+-----------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
 keyword arguments of the constructor of :class:`Tool.Dependency`.
@@ -384,17 +391,17 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 Concrete output dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+--------------------------------------------+----------------------------------------------------+
-| Dependency role class                      | Keyword arguments of constructor                   |
-|                                            +-----------------------+----------------------------+
-|                                            | Name                  | Default value              |
-+============================================+=======================+============================+
-| :class:`dlb.ex.Tool.Output.RegularFile`    | ``cls``               | :class:`dlb.fs.Path`       |
-+--------------------------------------------+-----------------------+----------------------------+
-| :class:`dlb.ex.Tool.Output.NonRegularFile` | ``cls``               | :class:`dlb.fs.Path`       |
-+--------------------------------------------+-----------------------+----------------------------+
-| :class:`dlb.ex.Tool.Output.Directory`      | ``cls``               | :class:`dlb.fs.Path`       |
-+--------------------------------------------+-----------------------+----------------------------+
++-------------------------------------+----------------------------------------------------+
+| Dependency role class               | Keyword arguments of constructor                   |
+|                                     +-----------------------+----------------------------+
+|                                     | Name                  | Default value              |
++=====================================+=======================+============================+
+| :class:`Tool.Output.RegularFile`    | ``cls``               | :class:`dlb.fs.Path`       |
++-------------------------------------+-----------------------+----------------------------+
+| :class:`Tool.Output.NonRegularFile` | ``cls``               | :class:`dlb.fs.Path`       |
++-------------------------------------+-----------------------+----------------------------+
+| :class:`Tool.Output.Directory`      | ``cls``               | :class:`dlb.fs.Path`       |
++-------------------------------------+-----------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
 keyword arguments of the constructor of :class:`Tool.Dependency`.
@@ -460,10 +467,10 @@ Exceptions
 
 .. exception:: DefinitionAmbiguityError
 
-   Raised at the definition of a subclass of :class:`dlb.ex.Tool`, when the location is unknown or another subclass of
-   :class:`dlb.ex.Tool` was defined before at the same location.
+   Raised at the definition of a subclass of :class:`Tool`, when the location is unknown or another subclass of
+   :class:`Tool` was defined before at the same location.
 
 .. exception:: DependencyRoleAssignmentError
 
-   Raised at the construction of a subclass of :class:`dlb.ex.Tool`, when the arguments of the constructor do not
+   Raised at the construction of a subclass of :class:`Tool`, when the arguments of the constructor do not
    match the declared dependency roles of the class.
