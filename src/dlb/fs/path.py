@@ -14,6 +14,7 @@ import re
 import os
 import functools
 import pathlib  # since Python 3.4
+import typing
 assert sys.version_info >= (3, 6)
 
 
@@ -145,13 +146,13 @@ class Path(metaclass=_PathMeta):
             if not path.drive:
                 raise ValueError('neither absolute nor relative: drive is missing')
 
-    def is_dir(self):
+    def is_dir(self) -> bool:
         return self._is_dir
 
-    def is_absolute(self):
+    def is_absolute(self) -> bool:
         return self._path.is_absolute()
 
-    def is_normalized(self):
+    def is_normalized(self) -> bool:
         return '..' not in self.parts
 
     def relative_to(self, other):
@@ -230,15 +231,15 @@ class Path(metaclass=_PathMeta):
         return self.parts if self.is_absolute() else ('',) + self.parts
 
     @property
-    def parts(self):
+    def parts(self) -> typing.Tuple[str, ...]:
         return self._path.parts
 
     @property
-    def pure_posix(self):
+    def pure_posix(self) -> pathlib.PurePosixPath:
         return self._path
 
     @property
-    def pure_windows(self):
+    def pure_windows(self) -> pathlib.PureWindowsPath:
         s = self.as_string()
         if s.startswith('/') and not s.startswith('//'):
             s = s[1:]
@@ -268,7 +269,7 @@ class Path(metaclass=_PathMeta):
     else:
         raise TypeError("unknown 'Native' class")
 
-    def as_string(self):
+    def as_string(self) -> str:
         s = str(self._path)
         if self.is_dir() and not s.endswith('/'):
             s += '/'
@@ -294,10 +295,10 @@ class Path(metaclass=_PathMeta):
         other = self.__class__(other)
         return (self._cparts, self._is_dir) < (other._cparts, other._is_dir)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self._path, self._is_dir))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.__class__.__qualname__}({self.as_string()!r})'
 
     def __str__(self):
