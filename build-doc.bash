@@ -14,5 +14,5 @@ sphinx_out_dir="${out_dir:?}/sphinx"
     rm -rf -- "./${doc_to_root:?}/${sphinx_out_dir:?}"
     sphinx_args=("-d" "./${doc_to_root:?}/${sphinx_out_dir:?}/doctrees")
     "${SPHINXBUILD:?}" "${sphinx_args[@]}" -b html . "./${doc_to_root:?}/${sphinx_out_dir:?}/html"
-    #??? "${SPHINXBUILD:?}" "${sphinx_args[@]}" -b linkcheck  . "./${doc_to_root:?}/${sphinx_out_dir:?}/linkcheck"
+    "${SPHINXBUILD:?}" "${sphinx_args[@]}" -b linkcheck  . "./${doc_to_root:?}/${sphinx_out_dir:?}/linkcheck"
 )
