@@ -16,7 +16,7 @@ import unittest
 import tools_for_test
 
 
-class DependencyTest(unittest.TestCase):
+class BaseDependencyTest(unittest.TestCase):
 
     def test_is_multiplicity_holder(self):
         d = dlb.ex.depend.Dependency()
@@ -39,13 +39,34 @@ class DependencyTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
-class CommonOfNonAbstractDependencyTest(unittest.TestCase):
+class CommonOfConcreteValidationTest(unittest.TestCase):
 
     # stands for any non-abstract subclass of Dependency:
     D = dlb.ex.depend.RegularFileInput
 
+    def test_fails_for_none(self):
+        D = CommonOfConcreteValidationTest.D[1:]
+
+        msg = "'value' must not be None"
+
+        with self.assertRaises(TypeError) as cm:
+            D().validate(None, None)
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            D(required=False).validate(None, None)
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            D().validate([None], None)
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            D(required=False).validate([None], None)
+        self.assertEqual(msg, str(cm.exception))
+
     def test_validate_with_multiplicity_mismatch_fails_with_meaningful_message(self):
-        d = CommonOfNonAbstractDependencyTest.D[1:]()
+        d = CommonOfConcreteValidationTest.D[1:]()
         with self.assertRaises(ValueError) as cm:
             d.validate([], None)
         msg = 'value has 0 members, which is not accepted according to the specified multiplicity [1:]'
@@ -53,21 +74,21 @@ class CommonOfNonAbstractDependencyTest(unittest.TestCase):
 
     def test_duplicate_free_cannot_contain_duplicates(self):
         paths = ['1', '2', '1']
-        CommonOfNonAbstractDependencyTest.D[:](unique=False).validate(paths, None)
+        CommonOfConcreteValidationTest.D[:](unique=False).validate(paths, None)
         with self.assertRaises(ValueError) as cm:
-            CommonOfNonAbstractDependencyTest.D[:](unique=True).validate(paths, None)
+            CommonOfConcreteValidationTest.D[:](unique=True).validate(paths, None)
         msg = "sequence of dependencies must be duplicate-free, but contains Path('1') more than once"
         self.assertEqual(str(cm.exception), msg)
 
     def test_value_must_be_iterable(self):
         with self.assertRaises(TypeError) as cm:
-            CommonOfNonAbstractDependencyTest.D[:]().validate(1, None)
+            CommonOfConcreteValidationTest.D[:]().validate(1, None)
         msg = "'int' object is not iterable"
         self.assertEqual(str(cm.exception), msg)
 
     def test_validate_with_str_of_bytes_fails_with_meaningful_message(self):
         msg = "since dependency has a multiplicity, value must be iterable (other than 'str' or 'bytes')"
-        d = CommonOfNonAbstractDependencyTest.D[:]()
+        d = CommonOfConcreteValidationTest.D[:]()
 
         with self.assertRaises(TypeError) as cm:
             d.validate('', None)
@@ -79,18 +100,18 @@ class CommonOfNonAbstractDependencyTest(unittest.TestCase):
 
     def test_each_member_is_validated(self):
         with self.assertRaises(ValueError):
-            CommonOfNonAbstractDependencyTest.D[:]().validate(['a', 'b/'], None)
+            CommonOfConcreteValidationTest.D[:]().validate(['a', 'b/'], None)
         with self.assertRaises(ValueError):
-            CommonOfNonAbstractDependencyTest.D[:]().validate(['a/', 'b'], None)
+            CommonOfConcreteValidationTest.D[:]().validate(['a/', 'b'], None)
 
     def test_member_count_must_match_multiplicity(self):
         with self.assertRaises(ValueError) as cm:
-            CommonOfNonAbstractDependencyTest.D[2:]().validate([], None)
+            CommonOfConcreteValidationTest.D[2:]().validate([], None)
         msg = "value has 0 members, which is not accepted according to the specified multiplicity [2:]"
         self.assertEqual(str(cm.exception), msg)
 
 
-class AbstractDependencyClassesTest(unittest.TestCase):
+class AbstractDependencyValidationTest(unittest.TestCase):
 
     def test_fails_with_meaningful_message(self):
         msg_tmpl = (
@@ -115,12 +136,18 @@ class AbstractDependencyClassesTest(unittest.TestCase):
         self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Output'))
 
 
-class SingleInputTypeTest(tools_for_test.TemporaryDirectoryTestCase):
+class SingleInputValidationTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fails_for_none(self):
+        msg = "'value' must not be None"
+
         with self.assertRaises(TypeError) as cm:
             dlb.ex.depend.RegularFileInput().validate(None, None)
-        self.assertEqual(str(cm.exception), "'value' must not be None")
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.depend.RegularFileInput(required=False).validate(None, None)
+        self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_invalid_path_conversion(self):
         with self.assertRaises(ValueError):
@@ -212,7 +239,7 @@ class FileInputValidationTest(unittest.TestCase):
 
 class DirectoryInputValidationTest(unittest.TestCase):
 
-    def test_fails_for_fil(self):
+    def test_fails_for_file(self):
 
         with self.assertRaises(ValueError) as cm:
             dlb.ex.depend.DirectoryInput().validate('a/b', None)
@@ -260,12 +287,18 @@ class EnvVarInputValidationTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(str(cm.exception), msg)
 
 
-class SingleOutputTypeTest(unittest.TestCase):
+class SingleOutputValidationTest(unittest.TestCase):
 
     def test_fail_for_none(self):
+        msg = "'value' must not be None"
+
         with self.assertRaises(TypeError) as cm:
             dlb.ex.depend.RegularFileOutput().validate(None, None)
-        self.assertEqual(str(cm.exception), "'value' must not be None")
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.depend.RegularFileOutput(required=False).validate(None, None)
+        self.assertEqual(msg, str(cm.exception))
 
     def test_regular_file_returns_path(self):
         v = dlb.ex.depend.RegularFileOutput(cls=dlb.fs.NoSpacePath).validate('a/b', None)
@@ -321,3 +354,25 @@ class CompatibilityTest:
         B = dlb.ex.depend.RegularFileInput[1:5:2]
         self.assertFalse(A().compatible_and_no_less_restrictive(B()))
         self.assertFalse(B().compatible_and_no_less_restrictive(A()))
+
+
+class CoverageTest(unittest.TestCase):
+    def test_all_concrete_dependency_is_complete(self):
+        true_subclasses_of_concrete_dependency = {
+            v  for n, v in dlb.ex.depend.__dict__.items() \
+            if isinstance(v, type) and issubclass(v, dlb.ex.depend.ConcreteDependency) and
+               v is not dlb.ex.depend.ConcreteDependency
+        }
+
+        covered_dependencies = (
+            dlb.ex.depend.RegularFileInput,
+            dlb.ex.depend.NonRegularFileInput,
+            dlb.ex.depend.DirectoryInput,
+            dlb.ex.depend.EnvVarInput,
+            dlb.ex.depend.RegularFileOutput,
+            dlb.ex.depend.NonRegularFileOutput,
+            dlb.ex.depend.DirectoryOutput
+        )
+
+        # make sure no concrete dependency class is added to dlb.ex.depend without a test here
+        self.assertEqual(set(covered_dependencies), true_subclasses_of_concrete_dependency)

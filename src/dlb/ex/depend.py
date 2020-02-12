@@ -77,6 +77,9 @@ class Dependency(mult.MultiplicityHolder):
         if m is None:
             return self.validate_single(value, context)
 
+        if value is None:
+            raise TypeError("'value' must not be None")
+
         if m is not None and isinstance(value, (bytes, str)):  # avoid iterator over characters by mistake
             raise TypeError("since dependency has a multiplicity, value must be iterable (other than 'str' or 'bytes')")
 
