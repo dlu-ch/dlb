@@ -508,7 +508,7 @@ class Context(metaclass=_ContextMeta):
 
     EnvVarDict = NotImplemented  # only Context should construct an _EnvVarDict
 
-    def __init__(self, path_cls=fs.Path):
+    def __init__(self, *, path_cls=fs.Path):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls  # type: fs.Path

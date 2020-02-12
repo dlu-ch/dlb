@@ -18,7 +18,7 @@ class Dependency(mult.MultiplicityHolder):
     #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
     RANK = 0  # type: int
 
-    def __init__(self, required=True, explicit=True, unique=True):
+    def __init__(self, *, required=True, explicit=True, unique=True):
         super().__init__()
         self._required = bool(required)  # not checked by validate(), only for the caller
         self._explicit = bool(explicit)  # not checked by validate(), only for the caller
@@ -112,7 +112,7 @@ class Output(Dependency):
 
 
 class _FilesystemObjectMixin:
-    def __init__(self, cls=fs.Path, **kwargs):
+    def __init__(self, *, cls=fs.Path, **kwargs):
         super().__init__(**kwargs)
         if not (isinstance(cls, type) and issubclass(cls, fs.Path)):
             raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
@@ -134,7 +134,7 @@ class _FilesystemObjectMixin:
 
 
 class _FilesystemObjectInputMixin:
-    def __init__(self, ignore_permission=True, **kwargs):
+    def __init__(self, *, ignore_permission=True, **kwargs):
         super().__init__(**kwargs)
         self._ignore_permission = bool(ignore_permission)
 
@@ -194,7 +194,7 @@ class DirectoryOutput(_DirectoryMixin, ConcreteDependency, Output):
 
 class EnvVarInput(ConcreteDependency, Input):
 
-    def __init__(self, restriction, example, **kwargs):
+    def __init__(self, *, restriction, example, **kwargs):
         super().__init__(**kwargs)
 
         if isinstance(restriction, str):

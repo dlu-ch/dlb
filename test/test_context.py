@@ -509,7 +509,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         with open('a/b/c', 'w'):
             pass
 
-        with dlb.ex.Context(dlb.fs.NoSpacePath):
+        with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             p = dlb.ex.Context.get_managed_tree_path(dlb.ex.Context.root_path)
 
             self.assertIs(p.__class__, dlb.fs.Path)
