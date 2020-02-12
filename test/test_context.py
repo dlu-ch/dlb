@@ -5,7 +5,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex
-import dlb.ex.context
 import stat
 import time
 import unittest
@@ -17,7 +16,7 @@ class TechnicalInterfaceTest(unittest.TestCase):
     def test_import(self):
         import dlb.ex.context
         self.assertEqual(['Context'], dlb.ex.context.__all__)
-        self.assertTrue('Tool' in dir(dlb.ex))
+        self.assertTrue('Context' in dir(dlb.ex))
 
     def test_attributes_of_contextmeta_and_rootsspecifics_to_not_clash(self):
         rs = set(n for n in dlb.ex.context._RootSpecifics.__dict__ if not n.startswith('_'))
@@ -559,3 +558,10 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             with self.assertRaises(TypeError) as cm:
                 dlb.ex.Context.get_managed_tree_path(3)
             self.assertEqual(str(cm.exception), "'path' must be 'str' or 'dlb.fs.Path'")
+
+
+class ReprTest(unittest.TestCase):
+
+    def test_repr_name_reflects_recommended_module(self):
+        self.assertEqual(repr(dlb.ex.Context), "<class 'dlb.ex.Context'>")
+        self.assertEqual(repr(dlb.ex.context._EnvVarDict), "<class 'dlb.ex.Context.EnvVarDict'>")

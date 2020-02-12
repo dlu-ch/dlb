@@ -1,10 +1,9 @@
 import sys
 import re
-import collections
 import os
 import typing
 import inspect
-import dlb.fs
+from . import depend
 assert sys.version_info >= (3, 6)
 
 
@@ -22,288 +21,13 @@ RESERVED_NAME_REGEX = re.compile('^__[^_].*[^_]?__$')
 assert RESERVED_NAME_REGEX.match('__init__')
 assert not RESERVED_NAME_REGEX.match('__init')
 
-__all__ = [
-    'Tool'
-]
-
-#: key: (cls_id, (start, stop, step)), value: mult_class
-_classes_with_multiplicity = {}
+__all__ = ['Tool']
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
 _tool_class_by_definition_location = {}
 
 
 class DefinitionAmbiguityError(SyntaxError):
-    pass
-
-
-class _ConcreteDependencyMixinMeta(type):
-    @property
-    def multiplicity(cls):
-        return cls._multiplicity
-
-    def __getitem__(cls, multiplicity):
-        if cls.multiplicity is not None:
-            raise TypeError('dependency role with multiplicity is not subscriptable')
-
-        if isinstance(multiplicity, int):
-            multiplicity = slice(multiplicity, multiplicity + 1)
-        elif not isinstance(multiplicity, slice):
-            raise TypeError("dependency role multiplicity must be int oder slice of int")
-
-        step = 1 if multiplicity.step is None else int(multiplicity.step)
-        if step <= 0:
-            raise ValueError('slice step must be positive')
-        start = 0 if multiplicity.start is None else int(multiplicity.start)
-        if start < 0:
-            raise ValueError('minimum multiplicity (start of slice) must be non-negative')
-        stop = None if multiplicity.stop is None else max(start, int(multiplicity.stop))
-
-        if stop is not None:
-            # make stop the maximum + 1
-            stop = ((stop - start - 1) // step) * step + start + 1
-
-        if stop is not None and start < stop <= start + step:  # is start the only member?
-            stop = start + 1
-            step = 1
-        if stop == start:
-            start = 0
-            stop = 1
-
-        assert start >= 0
-        assert stop is None or stop > start
-        assert step > 0
-
-        m = (start, stop, step)
-        k = (id(cls), m)
-
-        # noinspection PyPep8Naming
-        MultipleDependency = _classes_with_multiplicity.get(k)
-
-        if MultipleDependency is None:
-            bases = []
-            for c in cls.__mro__:
-                if _DependencyRole in c.__bases__:
-                    bases.append(c)
-
-            class MultipleDependency(_MultipleDependencyRoleBase, *bases):
-                _member_role_class = cls
-                _multiplicity = slice(*m)
-
-        _classes_with_multiplicity[k] = MultipleDependency
-
-        if stop is not None and stop == start + 1:
-            suffix = str(start)
-        else:
-            suffix = (str(start) if start else '') + ':' + (str(stop) if stop is not None else '')
-            if step > 1:
-                suffix += ':' + str(step)
-        suffix = f'[{suffix}]'
-
-        MultipleDependency.__name__ = cls.__name__ + suffix
-        MultipleDependency.__qualname__ = cls.__qualname__ + suffix
-
-        return MultipleDependency
-
-
-# list this as last class before abstract dependency role class in base class list
-class _ConcreteDependencyMixin(metaclass=_ConcreteDependencyMixinMeta):
-    #: None or slice.
-    #: if slice: Exactly every multiplicity which is contained in this slice is valid (step must not be non-positive)
-    _multiplicity = None
-
-    def __init__(self, required=True):
-        self._required = required
-
-    @property
-    def required(self):
-        return self._required
-
-    @property
-    def multiplicity(self):
-        return self.__class__.multiplicity
-
-    def is_more_restrictive_than(self, other):
-        return (
-            isinstance(self, other.__class__)
-            and not (other.required and not self.required)
-            and (self.__class__.multiplicity is None) == (other.__class__.multiplicity is None)
-        )
-
-    @classmethod
-    def _check_multiplicity(cls, n):
-        m = cls.multiplicity
-        if m is None:
-            if n is not None:
-                raise ValueError('dependency role has no multiplicity')
-        else:
-            if n < m.start:
-                raise ValueError(f'value has {n} members, but minimum multiplicity is {m.start}')
-            if m.stop is not None and n >= m.stop:
-                raise ValueError(f'value has {n} members, but maximum multiplicity is {m.stop-1}')
-            if (n - m.start) % m.step != 0:
-                msg = f'value has {n} members, but multiplicity must be an integer multiple of {m.step} above {m.start}'
-                raise ValueError(msg)
-
-    @classmethod
-    def is_multiplicity_valid(cls, n):
-        if not (n is None or isinstance(n, int)):
-            raise TypeError('multiplicity must be None or integer')
-        try:
-            cls._check_multiplicity(n)
-        except ValueError:
-            return False
-        return True
-
-    def initial(self):
-        raise NotImplementedError
-
-    def validate(self, value):
-        # do _not_ call super().validate() here!
-        return value
-
-
-# noinspection PyUnresolvedReferences,PyArgumentList
-class _PathDependencyMixin:
-    def __init__(self, cls=dlb.fs.Path, **kwargs):
-        super().__init__(**kwargs)
-        if not (isinstance(cls, type) and issubclass(cls, dlb.fs.Path)):
-            raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
-        self._path_cls = cls
-
-    def is_more_restrictive_than(self, other):
-        return super().is_more_restrictive_than(other) and issubclass(self._path_cls, other._path_cls)
-
-    def validate(self, value):
-        value = super().validate(value)
-        return self._path_cls(value)
-
-
-class _DirectoryDependencyMixin(_PathDependencyMixin):
-    def validate(self, value):
-        value = super().validate(value)
-        if not value.is_dir():
-            raise ValueError(f'non-directory path not valid for directory dependency: {value!r}')
-        return value
-
-
-class _NonDirectoryDependencyMixin(_PathDependencyMixin):
-    def validate(self, value):
-        value = super().validate(value)
-        if value.is_dir():
-            raise ValueError(f'directory path not valid for non-directory dependency: {value!r}')
-        return value
-
-
-class _DependencyRole:
-    #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
-    _RANK = 0
-
-
-# noinspection PyAbstractClass
-class _InputDependencyRole(_DependencyRole):
-    _RANK = 3
-
-
-# noinspection PyAbstractClass
-class _IntermediateDependencyRole(_DependencyRole):
-    _RANK = 2
-
-
-# noinspection PyAbstractClass
-class _OutputDependencyRole(_DependencyRole):
-    _RANK = 1
-
-
-class _MultipleDependencyRoleBase(_ConcreteDependencyMixin, _DependencyRole):
-    #: Subclass of _Dependency for each member
-    _member_role_class = None
-
-    def __init__(self, required=True, unique=False, **kwargs):
-        super().__init__(required=required)
-        self._unique = unique
-        # noinspection PyCallingNonCallable
-        self._member_role_prototype = self.__class__._member_role_class(required=True, **kwargs)
-
-    def validate(self, value) -> typing.Tuple:
-        value = super().validate(value)
-
-        if self.__class__.multiplicity is not None and isinstance(value, str):  # for safety
-            raise TypeError('since dependency role has a multiplicity, value must be iterable (other than string)')
-        value = tuple(self._member_role_prototype.validate(v) for v in value)
-
-        self.__class__._check_multiplicity(len(value))
-
-        if self._unique:
-            prefix = []
-            for v in value:
-                if v in prefix:
-                    raise ValueError(f'dependency must be duplicate-free, but contains {v!r} more than once')
-                prefix.append(v)
-
-        return value
-
-    def is_more_restrictive_than(self, other):
-        # only compare if multiplicity os None or not
-        return (
-            super().is_more_restrictive_than(other)
-            and self._member_role_prototype.is_more_restrictive_than(other._member_role_prototype)
-        )
-
-
-class _RegularInputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependencyRole):
-    pass
-
-
-class _InputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _InputDependencyRole):
-    pass
-
-
-class _InputEnvVarDependency(_ConcreteDependencyMixin, _InputDependencyRole):  #???
-
-    def __init__(self, name, restriction, example, **kwargs):
-        super().__init__(**kwargs)
-
-        if not isinstance(name, str):
-            raise TypeError("'name' must be a str")
-        if not name:
-            raise ValueError("'name' must not be empty")
-
-        if isinstance(restriction, str):
-            restriction = re.compile(restriction)
-        if not isinstance(restriction, typing.Pattern):
-            raise TypeError("'restriction' must be regular expression (compiled or str)")
-        if not isinstance(example, str):
-            raise TypeError("'example' must be a str")
-
-        if not restriction.fullmatch(example):
-            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
-
-        self._name = name
-        self._restriction = restriction  # regex
-
-    def validate(self, value):
-        validated_value = str(super().validate(value))
-
-        m = self._restriction.fullmatch(validated_value)
-        if not m:
-           raise ValueError(f'value does not match restriction regular expression: {validated_value!r}')
-
-        # return only validates/possibly modify value
-        groups = m.groupdict()
-        if groups:
-            return groups
-        return validated_value
-
-    def initial(self) -> typing.Optional[str]:
-        return os.environ.get(self._name)
-
-
-class _RegularOutputFileDependency(_NonDirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependencyRole):
-    pass
-
-
-class _OutputDirectoryDependency(_DirectoryDependencyMixin, _ConcreteDependencyMixin, _OutputDependencyRole):
     pass
 
 
@@ -314,34 +38,17 @@ class _ToolBase:
 
         dependency_names = self.__class__._dependency_names
 
-        # for a role representing something of type T:
-        #
-        #   role.initial()                    -> T
-        #   role.validate(typing.Optional[T]) -> typing.Union[typing.Any, NotImplemented]
-
-        # assign initial dependency to all dependency roles which provide one  -  role.initial()
         dependency_names_to_assign = set()
         for name in dependency_names:
-            role = getattr(self.__class__, name)
-            try:
-                value = role.initial()  # ??? != None
-            except NotImplementedError:
-                dependency_names_to_assign.add(name)
-            else:
-                if value is None:
-                    if role.required:  # ??? kann nur von initial() kommen
-                        raise ValueError('required dependency must not be None')
-                    validated_value = value
-                else:
-                    validated_value = role.validate(value)
-                object.__setattr__(self, name, validated_value)
+            #required????
+            dependency_names_to_assign.add(name)
 
         names_of_assigned = set()
         for name, value in kwargs.items():
             if name not in dependency_names_to_assign:
                 if name in dependency_names:
                     msg = (
-                        f'dependency role {name!r} with automatic initialization must not be '
+                        f'dependency role {name!r} with automatic??? initialization must not be '
                         f'initialized by keyword parameter'
                     )
                     raise TypeError(msg)
@@ -354,7 +61,7 @@ class _ToolBase:
                 if role.required:
                     raise ValueError('required dependency must not be None')
             else:
-                validated_value = role.validate(value)
+                validated_value = role.validate(value, None)  #???
             object.__setattr__(self, name, validated_value)
             names_of_assigned.add(name)
 
@@ -364,6 +71,7 @@ class _ToolBase:
                 raise TypeError(f'missing keyword parameter for required dependency role: {name!r}')
             object.__setattr__(self, name, None)
 
+    # final
     def run(self):
         # TODO: implement, document
         raise NotImplementedError
@@ -380,34 +88,7 @@ class _ToolBase:
         return f'{self.__class__.__qualname__}({args})'
 
 
-def _inject_nested_class_into(owner, cls, name, owner_qualname=None):
-    setattr(owner, name, cls)
-    cls.__name__ = name
-    if owner_qualname is None:
-        owner_qualname = owner.__qualname__
-    cls.__qualname__ = owner_qualname + '.' + name
-
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _DependencyRole, 'DependencyRole', 'Tool')
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _InputDependencyRole, 'Input', 'Tool')
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _OutputDependencyRole, 'Output', 'Tool')
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase, _IntermediateDependencyRole, 'Intermediate', 'Tool')
-
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase.Input, _RegularInputFileDependency, 'RegularFile')
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase.Input, _InputDirectoryDependency, 'Directory')
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase.Input, _InputEnvVarDependency, 'EnvVar')
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase.Output, _RegularOutputFileDependency, 'RegularFile')
-# noinspection PyTypeChecker
-_inject_nested_class_into(_ToolBase.Output, _OutputDirectoryDependency, 'Directory')
-
-del _inject_nested_class_into
+depend._inject_into(_ToolBase, 'Tool', '.'.join(_ToolBase.__module__.split('.')[:-1]))
 
 
 class _ToolMeta(type):
@@ -506,15 +187,15 @@ class _ToolMeta(type):
                         )
                         raise TypeError(msg)
             elif DEPENDENCY_NAME_REGEX.match(name):
-                if not (isinstance(value, _ToolBase.DependencyRole) and isinstance(value, _ConcreteDependencyMixin)):
+                if not (isinstance(value, _ToolBase.Dependency) and isinstance(value, depend.ConcreteDependency)):
                     msg = (
                         f"the value of {name!r} must be an instance of a concrete subclass of "
-                        f"'dlb.ex.Tool.DependencyRole'"
+                        f"'dlb.ex.Tool.Dependency'"
                     )
                     raise TypeError(msg)
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
-                    if base_value is not None and not value.is_more_restrictive_than(base_value):
+                    if base_value is not None and not value.compatible_and_no_less_restrictive(base_value):
                         msg = (
                             f"attribute {name!r} of base class may only be overridden by "
                             f"a {type(base_value)!r} at least as restrictive"
@@ -530,7 +211,7 @@ class _ToolMeta(type):
 
     def _get_dependency_names(cls):
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
-        pairs = [(-v._RANK, not v.required, n) for n, v in dependencies.items() if isinstance(v, _DependencyRole)]
+        pairs = [(-v.RANK, not v.required, n) for n, v in dependencies.items() if isinstance(v, depend.Dependency)]
         pairs.sort()
         # order: input - intermediate - output, required first
         return tuple(p[-1] for p in pairs)
@@ -544,3 +225,5 @@ class _ToolMeta(type):
 
 class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
+
+type.__setattr__(Tool, '__module__', '.'.join(_ToolBase.__module__.split('.')[:-1]))

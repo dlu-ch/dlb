@@ -1,13 +1,16 @@
 import re
 import typing
-import dlb.ex.mult
-import dlb.ex.context
+from . import mult
+from . import context
+from .. import fs
 
-
-class Dependency(dlb.ex.mult.MultiplicityHolder):
+class Dependency(mult.MultiplicityHolder):
     # Each instance d represents a dependency role.
     # The return value of d.validate() is a concrete dependency, if d.multiplicity is None and
     # a tuple of concrete dependencies otherwise.
+
+    #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
+    RANK = 0  # type: int
 
     def __init__(self, required=True, explicit=True, unique=True):
         super().__init__()
@@ -41,8 +44,7 @@ class Dependency(dlb.ex.mult.MultiplicityHolder):
 
         if other.unique and not self.unique:
             return False
-
-        if self.required != other.required:
+        if other.required and not self.required:
             return False
         if self.explicit != other.explicit:
             return False
@@ -50,14 +52,14 @@ class Dependency(dlb.ex.mult.MultiplicityHolder):
         return True
 
     # overwrite in base classes
-    def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> typing.Hashable:
+    def validate_single(self, value, context: typing.Optional[context.Context]) -> typing.Hashable:
         if value is None:
             raise TypeError("'value' must not be None")
         return value
 
     # final
     def validate(self, value, context) -> typing.Union[typing.Hashable, typing.Tuple[typing.Hashable, ...]]:
-        if self.__class__.validate_single is Dependency.validate_single:
+        if not isinstance(self, ConcreteDependency):
             msg = (
                 f"{self.__class__!r} is abstract\n"
                 f"  | use one of its documented subclasses instead"
@@ -87,27 +89,31 @@ class Dependency(dlb.ex.mult.MultiplicityHolder):
         return tuple(values)
 
 
-class Input(Dependency):
+class ConcreteDependency:
     pass
+
+
+class Input(Dependency):
+    RANK = 3  # type: int
 
 
 class Intermediate(Dependency):
-    pass
+    RANK = 2  # type: int
 
 
 class Output(Dependency):
-    pass
+    RANK = 1  # type: int
 
 
 class _FilesystemObjectMixin:
-    def __init__(self, cls=dlb.fs.Path, **kwargs):
+    def __init__(self, cls=fs.Path, **kwargs):
         super().__init__(**kwargs)
-        if not (isinstance(cls, type) and issubclass(cls, dlb.fs.Path)):
+        if not (isinstance(cls, type) and issubclass(cls, fs.Path)):
             raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = cls
 
     @property
-    def cls(self) -> dlb.fs.Path:
+    def cls(self) -> fs.Path:
         return self._path_cls
 
     def compatible_and_no_less_restrictive(self, other) -> bool:
@@ -116,7 +122,7 @@ class _FilesystemObjectMixin:
 
         return issubclass(self.cls, other.cls)
 
-    def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> dlb.fs.Path:
+    def validate_single(self, value, context: typing.Optional[context.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         return self._path_cls(value)
 
@@ -141,7 +147,7 @@ class _FilesystemObjectInputMixin:
 
 
 class _NonDirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> dlb.fs.Path:
+    def validate_single(self, value, context: typing.Optional[context.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         if value.is_dir():
             raise ValueError(f'directory path not valid for non-directory dependency: {value!r}')
@@ -149,38 +155,38 @@ class _NonDirectoryMixin(_FilesystemObjectMixin):
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> dlb.fs.Path:
+    def validate_single(self, value, context: typing.Optional[context.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         if not value.is_dir():
             raise ValueError(f'non-directory path not valid for directory dependency: {value!r}')
         return value
 
 
-class RegularFileInput(_NonDirectoryMixin, _FilesystemObjectInputMixin, Input):
+class RegularFileInput(_NonDirectoryMixin, _FilesystemObjectInputMixin, ConcreteDependency, Input):
     pass
 
 
-class NonRegularFileInput(_NonDirectoryMixin, _FilesystemObjectInputMixin, Input):
+class NonRegularFileInput(_NonDirectoryMixin, _FilesystemObjectInputMixin, ConcreteDependency, Input):
     pass
 
 
-class DirectoryInput(_DirectoryMixin, _FilesystemObjectInputMixin, Input):
+class DirectoryInput(_DirectoryMixin, _FilesystemObjectInputMixin, ConcreteDependency, Input):
     pass
 
 
-class RegularFileOutput(_NonDirectoryMixin, Output):
+class RegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
     pass
 
 
-class NonRegularFileOutput(_NonDirectoryMixin, Output):
+class NonRegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
     pass
 
 
-class DirectoryOutput(_DirectoryMixin, Output):
+class DirectoryOutput(_DirectoryMixin, ConcreteDependency, Output):
     pass
 
 
-class EnvVarInput(Input):
+class EnvVarInput(ConcreteDependency, Input):
 
     def __init__(self, restriction, example, **kwargs):
         super().__init__(**kwargs)
@@ -212,7 +218,7 @@ class EnvVarInput(Input):
 
         return self.restriction == other.restriction  # ignore example
 
-    def validate_single(self, value, context: typing.Optional[dlb.ex.Context]) -> typing.Union[str, typing.Dict[str, str]]:
+    def validate_single(self, value, context_: typing.Optional[context.Context]) -> typing.Union[str, typing.Dict[str, str]]:
         # value is the name of an environment variable
 
         value = str(super().validate_single(value, None))
@@ -222,11 +228,11 @@ class EnvVarInput(Input):
         if not value:
             raise ValueError("'value' must not be empty")
 
-        if not isinstance(context, dlb.ex.Context):
+        if not isinstance(context_, context.Context):
             raise TypeError("needs context")
 
         try:
-            envvar_value = context.env[value]
+            envvar_value = context_.env[value]
         except KeyError as e:
             raise ValueError(*e.args)
 
@@ -241,3 +247,28 @@ class EnvVarInput(Input):
             return groups
 
         return envvar_value
+
+
+def _inject_into(owner, owner_name, owner_module):
+    def _inject_nested_class_into(parent, cls, name, owner_qualname=None):
+        setattr(parent, name, cls)
+        cls.__module__ = owner_module
+        cls.__name__ = name
+        if owner_qualname is None:
+            owner_qualname = parent.__qualname__
+        cls.__qualname__ = owner_qualname + '.' + name
+
+    _inject_nested_class_into(owner, Dependency, 'Dependency', owner_name)
+
+    _inject_nested_class_into(owner, Input, 'Input', owner_name)
+    _inject_nested_class_into(owner, Output, 'Output', owner_name)
+    _inject_nested_class_into(owner, Intermediate, 'Intermediate', owner_name)
+
+    _inject_nested_class_into(owner.Input, RegularFileInput, 'RegularFile')
+    _inject_nested_class_into(owner.Input, NonRegularFileInput, 'NonRegularFile')
+    _inject_nested_class_into(owner.Input, DirectoryInput, 'Directory')
+    _inject_nested_class_into(owner.Input, EnvVarInput, 'EnvVar')
+
+    _inject_nested_class_into(owner.Output, RegularFileOutput, 'RegularFile')
+    _inject_nested_class_into(owner.Output, NonRegularFileOutput, 'NonRegularFile')
+    _inject_nested_class_into(owner.Output, DirectoryOutput, 'Directory')

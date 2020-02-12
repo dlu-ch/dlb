@@ -3,7 +3,7 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-from dlb.ex.tmpl import TokensTemplate
+from dlb.ex import TokensTemplate
 import collections
 import unittest
 
@@ -612,3 +612,10 @@ class TestExpansion(unittest.TestCase):
 
         self.assertEqual(3, a.getitem_count)
         self.assertEqual(1, a.items_count)
+
+
+class ReprTest(unittest.TestCase):
+
+    def test_repr_name_reflects_recommended_module(self):
+        self.assertEqual(repr(TokensTemplate), "<class 'dlb.ex.TokensTemplate'>")
+

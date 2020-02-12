@@ -9,7 +9,7 @@ import typing
 import tempfile
 import shutil
 import sqlite3
-import dlb.fs
+from .. import fs
 assert sys.version_info >= (3, 6)
 
 __all__ = ['Context']
@@ -331,10 +331,10 @@ class _RootSpecifics:
             raise ManagementTreeError(msg) from None
 
     @property
-    def root_path(self) -> dlb.fs.Path:
+    def root_path(self) -> fs.Path:
         return self._working_tree_path
 
-    def create_temporary(self, suffix='', prefix='t', is_dir=False) -> dlb.fs.Path:
+    def create_temporary(self, suffix='', prefix='t', is_dir=False) -> fs.Path:
         if not isinstance(suffix, str) or not isinstance(prefix, str):
             raise TypeError("'prefix' and 'suffix' must be str")
         if not prefix:
@@ -367,7 +367,7 @@ class _RootSpecifics:
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
-    def get_managed_tree_path(self, path: typing.Union[str, dlb.fs.Path]) -> dlb.fs.Path:
+    def get_managed_tree_path(self, path: typing.Union[str, fs.Path]) -> fs.Path:
         is_dir = None
         if isinstance(path, str):
             native_path = pathlib.Path(path)  # path may be ''
@@ -375,7 +375,7 @@ class _RootSpecifics:
             if path[-1:] in seps or (path[-1:] == '.' and path[-2:-1] in seps) or \
                     not native_path.parts or native_path.parts[-1:]  == ('..',):
                 is_dir = True
-        elif isinstance(path, dlb.fs.Path):
+        elif isinstance(path, fs.Path):
             is_dir = path.is_dir()
             native_path = path.native.raw
         else:
@@ -392,7 +392,7 @@ class _RootSpecifics:
         except ValueError:
             raise ValueError(f'path not in managed tree: {native_path!r}') from None
 
-        mtp = dlb.fs.Path(rel_path, is_dir=stat.S_ISDIR(sr.st_mode))
+        mtp = fs.Path(rel_path, is_dir=stat.S_ISDIR(sr.st_mode))
         if is_dir is not None and is_dir != mtp.is_dir():
             raise ValueError(f"form of 'path' does not match the type of filesystem object: {str(mtp.native)!r}")
 
@@ -480,15 +480,18 @@ class _RootSpecifics:
             else:
                 raise first_exception
 
+_EnvVarDict.__name__ = 'EnvVarDict'
+_EnvVarDict.__qualname__ = 'Context.EnvVarDict'
+
 
 class Context(metaclass=_ContextMeta):
 
-    EnvVarDict = NotImplemented
+    EnvVarDict = NotImplemented  # only Context should construct an _EnvVarDict
 
-    def __init__(self, path_cls=dlb.fs.Path):
-        if not (isinstance(path_cls, type) and issubclass(path_cls, dlb.fs.Path)):
+    def __init__(self, path_cls=fs.Path):
+        if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' is not a subclass of 'dlb.fs.Path'")
-        self._path_cls = path_cls  # type: dlb.fs.Path
+        self._path_cls = path_cls  # type: fs.Path
         self._root_specifics = None  # type: typing.Optional[_RootSpecifics]
         self._env = None  # type: typing.Optional[_EnvVarDict]
 
@@ -503,7 +506,7 @@ class Context(metaclass=_ContextMeta):
         return _contexts[-1]
 
     @property
-    def path_cls(self) -> dlb.fs.Path:
+    def path_cls(self) -> fs.Path:
         return self._path_cls
 
     @property
@@ -550,3 +553,9 @@ class Context(metaclass=_ContextMeta):
         if self._root_specifics:
             self._root_specifics.cleanup_and_close()
             self._root_specifics = None
+
+
+m = '.'.join(Context.__module__.split('.')[:-1])
+Context.__module__ = m
+_EnvVarDict.__module__ = m
+del m

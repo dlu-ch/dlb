@@ -1,1 +1,1 @@
-__VERSION__ = (0, 0, 1)  # TODO generate with Git
+from .version import __VERSION__

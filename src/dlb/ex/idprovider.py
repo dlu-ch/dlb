@@ -3,11 +3,14 @@ import collections
 import typing
 import platform
 import marshal
-import dlb.ex
+from . import context
+from . import tool
+from .. import fs
+from .. import version
 assert sys.version_info >= (3, 6)
 
 
-PLATFORM_ID = marshal.dumps((platform.platform(), sys.hexversion, dlb.__VERSION__))
+PLATFORM_ID = marshal.dumps((platform.platform(), sys.hexversion, version.__VERSION__))
 
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_id', 'definition_paths'))
 
@@ -15,14 +18,14 @@ ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_id', 'definition
 _registered_info_by_tool = {}
 
 
-def _get_and_register_tool_identity(tool: dlb.ex.Tool) -> typing.Tuple[bytes, dlb.fs.Path]:
+def _get_and_register_tool_identity(tool: tool.Tool) -> typing.Tuple[bytes, fs.Path]:
     # Return a ToolIdentity with a permanent local id of tool and the managed tree path of the defining source file,
     # if it is in the managed tree.
 
     definition_path_in_managed_tree = None
     definition_path, in_archive_path, lineno = tool.definition_location
     try:
-        definition_path_in_managed_tree = dlb.ex.Context.get_managed_tree_path(definition_path)
+        definition_path_in_managed_tree = context.Context.get_managed_tree_path(definition_path)
         definition_path = definition_path_in_managed_tree.as_string()
         if definition_path.startswith('./'):
             definition_path = definition_path[2:]
@@ -33,8 +36,8 @@ def _get_and_register_tool_identity(tool: dlb.ex.Tool) -> typing.Tuple[bytes, dl
     return permanent_local_id, definition_path_in_managed_tree
 
 
-def get_and_register_tool_info(tool: dlb.ex.Tool) -> ToolInfo:
-    # Return a ToolInfo with a permanent local id of tool and a set of all source file in the managed tree in
+def get_and_register_tool_info(tool_: tool.Tool) -> ToolInfo:
+    # Return a ToolInfo with a permanent local id of tool_ and a set of all source file in the managed tree in
     # which the class or one of its baseclass of type `base_cls` is defined.
     #
     # The result is cached.
@@ -45,7 +48,7 @@ def get_and_register_tool_info(tool: dlb.ex.Tool) -> ToolInfo:
     # objects. So, its up to the programmer of the tool, how much variability a tool with a unchanged
     # permanent local id can show.
 
-    if not issubclass(tool, dlb.ex.Tool):
+    if not issubclass(tool_, tool.Tool):
         raise TypeError("'tool' must be a 'dlb.ex.Tool'")
 
     info = _registered_info_by_tool.get(tool)
@@ -55,16 +58,16 @@ def get_and_register_tool_info(tool: dlb.ex.Tool) -> ToolInfo:
     # collect the managed tree paths of tool and its base classes that are tools
 
     definition_paths = set()
-    for c in reversed(tool.mro()):
-        if c is not tool and issubclass(c, dlb.ex.Tool):
+    for c in reversed(tool_.mro()):
+        if c is not tool_ and issubclass(c, tool.Tool):
             base_info = get_and_register_tool_info(c)
             definition_paths = definition_paths.union(base_info.definition_paths)
 
-    permanent_local_id, definition_path = _get_and_register_tool_identity(tool)
+    permanent_local_id, definition_path = _get_and_register_tool_identity(tool_)
     if definition_path is not None:
         definition_paths.add(definition_path)
 
     info = ToolInfo(permanent_local_id=permanent_local_id, definition_paths=definition_paths)
-    _registered_info_by_tool[tool] = info
+    _registered_info_by_tool[tool_] = info
 
     return info

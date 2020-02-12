@@ -4,9 +4,8 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-import time
-import dlb.ex
 import dlb.ex.idprovider
+import time
 import tools_for_test
 
 

@@ -699,3 +699,6 @@ class TokensTemplate:
             else:
                 raise TypeError(msg_tmpl.format(_node_path_to_str(child_node_path)))
         return scanned_root
+
+
+TokensTemplate.__module__ = '.'.join(TokensTemplate.__module__.split('.')[:-1])

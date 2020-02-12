@@ -4,10 +4,10 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
+import dlb.ex
+from dlb.ex import Tool
 import tempfile
 import zipfile
-import dlb.ex.tool
-from dlb.ex.tool import Tool
 import unittest
 import tools_for_test
 
@@ -18,6 +18,23 @@ class TestModule(unittest.TestCase):
         import dlb.ex.tool
         self.assertEqual(['Tool'], dlb.ex.tool.__all__)
         self.assertTrue('Tool' in dir(dlb.ex))
+
+
+class InheritanceTest(unittest.TestCase):
+
+    def test_hierarchy_matches_nesting(self):
+        self.assertTrue(issubclass(Tool.Input, Tool.Dependency))
+        self.assertTrue(issubclass(Tool.Input.RegularFile, Tool.Input))
+        self.assertTrue(issubclass(Tool.Input.NonRegularFile, Tool.Input))
+        self.assertTrue(issubclass(Tool.Input.Directory, Tool.Input))
+        self.assertTrue(issubclass(Tool.Input.EnvVar, Tool.Input))
+
+        self.assertTrue(issubclass(Tool.Intermediate, Tool.Dependency))
+
+        self.assertTrue(issubclass(Tool.Output, Tool.Dependency))
+        self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
+        self.assertTrue(issubclass(Tool.Output.NonRegularFile, Tool.Output))
+        self.assertTrue(issubclass(Tool.Output.Directory, Tool.Output))
 
 
 class AttributeDefineTest(unittest.TestCase):
@@ -82,20 +99,18 @@ class AttributeDefineTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = None
-        self.assertEqual(
-            str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.DependencyRole'")
+        msg = "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
+        self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
-                x_y_z = Tool.DependencyRole()
-        self.assertEqual(
-            str(cm.exception),
-            "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.DependencyRole'")
+                x_y_z = Tool.Dependency()
+        msg = "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
+        self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
-                x_y_z = Tool.DependencyRole[:]()
+                x_y_z = Tool.Dependency[:]()
 
     # noinspection PyUnusedLocal,PyRedeclaration
     def test_some_methods_cannot_be_overridden(self):
@@ -103,25 +118,25 @@ class AttributeDefineTest(unittest.TestCase):
             class ATool(Tool):
                 def __new__(cls):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__new__'")
+        self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__new__'", str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
                 def __init__(self):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__init__'")
+        self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__init__'", str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
                 def __setattr__(self):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__setattr__'")
+        self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__setattr__'", str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
                 def __delattr__(self):
                     pass
-        self.assertEqual(str(cm.exception), "must not be overridden in a 'dlb.ex.Tool': '__delattr__'")
+        self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__delattr__'", str(cm.exception))
 
     def test_can_inherit_invalid_from_nontool(self):
         class ATool(Tool):
@@ -176,9 +191,9 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             class BTool(ATool):
                 source_file = Tool.Output.RegularFile()
         self.assertEqual(
-            str(cm.exception),
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            str(cm.exception))
 
     # noinspection PyUnusedLocal
     def test_cannot_override_file_with_director(self):
@@ -189,9 +204,9 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             class BTool(ATool):
                 source_file = Tool.Input.Directory()
         self.assertEqual(
-            str(cm.exception),
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            str(cm.exception))
 
     # noinspection PyUnusedLocal
     def test_can_only_override_path_with_more_restrictive_path(self):
@@ -207,25 +222,25 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             class DTool(BTool):  # cls is less restrictive
                 source_file = Tool.Input.RegularFile()
         self.assertEqual(
-            str(cm.exception),
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            str(cm.exception))
 
     # noinspection PyUnusedLocal
     def test_can_only_override_nonrequired_with_required(self):
         class ATool(Tool):
             source_file = Tool.Input.RegularFile(required=False)
 
-        class BTool(ATool):  # ok, required=True is more restrictive than (required=False
+        class BTool(ATool):  # ok, required=True is more restrictive than required=False
             source_file = Tool.Input.RegularFile(required=True)
 
         with self.assertRaises(TypeError) as cm:
             class CTool(BTool):
                 source_file = Tool.Input.RegularFile(required=False)
         self.assertRegex(
-            str(cm.exception),
             r"^attribute 'source_file' of base class may only be overridden by a "
-            r"<class 'dlb.ex.tool.Tool.Input.RegularFile'> at least as restrictive$")
+            r"<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive$",
+            str(cm.exception))
 
     # noinspection PyUnusedLocal
     def test_can_only_override_with_similar_multiplicity(self):
@@ -237,17 +252,17 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             class BTool(ATool):
                 source_files = Tool.Input.RegularFile()
         self.assertEqual(
-            str(cm.exception),
             "attribute 'source_files' of base class may only be overridden by a "
-            "<class 'dlb.ex.tool.Tool.Input.RegularFile[1:]'> at least as restrictive")
+            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             class CTool(ATool):
                 linked_file = Tool.Output.RegularFile[:]()
         self.assertEqual(
-            str(cm.exception),
             "attribute 'linked_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.tool.Tool.Output.RegularFile'> at least as restrictive")
+            "<class 'dlb.ex.Tool.Output.RegularFile'> at least as restrictive",
+            str(cm.exception))
 
 
 class WriteProtectionTest(unittest.TestCase):
@@ -288,13 +303,12 @@ class ConstructionTest(unittest.TestCase):
         map_file = Tool.Output.RegularFile(required=False)
 
     class CTool(Tool):
-        envvar = Tool.Input.EnvVar(name='XYZ', restriction='.*', example='', required=False)
+        envvar = Tool.Input.EnvVar(restriction='.*', example='', required=False)
 
     def test_tool_can_be_constructed_without_parameters(self):
         Tool()
 
     def test_dependencies_are_assigned(self):
-
         t = ConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o')
         self.assertEqual(t.source_file, 'x.cpp')
         self.assertEqual(t.object_file, 'x.cpp.o')
@@ -317,20 +331,6 @@ class ConstructionTest(unittest.TestCase):
             r"^'temporary_file' is not a dependency role of .*: "
             r"'source_file', 'object_file', 'map_file'$")
 
-    def test_must_envvar_has_initial_of_environment(self):
-        os.environ['XYZ'] = 'abc'
-        self.assertEqual(ConstructionTest.CTool().envvar, 'abc')
-
-        del os.environ['XYZ']
-        self.assertIsNone(ConstructionTest.CTool().envvar)
-
-    def test_must_not_have_parameter_for_role_with_initial(self):
-        with self.assertRaises(TypeError) as cm:
-            ConstructionTest.CTool(envvar='uvw')
-        self.assertEqual(
-            str(cm.exception),
-            "dependency role 'envvar' with automatic initialization must not be initialized by keyword parameter")
-
 
 class ReprTest(unittest.TestCase):
 
@@ -351,28 +351,44 @@ class ReprTest(unittest.TestCase):
     class DTool(CTool, X):
         object_file = Tool.Output.RegularFile()
 
+    def test_name_matches_class(self):
+        self.assertEqual(Tool.__name__, 'Tool')
+        self.assertEqual(Tool.Dependency.__name__, 'Dependency')
+        self.assertEqual(Tool.Input.__name__, 'Input')
+        self.assertEqual(Tool.Intermediate.__name__, 'Intermediate')
+        self.assertEqual(Tool.Output.__name__, 'Output')
+
+    def test_repr_name_reflects_recommended_module(self):
+        self.assertEqual(repr(Tool), "<class 'dlb.ex.Tool'>")
+
+    def test_repr_name_reflects_nesting(self):
+        self.assertEqual(repr(Tool.Dependency), "<class 'dlb.ex.Tool.Dependency'>")
+        self.assertEqual(repr(Tool.Input), "<class 'dlb.ex.Tool.Input'>")
+        self.assertEqual(repr(Tool.Input.RegularFile), "<class 'dlb.ex.Tool.Input.RegularFile'>")
+        self.assertEqual(repr(Tool.Output), "<class 'dlb.ex.Tool.Output'>")
+        self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.ex.Tool.Output.RegularFile'>")
+        self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.ex.Tool.Intermediate'>")
+
     def test_shows_name_and_dependency_rules(self):
         self.assertEqual(repr(Tool()), 'Tool()')
 
         t = ReprTest.BTool(source_file='x.cpp', object_file='x.cpp.o')
-        self.assertEqual(
-            repr(t),
-            "ReprTest.BTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'), map_file=None)")
+        text = "ReprTest.BTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'), map_file=None)"
+        self.assertEqual(text, repr(t))
 
         class CTool(Tool):
             pass
 
-        self.assertEqual(repr(CTool()), "ReprTest.test_shows_name_and_dependency_rules.<locals>.CTool()")
+        self.assertEqual("ReprTest.test_shows_name_and_dependency_rules.<locals>.CTool()", repr(CTool()))
 
     def test_inherit_invalid_from_nontool(self):
-
         t = ReprTest.DTool(source_file='x.cpp', object_file='x.cpp.o')
-        self.assertEqual(repr(t), "ReprTest.DTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'))")
+        self.assertEqual("ReprTest.DTool(source_file=Path('x.cpp'), object_file=Path('x.cpp.o'))", repr(t))
 
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_of_tools_are_correct(self):
-        lineno = 375  # of this line
+        lineno = 391  # of this line
 
         class A(Tool):
             pass
