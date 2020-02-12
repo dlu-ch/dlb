@@ -8,15 +8,15 @@ import collections
 import unittest
 
 
-class TestModule(unittest.TestCase):
+class ImportTest(unittest.TestCase):
 
-    def test_import(self):
+    def test_all_is_correct(self):
         import dlb.ex.tmpl
         self.assertEqual({'TokensTemplate'}, set(dlb.ex.tmpl.__all__))
         self.assertTrue('TokensTemplate' in dir(dlb.ex))
 
 
-class TestSyntax(unittest.TestCase):
+class SyntaxTest(unittest.TestCase):
 
     def test_invalid_type(self):
         with self.assertRaises(TypeError):
@@ -176,7 +176,7 @@ class TestSyntax(unittest.TestCase):
                          str(cm.exception))
 
 
-class TestNameLookup(unittest.TestCase):
+class NameLookupTest(unittest.TestCase):
 
     def test_define(self):
         tmpl = TokensTemplate()
@@ -333,7 +333,7 @@ class TestNameLookup(unittest.TestCase):
                          str(cm.exception))
 
 
-class TestExpansion(unittest.TestCase):
+class ExpansionTest(unittest.TestCase):
 
     def test_escape(self):
         self.assertEqual('', TokensTemplate.escape_literal(''))

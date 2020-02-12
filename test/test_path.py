@@ -8,7 +8,7 @@ import pathlib
 import unittest
 
 
-class TestConstruction(unittest.TestCase):
+class ConstructionTest(unittest.TestCase):
 
     def test_from_absolute_as_string(self):
         p = dlb.fs.Path('/x//../yz/.////u')
@@ -116,7 +116,7 @@ class TestConstruction(unittest.TestCase):
         self.assertEqual("argument should be a path or str object, not <class 'int'>", str(cm.exception))
 
 
-class TestStringRepresentation(unittest.TestCase):
+class StringRepresentationTest(unittest.TestCase):
 
     def test_repr(self):
         p = dlb.fs.Path('x//../yz/.////u')
@@ -129,7 +129,7 @@ class TestStringRepresentation(unittest.TestCase):
         self.assertEqual("use 'repr()' or 'native' instead", str(cm.exception))
 
 
-class TestConversionFromAnToPurePath(unittest.TestCase):
+class ConversionFromAnToPurePathTest(unittest.TestCase):
 
     def test_posix_roundtrip_is_lossless(self):
         pp = pathlib.PurePosixPath('/a/b/../c/')
@@ -166,7 +166,7 @@ class TestConversionFromAnToPurePath(unittest.TestCase):
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
 
-class TestIsDirConstruction(unittest.TestCase):
+class IsDirConstructionTest(unittest.TestCase):
 
     def test_isdir_is_preserved_from_string(self):
         p = dlb.fs.Path('x')
@@ -192,7 +192,7 @@ class TestIsDirConstruction(unittest.TestCase):
         self.assertTrue(p.is_dir())
 
 
-class TestOrderingAndComparison(unittest.TestCase):
+class OrderingAndComparisonTest(unittest.TestCase):
 
     def test_comparison_is_casesensitive_on_all_platforms(self):
         a = dlb.fs.Path('/c:/')
@@ -229,7 +229,7 @@ class TestOrderingAndComparison(unittest.TestCase):
         self.assertEqual(len(s), 3)
 
 
-class TestTransformation(unittest.TestCase):
+class TransformationTest(unittest.TestCase):
 
     def test_appending_relative_to_dir_is_possible(self):
         p = dlb.fs.Path('..') / dlb.fs.Path('a/b/c/d')
@@ -310,7 +310,7 @@ class TestTransformation(unittest.TestCase):
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
 
 
-class TestDirectoryListing(unittest.TestCase):
+class DirectoryListingTest(unittest.TestCase):
 
     def setUp(self):
         import tempfile
@@ -432,7 +432,7 @@ class TestDirectoryListing(unittest.TestCase):
         self.assertEqual("'cls' must be None or a subclass of 'dlb.fs.Path'", str(cm.exception))
 
 
-class TestNative(unittest.TestCase):
+class NativeTest(unittest.TestCase):
 
     def test_str_prefixes_relative_with_dot(self):
         s = str(dlb.fs.Path('x').native)
@@ -467,7 +467,7 @@ class TestNative(unittest.TestCase):
         self.assertEqual(CheckCountingPath.n, 2)
 
 
-class TestRelativeRestrictions(unittest.TestCase):
+class RelativeRestrictionsTest(unittest.TestCase):
 
     def test_relative_permitted(self):
         dlb.fs.RelativePath('a/b/c')
@@ -478,7 +478,7 @@ class TestRelativeRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'RelativePath': '/a/b/c' (must be relative)", str(cm.exception))
 
 
-class TestAbsoluteRestrictions(unittest.TestCase):
+class AbsoluteRestrictionsTest(unittest.TestCase):
 
     def test_absolute_permitted(self):
         dlb.fs.AbsolutePath('/a/b/c')
@@ -489,7 +489,7 @@ class TestAbsoluteRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'AbsolutePath': 'a/b/c' (must be absolute)", str(cm.exception))
 
 
-class TestNormalizedRestrictions(unittest.TestCase):
+class NormalizedRestrictionsTest(unittest.TestCase):
 
     def test_relative_permitted(self):
         dlb.fs.NormalizedPath('/a/b/c')
@@ -503,7 +503,7 @@ class TestNormalizedRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'NormalizedPath': 'a/../b' (must be normalized)", str(cm.exception))
 
 
-class TestNoSpaceRestrictions(unittest.TestCase):
+class NoSpaceRestrictionsTest(unittest.TestCase):
 
     def test_space_not_permitted(self):
         with self.assertRaises(ValueError) as cm:
@@ -511,7 +511,7 @@ class TestNoSpaceRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'NoSpacePath': 'a b' (must not contain space)", str(cm.exception))
 
 
-class TestPosixRestrictions(unittest.TestCase):
+class PosixRestrictionsTest(unittest.TestCase):
 
     def test_null_not_permitted(self):
         # IEEE Std 1003.1-2008, §3.170
@@ -520,7 +520,7 @@ class TestPosixRestrictions(unittest.TestCase):
         self.assertEqual("invalid path for 'PosixPath': 'a\\x00b' (must not contain NUL)", str(cm.exception))
 
 
-class TestWindowsRestrictions(unittest.TestCase):
+class WindowsRestrictionsTest(unittest.TestCase):
 
     def test_backslash_not_permitted(self):
         with self.assertRaises(ValueError) as cm:
@@ -573,7 +573,7 @@ class TestWindowsRestrictions(unittest.TestCase):
         dlb.fs.WindowsPath('a/b./c ')
 
 
-class TestPortableWindowsRestrictions(unittest.TestCase):
+class PortableWindowsRestrictionsTest(unittest.TestCase):
 
     def test_space_at_end_of_component_not_permitted(self):
         with self.assertRaises(ValueError) as cm:

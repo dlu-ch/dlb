@@ -8,7 +8,7 @@ import unittest
 import random
 
 
-class TestConstruction(unittest.TestCase):
+class ConstructionTest(unittest.TestCase):
 
     def test_succeeds_from_nonnegative_int(self):
         m = dlb.ex.mult.MultiplicityRange(3)
@@ -63,7 +63,7 @@ class TestConstruction(unittest.TestCase):
         self.assertEqual(m.as_slice, slice(3, 4, 1))
 
 
-class TestCompare(unittest.TestCase):
+class CompareTest(unittest.TestCase):
 
     def test_normalized_equal_are_equal(self):
         m1 = dlb.ex.mult.MultiplicityRange(slice(2, 2))
@@ -83,7 +83,7 @@ class TestCompare(unittest.TestCase):
         self.assertFalse(m1 == m2)
 
 
-class TestStr(unittest.TestCase):
+class StrTest(unittest.TestCase):
 
     def test_empty_is_correct(self):
         m = dlb.ex.mult.MultiplicityRange(slice(2, 2))
@@ -102,14 +102,14 @@ class TestStr(unittest.TestCase):
         self.assertEqual('[:]', str(m))
 
 
-class TestRepr(unittest.TestCase):
+class ReprTest(unittest.TestCase):
 
     def test_upper_bound_is_correct(self):
         m = dlb.ex.mult.MultiplicityRange(slice(None, 4))
         self.assertEqual('MultiplicityRange(slice(0, 4, 1))', repr(m))
 
 
-class TestMatchesCount(unittest.TestCase):
+class MatchesCountTest(unittest.TestCase):
 
     def test_integer_matches_exact_count(self):
         m = dlb.ex.mult.MultiplicityRange(2)
@@ -140,40 +140,40 @@ class TestMatchesCount(unittest.TestCase):
                 pass
 
 
-class TestMultiplicityHolder(unittest.TestCase):
+class MultiplicityHolderTest(unittest.TestCase):
 
     class M(dlb.ex.mult.MultiplicityHolder):
         def __init__(self, a, b=1):
             super().__init__()
 
     def test_has_no_multiplicity_when_constructed_directly(self):
-        m = TestMultiplicityHolder.M(1, b=2)
-        self.assertIsInstance(m, TestMultiplicityHolder.M)
+        m = MultiplicityHolderTest.M(1, b=2)
+        self.assertIsInstance(m, MultiplicityHolderTest.M)
         self.assertIsNone(m.multiplicity)
 
     def test_has_multiplicity_when_constructed_by_slice(self):
-        m = TestMultiplicityHolder.M[:3](1, b=2)
-        self.assertIsInstance(m, TestMultiplicityHolder.M)
+        m = MultiplicityHolderTest.M[:3](1, b=2)
+        self.assertIsInstance(m, MultiplicityHolderTest.M)
         self.assertEqual(dlb.ex.mult.MultiplicityRange(slice(0, 3)), m.multiplicity)
 
     def test_fails_for_nested_multiplicity(self):
         with self.assertRaises(TypeError) as cm:
-            TestMultiplicityHolder.M[:3][2](1, b=2)
+            MultiplicityHolderTest.M[:3][2](1, b=2)
         self.assertEqual("'M' with multiplicity is not subscriptable", str(cm.exception))
 
     def test_multiplicity_cannot_be_assigned(self):
         with self.assertRaises(AttributeError):
-            TestMultiplicityHolder.M(1, b=2).multiplicity = None
+            MultiplicityHolderTest.M(1, b=2).multiplicity = None
 
     def test_name_contains_multiplicity(self):
-        M = TestMultiplicityHolder.M[:3]
-        self.assertEqual(TestMultiplicityHolder.M.__name__ + '[:3]', M.__name__)
-        self.assertEqual(TestMultiplicityHolder.M.__qualname__ + '[:3]', M.__qualname__)
+        M = MultiplicityHolderTest.M[:3]
+        self.assertEqual(MultiplicityHolderTest.M.__name__ + '[:3]', M.__name__)
+        self.assertEqual(MultiplicityHolderTest.M.__qualname__ + '[:3]', M.__qualname__)
 
     def test_repr_is_meaningful(self):
-        r = repr(TestMultiplicityHolder.M[:3])
+        r = repr(MultiplicityHolderTest.M[:3])
         regex = (
             r"\A<dlb\.ex\.mult\._MultiplicityHolderProxy object at 0x[0-9a-fA-F]+ for "
-            r"<class 'test_mult\.TestMultiplicityHolder\.M'> with multiplicity \[:3\]>\Z"
+            r"<class 'test_mult\.MultiplicityHolderTest\.M'> with multiplicity \[:3\]>\Z"
         )
         self.assertRegex(r, regex)

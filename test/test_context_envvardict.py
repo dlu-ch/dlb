@@ -10,17 +10,7 @@ import os
 import tools_for_test
 
 
-class TechnicalInterfaceTest(tools_for_test.TemporaryDirectoryTestCase):
-
-    def test_empty_dict_access(self):
-        os.mkdir('.dlbroot')
-
-        with dlb.ex.Context() as c:
-            self.assertEqual(len(c.env), 0)
-            self.assertFalse('x' in c.env)
-            self.assertTrue('x' not in c.env)
-            self.assertEqual([k for k in c.env], [])
-            self.assertEqual({k: v for k, v in c.env.items()}, dict())
+class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_import_fails_if_argument_type_is_incorrect(self):
         os.mkdir('.dlbroot')
@@ -51,32 +41,6 @@ class TechnicalInterfaceTest(tools_for_test.TemporaryDirectoryTestCase):
                 c.env.import_from_outer('A_B_C', r'X.*Z', example='')
             with self.assertRaisesRegex(ValueError, regex):
                 c.env.import_from_outer('A_B_C', re.compile(r'X.*Z'), example='')
-
-    def test_env_get_env_of_active_context(self):
-        os.mkdir('.dlbroot')
-
-        c0 = dlb.ex.Context()
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            c0.env
-        with c0:
-            env0 = c0.env
-            self.assertIs(c0.env, env0)
-            self.assertIs(dlb.ex.Context.env, env0)
-            with dlb.ex.Context() as c1:
-                env1 = c1.env
-                self.assertIs(c0.env, env0)
-                self.assertIs(c1.env, env1)
-                self.assertIs(dlb.ex.Context.env, env0)
-                self.assertIs(dlb.ex.Context.active.env, env1)
-                with dlb.ex.Context() as c2:
-                    env2 = c2.env
-                    self.assertIs(c0.env, env0)
-                    self.assertIs(c1.env, env1)
-                    self.assertIs(c2.env, env2)
-                    self.assertIs(dlb.ex.Context.env, env0)
-                    self.assertIs(dlb.ex.Context.active.env, env2)
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            c0.env
 
     def test_after_import_envvar_is_imported(self):
         os.mkdir('.dlbroot')
@@ -177,6 +141,62 @@ class TechnicalInterfaceTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(dlb.ex.Context.active.env['A_B_C'], 'XYZ')
             del dlb.ex.Context.active.env['A_B_C']
 
+    def test_import_fails_on_inactive_context(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context() as c0:
+            env0 = c0.env
+            with dlb.ex.Context() as c1:
+                env1 = c1.env
+                with dlb.ex.Context():
+                    regex = (
+                        r"(?m)"
+                        r"\A'env' of an inactive context must not be modified\n"
+                        r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
+                    )
+                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                        env0.import_from_outer('A_B_C', r'X.*Z', example='XZ')
+                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                        env1.import_from_outer('A_B_C', r'X.*Z', example='XZ')
+
+
+class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_empty_dict_access(self):
+        os.mkdir('.dlbroot')
+
+        with dlb.ex.Context() as c:
+            self.assertEqual(len(c.env), 0)
+            self.assertFalse('x' in c.env)
+            self.assertTrue('x' not in c.env)
+            self.assertEqual([k for k in c.env], [])
+            self.assertEqual({k: v for k, v in c.env.items()}, dict())
+
+    def test_env_returns_env_of_active_context(self):
+        os.mkdir('.dlbroot')
+
+        c0 = dlb.ex.Context()
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            c0.env
+        with c0:
+            env0 = c0.env
+            self.assertIs(c0.env, env0)
+            self.assertIs(dlb.ex.Context.env, env0)
+            with dlb.ex.Context() as c1:
+                env1 = c1.env
+                self.assertIs(c0.env, env0)
+                self.assertIs(c1.env, env1)
+                self.assertIs(dlb.ex.Context.env, env0)
+                self.assertIs(dlb.ex.Context.active.env, env1)
+                with dlb.ex.Context() as c2:
+                    env2 = c2.env
+                    self.assertIs(c0.env, env0)
+                    self.assertIs(c1.env, env1)
+                    self.assertIs(c2.env, env2)
+                    self.assertIs(dlb.ex.Context.env, env0)
+                    self.assertIs(dlb.ex.Context.active.env, env2)
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            c0.env
+
     def test_deletion_fails_if_undefined(self):
         os.mkdir('.dlbroot')
 
@@ -203,23 +223,6 @@ class TechnicalInterfaceTest(tools_for_test.TemporaryDirectoryTestCase):
                 with dlb.ex.Context():
                     with self.assertRaisesRegex(AttributeError, regex):
                         dlb.ex.Context.active.env['A_B_C'] = 'XyZ'
-
-    def test_import_fails_on_inactive_context(self):
-        os.mkdir('.dlbroot')
-        with dlb.ex.Context() as c0:
-            env0 = c0.env
-            with dlb.ex.Context() as c1:
-                env1 = c1.env
-                with dlb.ex.Context():
-                    regex = (
-                        r"(?m)"
-                        r"\A'env' of an inactive context must not be modified\n"
-                        r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
-                    )
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
-                        env0.import_from_outer('A_B_C', r'X.*Z', example='XZ')
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
-                        env1.import_from_outer('A_B_C', r'X.*Z', example='XZ')
 
     def test_assignment_fails_on_inactive_context(self):
         os.mkdir('.dlbroot')
@@ -260,6 +263,9 @@ class TechnicalInterfaceTest(tools_for_test.TemporaryDirectoryTestCase):
                         del env0['A_B_C']
                     with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
                         del env1['A_B_C']
+
+
+class UsageTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_example(self):
         os.mkdir('.dlbroot')

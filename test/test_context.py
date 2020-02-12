@@ -11,9 +11,9 @@ import unittest
 import tools_for_test
 
 
-class TechnicalInterfaceTest(unittest.TestCase):
+class ImportTest(unittest.TestCase):
 
-    def test_import(self):
+    def test_all_is_correct(self):
         import dlb.ex.context
         self.assertEqual({
             'Context',
@@ -30,6 +30,9 @@ class TechnicalInterfaceTest(unittest.TestCase):
         rs = set(n for n in dlb.ex.context._RootSpecifics.__dict__ if not n.startswith('_'))
         mc = set(n for n in dlb.ex.context._ContextMeta.__dict__ if not n.startswith('_'))
         self.assertEqual(set(), rs.intersection(mc))
+
+
+class AccessTest(unittest.TestCase):
 
     def test_public_attribute_are_readonly(self):
         with self.assertRaises(AttributeError):

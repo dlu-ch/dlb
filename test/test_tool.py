@@ -12,9 +12,9 @@ import unittest
 import tools_for_test
 
 
-class TestModule(unittest.TestCase):
+class ImportTest(unittest.TestCase):
 
-    def test_import(self):
+    def test_all_is_correct(self):
         import dlb.ex.tool
         self.assertEqual({
             'Tool',
