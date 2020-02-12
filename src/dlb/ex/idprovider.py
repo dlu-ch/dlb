@@ -10,7 +10,7 @@ from .. import version
 assert sys.version_info >= (3, 6)
 
 
-PLATFORM_ID = marshal.dumps((platform.platform(), sys.hexversion, version.__VERSION__))
+PLATFORM_ID = marshal.dumps((platform.platform(), sys.hexversion, version.__version__))
 
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_id', 'definition_paths'))
 
