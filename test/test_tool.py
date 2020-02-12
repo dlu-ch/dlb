@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# dlb - a Pythonic build tool
+# Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
+
 import sys
 import os.path
 here = os.path.dirname(__file__) or os.curdir
@@ -420,7 +424,7 @@ class ReprTest(unittest.TestCase):
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_of_tools_are_correct(self):
-        lineno = 423  # of this line
+        lineno = 427  # of this line
 
         class A(Tool):
             pass

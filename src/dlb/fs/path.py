@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# dlb - a Pythonic build tool
+# Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
+
 __all__ = (
     'Path', 'RelativePath', 'AbsolutePath', 'NormalizedPath', 'NoSpacePath',
     'PosixPath', 'PortablePosixPath',
