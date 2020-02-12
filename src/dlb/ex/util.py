@@ -4,7 +4,6 @@ assert sys.version_info >= (3, 6)
 
 __all__ = []
 
-
 _non_container_fundamental_types = (bool, int, float, complex, str, bytes)
 
 
@@ -48,3 +47,8 @@ def make_fundamental(obj, replace_unordered_by_tuple=False):
             f"or an iterable of only such objects"
         )
         raise TypeError(msg) from None
+
+
+def remove_last_component_from_dotted_module_name(cls, ignore_missing_module=False):
+    if not ignore_missing_module or hasattr(cls, '__module__'):
+        cls.__module__ = '.'.join(cls.__module__.split('.')[:-1])

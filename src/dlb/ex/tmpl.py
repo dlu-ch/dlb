@@ -4,6 +4,7 @@ import collections
 import collections.abc
 import enum
 import inspect
+from . import util
 assert sys.version_info >= (3, 6)
 
 
@@ -701,4 +702,6 @@ class TokensTemplate:
         return scanned_root
 
 
-TokensTemplate.__module__ = '.'.join(TokensTemplate.__module__.split('.')[:-1])
+for exported_name in __all__:
+    util.remove_last_component_from_dotted_module_name(vars()[exported_name])
+del exported_name

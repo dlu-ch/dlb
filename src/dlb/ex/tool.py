@@ -4,6 +4,7 @@ import os
 import typing
 import inspect
 from . import depend
+from . import util
 assert sys.version_info >= (3, 6)
 
 
@@ -226,4 +227,9 @@ class _ToolMeta(type):
 class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
 
+
 type.__setattr__(Tool, '__module__', '.'.join(_ToolBase.__module__.split('.')[:-1]))
+for exported_name in __all__:
+    if exported_name != 'Tool':
+        util.remove_last_component_from_dotted_module_name(vars()[exported_name])
+del exported_name

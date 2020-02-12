@@ -4,7 +4,7 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-from dlb.ex.repr import make_fundamental
+from dlb.ex.util import make_fundamental
 import collections
 import unittest
 

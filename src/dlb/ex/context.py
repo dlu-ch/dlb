@@ -9,6 +9,7 @@ import typing
 import tempfile
 import shutil
 import sqlite3
+from . import util
 from .. import fs
 assert sys.version_info >= (3, 6)
 
@@ -60,7 +61,7 @@ def exception_to_string(e):
     return e.__class__.__qualname__
 
 
-# TODO implement safer version (see ???)
+# TODO implement safer version
 # TODO move to appropriate plae
 def remove_filesystem_object(path, ignore_non_existing=False):
     try:
@@ -480,8 +481,10 @@ class _RootSpecifics:
             else:
                 raise first_exception
 
+
 _EnvVarDict.__name__ = 'EnvVarDict'
 _EnvVarDict.__qualname__ = 'Context.EnvVarDict'
+util.remove_last_component_from_dotted_module_name(_EnvVarDict)
 
 
 class Context(metaclass=_ContextMeta):
@@ -555,7 +558,6 @@ class Context(metaclass=_ContextMeta):
             self._root_specifics = None
 
 
-m = '.'.join(Context.__module__.split('.')[:-1])
-Context.__module__ = m
-_EnvVarDict.__module__ = m
-del m
+for exported_name in __all__:
+    util.remove_last_component_from_dotted_module_name(vars()[exported_name])
+del exported_name
