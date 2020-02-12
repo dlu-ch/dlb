@@ -1,16 +1,16 @@
-import sys
-import re
-import os
-import functools
-import pathlib  # since Python 3.4
-assert sys.version_info >= (3, 6)
-
 __all__ = (
     'Path', 'RelativePath', 'AbsolutePath', 'NormalizedPath', 'NoSpacePath',
     'PosixPath', 'PortablePosixPath',
     'PortableWindowsPath', 'WindowsPath',
     'PortablePath'
 )
+
+import sys
+import re
+import os
+import functools
+import pathlib  # since Python 3.4
+assert sys.version_info >= (3, 6)
 
 
 # cannot derive easily from pathlib.Path without defining non-API members

@@ -4,6 +4,7 @@ from . import mult
 from . import context
 from .. import fs
 
+
 class Dependency(mult.MultiplicityHolder):
     # Each instance d represents a dependency role.
     # The return value of d.validate() is a concrete dependency, if d.multiplicity is None and

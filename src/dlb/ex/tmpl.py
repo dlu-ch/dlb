@@ -1,3 +1,5 @@
+__all__ = ('TokensTemplate',)
+
 import sys
 import re
 import collections
@@ -6,9 +8,6 @@ import enum
 import inspect
 from . import util
 assert sys.version_info >= (3, 6)
-
-
-__all__ = ['TokensTemplate']
 
 
 LITERAL_REGEX = re.compile(r'([^{}]|{{|}})+', re.DOTALL)

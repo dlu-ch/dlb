@@ -1,3 +1,5 @@
+__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError')
+
 import sys
 import re
 import os
@@ -22,7 +24,6 @@ RESERVED_NAME_REGEX = re.compile('^__[^_].*[^_]?__$')
 assert RESERVED_NAME_REGEX.match('__init__')
 assert not RESERVED_NAME_REGEX.match('__init')
 
-__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError')
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
 _tool_class_by_definition_location = {}

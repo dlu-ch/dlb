@@ -12,7 +12,7 @@ class TestModule(unittest.TestCase):
 
     def test_import(self):
         import dlb.ex.tmpl
-        self.assertEqual(['TokensTemplate'], dlb.ex.tmpl.__all__)
+        self.assertEqual({'TokensTemplate'}, set(dlb.ex.tmpl.__all__))
         self.assertTrue('TokensTemplate' in dir(dlb.ex))
 
 

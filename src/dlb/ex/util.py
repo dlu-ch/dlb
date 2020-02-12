@@ -1,8 +1,9 @@
+__all__ = ()
+
 import sys
 import collections.abc
 assert sys.version_info >= (3, 6)
 
-__all__ = []
 
 _non_container_fundamental_types = (bool, int, float, complex, str, bytes)
 
