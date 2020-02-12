@@ -22,7 +22,7 @@ RESERVED_NAME_REGEX = re.compile('^__[^_].*[^_]?__$')
 assert RESERVED_NAME_REGEX.match('__init__')
 assert not RESERVED_NAME_REGEX.match('__init')
 
-__all__ = ['Tool']
+__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError')
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
 _tool_class_by_definition_location = {}
@@ -32,44 +32,53 @@ class DefinitionAmbiguityError(SyntaxError):
     pass
 
 
+class DependencyRoleAssignmentError(ValueError):
+    pass
+
+
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class _ToolBase:
     def __init__(self, **kwargs):
         super().__init__()
 
-        dependency_names = self.__class__._dependency_names
+        # replace all dependency roles by concrete dependencies or None
 
-        dependency_names_to_assign = set()
-        for name in dependency_names:
-            #required????
-            dependency_names_to_assign.add(name)
-
+        # order is important:
+        dependency_names = self.__class__._dependency_names   # type: typing.Tuple[typing.Tuple, ...]
         names_of_assigned = set()
         for name, value in kwargs.items():
-            if name not in dependency_names_to_assign:
-                if name in dependency_names:
-                    msg = (
-                        f'dependency role {name!r} with automatic??? initialization must not be '
-                        f'initialized by keyword parameter'
-                    )
-                    raise TypeError(msg)
-                else:
-                    names = ', '.join(repr(n) for n in dependency_names)
-                    raise TypeError(f'{name!r} is not a dependency role of {self.__class__.__qualname__!r}: {names}')
+            if name not in dependency_names:
+                names = ', '.join(repr(n) for n in dependency_names)
+                msg = (
+                    f"keyword argument does not name a dependency role of {self.__class__.__qualname__!r}: {name!r}\n"
+                    f"  | dependency roles: {names}"
+                )
+                raise DependencyRoleAssignmentError(msg)
+
             role = getattr(self.__class__, name)
+            if not role.explicit:
+                msg = (
+                    f"keyword argument does name a non-explicit dependency role: {name!r}\n"
+                    f"  | non-explicit dependency must not be assigned at construction"
+                )
+                raise DependencyRoleAssignmentError(msg)
+
             if value is None:
                 validated_value = None
                 if role.required:
-                    raise ValueError('required dependency must not be None')
+                    msg = f"keyword argument for required dependency role must not be None: {name!r}"
+                    raise DependencyRoleAssignmentError(msg)
             else:
-                validated_value = role.validate(value, None)  #???
+                validated_value = role.validate(value, None)
+
             object.__setattr__(self, name, validated_value)
             names_of_assigned.add(name)
 
-        for name in sorted(set(dependency_names_to_assign) - names_of_assigned):
+        for name in sorted(set(dependency_names) - names_of_assigned):
             role = getattr(self.__class__, name)
-            if role.required:
-                raise TypeError(f'missing keyword parameter for required dependency role: {name!r}')
+            if role.required and role.explicit:
+                msg = f"missing keyword argument for required and explicit dependency role: {name!r}"
+                raise DependencyRoleAssignmentError(msg)
             object.__setattr__(self, name, None)
 
     # final
@@ -210,7 +219,7 @@ class _ToolMeta(type):
                 )
                 raise AttributeError(msg)
 
-    def _get_dependency_names(cls):
+    def _get_dependency_names(cls) -> typing.Tuple[typing.Tuple, ...]:
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
         pairs = [(-v.RANK, not v.required, n) for n, v in dependencies.items() if isinstance(v, depend.Dependency)]
         pairs.sort()

@@ -15,7 +15,15 @@ class TechnicalInterfaceTest(unittest.TestCase):
 
     def test_import(self):
         import dlb.ex.context
-        self.assertEqual(['Context'], dlb.ex.context.__all__)
+        self.assertEqual({
+            'Context',
+            'ContextNestingError',
+            'NotRunningError',
+            'ManagementTreeError',
+            'NoWorkingTreeError',
+            'WorkingTreeTimeError',
+            'NonActiveContextAccessError'},
+            set(dlb.ex.context.__all__))
         self.assertTrue('Context' in dir(dlb.ex))
 
     def test_attributes_of_contextmeta_and_rootsspecifics_to_not_clash(self):

@@ -75,6 +75,6 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
             )
 
         sys.path.insert(0, '.')  # !
-        with self.assertRaises(dlb.ex.tool.DefinitionAmbiguityError):
+        with self.assertRaises(dlb.ex.DefinitionAmbiguityError):
             import z  # needs a name different from the already loaded modules
         del sys.path[0]

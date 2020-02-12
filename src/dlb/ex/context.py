@@ -13,7 +13,15 @@ from . import util
 from .. import fs
 assert sys.version_info >= (3, 6)
 
-__all__ = ['Context']
+__all__ = (
+    'Context',
+    'ContextNestingError',
+    'NotRunningError',
+    'ManagementTreeError',
+    'NoWorkingTreeError',
+    'WorkingTreeTimeError',
+    'NonActiveContextAccessError'
+)
 
 _contexts = []
 

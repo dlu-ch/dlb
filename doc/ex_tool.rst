@@ -1,6 +1,7 @@
 :mod:`dlb.ex.tool` --- Dependency-aware tool execution
 ======================================================
-.. module:: dlb.ex
+
+.. module:: dlb.ex.tool
    :synopsis: Dependency-aware tool execution
 
 This module provides classes to represent tools to be executed during the build process (typically by calling
@@ -207,9 +208,8 @@ Concrete dependency role classes support the following methods and attributes:
    If ``unique`` is ``True``, concrete dependency whose :attr:`multiplicity` is not ``None`` will never contain
    the the same member more than once (this is ignored if :attr:`multiplicity` is ``None``).
 
-   If ``explicit`` is ``True``, the concrete dependency can and must be fully defined during construct of the
-   :term:`tool instance`. Otherwise, it cannot and must not by but automatically assigned by
-   :meth:`dlb.ex.Tool.run()`.
+   If ``explicit`` is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
+   is created. Otherwise, it cannot and must not be, but automatically assigned by :meth:`dlb.ex.Tool.run()`.
 
    .. param required: is a value other than ``None`` required?
    .. type required: bool
@@ -219,6 +219,9 @@ Concrete dependency role classes support the following methods and attributes:
    .. type unique: bool
 
    Each supported constructor argument is available as a property of the same name.
+
+   :raise DependencyRoleAssignmentError:
+      if the arguments of the constructor do not match the declared dependency roles of the class
 
    .. method:: validate(value, context)
 
@@ -459,3 +462,8 @@ Exceptions
 
    Raised at the definition of a subclass of :class:`dlb.ex.Tool`, when the location is unknown or another subclass of
    :class:`dlb.ex.Tool` was defined before at the same location.
+
+.. exception:: DependencyRoleAssignmentError
+
+   Raised at the construction of a subclass of :class:`dlb.ex.Tool`, when the arguments of the constructor do not
+   match the declared dependency roles of the class.

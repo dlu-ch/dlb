@@ -16,7 +16,11 @@ class TestModule(unittest.TestCase):
 
     def test_import(self):
         import dlb.ex.tool
-        self.assertEqual(['Tool'], dlb.ex.tool.__all__)
+        self.assertEqual({
+            'Tool',
+            'DefinitionAmbiguityError',
+            'DependencyRoleAssignmentError'},
+            set(dlb.ex.tool.__all__))
         self.assertTrue('Tool' in dir(dlb.ex))
 
 
@@ -301,11 +305,12 @@ class ConstructionTest(unittest.TestCase):
 
     class BTool(ATool):
         map_file = Tool.Output.RegularFile(required=False)
+        log_file = Tool.Output.RegularFile(required=True, explicit=False)
 
     class CTool(Tool):
         envvar = Tool.Input.EnvVar(restriction='.*', example='', required=False)
 
-    def test_tool_can_be_constructed_without_parameters(self):
+    def test_tool_can_be_constructed_without_arguments(self):
         Tool()
 
     def test_dependencies_are_assigned(self):
@@ -318,18 +323,44 @@ class ConstructionTest(unittest.TestCase):
         self.assertIsInstance(ConstructionTest.BTool.object_file, Tool.Output)
         self.assertIsInstance(ConstructionTest.BTool.map_file, Tool.Output)
 
-    def test_must_have_parameter_for_required_dependencies(self):
-        with self.assertRaises(TypeError) as cm:
+    def test_must_have_argument_for_required_explicit_dependency(self):
+        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
             ConstructionTest.BTool(source_file='x.cpp')
-        self.assertEqual(str(cm.exception), "missing keyword parameter for required dependency role: 'object_file'")
+        msg = "missing keyword argument for required and explicit dependency role: 'object_file'"
+        self.assertEqual(msg, str(cm.exception))
 
-    def test_must_not_have_parameter_for_undeclared_dependencies(self):
-        with self.assertRaises(TypeError) as cm:
+        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+            ConstructionTest.BTool(source_file=None)
+        msg = "keyword argument for required dependency role must not be None: 'source_file'"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_must_not_have_argument_for_undeclared_dependency(self):
+        msg = (
+            "keyword argument does not name a dependency role of 'ConstructionTest.BTool': 'temporary_file'\n"
+            "  | dependency roles: 'source_file', 'log_file', 'object_file', 'map_file'"
+        )
+
+        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
             ConstructionTest.BTool(temporary_file='x.cpp.o._')
-        self.assertRegex(
-            str(cm.exception),
-            r"^'temporary_file' is not a dependency role of .*: "
-            r"'source_file', 'object_file', 'map_file'$")
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+            ConstructionTest.BTool(temporary_file=None)
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_must_not_have_argument_for_nonexplicit_dependencies(self):
+        msg = (
+            "keyword argument does name a non-explicit dependency role: 'log_file'\n"
+            "  | non-explicit dependency must not be assigned at construction"
+        )
+
+        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+            ConstructionTest.BTool(log_file='x.log')
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+            ConstructionTest.BTool(log_file=None)
+        self.assertEqual(msg, str(cm.exception))
 
 
 class ReprTest(unittest.TestCase):
@@ -388,7 +419,7 @@ class ReprTest(unittest.TestCase):
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_of_tools_are_correct(self):
-        lineno = 391  # of this line
+        lineno = 422  # of this line
 
         class A(Tool):
             pass
@@ -450,7 +481,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
         )
 
         B = f(False)
-        with self.assertRaisesRegex(dlb.ex.tool.DefinitionAmbiguityError, regex):
+        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
             C = f(True)
 
     def test_definition_fails_for_two_equal_dynamic_definitions(self):
@@ -465,7 +496,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             f"  \| location: '.+':[0-9]+\n"
             f"  \| class: <class '.+'>\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.tool.DefinitionAmbiguityError, regex):
+        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
             _, _ = f(False), f(True)
 
     def test_definition_fails_in_import_with_relative_search_path(self):
@@ -483,6 +514,6 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             r"  \| source file: '.+'\n"
             r"  \| make sure the matching module search path is an absolute path when the defining module is imported\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.tool.DefinitionAmbiguityError, regex):
+        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
             import z  # needs a name different from the already loaded modules
         del sys.path[0]

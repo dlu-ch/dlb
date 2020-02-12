@@ -1,5 +1,6 @@
 :mod:`dlb.fs` --- Filesystem paths
 ==================================
+
 .. module:: dlb.fs
    :synopsis: Filesystem paths
 
