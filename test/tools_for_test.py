@@ -1,8 +1,10 @@
 import sys
 import os.path
 
+
 def sanitize_module_search_path():
     sys.path = [os.path.abspath(p) for p in sys.path]
+
 
 # make sure sys.path does not a relative path before you import a module inside
 sanitize_module_search_path()

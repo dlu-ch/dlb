@@ -42,6 +42,7 @@ class _Native:
 
 
 # http://stackoverflow.com/questions/13762231/python-metaclass-arguments
+# noinspection PyMethodParameters,PyProtectedMember
 class _Meta(type):
     def __subclasscheck__(mcl, subclass):
         # Class hierarchy:
@@ -55,6 +56,7 @@ class _Meta(type):
         return common_bases and issubclass(subclass._cls, mcl._cls)
 
 
+# noinspection PyMethodParameters,PyProtectedMember
 class _NativeMeta(_Meta):
     def __call__(mcl, value):
         obj = _Native(value)

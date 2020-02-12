@@ -276,8 +276,9 @@ class SingleOutputTypeTest(unittest.TestCase):
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
 
-class CompatibilityTest():
-    
+# noinspection PyPep8Naming
+class CompatibilityTest:
+
     def test_is_compatible_to_self(self):
         Ds = [
             dlb.ex.depend.RegularFileInput,

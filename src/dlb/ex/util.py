@@ -1,7 +1,8 @@
-__all__ = ()
+__all__ = ('is_immutable_fundamental', 'make_fundamental')
 
 import sys
 import collections.abc
+import typing
 assert sys.version_info >= (3, 6)
 
 
@@ -50,6 +51,11 @@ def make_fundamental(obj, replace_unordered_by_tuple=False):
         raise TypeError(msg) from None
 
 
-def remove_last_component_from_dotted_module_name(cls, ignore_missing_module=False):
-    if not ignore_missing_module or hasattr(cls, '__module__'):
-        cls.__module__ = '.'.join(cls.__module__.split('.')[:-1])
+def set_module_name_to_parent(cls):  # e.g. dlb.ex.context.Context -> dlb.ex.Context
+    cls.__module__ = '.'.join(cls.__module__.split('.')[:-1])
+
+
+def set_module_name_to_parent_by_name(obj_by_name: typing.Dict[str, typing.Any], names: typing.Iterable):
+    for name in names:
+        obj = obj_by_name[name]
+        obj.__module__ = '.'.join(obj.__module__.split('.')[:-1])

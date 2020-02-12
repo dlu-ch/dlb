@@ -45,12 +45,12 @@ class ConstructionTest(unittest.TestCase):
         self.assertEqual("slice step must be positive, not -3", str(cm.exception))
 
     def test_fails_from_noninteger_slice(self):
-        with self.assertRaises(ValueError) as cm:
-            dlb.ex.mult.MultiplicityRange(slice('1', 20, 3))
-        self.assertEqual("slice step must be positive, not -3", str(cm.exception))
-
-    def test_fails_from_noninteger_slice(self):
         with self.assertRaises(TypeError) as cm:
+            dlb.ex.mult.MultiplicityRange('-3')
+        self.assertEqual("'multiplicity' must be int or slice of int, not '-3'", str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex.mult.MultiplicityRange(slice('1', 20, 3))
         self.assertEqual("'multiplicity' must be int or slice of int, not slice('1', 20, 3)", str(cm.exception))
 
@@ -143,6 +143,7 @@ class MatchesCountTest(unittest.TestCase):
 class MultiplicityHolderTest(unittest.TestCase):
 
     class M(dlb.ex.mult.MultiplicityHolder):
+        # noinspection PyUnusedLocal
         def __init__(self, a, b=1):
             super().__init__()
 
@@ -161,11 +162,13 @@ class MultiplicityHolderTest(unittest.TestCase):
             MultiplicityHolderTest.M[:3][2](1, b=2)
         self.assertEqual("'M' with multiplicity is not subscriptable", str(cm.exception))
 
+    # noinspection PyPropertyAccess
     def test_multiplicity_cannot_be_assigned(self):
         with self.assertRaises(AttributeError):
             MultiplicityHolderTest.M(1, b=2).multiplicity = None
 
     def test_name_contains_multiplicity(self):
+        # noinspection PyPep8Naming
         M = MultiplicityHolderTest.M[:3]
         self.assertEqual(MultiplicityHolderTest.M.__name__ + '[:3]', M.__name__)
         self.assertEqual(MultiplicityHolderTest.M.__qualname__ + '[:3]', M.__qualname__)

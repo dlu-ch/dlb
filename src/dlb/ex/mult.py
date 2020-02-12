@@ -94,7 +94,7 @@ class _MultiplicityHolderProxy:
         self._multiplicity = multiplicity
         s = '' if multiplicity is None else str(multiplicity)
         self.__name__ = element_class.__name__ + s
-        self.__qualname__ = element_class.__qualname__  + s
+        self.__qualname__ = element_class.__qualname__ + s
 
     @property
     def element_class(self):

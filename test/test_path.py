@@ -156,12 +156,10 @@ class ConversionFromAnToPurePathTest(unittest.TestCase):
 
     def test_incomplete_windowspath_are_inhibited(self):
         with self.assertRaises(ValueError) as cm:
-            # noinspection PyStatementEffect
             dlb.fs.Path('/c:').pure_windows
         self.assertEqual("neither absolute nor relative: root is missing", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            # noinspection PyStatementEffect
             dlb.fs.Path('//name').pure_windows
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
@@ -294,7 +292,6 @@ class TransformationTest(unittest.TestCase):
         self.assertEqual(p[:-3], dlb.fs.Path('/'))
 
         with self.assertRaises(ValueError) as cm:
-            # noinspection PyStatementEffect
             p[:-4]
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
 
@@ -305,7 +302,6 @@ class TransformationTest(unittest.TestCase):
         self.assertEqual(p[:-2], dlb.fs.Path('//u/'))
         self.assertEqual(p[:-3], dlb.fs.Path('//'))
         with self.assertRaises(ValueError) as cm:
-            # noinspection PyStatementEffect
             p[:-4]
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
 
@@ -459,7 +455,6 @@ class NativeTest(unittest.TestCase):
         p = CheckCountingPath('x')
         self.assertEqual(CheckCountingPath.n, 1)
 
-        # noinspection PyStatementEffect
         p.native
         self.assertEqual(CheckCountingPath.n, 1)
 
@@ -565,7 +560,6 @@ class WindowsRestrictionsTest(unittest.TestCase):
         dlb.fs.WindowsPath('a/coM10')
         p = dlb.fs.WindowsPath('a/coM9/')
         with self.assertRaises(ValueError) as cm:
-            # noinspection PyStatementEffect
             p.pure_windows
         self.assertEqual("file path is reserved: 'a\\\\coM9'", str(cm.exception))
 

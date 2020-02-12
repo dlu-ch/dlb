@@ -17,20 +17,25 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.Context() as c:
             regex = r"'.+' must be a str"
             with self.assertRaisesRegex(TypeError, regex):
+                # noinspection PyTypeChecker
                 c.env.import_from_outer(None, r'X.*Z', example='XZ')
             with self.assertRaisesRegex(TypeError, regex):
+                # noinspection PyTypeChecker
                 c.env.import_from_outer('A_B_C', r'X.*Z', example=None)
             with self.assertRaisesRegex(TypeError, regex):
+                # noinspection PyTypeChecker
                 c.env.import_from_outer('A_B_C', r'X.*Z', example=b'XZ')
 
             regex = re.escape("'name' must not be empty")
-            with self.assertRaisesRegex(ValueError, regex) as cm:
+            with self.assertRaisesRegex(ValueError, regex):
                 c.env.import_from_outer('', r'X.*Z', example='XZ')
 
             regex = re.escape(r"'restriction' must be regular expression (compiled or str)")
             with self.assertRaisesRegex(TypeError, regex):
+                # noinspection PyTypeChecker
                 c.env.import_from_outer('A_B_C', None, example='XZ')
             with self.assertRaisesRegex(TypeError, regex):
+                # noinspection PyTypeChecker
                 c.env.import_from_outer('A_B_C', b'', example='XZ')
 
     def test_import_fails_if_example_is_invalid_with_respect_to_restriction(self):
@@ -159,6 +164,7 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
                         env1.import_from_outer('A_B_C', r'X.*Z', example='XZ')
 
 
+# noinspection PyUnresolvedReferences
 class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_empty_dict_access(self):

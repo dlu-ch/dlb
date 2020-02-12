@@ -71,7 +71,7 @@ def exception_to_string(e):
 
 
 # TODO implement safer version
-# TODO move to appropriate plae
+# TODO move to appropriate place
 def remove_filesystem_object(path, ignore_non_existing=False):
     try:
         try:
@@ -85,7 +85,7 @@ def remove_filesystem_object(path, ignore_non_existing=False):
 
 class _EnvVarDict:
 
-    def __init__(self, parent=None, top_value_by_name: typing.Optional[typing.Dict[str, str]]=None):
+    def __init__(self, parent=None, top_value_by_name: typing.Optional[typing.Dict[str, str]] = None):
         if not (parent is None or isinstance(parent, _EnvVarDict)):
             raise TypeError
 
@@ -95,7 +95,7 @@ class _EnvVarDict:
             self._value_by_name = dict()
         else:
             self._top_value_by_name = dict()
-            self._value_by_name = dict(parent._value_by_name)  # type: typing.Dict[str, int]
+            self._value_by_name = dict(parent._value_by_name)  # type: typing.Dict[str, str]
         self._restriction_by_name = dict()  # type: typing.Dict[str, typing.Pattern]
 
     def import_from_outer(self, name: str, restriction: typing.Union[str, typing.Pattern], example: str):
@@ -121,7 +121,7 @@ class _EnvVarDict:
         else:
             value_name = 'current'
 
-        if not value is None:
+        if value is not None:
             if not restriction.fullmatch(value):
                 raise ValueError(f"{value_name} value invalid with respect to 'restriction': {value!r}")
 
@@ -144,7 +144,8 @@ class _EnvVarDict:
             return False
         return self._parent is None or self._parent._is_valid(name, value)
 
-    def _check_non_empty_str(self, **kwargs):
+    @staticmethod
+    def _check_non_empty_str(**kwargs):
         for k, v in kwargs.items():
             if not isinstance(v, str):
                 raise TypeError(f"{k!r} must be a str")
@@ -232,6 +233,8 @@ class _ContextMeta(type):
                 raise
         if refer:
             a = getattr(_get_root(), name)  # delegate to root context
+
+        # noinspection PyUnboundLocalVariable
         return a
 
     def __setattr__(self, key, value):
@@ -249,7 +252,8 @@ class _RootSpecifics:
         try:
             self._working_tree_path = path_cls(path_cls.Native(working_tree_path_str), is_dir=True)
             self._real_working_tree_path = pathlib.Path(os.path.realpath(working_tree_path_str))
-                # TODO check if canonical-case path
+            # TODO check if canonical-case path
+
             if not os.path.samefile(working_tree_path_str, str(self._working_tree_path.native)):
                 msg = (
                     f'current directory probably violates imposed path restrictions: {working_tree_path_str!r}\n'
@@ -269,7 +273,7 @@ class _RootSpecifics:
         self._mtime_probe = None
         self._rundb_connection = None
 
-        management_tree_path = self._working_tree_path  / (_MANAGEMENTTREE_DIR_NAME + '/')
+        management_tree_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/')
 
         # 1. is this a working tree?
 
@@ -299,7 +303,7 @@ class _RootSpecifics:
             os.mkdir(lock_dir_path_str)
         except OSError as e:
             msg = (
-                f'cannot aquire lock for exclusive access to working tree {working_tree_path_str!r}\n'
+                f'cannot acquire lock for exclusive access to working tree {working_tree_path_str!r}\n'
                 f'  | reason: {exception_to_string(e)}\n'
                 f'  | to break the lock (if you are sure no other dlb process is running): remove {lock_dir_path_str!r}'
             )
@@ -383,7 +387,7 @@ class _RootSpecifics:
             native_path = pathlib.Path(path)  # path may be ''
             seps = (os.path.sep, os.path.altsep)
             if path[-1:] in seps or (path[-1:] == '.' and path[-2:-1] in seps) or \
-                    not native_path.parts or native_path.parts[-1:]  == ('..',):
+                    not native_path.parts or native_path.parts[-1:] == ('..',):
                 is_dir = True
         elif isinstance(path, fs.Path):
             is_dir = path.is_dir()
@@ -471,14 +475,14 @@ class _RootSpecifics:
         first_exception = None
 
         try:
-             self._cleanup_and_delay_to_working_tree_time_change()
+            self._cleanup_and_delay_to_working_tree_time_change()
         except Exception as e:
-             first_exception = e
+            first_exception = e
 
         try:
             self.close_and_unlock_if_open()
         except Exception as e:
-             first_exception = e
+            first_exception = e
 
         if first_exception:
             if isinstance(first_exception, (OSError, sqlite3.Error)):
@@ -493,7 +497,7 @@ class _RootSpecifics:
 
 _EnvVarDict.__name__ = 'EnvVarDict'
 _EnvVarDict.__qualname__ = 'Context.EnvVarDict'
-util.remove_last_component_from_dotted_module_name(_EnvVarDict)
+util.set_module_name_to_parent(_EnvVarDict)
 
 
 class Context(metaclass=_ContextMeta):
@@ -523,6 +527,7 @@ class Context(metaclass=_ContextMeta):
 
     @property
     def env(self) -> _EnvVarDict:
+        # noinspection PyStatementEffect
         self.active
         return self._env
 
@@ -530,6 +535,7 @@ class Context(metaclass=_ContextMeta):
         try:
             if name.startswith('_'):
                 raise AttributeError
+            # noinspection PyProtectedMember
             return getattr(_get_root()._root_specifics, name)  # delegate to _RootSpecifics
         except AttributeError:
             raise AttributeError(f'{self.__class__.__qualname__!r} object has no attribute {name!r}') from None
@@ -542,6 +548,7 @@ class Context(metaclass=_ContextMeta):
     def __enter__(self):
         if _contexts:
             try:
+                # noinspection PyCallingNonCallable
                 self._path_cls(self.root_path)
             except ValueError as e:
                 msg = (  # assume that exception_to_string(e) include the working_tree_path
@@ -567,6 +574,4 @@ class Context(metaclass=_ContextMeta):
             self._root_specifics = None
 
 
-for exported_name in __all__:
-    util.remove_last_component_from_dotted_module_name(vars()[exported_name])
-del exported_name
+util.set_module_name_to_parent_by_name(vars(), __all__)

@@ -45,7 +45,7 @@ class _ToolBase:
         # replace all dependency roles by concrete dependencies or None
 
         # order is important:
-        dependency_names = self.__class__._dependency_names   # type: typing.Tuple[typing.Tuple, ...]
+        dependency_names = self.__class__._dependency_names   # type: typing.Tuple[str, ...]
         names_of_assigned = set()
         for name, value in kwargs.items():
             if name not in dependency_names:
@@ -87,10 +87,10 @@ class _ToolBase:
         # TODO: implement, document
         raise NotImplementedError
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value):
         raise AttributeError
 
-    def __delattr__(self, name):
+    def __delattr__(self, name: str):
         raise AttributeError
 
     def __repr__(self):
@@ -99,6 +99,7 @@ class _ToolBase:
         return f'{self.__class__.__qualname__}({args})'
 
 
+# noinspection PyProtectedMember
 depend._inject_into(_ToolBase, 'Tool', '.'.join(_ToolBase.__module__.split('.')[:-1]))
 
 
@@ -132,7 +133,8 @@ class _ToolMeta(type):
                 f"invalid tool definition: location of definition depends on current working directory\n"
                 f"  | class: {cls!r}\n"
                 f"  | source file: {defining_frame.filename!r}\n"
-                f"  | make sure the matching module search path is an absolute path when the defining module is imported"
+                f"  | make sure the matching module search path is an absolute path when the "
+                f"defining module is imported"
             )
             raise DefinitionAmbiguityError(msg)
 
@@ -162,12 +164,12 @@ class _ToolMeta(type):
                 in_archive_path = os.path.normpath(in_archive_path)
 
         except Exception:
-            raise
             msg = (
                 f"invalid tool definition: location of definition is unknown\n"
                 f"  | class: {cls!r}\n"
                 f"  | define the class in a regular file or in a zip archived with '.zip'\n"
-                f"  | note also the importance of upper and lower case of module search paths on case-insensitive filesystems"
+                f"  | note also the importance of upper and lower case of module search paths on "
+                f"case-insensitive filesystems"
             )
             raise DefinitionAmbiguityError(msg) from None
 
@@ -220,7 +222,7 @@ class _ToolMeta(type):
                 )
                 raise AttributeError(msg)
 
-    def _get_dependency_names(cls) -> typing.Tuple[typing.Tuple, ...]:
+    def _get_dependency_names(cls) -> typing.Tuple[str, ...]:
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
         pairs = [(-v.RANK, not v.required, n) for n, v in dependencies.items() if isinstance(v, depend.Dependency)]
         pairs.sort()
@@ -238,8 +240,6 @@ class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
 
 
+# noinspection PyCallByClass
 type.__setattr__(Tool, '__module__', '.'.join(_ToolBase.__module__.split('.')[:-1]))
-for exported_name in __all__:
-    if exported_name != 'Tool':
-        util.remove_last_component_from_dotted_module_name(vars()[exported_name])
-del exported_name
+util.set_module_name_to_parent_by_name(vars(), [n for n in __all__ if not 'Tool'])

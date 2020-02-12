@@ -1,10 +1,11 @@
 import re
 import typing
 from . import mult
-from . import context
+from . import context as context_
 from .. import fs
 
 
+# noinspection PyUnresolvedReferences
 class Dependency(mult.MultiplicityHolder):
     # Each instance d represents a dependency role.
     # The return value of d.validate() is a concrete dependency, if d.multiplicity is None and
@@ -53,7 +54,7 @@ class Dependency(mult.MultiplicityHolder):
         return True
 
     # overwrite in base classes
-    def validate_single(self, value, context: typing.Optional[context.Context]) -> typing.Hashable:
+    def validate_single(self, value, context: typing.Optional[context_.Context]) -> typing.Hashable:
         if value is None:
             raise TypeError("'value' must not be None")
         return value
@@ -78,7 +79,7 @@ class Dependency(mult.MultiplicityHolder):
         values = []
         for v in value:
             v = self.validate_single(v, context)
-            if self._unique and v in values:
+            if self.unique and v in values:
                 raise ValueError(f'sequence of dependencies must be duplicate-free, but contains {v!r} more than once')
             values.append(v)
 
@@ -114,7 +115,7 @@ class _FilesystemObjectMixin:
         self._path_cls = cls
 
     @property
-    def cls(self) -> fs.Path:
+    def cls(self) -> typing.Type[fs.Path]:
         return self._path_cls
 
     def compatible_and_no_less_restrictive(self, other) -> bool:
@@ -123,7 +124,7 @@ class _FilesystemObjectMixin:
 
         return issubclass(self.cls, other.cls)
 
-    def validate_single(self, value, context: typing.Optional[context.Context]) -> fs.Path:
+    def validate_single(self, value, context: typing.Optional[context_.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         return self._path_cls(value)
 
@@ -148,7 +149,7 @@ class _FilesystemObjectInputMixin:
 
 
 class _NonDirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: typing.Optional[context.Context]) -> fs.Path:
+    def validate_single(self, value, context: typing.Optional[context_.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         if value.is_dir():
             raise ValueError(f'directory path not valid for non-directory dependency: {value!r}')
@@ -156,7 +157,7 @@ class _NonDirectoryMixin(_FilesystemObjectMixin):
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: typing.Optional[context.Context]) -> fs.Path:
+    def validate_single(self, value, context: typing.Optional[context_.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         if not value.is_dir():
             raise ValueError(f'non-directory path not valid for directory dependency: {value!r}')
@@ -219,7 +220,8 @@ class EnvVarInput(ConcreteDependency, Input):
 
         return self.restriction == other.restriction  # ignore example
 
-    def validate_single(self, value, context_: typing.Optional[context.Context]) -> typing.Union[str, typing.Dict[str, str]]:
+    def validate_single(self, value, context: typing.Optional[context_.Context]) \
+            -> typing.Union[str, typing.Dict[str, str]]:
         # value is the name of an environment variable
 
         value = str(super().validate_single(value, None))
@@ -229,11 +231,11 @@ class EnvVarInput(ConcreteDependency, Input):
         if not value:
             raise ValueError("'value' must not be empty")
 
-        if not isinstance(context_, context.Context):
+        if not isinstance(context, context_.Context):
             raise TypeError("needs context")
 
         try:
-            envvar_value = context_.env[value]
+            envvar_value = context.env[value]
         except KeyError as e:
             raise ValueError(*e.args)
 

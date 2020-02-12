@@ -490,7 +490,8 @@ class TokensTemplate:
 
         return expanded_values
 
-    def _expand_variable_value(self, variable_spec, node_path, value, typ):
+    @staticmethod
+    def _expand_variable_value(variable_spec, node_path, value, typ):
         if value is not None and not isinstance(value, typ):
             # value is known -> coerce to declared type
             try:
@@ -650,6 +651,7 @@ class TokensTemplate:
 
         if scope is cls.LookupScope.KNOWN:
             for i in range(len(frames)):
+                frame = None
                 try:
                     frame = frames[i][0]
                     root, found = lookup_in(frame.f_locals)
@@ -662,6 +664,7 @@ class TokensTemplate:
                 finally:
                     del frame
         else:
+            frame = None
             try:
                 frame = frames[0][0]
                 if scope is cls.LookupScope.LOCAL:
@@ -701,6 +704,4 @@ class TokensTemplate:
         return scanned_root
 
 
-for exported_name in __all__:
-    util.remove_last_component_from_dotted_module_name(vars()[exported_name])
-del exported_name
+util.set_module_name_to_parent_by_name(vars(), __all__)

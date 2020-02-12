@@ -15,7 +15,7 @@ class MakeFundamentalTest(unittest.TestCase):
         self.assertIsNone(make_fundamental(None))
 
     def test_returns_frozenset_for_set(self):
-        s = set([1, 2, 3])
+        s = {1, 2, 3}
         r = make_fundamental(s)
         self.assertIsInstance(r, frozenset)
         self.assertEqual(r, s)

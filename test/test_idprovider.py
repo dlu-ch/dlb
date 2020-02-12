@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex.idprovider
+import dlb.fs
 import time
 import tools_for_test
 
@@ -47,6 +48,7 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
             )
 
         sys.path.insert(0, os.getcwd())
+        # noinspection PyUnresolvedReferences
         import w  # needs a name different from the already loaded modules
         del sys.path[0]
 
@@ -64,7 +66,7 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
 
         self.assertIsInstance(info1.permanent_local_id, bytes)
         self.assertGreater(len(info1.permanent_local_id), 1)
-        self.assertEqual(info1.definition_paths, set((dlb.fs.Path('a/u.py'), dlb.fs.Path('w.py'))))
+        self.assertEqual(info1.definition_paths, {dlb.fs.Path('a/u.py'), dlb.fs.Path('w.py')})
         self.assertEqual(info1, info2)
 
     def test_definition_fails_in_import_with_relative_search_path(self):

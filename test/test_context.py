@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex
+import dlb.fs
 import stat
 import time
 import unittest
@@ -32,6 +33,7 @@ class ImportTest(unittest.TestCase):
         self.assertEqual(set(), rs.intersection(mc))
 
 
+# noinspection PyPropertyAccess
 class AccessTest(unittest.TestCase):
 
     def test_public_attribute_are_readonly(self):
@@ -133,7 +135,8 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fails_if_dlbroot_does_not_exist(self):
         with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
-            with dlb.ex.Context(): pass
+            with dlb.ex.Context():
+                pass
 
         self.assertIn(repr('.dlbroot'), str(cm.exception))
         self.assertIn('working tree', str(cm.exception))
@@ -143,7 +146,8 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
             pass
 
         with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
-            with dlb.ex.Context(): pass
+            with dlb.ex.Context():
+                pass
 
         self.assertIn(repr('.dlbroot'), str(cm.exception))
         self.assertIn('working tree', str(cm.exception))
@@ -158,7 +162,8 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
             raise unittest.SkipTest from None  # filesystem is not case-sensitive
 
         with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
-            with dlb.ex.Context(): pass
+            with dlb.ex.Context():
+                pass
 
         self.assertIn(repr('.dlbroot'), str(cm.exception))
         self.assertIn('working tree', str(cm.exception))
@@ -177,8 +182,10 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
 
         os.mkdir('.dlbroot/t')
         os.mkdir('.dlbroot/t/c')
-        with open('.dlbroot/t/a', 'wb'): pass
-        with open('.dlbroot/t/c/b', 'wb'): pass
+        with open('.dlbroot/t/a', 'wb'):
+            pass
+        with open('.dlbroot/t/c/b', 'wb'):
+            pass
 
         sr0 = os.stat('.dlbroot/t')
         os.chmod('.dlbroot/t', stat.S_IMODE(sr0.st_mode) ^ stat.S_IXOTH)  # change permission
@@ -211,8 +218,10 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
 
         os.mkdir('.dlbroot/o')
         os.mkdir('.dlbroot/o/c')
-        with open('.dlbroot/o/a', 'wb'): pass
-        with open('.dlbroot/o/c/b', 'wb'): pass
+        with open('.dlbroot/o/a', 'wb'):
+            pass
+        with open('.dlbroot/o/c/b', 'wb'):
+            pass
 
         with dlb.ex.Context():
             self.assertTrue(os.path.isfile('.dlbroot/o'))
@@ -220,9 +229,11 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_mtime_probe_uppercase_file_is_removed(self):
         os.mkdir('.dlbroot')
 
-        with open('.dlbroot/o', 'xb'): pass
+        with open('.dlbroot/o', 'xb'):
+            pass
         try:
-            with open('.dlbroot/O', 'xb'): pass
+            with open('.dlbroot/O', 'xb'):
+                pass
         except FileExistsError:
             raise unittest.SkipTest from None  # filesystem is not case-sensitive
         with dlb.ex.Context():
@@ -271,7 +282,7 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.ex.Context.root_path
 
         c = dlb.ex.Context()
-        with self.assertRaises(dlb.ex.context.NotRunningError) as cm:
+        with self.assertRaises(dlb.ex.context.NotRunningError):
             c.root_path
 
     def test_root_is_correct(self):
@@ -294,7 +305,7 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
                 self.assertEqual(c.path_cls, dlb.fs.Path)
                 self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
 
-    def test_entering_fails_if_path_not_representabe(self):
+    def test_entering_fails_if_path_not_representable(self):
         os.mkdir('x y')
 
         with tools_for_test.DirectoryChanger('x y'):
@@ -368,7 +379,7 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
 
         regex = (
             r"(?m)"
-            r"\Acannot aquire lock for exclusive access to working tree '.*'\n"
+            r"\Acannot acquire lock for exclusive access to working tree '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
@@ -377,7 +388,6 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
             with dlb.ex.Context():
                 pass
 
-
     def test_meaningful_exception_on_permission_error(self):
         os.mkdir('.dlbroot')
 
@@ -385,7 +395,7 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
 
         regex = (
             r"(?m)"
-            r"\Acannot aquire lock for exclusive access to working tree '.*'\n"
+            r"\Acannot acquire lock for exclusive access to working tree '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
@@ -395,7 +405,6 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
                 pass
 
         os.chmod('.dlbroot', 0o777)
-
 
 
 class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -474,7 +483,7 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
             with self.assertRaises(ValueError):
                 dlb.ex.Context.create_temporary(is_dir=True, suffix='x/../')
 
-    def test_fails_if_path_not_representabe(self):
+    def test_fails_if_path_not_representable(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             regex = (

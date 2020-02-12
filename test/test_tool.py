@@ -125,6 +125,7 @@ class AttributeDefineTest(unittest.TestCase):
         self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__new__'", str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
+            # noinspection PyMissingConstructor
             class ATool(Tool):
                 def __init__(self):
                     pass
@@ -132,13 +133,13 @@ class AttributeDefineTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
-                def __setattr__(self):
+                def __setattr__(self, name, value):
                     pass
         self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__setattr__'", str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
-                def __delattr__(self):
+                def __delattr__(self, name):
                     pass
         self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__delattr__'", str(cm.exception))
 
@@ -419,7 +420,7 @@ class ReprTest(unittest.TestCase):
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_of_tools_are_correct(self):
-        lineno = 422  # of this line
+        lineno = 423  # of this line
 
         class A(Tool):
             pass
@@ -451,6 +452,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
                     z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u/v.py')
 
             sys.path.insert(0, zip_file_path)
+            # noinspection PyUnresolvedReferences
             import u.v
             del sys.path[0]
 
@@ -467,6 +469,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
         self.assertEqual(A.definition_location[0], os.path.realpath(__file__))
 
+    # noinspection PyUnusedLocal,PyPep8Naming
     def test_definition_fails_for_two_different_dynamic_definitions(self):
         def f(s):
             class A(Tool):
@@ -475,9 +478,9 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
         regex = (
             r"(?m)"
-            f"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
-            f"  \| location: '.+':[0-9]+\n"
-            f"  \| class: <class '.+'>\Z"
+            r"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"  \| location: '.+':[0-9]+\n"
+            r"  \| class: <class '.+'>\Z"
         )
 
         B = f(False)
@@ -485,6 +488,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             C = f(True)
 
     def test_definition_fails_for_two_equal_dynamic_definitions(self):
+        # noinspection PyUnusedLocal
         def f(s):
             class A(Tool):
                 pass
@@ -492,9 +496,9 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
         regex = (
             r"(?m)"
-            f"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
-            f"  \| location: '.+':[0-9]+\n"
-            f"  \| class: <class '.+'>\Z"
+            r"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"  \| location: '.+':[0-9]+\n"
+            r"  \| class: <class '.+'>\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
             _, _ = f(False), f(True)
@@ -515,5 +519,6 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             r"  \| make sure the matching module search path is an absolute path when the defining module is imported\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
+            # noinspection PyUnresolvedReferences
             import z  # needs a name different from the already loaded modules
         del sys.path[0]

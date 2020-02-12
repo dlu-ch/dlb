@@ -36,7 +36,6 @@ class SyntaxTest(unittest.TestCase):
 
     def test_recursive_list(self):
         l = ['a', 'b']
-        # noinspection PyTypeChecker
         l.append(l)
         l2 = ['c', l]
         with self.assertRaises(TypeError) as cm:
