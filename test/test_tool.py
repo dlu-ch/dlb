@@ -526,3 +526,44 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             # noinspection PyUnresolvedReferences
             import z  # needs a name different from the already loaded modules
         del sys.path[0]
+
+
+class DependencyActionRegistrationTest(unittest.TestCase):
+
+    def test_fails_for_unregistered_dependency_class(self):
+        class D(dlb.ex.Tool.Input.RegularFile):
+            pass
+
+        class T(dlb.ex.Tool):
+            oho = D()
+
+        regex = r"keyword names unregistered dependency class <class '.+'>: 'oho'"
+        with self.assertRaisesRegex(dlb.ex.DependencyRoleAssignmentError, regex):
+            T(oho='x')
+
+
+class ToolInstanceFingerprintTest(unittest.TestCase):
+
+    class ATool(Tool):
+        source_file = Tool.Input.RegularFile[:]()
+        object_file = Tool.Output.RegularFile()
+
+    def test_is_equal_for_same_concrete_dependencies(self):
+        tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'], object_file='e.o')
+        tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'], object_file='e.o')
+        self.assertEqual(tool1.fingerprint, tool2.fingerprint)
+
+    def test_is_not_equal_for_different_concrete_dependencies(self):
+        tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'], object_file='e.o')
+        tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/d.c'], object_file='e.o')
+        self.assertNotEqual(tool1.fingerprint, tool2.fingerprint)
+
+    def test_is_20_byte(self):
+        tool = ToolInstanceFingerprintTest.ATool(source_file=[], object_file='e.o')
+        self.assertIsInstance(tool.fingerprint, bytes)
+        self.assertEqual(20, len(tool.fingerprint))
+
+    def test_is_readonly(self):
+        tool = ToolInstanceFingerprintTest.ATool(source_file=[], object_file='e.o')
+        with self.assertRaises(AttributeError):
+            tool.fingerprint = b''

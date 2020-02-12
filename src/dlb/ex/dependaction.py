@@ -18,6 +18,7 @@ from . import util
 _action_by_dependency = {}
 
 
+# noinspection PyMethodMayBeStatic
 class Action:
     def __init__(self, dependency: depend.Dependency):
         self._dependency = dependency
@@ -31,13 +32,11 @@ class Action:
         # Returns a short byte string as a permanent local id for this validated value of a given instance.
         #
         # Two instances of the same or of different dependency classes may return different permanent local value ids
-        # for the same value.
+        # for the same validated value.
         #
-        # Must return different permanent local value id for the same instance, if the value
-        #
-        # Two instances of the same dependency class whose properties differ, must return different
-        # permanent local value ids, if the meaning or treatment of a validated value by the instance depends on
-        # the difference.
+        # Two instances of the same dependency class, whose properties differ, must return different
+        # permanent local value ids if the meaning of this validated value `validated_value` of a concrete dependency
+        # for a running tool instance depends on the difference.
         return marshal.dumps(util.make_fundamental(validated_value, True))
 
     # overwrite and call method of superclass in subclasses
@@ -49,11 +48,11 @@ class Action:
         #
         # Two instances of different dependency classes must return different permanent local instance ids.
         #
-        # Two instances of the same dependency class whose properties differ, must return different
-        # permanent local instance ids, if the meaning or treatment of a the validated value of concrete dependency of
-        # this dependency rule depends on the difference.
+        # Two instances of the same dependency class, whose properties differ, must return different
+        # permanent local instance ids if the meaning of validated value of _any_ concrete dependency
+        # for a running tool instance depends on the difference.
         #
-        # Raises KeyError if this class is not registered of the dependency.
+        # Raises KeyError if this class is not registered for 'self.dependency'.
         register_index, _ = _action_by_dependency[self._dependency.__class__]
         d = self.dependency
         # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.

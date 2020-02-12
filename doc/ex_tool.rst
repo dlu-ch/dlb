@@ -98,6 +98,19 @@ Tool objects
 
       ``lineno`` is the 1-based line number in the source file.
 
+   .. attribute:: fingerprint
+
+      The SHA1 fingerprint of this instance, calculated from all its concrete dependencies ``d`` with
+      ``d.explicit`` = ``True``.
+      This is a ``bytes`` object of fixed size.
+
+      If two instances of the same subclass of :class:`Tool` have "similar" explicit dependencies, their
+      fingerprints are equal.
+      If two instances of the same subclass of :class:`Tool` have explicit dependencies that are not "similar",
+      their fingerprints are different with very high probability.
+
+      The explicit dependencies of two instances are considered "similar", if they are equal or differ in a way that
+      does *not affect the meaning* of the dependencies while the :term:`tool instance` is running.
 
 
 Dependency classes

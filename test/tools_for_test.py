@@ -60,3 +60,4 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
                     print(f'changed current working directory of process back to {self._original_cwd!r}')
             finally:
                 self._temp_dir.cleanup()
+

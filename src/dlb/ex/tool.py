@@ -7,9 +7,11 @@ __all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError')
 import sys
 import re
 import os
+import hashlib
 import typing
 import inspect
 from . import depend
+from . import dependaction
 from . import util
 assert sys.version_info >= (3, 6)
 
@@ -50,9 +52,11 @@ class _ToolBase:
 
         # order is important:
         dependency_names = self.__class__._dependency_names   # type: typing.Tuple[str, ...]
+        dependency_names_set = set(dependency_names)
+
         names_of_assigned = set()
         for name, value in kwargs.items():
-            if name not in dependency_names:
+            if name not in dependency_names_set:
                 names = ', '.join(repr(n) for n in dependency_names)
                 msg = (
                     f"keyword argument does not name a dependency role of {self.__class__.__qualname__!r}: {name!r}\n"
@@ -79,12 +83,33 @@ class _ToolBase:
             object.__setattr__(self, name, validated_value)
             names_of_assigned.add(name)
 
-        for name in sorted(set(dependency_names) - names_of_assigned):
+        # build permanent fingerprint for tool instance from all explicit dependencies
+
+        hashalg = hashlib.sha1()
+        # SHA1 is always present and fasted according to this:
+        # http://atodorov.org/blog/2013/02/05/performance-test-md5-sha1-sha256-sha512/
+
+        names_of_notassigned = dependency_names_set - names_of_assigned
+        for name in dependency_names:  # order is important
             role = getattr(self.__class__, name)
-            if role.required and role.explicit:
-                msg = f"missing keyword argument for required and explicit dependency role: {name!r}"
-                raise DependencyRoleAssignmentError(msg)
-            object.__setattr__(self, name, None)
+            if name in names_of_notassigned:
+                if role.required and role.explicit:
+                    msg = f"missing keyword argument for required and explicit dependency role: {name!r}"
+                    raise DependencyRoleAssignmentError(msg)
+                object.__setattr__(self, name, None)
+            if role.explicit:
+                # this remains unchanged between dlb run if dlb.ex.idprovider.PLATFORM_ID remains unchanged
+                try:
+                    action = dependaction.get_action(role)
+                    pli = action.get_permanent_local_instance_id()
+                    pli += action.get_permanent_local_value_id(getattr(self, name))
+                    hashalg.update(pli)
+                except KeyError:
+                    msg = f"keyword names unregistered dependency class {role.__class__!r}: {name!r}"
+                    raise DependencyRoleAssignmentError(msg)
+
+        # permanent local fingerprint for this instance (do not compare fingerprint between different self.__class__!)
+        object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
 
     # final
     def run(self):

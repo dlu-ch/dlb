@@ -45,6 +45,7 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
     D = dlb.ex.depend.RegularFileInput
 
     def test_fails_for_none(self):
+        # noinspection PyPep8Naming
         D = CommonOfConcreteValidationTest.D[1:]
 
         msg = "'value' must not be None"
