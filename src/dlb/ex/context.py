@@ -248,7 +248,7 @@ class _ContextMeta(type):
 
 
 class _RootSpecifics:
-    def __init__(self, path_cls):
+    def __init__(self, path_cls: typing.Type[fs.Path]):
         self._path_cls = path_cls
 
         # cwd must be a working tree`s root
@@ -508,7 +508,7 @@ class Context(metaclass=_ContextMeta):
 
     EnvVarDict = NotImplemented  # only Context should construct an _EnvVarDict
 
-    def __init__(self, *, path_cls=fs.Path):
+    def __init__(self, *, path_cls: typing.Type[fs.Path] = fs.Path):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls  # type: fs.Path
@@ -526,7 +526,7 @@ class Context(metaclass=_ContextMeta):
         return _contexts[-1]
 
     @property
-    def path_cls(self) -> fs.Path:
+    def path_cls(self) -> typing.Type[fs.Path]:
         return self._path_cls
 
     @property

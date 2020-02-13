@@ -25,13 +25,13 @@ class _Native:
         self._raw = pathlib.Path(path)
 
     @property
-    def raw(self):
+    def raw(self) -> pathlib.Path:
         return self._raw
 
-    def __fspath__(self):  # make this class a safer os.PathLike
+    def __fspath__(self) -> str:  # make this class a safer os.PathLike
         return str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         r = self._raw
         s = str(r)
         if not r.anchor:  # with anchor: 'c:x', 'c:/x', '//unc/root/x'
@@ -40,7 +40,7 @@ class _Native:
                 s = str('_.' / r)[1:]
         return s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'Path.Native({str(self)!r})'
 
     def __getattr__(self, item):
@@ -69,7 +69,7 @@ class _NativeMeta(_Meta):
         mcl._cls(obj._raw)
         return obj
 
-    def __instancecheck__(mcl, instance):
+    def __instancecheck__(mcl, instance) -> bool:
         if not isinstance(instance, _Native):
             return False
         try:
@@ -88,7 +88,7 @@ class _PathMeta(type):
 
 @functools.total_ordering
 class Path(metaclass=_PathMeta):
-    def __init__(self, path, is_dir=None):
+    def __init__(self, path, is_dir: typing.Optional[bool] = None):
         if path is None:
             raise ValueError('invalid path: None')
 
@@ -163,7 +163,7 @@ class Path(metaclass=_PathMeta):
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
         return self.__class__(self._path.relative_to(other._path), is_dir=self._is_dir)
 
-    def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
+    def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
         if not self.is_dir():
             raise ValueError(f'cannot list non-directory path: {self.as_string()!r}')
 
@@ -172,7 +172,7 @@ class Path(metaclass=_PathMeta):
                 return lambda s: False
             if callable(f):
                 return f
-            if isinstance(f, type(re.compile(''))):
+            if isinstance(f, typing.Pattern):
                 return lambda s: f.fullmatch(s)  # since Python 3.4
             if isinstance(f, str):
                 if f:
@@ -218,14 +218,14 @@ class Path(metaclass=_PathMeta):
 
             dir_paths_to_recurse.sort()
 
-    def iterdir_r(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
+    def iterdir_r(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
         for p in self.iterdir(name_filter, recurse_name_filter, follow_symlinks, cls):
             yield p.relative_to(self)
 
-    def list(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
+    def list(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
         return sorted(self.iterdir(name_filter, recurse_name_filter, follow_symlinks, cls))
 
-    def list_r(self, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None):
+    def list_r(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
         return sorted(self.iterdir_r(name_filter, recurse_name_filter, follow_symlinks, cls))
 
     @property
@@ -288,12 +288,12 @@ class Path(metaclass=_PathMeta):
     def __rtruediv__(self, other):
         return self.__class__(other) / self
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         # on all platform, comparison is case sensitive
         other = self.__class__(other)
         return (self._cparts, self._is_dir) == (other._cparts, other._is_dir)
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         other = self.__class__(other)
         return (self._cparts, self._is_dir) < (other._cparts, other._is_dir)
 
