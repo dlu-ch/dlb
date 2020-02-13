@@ -13,12 +13,13 @@ __all__ = (
 
 import marshal
 import typing
-from . import depend
 from . import util
+from . import depend
 
 
 # this prevents actions to be exposed to the user via dependency classes
-_action_by_dependency = {}
+_action_by_dependency = {}  # key: registered dependency class, value: (unique id of dependency class id, action)
+_dependency_class_ids: typing.Set[int] = set()  # contains the first element of each value of _action_by_dependency
 
 
 # noinspection PyMethodMayBeStatic
@@ -42,7 +43,7 @@ class Action:
         # for a running tool instance depends on the difference.
         return marshal.dumps(util.make_fundamental(validated_value, True))
 
-    # overwrite and call method of superclass in subclasses
+    # overwrite and prepend super().get_permanent_local_instance_id() to return value
     def get_permanent_local_instance_id(self) -> bytes:
         # Returns a short non-empty byte string as a permanent local id for this instance.
         #
@@ -56,10 +57,10 @@ class Action:
         # for a running tool instance depends on the difference.
         #
         # Raises KeyError if this class is not registered for 'self.dependency'.
-        register_index, _ = _action_by_dependency[self._dependency.__class__]
+        dependency_id, _ = _action_by_dependency[self._dependency.__class__]
         d = self.dependency
         # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.
-        return marshal.dumps((register_index, d.explicit))
+        return marshal.dumps((dependency_id, d.explicit))
 
 
 class _FilesystemObjectMixin(Action):
@@ -107,11 +108,23 @@ class DirectoryOutputAction(_FilesystemObjectMixin, Action):
     pass
 
 
-def register_action(dependency: typing.Type[depend.Dependency], action: typing.Type[Action]):
-    a = _action_by_dependency.get(dependency)
-    if not (a is None or a is action):
-        raise ValueError(f"dependency already registered with different action: {dependency!r}")
-    _action_by_dependency[dependency] = (len(_action_by_dependency), action)  # assign a unique id by register order
+def register_action(dependency_id: int, dependency: typing.Type[depend.Dependency], action: typing.Type[Action]):
+    # Registers the dependency class 'dependency' and assigns it an action 'action' as well as the
+    # dependency id 'dependency_id'.
+    # 'dependency_id' must be an integer unique among all registered dependency class and must not change between
+    # different dlb run.
+
+    dependency_id = int(dependency_id)
+    try:
+        did, a = _action_by_dependency[dependency]
+        if a is not action:
+            raise ValueError(f"dependency already registered with different action: {dependency!r}")
+        if did != dependency_id:
+            msg = f"'dependency_id'' is already registered with different dependency: {dependency_id}"
+            raise ValueError(msg)
+    except KeyError:
+        _dependency_class_ids.add(dependency_id)
+        _action_by_dependency[dependency] = (dependency_id, action)
 
 
 def get_action(dependency: depend.Dependency) -> Action:
@@ -119,10 +132,10 @@ def get_action(dependency: depend.Dependency) -> Action:
     return a(dependency)
 
 
-register_action(depend.RegularFileInput, RegularFileInputAction)
-register_action(depend.NonRegularFileInput, NonRegularFileInputAction)
-register_action(depend.DirectoryInput, DirectoryInputAction)
-register_action(depend.EnvVarInput, EnvVarInputAction)
-register_action(depend.RegularFileOutput, RegularFileOutputAction)
-register_action(depend.NonRegularFileOutput, NonRegularFileOutputAction)
-register_action(depend.DirectoryOutput, DirectoryOutputAction)
+register_action(0, depend.RegularFileInput, RegularFileInputAction)
+register_action(1, depend.NonRegularFileInput, NonRegularFileInputAction)
+register_action(2, depend.DirectoryInput, DirectoryInputAction)
+register_action(3, depend.EnvVarInput, EnvVarInputAction)
+register_action(4, depend.RegularFileOutput, RegularFileOutputAction)
+register_action(5, depend.NonRegularFileOutput, NonRegularFileOutputAction)
+register_action(6, depend.DirectoryOutput, DirectoryOutputAction)
