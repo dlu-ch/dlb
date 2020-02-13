@@ -21,7 +21,7 @@ class Dependency(mult.MultiplicityHolder):
     #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
     RANK = 0  # type: int
 
-    def __init__(self, *, required=True, explicit=True, unique=True):
+    def __init__(self, *, required: bool = True, explicit: bool = True, unique: bool = True):
         super().__init__()
         self._required = bool(required)  # not checked by validate(), only for the caller
         self._explicit = bool(explicit)  # not checked by validate(), only for the caller
@@ -120,7 +120,7 @@ class Output(Dependency):
 
 
 class _FilesystemObjectMixin(Dependency):
-    def __init__(self, *, cls=fs.Path, **kwargs):
+    def __init__(self, *, cls: typing.Type[fs.Path] = fs.Path, **kwargs):
         super().__init__(**kwargs)
         if not (isinstance(cls, type) and issubclass(cls, fs.Path)):
             raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
@@ -142,7 +142,7 @@ class _FilesystemObjectMixin(Dependency):
 
 
 class _FilesystemObjectInputMixin(Dependency):
-    def __init__(self, *, ignore_permission=True, **kwargs):
+    def __init__(self, *, ignore_permission: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._ignore_permission = bool(ignore_permission)
 
@@ -202,7 +202,7 @@ class DirectoryOutput(_DirectoryMixin, ConcreteDependency, Output):
 
 class EnvVarInput(ConcreteDependency, Input):
 
-    def __init__(self, *, restriction, example, **kwargs):
+    def __init__(self, *, restriction: typing.Union[str, typing.Pattern], example: str, **kwargs):
         super().__init__(**kwargs)
 
         if isinstance(restriction, str):
