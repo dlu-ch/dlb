@@ -300,7 +300,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.RegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for a regular file.
+   Constructs a dependency role for a regular file in the :term`managed tree`, identified by its path.
+
+   If the path is relative, is it treated as relative to
+   :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`.
 
    If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
    :term:`mtime` is considered a modification of the dependency.
@@ -324,7 +327,11 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.NonRegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for a filesystem object, that is neither a directory nor a regular file.
+   Constructs a dependency role for a filesystem object in the :term`managed tree` that is neither a directory nor
+   a regular file, identified by its path.
+
+   If the path is relative, is it treated as relative to
+   :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`.
 
    If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
    :term:`mtime` is considered a modification of the dependency.
@@ -348,7 +355,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.Directory(cls=dlb.fs.Path)
 
-   Constructs a dependency role for directory.
+   Constructs a dependency role for directory in the :term`managed tree`, identified by its path.
+
+   If the path is relative, is it treated as relative to
+   :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`.
 
    If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
    :term:`mtime` is considered a modification of the dependency.
@@ -422,7 +432,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Output.RegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for a regular file.
+   Constructs a dependency role for a regular file in the :term`managed tree`, identified by its path.
+
+   If the path is relative, is it treated as relative to
+   :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path
    as an instance of ``cls``.
@@ -440,7 +453,11 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Output.NonRegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for a filesystem object, that is neither a directory nor a regular file.
+   Constructs a dependency role for a filesystem object in the :term`managed tree` that is neither a directory nor
+   a regular file, identified by its path.
+
+   If the path is relative, is it treated as relative to
+   :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
    instance of ``cls``.
@@ -458,7 +475,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Output.Directory(cls=dlb.fs.Path)
 
-   Constructs a dependency role for directory.
+   Constructs a dependency role for directory in the :term`managed tree`, identified by its path.
+
+   If the path is relative, is it treated as relative to
+   :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
    as an instance of ``cls``.

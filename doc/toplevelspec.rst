@@ -300,7 +300,7 @@ Dependencies
 **A-D3** (no implicit symbolic links in paths)
    A filesystem object in the :term:`managed tree` that serves as a dependency of a :term:`tool instance` *t* does not
    have a parent directory :file:`{p}` in its path that is a symbolic link, unless :file:`{p}` is an input dependency
-   of *t*.
+   of *t* and in the working tree.
 
    Acceptable when violated:
 

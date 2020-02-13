@@ -4,7 +4,7 @@
 .. module:: dlb.fs
    :synopsis: Filesystem paths
 
-This module provides classes to represent and access filesystem objects in a save and platform-independent manner,
+This module provides classes to represent and access filesystem objects in a safe and platform-independent manner,
 most prominently :class:`dlb.fs.Path` and its subclasses.
 
 .. inheritance-diagram:: dlb.fs.Path dlb.fs.RelativePath dlb.fs.AbsolutePath dlb.fs.NoSpacePath dlb.fs.PosixPath dlb.fs.PortablePosixPath dlb.fs.PortableWindowsPath dlb.fs.WindowsPath dlb.fs.PortablePath
