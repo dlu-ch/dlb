@@ -36,6 +36,7 @@ class _Native:
         s = str(r)
         if not r.anchor:  # with anchor: 'c:x', 'c:/x', '//unc/root/x'
             if s != '.' and r.parts[:1] != ('..',):
+                # noinspection PyUnresolvedReferences
                 s = str('_.' / r)[1:]
         return s
 
@@ -47,7 +48,7 @@ class _Native:
 
 
 # http://stackoverflow.com/questions/13762231/python-metaclass-arguments
-# noinspection PyMethodParameters,PyProtectedMember
+# noinspection PyMethodParameters,PyProtectedMember,PyUnresolvedReferences
 class _Meta(type):
     def __subclasscheck__(mcl, subclass):
         # Class hierarchy:
@@ -61,7 +62,7 @@ class _Meta(type):
         return common_bases and issubclass(subclass._cls, mcl._cls)
 
 
-# noinspection PyMethodParameters,PyProtectedMember
+# noinspection PyMethodParameters,PyProtectedMember,PyUnresolvedReferences
 class _NativeMeta(_Meta):
     def __call__(mcl, value):
         obj = _Native(value)
@@ -130,6 +131,7 @@ class Path(metaclass=_PathMeta):
         try:
             for c in reversed(self.__class__.mro()):
                 if 'check_restriction_to_base' in c.__dict__:
+                    # noinspection PyUnresolvedReferences
                     c.check_restriction_to_base(self)
         except ValueError as e:
             reason = str(e)

@@ -84,6 +84,8 @@ class Dependency(mult.MultiplicityHolder):
             raise TypeError("since dependency has a multiplicity, value must be iterable (other than 'str' or 'bytes')")
 
         values = []
+
+        # noinspection PyTypeChecker
         for v in value:
             v = self.validate_single(v, context)
             if self.unique and v in values:
@@ -114,7 +116,7 @@ class Output(Dependency):
     RANK = 1  # type: int
 
 
-class _FilesystemObjectMixin:
+class _FilesystemObjectMixin(Dependency):
     def __init__(self, *, cls=fs.Path, **kwargs):
         super().__init__(**kwargs)
         if not (isinstance(cls, type) and issubclass(cls, fs.Path)):
@@ -136,7 +138,7 @@ class _FilesystemObjectMixin:
         return self._path_cls(value)
 
 
-class _FilesystemObjectInputMixin:
+class _FilesystemObjectInputMixin(Dependency):
     def __init__(self, *, ignore_permission=True, **kwargs):
         super().__init__(**kwargs)
         self._ignore_permission = bool(ignore_permission)

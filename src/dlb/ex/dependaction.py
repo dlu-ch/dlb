@@ -59,7 +59,7 @@ class Action:
         return marshal.dumps((register_index, d.explicit))
 
 
-class _FilesystemObjectMixin:
+class _FilesystemObjectMixin(Action):
     def get_permanent_local_value_id(self, value) -> bytes:
         if value is not None:
             if self.dependency.multiplicity is None:
@@ -72,7 +72,7 @@ class _FilesystemObjectMixin:
 
 class _FilesystemObjectInputMixin(_FilesystemObjectMixin):
     def get_permanent_local_instance_id(self) -> bytes:
-        d = self.dependency
+        d: typing.Union[depend.RegularFileInput, depend.NonRegularFileInput, depend.DirectoryInput] = self.dependency
         return super().get_permanent_local_instance_id() + marshal.dumps(d.ignore_permission)
 
 

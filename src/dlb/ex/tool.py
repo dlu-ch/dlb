@@ -231,6 +231,7 @@ class _ToolMeta(type):
                         )
                         raise TypeError(msg)
             elif DEPENDENCY_NAME_REGEX.match(name):
+                # noinspection PyUnresolvedReferences
                 if not (isinstance(value, _ToolBase.Dependency) and isinstance(value, depend.ConcreteDependency)):
                     msg = (
                         f"the value of {name!r} must be an instance of a concrete subclass of "
@@ -238,6 +239,7 @@ class _ToolMeta(type):
                     )
                     raise TypeError(msg)
                 for base_class in cls.__bases__:
+                    value: depend.Dependency
                     base_value = base_class.__dict__.get(name, None)
                     if base_value is not None and not value.compatible_and_no_less_restrictive(base_value):
                         msg = (

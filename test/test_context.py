@@ -252,8 +252,8 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
         os.chmod('.dlbroot/t', 0o000)
 
         regex = (
-            r"(?m)"
-            r"\Afailed to setup management tree for '.*'\n"
+            r"(?m)\A"
+            r"failed to setup management tree for '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]t'.*\Z"
         )
         with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
@@ -266,8 +266,8 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
 
         regex = (
-            r"(?m)"
-            r"\Afailed to cleanup management tree for '.*'\n"
+            r"(?m)\A"
+            r"failed to cleanup management tree for '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\].*'.*\Z"
         )
         with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
@@ -316,8 +316,8 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
             os.mkdir('.dlbroot')
 
             regex = (
-                r"(?m)"
-                r"\Acurrent directory violates imposed path restrictions\n"
+                r"(?m)\A"
+                r"current directory violates imposed path restrictions\n"
                 r"  \| reason: .*NoSpacePath.*'.+'.*\n"
                 r"  \| move the working directory or choose a less restrictive path class for the root context\Z"
             )
@@ -327,8 +327,8 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
 
             with dlb.ex.Context():  # no exception
                 regex = (
-                    r"(?m)"
-                    r"\Aworking tree's root path violates path restrictions imposed by this context\n"
+                    r"(?m)\A"
+                    r"working tree's root path violates path restrictions imposed by this context\n"
                     r"  \| reason: .*NoSpacePath.*'.+'.*\n"
                     r"  \| move the working directory or choose a less restrictive path class for the root context\Z"
                 )
@@ -382,8 +382,8 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot/lock')
 
         regex = (
-            r"(?m)"
-            r"\Acannot acquire lock for exclusive access to working tree '.*'\n"
+            r"(?m)\A"
+            r"cannot acquire lock for exclusive access to working tree '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
@@ -398,8 +398,8 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
         os.chmod('.dlbroot', 0o000)
 
         regex = (
-            r"(?m)"
-            r"\Acannot acquire lock for exclusive access to working tree '.*'\n"
+            r"(?m)\A"
+            r"cannot acquire lock for exclusive access to working tree '.*'\n"
             r"  \| reason: .*'.+[/\\]\.dlbroot[/\\]lock'.*\n"
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[/\\]\.dlbroot[/\\]lock'\Z"
@@ -491,8 +491,8 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             regex = (
-                r"(?m)"
-                r"\Apath violates imposed path restrictions\n"
+                r"(?m)\A"
+                r"path violates imposed path restrictions\n"
                 r"  \| reason: .*NoSpacePath.*'.+'.*\n"
                 r"  \| check specified 'prefix' and 'suffix'\Z"
             )
@@ -562,7 +562,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(dlb.ex.Context.get_managed_tree_path(''), dlb.fs.Path('.'))
             self.assertEqual(dlb.ex.Context.get_managed_tree_path('f/..'), dlb.fs.Path('.'))
 
-            regex = r"\Aform of 'path' does not match the type of filesystem object: '.*'\Z"
+            regex = r"\A()form of 'path' does not match the type of filesystem object: '.*'\Z"
             with self.assertRaisesRegex(ValueError, regex):
                 dlb.ex.Context.get_managed_tree_path('f/')
             with self.assertRaisesRegex(ValueError, regex):

@@ -158,8 +158,8 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
                 env1 = c1.env
                 with dlb.ex.Context():
                     regex = (
-                        r"(?m)"
-                        r"\A'env' of an inactive context must not be modified\n"
+                        r"(?m)\A"
+                        r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
                     with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
@@ -223,8 +223,8 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
         os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
             regex = (
-                r"(?m)"
-                r"\Aenvironment variable not imported into context: 'A_B_C'\n"
+                r"(?m)\A"
+                r"environment variable not imported into context: 'A_B_C'\n"
                 r"  \| use 'dlb\.ex\.Context\.active\.env.import_from_outer\(\)' first\Z"
             )
             with self.assertRaisesRegex(AttributeError, regex):
@@ -245,8 +245,8 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
                 env1 = c1.env
                 with dlb.ex.Context():
                     regex = (
-                        r"(?m)"
-                        r"\A'env' of an inactive context must not be modified\n"
+                        r"(?m)\A"
+                        r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
                     with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
@@ -265,8 +265,8 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
                 env1 = c1.env
                 with dlb.ex.Context():
                     regex = (
-                        r"(?m)"
-                        r"\A'env' of an inactive context must not be modified\n"
+                        r"(?m)\A"
+                        r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
                     with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):

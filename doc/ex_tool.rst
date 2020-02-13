@@ -336,7 +336,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    symlinks = dlb.ex.Tool.Input.NonregularFile[:](cls=dlb.fs.NoSpacePath)
+      >>>    symlinks = dlb.ex.Tool.Input.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
       >>> tool = Tool(symlinks=['src/current'])
       >>> tool.symlinks
       (NoSpacePath('src/current'),)
@@ -448,7 +448,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    symlinks = dlb.ex.Tool.Output.NonregularFile[:](cls=dlb.fs.NoSpacePath)
+      >>>    symlinks = dlb.ex.Tool.Output.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
       >>> tool = Tool(symlinks=['dist'])
       >>> tool.symlinks
       (NoSpacePath('src/current'),)

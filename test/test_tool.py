@@ -483,8 +483,8 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             return A
 
         regex = (
-            r"(?m)"
-            r"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"(?m)\A"
+            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
             r"  \| location: '.+':[0-9]+\n"
             r"  \| class: <class '.+'>\Z"
         )
@@ -501,8 +501,8 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             return A
 
         regex = (
-            r"(?m)"
-            r"\Ainvalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"(?m)\A"
+            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
             r"  \| location: '.+':[0-9]+\n"
             r"  \| class: <class '.+'>\Z"
         )
@@ -518,8 +518,8 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
         sys.path.insert(0, '.')  # !
         regex = (
-            r"(?m)"
-            r"\Ainvalid tool definition: location of definition depends on current working directory\n"
+            r"(?m)\A"
+            r"invalid tool definition: location of definition depends on current working directory\n"
             r"  \| class: <class '.+'>\n"
             r"  \| source file: '.+'\n"
             r"  \| make sure the matching module search path is an absolute path when the defining module is imported\Z"

@@ -49,8 +49,9 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
             os.chdir(self._temp_dir.name)
             if self._show_dir_change:
                 print(f'changed current working directory of process to {self._temp_dir.name!r}')
-        except:
+        except Exception:
             self._temp_dir.cleanup()
+            raise
 
     def tearDown(self):
         if self._temp_dir:

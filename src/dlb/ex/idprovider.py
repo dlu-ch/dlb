@@ -22,12 +22,15 @@ ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_id', 'definition
 _registered_info_by_tool = {}
 
 
-def _get_and_register_tool_identity(tool__: typing.Type[tool_.Tool]) -> typing.Tuple[bytes, fs.Path]:
+def _get_and_register_tool_identity(tool: typing.Type[tool_.Tool]) -> typing.Tuple[bytes, fs.Path]:
     # Return a ToolIdentity with a permanent local id of tool and the managed tree path of the defining source file,
     # if it is in the managed tree.
 
     definition_path_in_managed_tree = None
-    definition_path, in_archive_path, lineno = tool__.definition_location
+
+    # noinspection PyUnresolvedReferences
+    definition_path, in_archive_path, lineno = tool.definition_location
+
     try:
         definition_path_in_managed_tree = context.Context.get_managed_tree_path(definition_path)
         definition_path = definition_path_in_managed_tree.as_string()

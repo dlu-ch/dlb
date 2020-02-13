@@ -159,10 +159,10 @@ A variable specification of the form
 describes a *non-container variable*.
 
    .. productionlist:: tokenstmpl
-      variable_name: `prefixed_dottet_name`
-      type_name: `prefixed_dottet_name`
-      prefixed_dottet_name: [`name_prefix`] `dottet_name`
-      dottet_name: `name` ('.' `name`)
+      variable_name: `prefixed_dotted_name`
+      type_name: `prefixed_dotted_name`
+      prefixed_dotted_name: [`name_prefix`] `dotted_name`
+      dotted_name: `name` ('.' `name`)
       name: `name_firstchar` `name_char`*
       name_firstchar: 'A' .. 'Z' | 'a' .. 'z' | '_'
       name_char: `name_firstchar` | '0' .. '9'

@@ -14,7 +14,7 @@ Terms
    tool instance
       A (concrete) instance of an (abstract) :term:`tool` with concrete dependencies.
 
-      Can be run in an active context with ``r = t.run()`` (once or multiple times), which happens sequencially in the
+      Can be run in an active context with ``r = t.run()`` (once or multiple times), which happens sequentially in the
       following stages:
 
       #. start of execution: call of :meth:`t.run() <dlb.ex.Tool.run()>`.

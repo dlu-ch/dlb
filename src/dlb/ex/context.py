@@ -459,18 +459,18 @@ class _RootSpecifics:
                 most_serious_exception = e
             self._mtime_probe = None
 
+        lock_dir_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _LOCK_DIRNAME + '/')
+        try:
+            os.rmdir(lock_dir_path.native)  # unlock
+        except Exception as e:
+            most_serious_exception = e
+
         if self._rundb_connection:
             try:
                 self._rundb_connection.close()  # note: uncommitted changes are lost!
             except Exception as e:
                 most_serious_exception = e
             self._rundb_connection = None
-
-        lock_dir_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _LOCK_DIRNAME + '/')
-        try:
-            os.rmdir(lock_dir_path.native)  # unlock
-        except Exception:
-            pass
 
         if most_serious_exception:
             raise most_serious_exception
