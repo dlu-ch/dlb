@@ -128,7 +128,7 @@ class StringRepresentationTest(unittest.TestCase):
 
     def test_str(self):
         p = dlb.fs.Path('x//../yz/.////u')
-        with self.assertRaises(NotImplementedError) as cm:
+        with self.assertRaises(AttributeError) as cm:
             str(p)
         self.assertEqual("use 'repr()' or 'native' instead", str(cm.exception))
 

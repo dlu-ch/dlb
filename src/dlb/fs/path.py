@@ -303,7 +303,8 @@ class Path(metaclass=_PathMeta):
 
     def __str__(self):
         # make sure this object is not converted to a string where a native path is expected
-        raise NotImplementedError("use 'repr()' or 'native' instead")
+        # (not to be implemented by subclasses, hence not NotImplementedError)
+        raise AttributeError("use 'repr()' or 'native' instead")
 
     def __getitem__(self, item):
         if not isinstance(item, slice):
