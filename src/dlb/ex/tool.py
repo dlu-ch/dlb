@@ -101,9 +101,11 @@ class _ToolBase:
                 # this remains unchanged between dlb run if dlb.ex.idprovider.PLATFORM_ID remains unchanged
                 try:
                     action = dependaction.get_action(role)
-                    pli = action.get_permanent_local_instance_id()
-                    pli += action.get_permanent_local_value_id(getattr(self, name))
-                    hashalg.update(pli)
+                    dependency_fingerprint = action.get_permanent_local_instance_id()
+                    dependency_fingerprint += action.get_permanent_local_value_id(getattr(self, name))
+                    # since 'dependency_names' and 'r.explicit of all their members r are fixed for all instances
+                    # of this class, the order of dependency roles is sufficient for their identification
+                    hashalg.update(dependency_fingerprint)  # dependency_fingerprint must not be empty
                 except KeyError:
                     msg = f"keyword names unregistered dependency class {role.__class__!r}: {name!r}"
                     raise DependencyRoleAssignmentError(msg)
@@ -114,7 +116,7 @@ class _ToolBase:
     # final
     def run(self):
         # TODO: implement, document
-        raise NotImplementedError
+        return
 
     def __setattr__(self, name: str, value):
         raise AttributeError

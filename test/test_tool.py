@@ -8,8 +8,10 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
+import dlb.fs
 import dlb.ex
 from dlb.ex import Tool
+import pathlib
 import tempfile
 import zipfile
 import unittest
@@ -424,7 +426,7 @@ class ReprTest(unittest.TestCase):
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_of_tools_are_correct(self):
-        lineno = 427  # of this line
+        lineno = 429  # of this line
 
         class A(Tool):
             pass
@@ -546,16 +548,26 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
 
     class ATool(Tool):
         source_file = Tool.Input.RegularFile[:]()
-        object_file = Tool.Output.RegularFile()
+        object_file = Tool.Output.RegularFile(required=False)
+        map_file = Tool.Output.RegularFile(required=False)
 
     def test_is_equal_for_same_concrete_dependencies(self):
-        tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'], object_file='e.o')
-        tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'], object_file='e.o')
+        tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'], object_file=pathlib.PosixPath('e.o'))
+        tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', dlb.fs.Path('src/d.c')], object_file='e.o')
+        self.assertEqual(tool1.fingerprint, tool2.fingerprint)
+
+    def test_is_equal_for_different_argument_order(self):
+        tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c'], object_file='e.o', map_file='e.map')
+        tool2 = ToolInstanceFingerprintTest.ATool(map_file='e.map', source_file=['src/a/b.c'], object_file='e.o')
         self.assertEqual(tool1.fingerprint, tool2.fingerprint)
 
     def test_is_not_equal_for_different_concrete_dependencies(self):
         tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'], object_file='e.o')
         tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/d.c'], object_file='e.o')
+        self.assertNotEqual(tool1.fingerprint, tool2.fingerprint)
+
+        tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c'], object_file='e.o', map_file='e.map')
+        tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c'], map_file='e.o', object_file='e.mp')
         self.assertNotEqual(tool1.fingerprint, tool2.fingerprint)
 
     def test_is_20_byte(self):

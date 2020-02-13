@@ -29,7 +29,7 @@ class Action:
 
     # overwrite in subclasses
     def get_permanent_local_value_id(self, validated_value) -> bytes:
-        # Returns a short byte string as a permanent local id for this validated value of a given instance.
+        # Returns a short non-empty byte string as a permanent local id for this validated value of a given instance.
         #
         # Two instances of the same or of different dependency classes may return different permanent local value ids
         # for the same validated value.
@@ -41,7 +41,7 @@ class Action:
 
     # overwrite and call method of superclass in subclasses
     def get_permanent_local_instance_id(self) -> bytes:
-        # Returns a short byte string as a permanent local id for this instance.
+        # Returns a short non-empty byte string as a permanent local id for this instance.
         #
         # The permanent local id is the same on every Python run as long as PLATFORM_ID remains the same
         # (at least that's the idea).
