@@ -7,9 +7,9 @@ This is an implementation detail - do not import it unless you know what you are
 
 import re
 import typing
+from .. import fs
 from . import mult
 from . import context as context_
-from .. import fs
 
 
 # noinspection PyUnresolvedReferences
