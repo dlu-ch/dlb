@@ -9,12 +9,16 @@ __all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError')
 import sys
 import re
 import os
+import collections
 import hashlib
 import typing
 import inspect
+import marshal
+from .. import fs
+from . import util
+from . import context
 from . import depend
 from . import dependaction
-from . import util
 assert sys.version_info >= (3, 6)
 
 
@@ -36,6 +40,9 @@ assert not RESERVED_NAME_REGEX.match('__init')
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
 _tool_class_by_definition_location = {}
 
+# key: dlb.ex.Tool, value: ToolInfo
+_registered_info_by_tool = {}
+
 
 class DefinitionAmbiguityError(SyntaxError):
     pass
@@ -43,6 +50,9 @@ class DefinitionAmbiguityError(SyntaxError):
 
 class DependencyRoleAssignmentError(ValueError):
     pass
+
+
+ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_id', 'definition_paths'))
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -100,7 +110,7 @@ class _ToolBase:
                     raise DependencyRoleAssignmentError(msg)
                 object.__setattr__(self, name, None)
             if role.explicit:
-                # this remains unchanged between dlb run if dlb.ex.idprovider.PLATFORM_ID remains unchanged
+                # this remains unchanged between dlb run if dlb.ex.platform.PERMANENT_PLATFORM_ID remains unchanged
                 try:
                     action = dependaction.get_action(role)
                     dependency_fingerprint = action.get_permanent_local_instance_id()
@@ -273,6 +283,64 @@ class _ToolMeta(type):
 
 class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
+
+
+def _get_and_register_tool_identity(tool: typing.Type[Tool]) -> typing.Tuple[bytes, fs.Path]:
+    # Return a ToolIdentity with a permanent local id of tool and the managed tree path of the defining source file,
+    # if it is in the managed tree.
+
+    definition_path_in_managed_tree = None
+
+    # noinspection PyUnresolvedReferences
+    definition_path, in_archive_path, lineno = tool.definition_location
+
+    try:
+        definition_path_in_managed_tree = context.Context.get_managed_tree_path(definition_path)
+        definition_path = definition_path_in_managed_tree.as_string()
+        if definition_path.startswith('./'):
+            definition_path = definition_path[2:]
+    except ValueError:
+        pass
+
+    permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
+    return permanent_local_id, definition_path_in_managed_tree
+
+
+def get_and_register_tool_info(tool: typing.Type[Tool]) -> ToolInfo:
+    # Return a ToolInfo with a permanent local id of tool and a set of all source file in the managed tree in
+    # which the class or one of its baseclass of type `base_cls` is defined.
+    #
+    # The result is cached.
+    #
+    # The permanent local id is the same on every Python run as long as dlb.ex.platform.PERMANENT_PLATFORM_ID
+    # remains the same (at least that's the idea).
+    # Note however, that the behaviour of tools not only depends on their own code but also on all imported
+    # objects. So, its up to the programmer of the tool, how much variability a tool with a unchanged
+    # permanent local id can show.
+
+    if not issubclass(tool, Tool):
+        raise TypeError("'tool' must be a 'dlb.ex.Tool'")
+
+    info = _registered_info_by_tool.get(tool)
+    if info is not None:
+        return info
+
+    # collect the managed tree paths of tool and its base classes that are tools
+
+    definition_paths = set()
+    for c in reversed(tool.mro()):
+        if c is not tool and issubclass(c, Tool):
+            base_info = get_and_register_tool_info(c)
+            definition_paths = definition_paths.union(base_info.definition_paths)
+
+    permanent_local_id, definition_path = _get_and_register_tool_identity(tool)
+    if definition_path is not None:
+        definition_paths.add(definition_path)
+
+    info = ToolInfo(permanent_local_id=permanent_local_id, definition_paths=definition_paths)
+    _registered_info_by_tool[tool] = info
+
+    return info
 
 
 # noinspection PyCallByClass
