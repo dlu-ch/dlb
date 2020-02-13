@@ -2,6 +2,9 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@userd.noreply.github.com>
 
+"""Actions for dependency classes for tools to be used by tool instances.
+This is an implementation detail - do not import it unless you know what you are doing."""
+
 __all__ = (
     'Action',
     'register_action',

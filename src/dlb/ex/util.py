@@ -2,6 +2,9 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
+"""(Technical) utilities.
+This is an implementation detail - do not import it unless you know what you are doing."""
+
 __all__ = ('is_immutable_fundamental', 'make_fundamental')
 
 import sys

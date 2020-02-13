@@ -2,6 +2,9 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
+"""Permanent identification of platform and tools.
+This is an implementation detail - do not import it unless you know what you are doing."""
+
 import sys
 import collections
 import typing

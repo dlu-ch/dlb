@@ -2,6 +2,8 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
+"""Execution contexts for tool instances."""
+
 __all__ = (
     'Context',
     'ContextNestingError',

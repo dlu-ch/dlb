@@ -2,6 +2,8 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
+"""Classes to represent and access filesystem objects in a safe and platform-independent manner."""
+
 __all__ = (
     'Path', 'RelativePath', 'AbsolutePath', 'NormalizedPath', 'NoSpacePath',
     'PosixPath', 'PortablePosixPath',
