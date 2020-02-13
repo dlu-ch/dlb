@@ -25,8 +25,9 @@ import typing
 import tempfile
 import shutil
 import sqlite3
-from . import util
 from .. import fs
+from . import util
+from . import rundb
 assert sys.version_info >= (3, 6)
 
 
@@ -277,7 +278,7 @@ class _RootSpecifics:
 
         self._is_working_tree_case_sensitive = True
         self._mtime_probe = None
-        self._rundb_connection = None
+        self._rundb = None
 
         management_tree_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/')
 
@@ -339,7 +340,14 @@ class _RootSpecifics:
                 os.mkdir(temporary_path_str)
 
                 rundb_path_str = str((management_tree_path / _RUNDB_FILE_NAME).native)
-                self._rundb_connection = self._open_or_create_rundb(rundb_path_str)
+                try:
+                    mode = os.lstat(rundb_path_str).st_mode
+                    if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
+                        remove_filesystem_object(rundb_path_str)
+                except FileNotFoundError:
+                    pass
+
+                self._rundb = rundb.Database(rundb_path_str)  # raises sqlite3.Error on error
             except Exception:
                 self.close_and_unlock_if_open()
                 raise
@@ -418,19 +426,8 @@ class _RootSpecifics:
 
         return mtp
 
-    def _open_or_create_rundb(self, rundb_path):
-        try:
-            mode = os.lstat(rundb_path).st_mode
-            if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
-                remove_filesystem_object(rundb_path)
-        except FileNotFoundError:
-            pass
-
-        connection = sqlite3.connect(rundb_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
-        return connection
-
     def _cleanup(self):
-        self._rundb_connection.commit()
+        self._rundb.cleanup()
         temporary_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')
         remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
 
@@ -467,12 +464,12 @@ class _RootSpecifics:
         except Exception as e:
             most_serious_exception = e
 
-        if self._rundb_connection:
+        if self._rundb:
             try:
-                self._rundb_connection.close()  # note: uncommitted changes are lost!
+                self._rundb.close()  # note: uncommitted changes are lost!
             except Exception as e:
                 most_serious_exception = e
-            self._rundb_connection = None
+            self._rundb = None
 
         if most_serious_exception:
             raise most_serious_exception
@@ -513,9 +510,9 @@ class Context(metaclass=_ContextMeta):
     def __init__(self, *, path_cls: typing.Type[fs.Path] = fs.Path):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' is not a subclass of 'dlb.fs.Path'")
-        self._path_cls = path_cls  # type: fs.Path
-        self._root_specifics = None  # type: typing.Optional[_RootSpecifics]
-        self._env = None  # type: typing.Optional[_EnvVarDict]
+        self._path_cls = path_cls
+        self._root_specifics: typing.Optional[_RootSpecifics] = None
+        self._env: typing.Optional[_EnvVarDict] = None
 
     @property
     def root(self):
