@@ -15,10 +15,10 @@ from .tool import *
 #     mult           ->
 #     tmpl           ->   util
 #
-#     rundb          ->
-#     context        ->   util        rundb
+#     platform       ->
+#     rundb          ->                platform
+#     context        ->   util                   rundb
 #
-#     depend         ->          mult         context
-#     dependaction   ->   util                          depend
-#     tool           ->   util                context   depend   dependaction
-#     idprovider     ->                       context                          tool
+#     depend         ->          mult                   context
+#     dependaction   ->   util                                    depend
+#     tool           ->   util                          context   depend   dependaction

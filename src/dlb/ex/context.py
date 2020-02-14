@@ -577,4 +577,12 @@ class Context(metaclass=_ContextMeta):
             self._root_specifics = None
 
 
+def _get_rundb() -> rundb.Database:
+    # use this to access the database from dlb.ex.Tool
+    rundb = Context.root._root_specifics._rundb
+    if rundb is None:
+        raise ValueError('run-database not open')
+    return rundb
+
+
 util.set_module_name_to_parent_by_name(vars(), __all__)

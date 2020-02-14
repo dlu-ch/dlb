@@ -307,7 +307,7 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.Context():
             info = dlb.ex.tool.get_and_register_tool_info(A)
 
-        self.assertGreater(len(info.permanent_local_id), 1)
+        self.assertGreater(len(info.permanent_local_tool_id), 1)
         self.assertEqual(info.definition_paths, set())
 
     def test_path_of_tools_defined_in_managed_tree_are_correct(self):
@@ -351,8 +351,8 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
             dt2 = time.time() - t
             print(f'second time: {dt2:6f} s')
 
-        self.assertIsInstance(info1.permanent_local_id, bytes)
-        self.assertGreater(len(info1.permanent_local_id), 1)
+        self.assertIsInstance(info1.permanent_local_tool_id, bytes)
+        self.assertGreater(len(info1.permanent_local_tool_id), 1)
         self.assertEqual(info1.definition_paths, {dlb.fs.Path('a/u.py'), dlb.fs.Path('w.py')})
         self.assertEqual(info1, info2)
 

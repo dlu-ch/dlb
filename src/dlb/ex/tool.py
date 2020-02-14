@@ -52,7 +52,7 @@ class DependencyRoleAssignmentError(ValueError):
     pass
 
 
-ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_id', 'definition_paths'))
+ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -122,7 +122,8 @@ class _ToolBase:
                     msg = f"keyword names unregistered dependency class {role.__class__!r}: {name!r}"
                     raise DependencyRoleAssignmentError(msg)
 
-        # permanent local fingerprint for this instance (do not compare fingerprint between different self.__class__!)
+        # permanent local tool instance fingerprint for this instance (do not compare fingerprint between
+        # different self.__class__!)
         object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
 
     # final
@@ -337,7 +338,7 @@ def get_and_register_tool_info(tool: typing.Type[Tool]) -> ToolInfo:
     if definition_path is not None:
         definition_paths.add(definition_path)
 
-    info = ToolInfo(permanent_local_id=permanent_local_id, definition_paths=definition_paths)
+    info = ToolInfo(permanent_local_tool_id=permanent_local_id, definition_paths=definition_paths)
     _registered_info_by_tool[tool] = info
 
     return info

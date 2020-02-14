@@ -100,9 +100,10 @@ Tool objects
 
    .. attribute:: fingerprint
 
-      The SHA1 fingerprint of this instance, calculated from all its concrete dependencies ``d`` with
-      ``d.explicit`` = ``True``.
-      This is a ``bytes`` object of fixed size.
+      The *permanent local tool instance fingerprint* of this instance.
+
+      This is a ``bytes`` object of fixed size, calculated from all its concrete
+      dependencies ``d`` with d.explicit`` = ``True``.
 
       If two instances of the same subclass of :class:`Tool` have "similar" explicit dependencies, their
       fingerprints are equal.

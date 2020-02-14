@@ -8,8 +8,9 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-import dlb.ex
 import dlb.fs
+import dlb.ex
+import dlb.ex.rundb
 import stat
 import time
 import unittest
@@ -373,6 +374,21 @@ class RunDatabaseTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
             os.path.isfile('.dlbroot/runs.sqlite')
+
+    def test_access_is_possible_in_nonobvious_way_when_running(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            self.assertIsInstance(dlb.ex.context._get_rundb(), dlb.ex.rundb.Database)
+
+    def test_access_not_possible_in_nobvious_way(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            with self.assertRaises(AttributeError):
+                dlb.ex.Context.root.run_db_()
+
+    def test_access_fails_if_not_running(self):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.context._get_rundb()
 
 
 class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):

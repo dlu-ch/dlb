@@ -8,9 +8,9 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-import dlb.ex.tool
-import dlb.ex.dependaction
 import dlb.fs
+import dlb.ex.dependaction
+import dlb.ex.tool
 import unittest
 import tools_for_test
 
