@@ -70,13 +70,6 @@ _MTIME_TEMPORARY_DIR_NAME = 't'
 _RUNDB_FILE_NAME = 'runs.sqlite'
 
 
-def exception_to_string(e):
-    s = str(e)
-    if s:
-        return s
-    return e.__class__.__qualname__
-
-
 # TODO implement safer version
 # TODO move to appropriate place
 def remove_filesystem_object(path, ignore_non_existing=False):
@@ -269,9 +262,9 @@ class _RootSpecifics:
                 raise ValueError(msg)
             working_tree_path_str = str(self._working_tree_path.native)
         except (ValueError, OSError) as e:
-            msg = (  # assume that exception_to_string(e) include the working_tree_path
+            msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
                 f'current directory violates imposed path restrictions\n'
-                f'  | reason: {exception_to_string(e)}\n'
+                f'  | reason: {util.exception_to_line(e)}\n'
                 f'  | move the working directory or choose a less restrictive path class for the root context'
             )
             raise ValueError(msg) from None
@@ -311,7 +304,7 @@ class _RootSpecifics:
         except OSError as e:
             msg = (
                 f'cannot acquire lock for exclusive access to working tree {working_tree_path_str!r}\n'
-                f'  | reason: {exception_to_string(e)}\n'
+                f'  | reason: {util.exception_to_line(e)}\n'
                 f'  | to break the lock (if you are sure no other dlb process is running): remove {lock_dir_path_str!r}'
             )
             raise ManagementTreeError(msg)
@@ -354,7 +347,7 @@ class _RootSpecifics:
         except (OSError, sqlite3.Error) as e:
             msg = (
                 f'failed to setup management tree for {working_tree_path_str!r}\n'
-                f'  | reason: {exception_to_string(e)}'
+                f'  | reason: {util.exception_to_line(e)}'
             )
             raise ManagementTreeError(msg) from None
 
@@ -383,7 +376,7 @@ class _RootSpecifics:
         except ValueError as e:
             msg = (
                 f'path violates imposed path restrictions\n'
-                f'  | reason: {exception_to_string(e)}\n'
+                f'  | reason: {util.exception_to_line(e)}\n'
                 f"  | check specified 'prefix' and 'suffix'"
             )
             raise ValueError(msg) from None
@@ -492,7 +485,7 @@ class _RootSpecifics:
             if isinstance(first_exception, (OSError, sqlite3.Error)):
                 msg = (
                     f'failed to cleanup management tree for {str(self._working_tree_path.native)!r}\n'
-                    f'  | reason: {exception_to_string(first_exception)}'
+                    f'  | reason: {util.exception_to_line(first_exception)}'
                 )
                 raise ManagementTreeError(msg) from None
             else:
@@ -555,9 +548,9 @@ class Context(metaclass=_ContextMeta):
                 # noinspection PyCallingNonCallable
                 self._path_cls(self.root_path)
             except ValueError as e:
-                msg = (  # assume that exception_to_string(e) include the working_tree_path
+                msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
                     f"working tree's root path violates path restrictions imposed by this context\n"
-                    f'  | reason: {exception_to_string(e)}\n'
+                    f'  | reason: {util.exception_to_line(e)}\n'
                     f'  | move the working directory or choose a less restrictive path class for the root context'
                 )
                 raise ValueError(msg) from None
