@@ -23,8 +23,8 @@ import stat
 import time
 import typing
 import tempfile
-import shutil
 from .. import fs
+from ..fs import manip
 from . import util
 from . import rundb
 assert sys.version_info >= (3, 6)
@@ -67,19 +67,6 @@ assert _MTIME_PROBE_FILE_NAME.upper() != _MTIME_PROBE_FILE_NAME
 _LOCK_DIRNAME = 'lock'
 _MTIME_TEMPORARY_DIR_NAME = 't'
 _RUNDB_FILE_NAME = 'runs.sqlite'
-
-
-# TODO implement safer version
-# TODO move to appropriate place
-def remove_filesystem_object(path, ignore_non_existing=False):
-    try:
-        try:
-            os.remove(path)  # does remove symlink
-        except IsADirectoryError:
-            shutil.rmtree(path, ignore_errors=False)
-    except FileNotFoundError:
-        if not ignore_non_existing:
-            raise
 
 
 class _EnvVarDict:
@@ -296,7 +283,7 @@ class _RootSpecifics:
             try:
                 mode = os.lstat(lock_dir_path_str).st_mode
                 if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
-                    remove_filesystem_object(lock_dir_path_str)
+                    manip.remove_filesystem_object(lock_dir_path_str)
             except FileNotFoundError:
                 pass
             os.mkdir(lock_dir_path_str)
@@ -315,8 +302,8 @@ class _RootSpecifics:
                 # prepare o for mtime probing
                 mtime_probe_path_str = str((management_tree_path / _MTIME_PROBE_FILE_NAME).native)
                 mtime_probeu_path_str = str((management_tree_path / _MTIME_PROBE_FILE_NAME.upper()).native)
-                remove_filesystem_object(mtime_probe_path_str, ignore_non_existing=True)
-                remove_filesystem_object(mtime_probeu_path_str, ignore_non_existing=True)
+                manip.remove_filesystem_object(mtime_probe_path_str, ignore_non_existing=True)
+                manip.remove_filesystem_object(mtime_probeu_path_str, ignore_non_existing=True)
 
                 self._mtime_probe = open(mtime_probe_path_str, 'xb')  # always a fresh file (no link to an existing one)
                 probe_stat = os.lstat(mtime_probe_path_str)
@@ -328,14 +315,14 @@ class _RootSpecifics:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
                 temporary_path_str = str((management_tree_path / _MTIME_TEMPORARY_DIR_NAME).native)
-                remove_filesystem_object(temporary_path_str, ignore_non_existing=True)
+                manip.remove_filesystem_object(temporary_path_str, ignore_non_existing=True)
                 os.mkdir(temporary_path_str)
 
                 rundb_path_str = str((management_tree_path / _RUNDB_FILE_NAME).native)
                 try:
                     mode = os.lstat(rundb_path_str).st_mode
                     if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
-                        remove_filesystem_object(rundb_path_str)
+                        manip.remove_filesystem_object(rundb_path_str)
                 except FileNotFoundError:
                     pass
 
@@ -427,7 +414,7 @@ class _RootSpecifics:
         self._rundb.cleanup()
         self._rundb.commit()
         temporary_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')
-        remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
+        manip.remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
         t0 = time.time()  # time_ns() not in Python 3.6
