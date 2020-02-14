@@ -10,6 +10,7 @@ import marshal  # very fast, reasonably secure, round-trip loss-less (see commen
 import sqlite3
 import typing
 from .. import fs
+from . import util
 from . import platform
 
 
@@ -61,20 +62,71 @@ def build_fsobject_dbid(managed_tree_path: fs.Path) -> str:
     return fsobject_dbid
 
 
+class DatabaseError(Exception):
+    pass
+
+
+class _CursorWithExceptionMapping:
+    def __init__(self, connection: sqlite3.Connection, summary_message_line: str, solution_message_line: str):
+        self._connection = connection
+        self._summary_message_line = summary_message_line.strip()
+        self._solution_message_line = solution_message_line.strip()
+
+    def __enter__(self):
+        return self._connection.cursor()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None and isinstance(exc_val, sqlite3.Error):
+            lines = []
+
+            if self._summary_message_line:
+                lines.append(f"reason: {self._summary_message_line}")
+            lines.append(util.exception_to_line(exc_val, True))
+            if self._solution_message_line:
+                lines.append(self._solution_message_line)
+
+            raise DatabaseError('\n  | '.join(lines)) from None
+
+
 class Database:
 
-    def __init__(self, rundb_path: str):
+    def __init__(self, rundb_path: str, suggestion_if_database_error: str = ''):
         """
         Open or create the database with path 'rundb_path'.
+
+        `suggestion_if_database_error` should be a non-empty line suggesting a recovery solution for database errors.
 
         Until `close()' is called on this object, no other process must construct an object with the same 'rundb_path'.
         """
 
-        rundb_abs_path = os.path.abspath(rundb_path)
-        connection = sqlite3.connect(rundb_abs_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
+        self._suggestion_if_database_error = str(suggestion_if_database_error)
 
+        rundb_abs_path = os.path.abspath(rundb_path)
         try:
-            connection.executescript(  # raises sqlite3.OperationalError if a table already exists
+            connection = sqlite3.connect(rundb_abs_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
+        except sqlite3.Error as e:
+            exists = False
+            try:
+                exists = os.path.isfile(rundb_abs_path)
+            except OSError:
+                pass
+
+            state_msg = 'existing' if exists else 'non-existing'
+            reason = util.exception_to_line(e, True)
+            msg = (
+                f"could not open {state_msg} run-database: {rundb_abs_path!r}\n"
+                f"  | reason: {reason}\n"
+                f"  | check access permissions"
+            )
+            raise DatabaseError(msg) from None
+
+        cursor_with_exception_mapping = _CursorWithExceptionMapping(
+            connection,
+            'could not setup run-database',
+            self._suggestion_if_database_error
+        )
+        with cursor_with_exception_mapping as cursor:
+            cursor.executescript(
                 "CREATE TABLE IF NOT EXISTS ToolInst("
                     "tool_inst_dbid INTEGER NOT NULL, "   # unique id of tool instance across dlb run and platforms
                                                           # (until next cleanup)
@@ -103,9 +155,6 @@ class Database:
                 "PRAGMA foreign_keys = ON;"               # https://www.sqlite.org/foreignkeys.html
             )
             connection.commit()
-        except:
-            connection.rollback()
-            raise
 
         self._connection = connection
 
@@ -119,24 +168,28 @@ class Database:
 
         When called more than one before the next cleanup() on this object, this always returns the same value."""
 
-        cursor = self._connection.cursor()
         t = (platform.PERMANENT_PLATFORM_ID, permanent_local_tool_id, permanent_local_tool_instance_fingerprint)
+        with self._cursor_with_exception_mapping() as cursor:
+            # assign tool_inst_dbid by AUTOINCREMENT:
+            cursor.execute("INSERT OR IGNORE INTO ToolInst VALUES (NULL, ?, ?, ?)", t)
+            cursor.execute("SELECT tool_inst_dbid FROM ToolInst WHERE "
+                           "pl_platform_id = ? AND pl_tool_id = ? AND pl_tool_inst_fp = ?", t)
+            tool_instance_dbid = cursor.fetchone()[0]
 
-        # assign tool_inst_dbid by AUTOINCREMENT:
-        cursor.execute("INSERT OR IGNORE INTO ToolInst VALUES (NULL, ?, ?, ?)", t)
-        cursor.execute("SELECT tool_inst_dbid FROM ToolInst WHERE "
-                       "pl_platform_id = ? AND pl_tool_id = ? AND pl_tool_inst_fp = ?", t)
-
-        return cursor.fetchone()[0]
+        return tool_instance_dbid
 
     def get_tool_instance_dbid_count(self) -> int:
         """
         Return the number of (different) registered `tool_instance_dbid` for the current platform.
         """
-        return self._connection.execute(
-            "SELECT COUNT(*) FROM ToolInst WHERE pl_platform_id = ?",
-            (platform.PERMANENT_PLATFORM_ID,)
-        ).fetchall()[0][0]
+
+        with self._cursor_with_exception_mapping() as cursor:
+            n = cursor.execute(
+                "SELECT COUNT(*) FROM ToolInst WHERE pl_platform_id = ?",
+                (platform.PERMANENT_PLATFORM_ID,)
+            ).fetchall()[0][0]
+
+        return n
 
     def update_fsobject_input(self, tool_instance_dbid: int, fsobject_dbid: str, is_explicit: bool,
                               memo_before: typing.Optional[bytes]):
@@ -153,8 +206,9 @@ class Database:
         if not is_fsobject_dbid(fsobject_dbid):
             raise ValueError(f"not a valid 'fsobject_dbid': {fsobject_dbid!r}")
 
-        self._connection.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?)",
-                                 (tool_instance_dbid, fsobject_dbid, 1 if is_explicit else 0, memo_before))
+        with self._cursor_with_exception_mapping() as cursor:
+            cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?)",
+                           (tool_instance_dbid, fsobject_dbid, 1 if is_explicit else 0, memo_before))
 
     def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: typing.Optional[bool] = None) \
             -> typing.Dict[str, typing.Optional[bytes]]:
@@ -169,15 +223,17 @@ class Database:
         not before the last `cleanup()` (if any).
         """
 
-        if is_explicit_filter is None:
-            rows = self._connection.execute(
-                "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput WHERE tool_inst_dbid == ?",
-                (tool_instance_dbid,)).fetchall()
-        else:
-            rows = self._connection.execute(
-                "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput "
-                "WHERE tool_inst_dbid == ? AND is_explicit == ?",
-                (tool_instance_dbid, 1 if is_explicit_filter else 0)).fetchall()
+        with self._cursor_with_exception_mapping():
+
+            if is_explicit_filter is None:
+                rows = self._connection.execute(
+                    "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput WHERE tool_inst_dbid == ?",
+                    (tool_instance_dbid,)).fetchall()
+            else:
+                rows = self._connection.execute(
+                    "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput "
+                    "WHERE tool_inst_dbid == ? AND is_explicit == ?",
+                    (tool_instance_dbid, 1 if is_explicit_filter else 0)).fetchall()
 
         return {fsobject_dbid: (bool(is_explicit), memo_before) for fsobject_dbid, is_explicit, memo_before in rows}
 
@@ -195,33 +251,44 @@ class Database:
         if not is_fsobject_dbid(modified_fsobject_dbid):
             raise ValueError(f"not a valid 'fsobject_dbid': {modified_fsobject_dbid!r}")
 
-        # remove all explicit dependencies (of all tool instances) whose `fsobject_dbid` have
-        # `modified_fsobject_dbid` as a prefix
-        cursor = self._connection.cursor()
-        cursor.execute(
-            "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(fsobject_dbid,?) == 1",
-            (modified_fsobject_dbid,))
+        with self._cursor_with_exception_mapping() as cursor:
 
-        # replace the `memo_before` all non-explicit dependencies (of all tool instances) whose `fsobject_dbid` have
-        # `modified_fsobject_dbid` as a prefix by NULL
-        # ...
-        cursor.execute(
-            "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 AND instr(fsobject_dbid,?) == 1",
-            (modified_fsobject_dbid,))
+            # remove all explicit dependencies (of all tool instances) whose `fsobject_dbid` have
+            # `modified_fsobject_dbid` as a prefix
+            cursor.execute(
+                "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(fsobject_dbid,?) == 1",
+                (modified_fsobject_dbid,))
+
+            # replace the `memo_before` all non-explicit dependencies (of all tool instances) whose `fsobject_dbid` have
+            # `modified_fsobject_dbid` as a prefix by NULL
+            # ...
+            cursor.execute(
+                "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 AND instr(fsobject_dbid,?) == 1",
+                (modified_fsobject_dbid,))
 
     def commit(self):
-        self._connection.commit()
+        with self._cursor_with_exception_mapping('commit failed'):
+            self._connection.commit()
 
     def cleanup(self):
-        # remove unused tool dbids
-        self._connection.execute(
-            "DELETE FROM ToolInst WHERE tool_inst_dbid IN ("
-                "SELECT ToolInst.tool_inst_dbid FROM ToolInst LEFT OUTER JOIN ToolInstFsInput "
-                "ON ToolInst.tool_inst_dbid = ToolInstFsInput.tool_inst_dbid "
-                "WHERE ToolInstFsInput.tool_inst_dbid IS NULL"
-            ")")
+        with self._cursor_with_exception_mapping('clean-up failed') as cursor:
+            # remove unused tool dbids
+            cursor.execute(
+                "DELETE FROM ToolInst WHERE tool_inst_dbid IN ("
+                    "SELECT ToolInst.tool_inst_dbid FROM ToolInst LEFT OUTER JOIN ToolInstFsInput "
+                    "ON ToolInst.tool_inst_dbid = ToolInstFsInput.tool_inst_dbid "
+                    "WHERE ToolInstFsInput.tool_inst_dbid IS NULL"
+                ")")
 
     def close(self):
         # note: uncommitted changes are lost!
-        self._connection.close()
+        with self._cursor_with_exception_mapping('closing failed'):
+            self._connection.close()
         self._connection = None
+
+    def _cursor_with_exception_mapping(self, summary_message_line: str = 'run-database access failed'):
+        return _CursorWithExceptionMapping(
+            self._connection,
+            summary_message_line,
+            self._suggestion_if_database_error
+        )

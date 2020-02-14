@@ -15,7 +15,7 @@ from .tool import *
 #     mult           ->
 #     tmpl           ->   util
 #
-#     platform       ->
+#     platform       ->   util
 #     rundb          ->                platform
 #     context        ->   util                   rundb
 #

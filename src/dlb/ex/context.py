@@ -24,7 +24,6 @@ import time
 import typing
 import tempfile
 import shutil
-import sqlite3
 from .. import fs
 from . import util
 from . import rundb
@@ -340,11 +339,16 @@ class _RootSpecifics:
                 except FileNotFoundError:
                     pass
 
-                self._rundb = rundb.Database(rundb_path_str)  # raises sqlite3.Error on error
+                suggestion_if_database_error = \
+                    f"if you suspect database corruption, remove the run-database file(s): {rundb_path_str!r}"
+                self._rundb = rundb.Database(rundb_path_str, suggestion_if_database_error)
             except Exception:
                 self.close_and_unlock_if_open()
                 raise
-        except (OSError, sqlite3.Error) as e:
+        except rundb.DatabaseError as e:
+            raise ManagementTreeError(str(e)) from None
+        except OSError as e:
+            # rundb.DatabaseError on error may have multi-line message
             msg = (
                 f'failed to setup management tree for {working_tree_path_str!r}\n'
                 f'  | reason: {util.exception_to_line(e)}'
@@ -482,7 +486,7 @@ class _RootSpecifics:
             first_exception = e
 
         if first_exception:
-            if isinstance(first_exception, (OSError, sqlite3.Error)):
+            if isinstance(first_exception, (OSError, rundb.DatabaseError)):
                 msg = (
                     f'failed to cleanup management tree for {str(self._working_tree_path.native)!r}\n'
                     f'  | reason: {util.exception_to_line(first_exception)}'
@@ -573,10 +577,11 @@ class Context(metaclass=_ContextMeta):
 
 def _get_rundb() -> rundb.Database:
     # use this to access the database from dlb.ex.Tool
-    rundb = Context.root._root_specifics._rundb
-    if rundb is None:
+    # noinspection PyProtectedMember,PyUnresolvedReferences
+    db = Context.root._root_specifics._rundb
+    if db is None:
         raise ValueError('run-database not open')
-    return rundb
+    return db
 
 
 util.set_module_name_to_parent_by_name(vars(), __all__)
