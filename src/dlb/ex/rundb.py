@@ -43,18 +43,21 @@ from . import platform
 
 
 def is_fsobject_dbid(fsobject_dbid: str) -> bool:
-    return isinstance(fsobject_dbid, str) and fsobject_dbid and fsobject_dbid[-1] == '/' and \
-           not fsobject_dbid.startswith('./')
+    if not isinstance(fsobject_dbid, str):
+        return False
+    if not fsobject_dbid:
+        return True
+    return fsobject_dbid[-1] == '/' and not fsobject_dbid.startswith('./')
 
 
 def build_fsobject_dbid(managed_tree_path: fs.Path) -> str:
     if managed_tree_path.is_absolute():
         raise ValueError
     fsobject_dbid = managed_tree_path.as_string()
-    if fsobject_dbid[:2] == './':
-        fsobject_dbid = fsobject_dbid[2:]
     if fsobject_dbid[-1:] != '/':
         fsobject_dbid = fsobject_dbid + '/'  # to enable efficient search for path prefixes in SQL
+    if fsobject_dbid[:2] == './':
+        fsobject_dbid = fsobject_dbid[2:]
     return fsobject_dbid
 
 
@@ -126,6 +129,15 @@ class Database:
 
         return cursor.fetchone()[0]
 
+    def get_tool_instance_dbid_count(self) -> int:
+        """
+        Return the number of (different) registered `tool_instance_dbid` for the current platform.
+        """
+        return self._connection.execute(
+            "SELECT COUNT(*) FROM ToolInst WHERE pl_platform_id = ?",
+            (platform.PERMANENT_PLATFORM_ID,)
+        ).fetchall()[0][0]
+
     def update_fsobject_input(self, tool_instance_dbid: int, fsobject_dbid: str, is_explicit: bool,
                               memo_before: typing.Optional[bytes]):
         """
@@ -169,9 +181,45 @@ class Database:
 
         return {fsobject_dbid: (bool(is_explicit), memo_before) for fsobject_dbid, is_explicit, memo_before in rows}
 
+    def declare_fsobject_input_as_modified(self, modified_fsobject_dbid: str):
+        """
+        Declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
+        modified if
+
+          - their `fsobject_dbid` = `modified_fsobject_dbid` or
+          - their managed tree path is a prefix of the path of the filesystem object identified
+            by `modified_fsobject_dbid`
+
+        Note: Call `commit()` before the filesystem object is actually modified.
+        """
+        if not is_fsobject_dbid(modified_fsobject_dbid):
+            raise ValueError(f"not a valid 'fsobject_dbid': {modified_fsobject_dbid!r}")
+
+        # remove all explicit dependencies (of all tool instances) whose `fsobject_dbid` have
+        # `modified_fsobject_dbid` as a prefix
+        cursor = self._connection.cursor()
+        cursor.execute(
+            "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(fsobject_dbid,?) == 1",
+            (modified_fsobject_dbid,))
+
+        # replace the `memo_before` all non-explicit dependencies (of all tool instances) whose `fsobject_dbid` have
+        # `modified_fsobject_dbid` as a prefix by NULL
+        # ...
+        cursor.execute(
+            "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 AND instr(fsobject_dbid,?) == 1",
+            (modified_fsobject_dbid,))
+
+    def commit(self):
+        self._connection.commit()
+
     def cleanup(self):
-        # remove unused tool dbids???
-        pass
+        # remove unused tool dbids
+        self._connection.execute(
+            "DELETE FROM ToolInst WHERE tool_inst_dbid IN ("
+                "SELECT ToolInst.tool_inst_dbid FROM ToolInst LEFT OUTER JOIN ToolInstFsInput "
+                "ON ToolInst.tool_inst_dbid = ToolInstFsInput.tool_inst_dbid "
+                "WHERE ToolInstFsInput.tool_inst_dbid IS NULL"
+            ")")
 
     def close(self):
         # note: uncommitted changes are lost!

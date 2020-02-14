@@ -428,6 +428,7 @@ class _RootSpecifics:
 
     def _cleanup(self):
         self._rundb.cleanup()
+        self._rundb.commit()
         temporary_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')
         remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
 
