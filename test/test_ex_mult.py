@@ -181,6 +181,6 @@ class MultiplicityHolderTest(unittest.TestCase):
         r = repr(MultiplicityHolderTest.M[:3])
         regex = (
             r"\A<dlb\.ex\.mult\._MultiplicityHolderProxy object at 0x[0-9a-fA-F]+ for "
-            r"<class 'test_mult\.MultiplicityHolderTest\.M'> with multiplicity \[:3\]>\Z"
+            r"<class '.+\.MultiplicityHolderTest\.M'> with multiplicity \[:3\]>\Z"
         )
         self.assertRegex(r, regex)

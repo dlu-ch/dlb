@@ -15,6 +15,7 @@ sanitize_module_search_path()
 
 import os
 import tempfile
+import shutil
 import unittest
 
 
@@ -40,25 +41,24 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
         super().__init__(*args, **kwargs)
         self._show_dir_change = show_dir_change
         self._original_cwd = None
-        self._temp_dir = None
+        self._temp_dir_path = None
 
     def setUp(self):
         self._original_cwd = os.getcwd()
-        self._temp_dir = tempfile.TemporaryDirectory()
+        self._temp_dir_path = os.path.abspath(tempfile.mkdtemp())
         try:
-            os.chdir(self._temp_dir.name)
+            os.chdir(self._temp_dir_path)
             if self._show_dir_change:
-                print(f'changed current working directory of process to {self._temp_dir.name!r}')
-        except Exception:
-            self._temp_dir.cleanup()
+                print(f'changed current working directory of process to {self._temp_dir_path!r}')
+        except OSError:
+            shutil.rmtree(self._temp_dir_path, ignore_errors=True)
             raise
 
     def tearDown(self):
-        if self._temp_dir:
+        if self._temp_dir_path:
             try:
                 os.chdir(self._original_cwd)
                 if self._show_dir_change:
                     print(f'changed current working directory of process back to {self._original_cwd!r}')
             finally:
-                self._temp_dir.cleanup()
-
+                shutil.rmtree(self._temp_dir_path, ignore_errors=True)

@@ -164,7 +164,7 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertTrue(os.path.islink('.dlbroot'))
         except (NotImplementedError, PermissionError):  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None  # filesystem is not case-sensitive
+            raise unittest.SkipTest from None
 
         with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
             with dlb.ex.Context():
@@ -212,7 +212,7 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertTrue(os.path.islink('.dlbroot/t'))
         except (NotImplementedError, PermissionError):  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None  # filesystem is not case-sensitive
+            raise unittest.SkipTest from None
 
         with dlb.ex.Context():
             self.assertTrue(os.path.isdir('.dlbroot/t'))
