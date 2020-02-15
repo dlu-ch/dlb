@@ -126,7 +126,7 @@ class Database:
             self._suggestion_if_database_error
         )
         with cursor_with_exception_mapping as cursor:
-            cursor.executescript(
+            cursor.executescript(  # includes a "BEGIN" according to the 'isolation_level'
                 "CREATE TABLE IF NOT EXISTS ToolInst("
                     "tool_inst_dbid INTEGER NOT NULL, "   # unique id of tool instance across dlb run and platforms
                                                           # (until next cleanup)
@@ -206,12 +206,36 @@ class Database:
         if not is_fsobject_dbid(fsobject_dbid):
             raise ValueError(f"not a valid 'fsobject_dbid': {fsobject_dbid!r}")
 
+        if memo_before is not None and not isinstance(memo_before, bytes):
+            raise ValueError(f"not a valid 'memo_before': {memo_before!r}")
+
         with self._cursor_with_exception_mapping() as cursor:
             cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?)",
                            (tool_instance_dbid, fsobject_dbid, 1 if is_explicit else 0, memo_before))
 
+    def replace_fsobject_inputs(self, tool_instance_dbid: int,
+                                info_by_by_fsobject_dbid: typing.Dict[str, typing.Tuple[bool, bytes]]):
+        """
+        Replace all information on input dependencies for a tool instance `tool_instance_dbid` by
+        `info_by_by_fsobject_dbid`.
+
+        Includes a `commit()` at the start.
+        In case of an exception, the information on input dependencies in the run-database remains unchanged.
+        """
+        with self._cursor_with_exception_mapping() as cursor:
+            try:
+                self._connection.commit()
+                cursor.execute("BEGIN")
+                cursor.execute("DELETE FROM ToolInstFsInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
+                for fsobject_dbid, info in info_by_by_fsobject_dbid.items():
+                    is_explicit, memo_before = info
+                    self.update_fsobject_input(tool_instance_dbid, fsobject_dbid, is_explicit, memo_before)
+            except:
+                self._connection.rollback()
+                raise
+
     def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: typing.Optional[bool] = None) \
-            -> typing.Dict[str, typing.Optional[bytes]]:
+            -> typing.Dict[str, typing.Tuple[bool, bytes]]:
         """
         Return the `fsobject_dbid` and the optional memo of all filesystem objects in the managed tree that are
         input dependencies of the tool instance `tool_instance_dbid`.
@@ -223,14 +247,14 @@ class Database:
         not before the last `cleanup()` (if any).
         """
 
-        with self._cursor_with_exception_mapping():
+        with self._cursor_with_exception_mapping() as cursor:
 
             if is_explicit_filter is None:
-                rows = self._connection.execute(
+                rows = cursor.execute(
                     "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput WHERE tool_inst_dbid == ?",
                     (tool_instance_dbid,)).fetchall()
             else:
-                rows = self._connection.execute(
+                rows = cursor.execute(
                     "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput "
                     "WHERE tool_inst_dbid == ? AND is_explicit == ?",
                     (tool_instance_dbid, 1 if is_explicit_filter else 0)).fetchall()
@@ -246,25 +270,36 @@ class Database:
           - their managed tree path is a prefix of the path of the filesystem object identified
             by `modified_fsobject_dbid`
 
-        Note: Call `commit()` before the filesystem object is actually modified.
+        Includes a `commit()` at the start.
+        In case of an exception, the information on input dependencies in the run-database remains unchanged.
+
+        Note: call `commit()` before the filesystem object is actually modified.
         """
         if not is_fsobject_dbid(modified_fsobject_dbid):
             raise ValueError(f"not a valid 'fsobject_dbid': {modified_fsobject_dbid!r}")
 
         with self._cursor_with_exception_mapping() as cursor:
+            try:
+                self._connection.commit()
+                cursor.execute("BEGIN")
 
-            # remove all explicit dependencies (of all tool instances) whose `fsobject_dbid` have
-            # `modified_fsobject_dbid` as a prefix
-            cursor.execute(
-                "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(fsobject_dbid,?) == 1",
-                (modified_fsobject_dbid,))
+                # remove all explicit dependencies (of all tool instances) whose `fsobject_dbid` have
+                # `modified_fsobject_dbid` as a prefix
+                cursor.execute(
+                    "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(fsobject_dbid,?) == 1",
+                    (modified_fsobject_dbid,))
 
-            # replace the `memo_before` all non-explicit dependencies (of all tool instances) whose `fsobject_dbid` have
-            # `modified_fsobject_dbid` as a prefix by NULL
-            # ...
-            cursor.execute(
-                "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 AND instr(fsobject_dbid,?) == 1",
-                (modified_fsobject_dbid,))
+                # replace the `memo_before` all non-explicit dependencies (of all tool instances) whose
+                # `fsobject_dbid` have `modified_fsobject_dbid` as a prefix by NULL
+                cursor.execute(
+                    "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 "
+                    "AND instr(fsobject_dbid,?) == 1",
+                    (modified_fsobject_dbid,))
+
+                self._connection.commit()
+            except:
+                self._connection.rollback()
+                raise
 
     def commit(self):
         with self._cursor_with_exception_mapping('commit failed'):

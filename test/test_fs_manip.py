@@ -59,6 +59,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.fs.manip.remove_filesystem_object(dlb.fs.Path('.'))
         self.assertEqual("not an absolute path: '.'", str(cm.exception))
 
+    # noinspection PyTypeChecker
     def test_fails_for_bytes_path(self):
         with open('x', 'wb'):
             pass
@@ -167,6 +168,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             pass
 
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.fs.manip.read_filesystem_object_memo(b'x')
         self.assertEqual("'abs_path' must be a str or path, not bytes", str(cm.exception))
 

@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex.rundb
+import collections
 import contextlib
 import unittest
 import tools_for_test
@@ -146,6 +147,14 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
                 fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a/b/c'))
                 rundb.update_fsobject_input(12, fsobject_dbid, True, b'')
 
+    def test_update_fails_for_invalid_fsobject_dbid(self):
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            with self.assertRaises(ValueError):
+                # noinspection PyTypeChecker
+                rundb.update_fsobject_input(12, 3, True, b'')
+            with self.assertRaises(ValueError):
+                rundb.update_fsobject_input(12, '/3', True, b'')
+
 
 class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCase):
 
@@ -259,6 +268,51 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
                 fsobject_dbids[1]: (False, None),
                 fsobject_dbids[6]: (False, None)
             }, fsobjects_dbid2)
+
+
+class ReplaceFsobjectInputsTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_is_correct_after_success(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+
+            tool_dbid0 = rundb.get_and_register_tool_instance_dbid(b't', b'i0')
+            rundb.update_fsobject_input(tool_dbid0, dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a')), False, b'0')
+
+            tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
+            rundb.update_fsobject_input(tool_dbid, dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a')), False, b'1')
+            rundb.update_fsobject_input(tool_dbid, dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('b')), False, b'1')
+
+            info_by_by_fsobject_dbid = {
+                dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('b')): (True,  b'3'),
+                dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('c')): (False, b'4')
+            }
+            rundb.replace_fsobject_inputs(tool_dbid, info_by_by_fsobject_dbid)
+
+            self.assertEqual(info_by_by_fsobject_dbid, rundb.get_fsobject_inputs(tool_dbid))
+            self.assertEqual({
+                dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a')): (False, b'0')
+            }, rundb.get_fsobject_inputs(tool_dbid0)) # input dependencies of tool_dbid0 are unchanged
+
+    def test_is_changed_after_fail(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
+            rundb.update_fsobject_input(tool_dbid, dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a')), False, b'1')
+            rundb.update_fsobject_input(tool_dbid, dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('b')), False, b'1')
+
+            info_by_by_fsobject_dbid = collections.OrderedDict([
+                (dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('b')), (True, b'3')),
+                (None, (False, b'4'))
+            ])
+            with self.assertRaises(ValueError):
+                rundb.replace_fsobject_inputs(tool_dbid, info_by_by_fsobject_dbid)
+
+            self.assertEqual({
+                dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a')): (False, b'1'),
+                dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('b')): (False, b'1')
+            }, rundb.get_fsobject_inputs(tool_dbid))
+
 
 class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
 
