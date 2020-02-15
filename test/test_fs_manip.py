@@ -17,7 +17,7 @@ import unittest
 import tools_for_test
 
 
-class RemoveFilesystemObject(tools_for_test.TemporaryDirectoryTestCase):
+class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
 
     @staticmethod
     def create_dir_a_in_cwd(all_writable=True):
@@ -58,6 +58,18 @@ class RemoveFilesystemObject(tools_for_test.TemporaryDirectoryTestCase):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.remove_filesystem_object(dlb.fs.Path('.'))
         self.assertEqual("not an absolute path: '.'", str(cm.exception))
+
+    def test_fails_for_bytes_path(self):
+        with open('x', 'wb'):
+            pass
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.fs.manip.remove_filesystem_object(b'x')
+        self.assertEqual("'abs_path' must be a str or path, not bytes", str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.fs.manip.remove_filesystem_object('x', abs_empty_dir_path=b'x')
+        self.assertEqual("'abs_empty_dir_path' must be a str or path, not bytes", str(cm.exception))
 
     def test_removes_existing_regular_file(self):
         with open('f', 'wb'):
@@ -130,3 +142,95 @@ class RemoveFilesystemObject(tools_for_test.TemporaryDirectoryTestCase):
             os.chmod(os.path.join(abs_temp_dir_path, 't', 'b1', 'c'), 0o777)
 
         self.assertFalse(os.path.exists('a'))  # was successful
+
+
+class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_fails_for_relative_path(self):
+        with open('x', 'wb'):
+            pass
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.manip.read_filesystem_object_memo('x')
+        self.assertEqual("not an absolute path: 'x'", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.manip.read_filesystem_object_memo(pathlib.Path('x'))
+        self.assertEqual("not an absolute path: 'x'", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.manip.read_filesystem_object_memo(dlb.fs.Path('x'))
+        self.assertEqual("not an absolute path: 'x'", str(cm.exception))
+
+    def test_fails_for_bytes_path(self):
+        with open('x', 'wb'):
+            pass
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.fs.manip.read_filesystem_object_memo(b'x')
+        self.assertEqual("'abs_path' must be a str or path, not bytes", str(cm.exception))
+
+    def test_return_none_for_nonexisting(self):
+        m = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
+        self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
+        self.assertIsNone(m.stat)
+        self.assertIsNone(m.symlink_target)
+
+    def test_return_stat_for_existing_regular(self):
+        with open('x', 'wb'):
+            pass
+
+        sr = os.lstat('x')
+
+        m = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
+        self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
+
+        self.assertEqual(sr.st_mode, m.stat.mode)
+        self.assertEqual(sr.st_size, m.stat.size)
+        self.assertEqual(sr.st_mtime_ns, m.stat.mtime_ns)
+        self.assertEqual(sr.st_uid, m.stat.uid)
+        self.assertEqual(sr.st_gid, m.stat.gid)
+        self.assertIsNone(m.symlink_target)
+
+    def test_return_stat_and_target_for_existing_directory_for_str(self):
+        os.mkdir('d')
+        os.chmod('d', 0x000)
+        try:
+            os.symlink('d' + os.path.sep, 's', target_is_directory=True)
+            # note: trailing os.path.sep is necessary irrespective of target_is_directory
+
+            sr = os.lstat('s')
+            m = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
+            self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
+
+            self.assertEqual(sr.st_mode, m.stat.mode)
+            self.assertEqual(sr.st_size, m.stat.size)
+            self.assertEqual(sr.st_mtime_ns, m.stat.mtime_ns)
+            self.assertEqual(sr.st_uid, m.stat.uid)
+            self.assertEqual(sr.st_gid, m.stat.gid)
+            self.assertEqual(m.symlink_target, 'd' + os.path.sep)
+
+        finally:
+            os.chmod('d', 0x777)
+
+    def test_return_stat_and_target_for_existing_directory_for_pathlib(self):
+        os.mkdir('d')
+        os.chmod('d', 0x000)
+        try:
+            os.symlink('d' + os.path.sep, 's', target_is_directory=True)
+            # note: trailing os.path.sep is necessary irrespective of target_is_directory
+
+            sr = os.lstat('s')
+            m = dlb.fs.manip.read_filesystem_object_memo(pathlib.Path(os.path.join(os.getcwd()) / pathlib.Path('s')))
+            self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
+
+            self.assertEqual(sr.st_mode, m.stat.mode)
+            self.assertEqual(sr.st_size, m.stat.size)
+            self.assertEqual(sr.st_mtime_ns, m.stat.mtime_ns)
+            self.assertEqual(sr.st_uid, m.stat.uid)
+            self.assertEqual(sr.st_gid, m.stat.gid)
+            self.assertIsInstance(m.symlink_target, str)
+            self.assertEqual(m.symlink_target, 'd' + os.path.sep)
+
+        finally:
+            os.chmod('d', 0x777)

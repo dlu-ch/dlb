@@ -6,8 +6,10 @@
 This is an implementation detail - do not import it unless you know what you are doing."""
 
 import os
+import stat
 import pathlib
 import shutil
+import dataclasses
 import typing
 from . import path
 
@@ -44,6 +46,15 @@ def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path.Path
     :raise OSError:
         if an existing `abs_path` was not removed
     """
+
+    if isinstance(abs_path, bytes):
+        # prevent special treatment by byte paths  ???
+        raise TypeError("'abs_path' must be a str or path, not bytes")
+
+    if isinstance(abs_empty_dir_path, bytes):
+        # prevent special treatment by byte paths
+        raise TypeError("'abs_empty_dir_path' must be a str or path, not bytes")
+
     if isinstance(abs_path, path.Path):
         abs_path = abs_path.native.raw
 
@@ -84,3 +95,58 @@ def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path.Path
     except FileNotFoundError:
         if not ignore_non_existing:
             raise
+
+
+@dataclasses.dataclass
+class FilesystemStatSummary:
+    mode: int
+    size: int
+    mtime_ns: int
+    uid: int
+    gid: int
+
+
+@dataclasses.dataclass
+class FilesystemObjectMemo:
+    stat: typing.Optional[FilesystemStatSummary] = None
+    symlink_target: typing.Optional[str] = None
+
+
+def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path.Path]) -> FilesystemObjectMemo:
+    """
+    Return a summary of the filesystem's meta-information on a filesystem object with absolute path `abs_path`.
+
+    Its `stat` attribute contains the following members from `stat_result` as integers
+    (with `st_` removed from their names):
+
+      - `mode`
+      - `size`
+      - `mtime_ns`
+      - `uid`
+      - `gid`
+
+    If `r.stat.mode` of the returned object `r` indicates a symbolic link, `r.symlink_target` is the path of its target
+    as a str. Otherwise, `r.symlink_target` is None.
+    """
+    if isinstance(abs_path, bytes):
+        raise TypeError("'abs_path' must be a str or path, not bytes")  # prevent special treatment by byte paths
+
+    if isinstance(abs_path, path.Path):
+        abs_path = abs_path.native.raw
+
+    if not os.path.isabs(abs_path):  # does not raise OSError
+        raise ValueError(f"not an absolute path: {str(abs_path)!r}")
+
+    memo = FilesystemObjectMemo()
+    try:
+        sr = os.lstat(abs_path)
+        memo.stat = FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
+                                          uid=sr.st_uid, gid=sr.st_gid)
+    except FileNotFoundError:
+        return memo
+
+    if not stat.S_ISLNK(sr.st_mode):
+        return memo
+
+    memo.symlink_target = os.readlink(abs_path)  # a trailing '/' is preserved
+    return memo
