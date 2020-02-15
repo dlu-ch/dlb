@@ -11,7 +11,26 @@ import pathlib
 import shutil
 import dataclasses
 import typing
-from . import path
+from . import path as path_
+
+
+class PathNormalizationError(ValueError):
+    pass
+
+
+@dataclasses.dataclass
+class FilesystemStatSummary:
+    mode: int
+    size: int
+    mtime_ns: int
+    uid: int
+    gid: int
+
+
+@dataclasses.dataclass
+class FilesystemObjectMemo:
+    stat: typing.Optional[FilesystemStatSummary] = None
+    symlink_target: typing.Optional[str] = None
 
 
 class _KeepFirstRmTreeException:
@@ -24,8 +43,8 @@ class _KeepFirstRmTreeException:
             self.first_exception = value
 
 
-def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path.Path], *,
-                             abs_empty_dir_path: typing.Optional[typing.Union[str, pathlib.Path, path.Path]] = None,
+def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path_.Path], *,
+                             abs_empty_dir_path: typing.Union[None, str, pathlib.Path, path_.Path] = None,
                              ignore_non_existing: bool = False):
     """
     Remove the filesystem objects with absolute path `abs_path`.
@@ -48,21 +67,21 @@ def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path.Path
     """
 
     if isinstance(abs_path, bytes):
-        # prevent special treatment by byte paths  ???
+        # prevent special treatment by byte paths
         raise TypeError("'abs_path' must be a str or path, not bytes")
 
     if isinstance(abs_empty_dir_path, bytes):
         # prevent special treatment by byte paths
         raise TypeError("'abs_empty_dir_path' must be a str or path, not bytes")
 
-    if isinstance(abs_path, path.Path):
+    if isinstance(abs_path, path_.Path):
         abs_path = abs_path.native.raw
 
     if not os.path.isabs(abs_path):  # does not raise OSError
         raise ValueError(f"not an absolute path: {str(abs_path)!r}")
 
     if abs_empty_dir_path is not None:
-        if isinstance(abs_empty_dir_path, path.Path):
+        if isinstance(abs_empty_dir_path, path_.Path):
             abs_empty_dir_path = abs_empty_dir_path.native.raw
 
         if not os.path.isabs(abs_empty_dir_path):  # does not raise OSError
@@ -97,22 +116,7 @@ def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path.Path
             raise
 
 
-@dataclasses.dataclass
-class FilesystemStatSummary:
-    mode: int
-    size: int
-    mtime_ns: int
-    uid: int
-    gid: int
-
-
-@dataclasses.dataclass
-class FilesystemObjectMemo:
-    stat: typing.Optional[FilesystemStatSummary] = None
-    symlink_target: typing.Optional[str] = None
-
-
-def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path.Path]) -> FilesystemObjectMemo:
+def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.Path]) -> FilesystemObjectMemo:
     """
     Return a summary of the filesystem's meta-information on a filesystem object with absolute path `abs_path`.
 
@@ -131,7 +135,7 @@ def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path.P
     if isinstance(abs_path, bytes):
         raise TypeError("'abs_path' must be a str or path, not bytes")  # prevent special treatment by byte paths
 
-    if isinstance(abs_path, path.Path):
+    if isinstance(abs_path, path_.Path):
         abs_path = abs_path.native.raw
 
     if not os.path.isabs(abs_path):  # does not raise OSError
@@ -150,3 +154,67 @@ def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path.P
 
     memo.symlink_target = os.readlink(abs_path)  # a trailing '/' is preserved
     return memo
+
+
+def normalize_dotdot(path: typing.Union[path_.Path, pathlib.PurePath],
+                     ref_dir_path: typing.Union[None, path_.Path, pathlib.Path] = None):
+    """
+    Return an equivalent normal `path` with all `..` components replaced.
+
+    If `ref_dir_path` is `None`, it is *assumed* that `path` is collapsable.
+
+    If `ref_dir_path` is not `None`, it must be an absolute path as a `pathlib.Path`.
+    It is then used as the reference directory for a relative `path`.
+
+    The return value is of the same type as `path` and contains no `..` components.
+
+    Does not access the filesystem unless `path` contains a `..` component and `ref_dir_path` is not `None`.
+    Does not raise `OSError`.
+
+    :raise PathNormalizationError: if `path` is an upwards path
+    :raise ValueError: if the resulting path is not representable with the type of `path`
+    """
+
+    if not isinstance(path, (path_.Path, pathlib.PurePath)):
+        raise TypeError(f"'path' must be a dlb.fs.Path or pathlib.PurePath object")
+
+    if ref_dir_path is not None:
+
+        if isinstance(ref_dir_path, path_.Path):
+            ref_dir_path = ref_dir_path.native.raw
+        elif not isinstance(ref_dir_path, pathlib.PurePath):
+            raise TypeError(f"'ref_dir_path' must be a dlb.fs.Path or pathlib.PurePath object or None")
+
+        if not ref_dir_path.is_absolute():
+            raise ValueError("'ref_dir_path' must be absolute")
+
+        ref_dir_path = str(ref_dir_path)
+
+    root = ()
+    nonroot_components = path.parts
+    if path.is_absolute():
+        root = nonroot_components[:1]
+        nonroot_components = nonroot_components[1:]
+
+    while True:
+        try:
+            i = nonroot_components.index('..')
+        except ValueError:
+            break
+        if i == 0:
+            raise PathNormalizationError(f"is an upwards path: {path!r}")
+        if ref_dir_path:
+            try:
+                p = os.path.join(ref_dir_path, *root, *nonroot_components[:i])
+                sr = os.lstat(p)
+                if stat.S_ISLNK(sr.st_mode):
+                    msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
+                    raise PathNormalizationError(msg) from None
+            except OSError as e:
+                raise PathNormalizationError(f"check failed with {e.__class__.__name__}: {p!r}") from None
+        nonroot_components = nonroot_components[:i - 1] + nonroot_components[i + 1:]
+
+    components = root + nonroot_components
+    if isinstance(path, path_.Path):
+        return path.__class__(pathlib.PurePosixPath(*components), is_dir=path.is_dir())
+    return path.__class__(*components)

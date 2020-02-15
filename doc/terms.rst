@@ -123,15 +123,30 @@ Terms
    ideal time
       The (strictly increasing) physical time at the place the dlb process is running.
 
-   managed tree path
-      The path of an existing filesystem object relative to the :term`managed tree`'s root, that contains no
-      symbolic links no :file:`..` components.
+   non-upwards path
+      A relative path that has no prefix denoting its parent directory.
+
+      Examples: :file:`a/../b` is an non-upwards path, :file:`a/../../a/b` is not.
+
+   collapsable path
+      A path *p* of an existing filesystem object with the following property:
+      No prefix path of *p'* that ends with a component other than :file:`..` is the path of a symbolic link,
+      where *p'* is *p* with all :file:`.` components removed.
+
+      Example: :file:`a/b/../c/..` is collapsable if and only if neither :file:`a/b/` nor :file:`a/b/../c` is a
+      symbolic link.
 
    canonical-case path
       A path whose components are all exactly as listed in their parent directory.
 
       On a case-insensitive filesystem or directory, multiple paths that differ in case or character encoding can point
       to the same filesystem object. Only one of them is a canonical-case path.
+
+   normal path
+      A path without :file:`..` components.
+
+   managed tree path
+      The :term:`normal path` of an existing filesystem object relative to the :term`managed tree`'s root.
 
    run-database
       The database in the :term:`management tree` that stores information on the current and past
