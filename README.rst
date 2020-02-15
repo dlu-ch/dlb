@@ -10,7 +10,7 @@ dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool that
 to the build process.
 It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
 
-dlb requires at least Python 3.6 (and nothing else).
+dlb requires at least Python 3.7 (and nothing else).
 
 See here for more:
 

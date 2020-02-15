@@ -17,7 +17,7 @@ import os
 import functools
 import pathlib  # since Python 3.4
 import typing
-assert sys.version_info >= (3, 6)
+assert sys.version_info >= (3, 7)
 
 
 # cannot derive easily from pathlib.Path without defining non-API members

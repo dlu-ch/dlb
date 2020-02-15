@@ -10,7 +10,7 @@ __all__ = ('is_immutable_fundamental', 'make_fundamental')
 import sys
 import collections.abc
 import typing
-assert sys.version_info >= (3, 6)
+assert sys.version_info >= (3, 7)
 
 
 _non_container_fundamental_types = (bool, int, float, complex, str, bytes)

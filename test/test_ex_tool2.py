@@ -341,15 +341,15 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
 
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
-            t = time.time()
+            t = time.time_ns()
             info1 = dlb.ex.tool.get_and_register_tool_info(w.E)
-            dt1 = time.time() - t
-            print(f'first time:  {dt1:6f} s')
+            dt1 = time.time_ns() - t
 
-            t = time.time()
+            t = time.time_ns()
             info2 = dlb.ex.tool.get_and_register_tool_info(w.E)
-            dt2 = time.time() - t
-            print(f'second time: {dt2:6f} s')
+            dt2 = time.time_ns() - t
+
+        print(f'get_and_register_tool_info(): {dt1/1e3:.0f} us (first call), {dt2/1e3:.0f} us (second call)')
 
         self.assertIsInstance(info1.permanent_local_tool_id, bytes)
         self.assertGreater(len(info1.permanent_local_tool_id), 1)

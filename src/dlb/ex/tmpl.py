@@ -13,7 +13,7 @@ import collections.abc
 import enum
 import inspect
 from . import util
-assert sys.version_info >= (3, 6)
+assert sys.version_info >= (3, 7)
 
 
 LITERAL_REGEX = re.compile(r'([^{}]|{{|}})+', re.DOTALL)

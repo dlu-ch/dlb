@@ -19,7 +19,7 @@ from . import util
 from . import context
 from . import depend
 from . import dependaction
-assert sys.version_info >= (3, 6)
+assert sys.version_info >= (3, 7)
 
 
 EXECUTION_PARAMETER_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')

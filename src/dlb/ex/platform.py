@@ -10,7 +10,7 @@ import platform
 import marshal
 import sqlite3
 from .. import version
-assert sys.version_info >= (3, 6)
+assert sys.version_info >= (3, 7)
 
 # changes whenever the platform, the Python version or the dlb version changes
 PERMANENT_PLATFORM_ID = marshal.dumps((

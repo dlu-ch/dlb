@@ -27,7 +27,7 @@ from .. import fs
 from ..fs import manip
 from . import util
 from . import rundb
-assert sys.version_info >= (3, 6)
+assert sys.version_info >= (3, 7)
 
 
 _contexts = []
@@ -417,14 +417,14 @@ class _RootSpecifics:
         manip.remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
-        t0 = time.time()  # time_ns() not in Python 3.6
+        t0 = time.time_ns()  # since Python 3.7
         wt0 = self.working_tree_time_ns
         self._cleanup()  # seize the the day
         while True:
             wt = self.working_tree_time_ns
             if wt != wt0:  # guarantee G-T2
                 break
-            if time.time() - t0 > 10.0:  # at most 10 for s
+            if (time.time_ns() - t0) / 1e9 > 10.0:  # at most 10 for s
                 msg = (
                     'working tree time did not change for at least 10 s of system time\n'
                     '  | was the system time adjusted in this moment?'
