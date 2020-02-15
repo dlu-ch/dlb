@@ -195,14 +195,14 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
                 env1 = c1.env
                 self.assertIs(c0.env, env0)
                 self.assertIs(c1.env, env1)
-                self.assertIs(dlb.ex.Context.env, env0)
+                self.assertIs(dlb.ex.Context.env, env1)
                 self.assertIs(dlb.ex.Context.active.env, env1)
                 with dlb.ex.Context() as c2:
                     env2 = c2.env
                     self.assertIs(c0.env, env0)
                     self.assertIs(c1.env, env1)
                     self.assertIs(c2.env, env2)
-                    self.assertIs(dlb.ex.Context.env, env0)
+                    self.assertIs(dlb.ex.Context.env, env2)
                     self.assertIs(dlb.ex.Context.active.env, env2)
         with self.assertRaises(dlb.ex.context.NotRunningError):
             c0.env

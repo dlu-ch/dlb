@@ -60,31 +60,22 @@ class NestingTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fails_if_not_running(self):
         with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.root
-        with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.active
 
     def test_can_by_nested(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context() as c1:
             self.assertIs(dlb.ex.Context.active, c1)
-            self.assertIs(dlb.ex.Context.root, c1)
             self.assertIs(c1.active, c1)
-            self.assertIs(c1.root, c1)
 
             with dlb.ex.Context() as c2:
                 self.assertIs(dlb.ex.Context.active, c2)
-                self.assertIs(dlb.ex.Context.root, c1)
                 self.assertIs(c1.active, c2)
-                self.assertIs(c1.root, c1)
 
             self.assertIs(dlb.ex.Context.active, c1)
-            self.assertIs(dlb.ex.Context.root, c1)
 
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.active
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.root
 
     def test_nesting_error_is_detected(self):
         os.mkdir('.dlbroot')
@@ -306,8 +297,8 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.NoSpacePath)
             self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
             with dlb.ex.Context(path_cls=dlb.fs.Path) as c:
-                self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.NoSpacePath)  # refers to root context
                 self.assertEqual(c.path_cls, dlb.fs.Path)
+                self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.Path)  # refers to active context
                 self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
 
     def test_entering_fails_if_path_not_representable(self):
@@ -384,7 +375,7 @@ class RunDatabaseTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
             with self.assertRaises(AttributeError):
-                dlb.ex.Context.root.run_db_()
+                dlb.ex.Context.run_db_()
 
     def test_access_fails_if_not_running(self):
         with self.assertRaises(dlb.ex.context.NotRunningError):

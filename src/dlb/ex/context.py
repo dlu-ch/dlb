@@ -32,6 +32,11 @@ assert sys.version_info >= (3, 7)
 
 _contexts = []
 
+def _get_root_specifics():
+    if not _contexts:
+        raise NotRunningError
+    return _contexts[0]._root_specifics
+
 
 class ContextNestingError(Exception):
     pass
@@ -202,12 +207,6 @@ class _EnvVarDict:
         return self._value_by_name.__contains__(name)
 
 
-def _get_root():
-    if not _contexts:
-        raise NotRunningError
-    return _contexts[0]
-
-
 class _ContextMeta(type):
     def __getattribute__(self, name):
         refer = not name.startswith('_')
@@ -218,7 +217,9 @@ class _ContextMeta(type):
             if not refer:
                 raise
         if refer:
-            a = getattr(_get_root(), name)  # delegate to root context
+            if not _contexts:
+                raise NotRunningError
+            a = getattr(_contexts[-1], name)  # delegate to active context
 
         # noinspection PyUnboundLocalVariable
         return a
@@ -330,7 +331,7 @@ class _RootSpecifics:
                     f"if you suspect database corruption, remove the run-database file(s): {rundb_path_str!r}"
                 self._rundb = rundb.Database(rundb_path_str, suggestion_if_database_error)
             except Exception:
-                self.close_and_unlock_if_open()
+                self._close_and_unlock_if_open()
                 raise
         except rundb.DatabaseError as e:
             raise ManagementTreeError(str(e)) from None
@@ -432,7 +433,7 @@ class _RootSpecifics:
                 raise WorkingTreeTimeError(msg)
             time.sleep(0.015)  # typical effective working tree time resolution: 10 ms
 
-    def close_and_unlock_if_open(self):  # safe to call multiple times
+    def _close_and_unlock_if_open(self):  # safe to call multiple times
         # called while self is not an active context (note: an exception may already have happened)
         most_serious_exception = None
 
@@ -459,7 +460,7 @@ class _RootSpecifics:
         if most_serious_exception:
             raise most_serious_exception
 
-    def cleanup_and_close(self):  # "normal" exit of root context (as far as it is special for root context)
+    def _cleanup_and_close(self):  # "normal" exit of root context (as far as it is special for root context)
         first_exception = None
 
         try:
@@ -468,7 +469,7 @@ class _RootSpecifics:
             first_exception = e
 
         try:
-            self.close_and_unlock_if_open()
+            self._close_and_unlock_if_open()
         except Exception as e:
             first_exception = e
 
@@ -500,10 +501,6 @@ class Context(metaclass=_ContextMeta):
         self._env: typing.Optional[_EnvVarDict] = None
 
     @property
-    def root(self):
-        return _get_root()
-
-    @property
     def active(self):
         if not _contexts:
             raise NotRunningError
@@ -523,8 +520,7 @@ class Context(metaclass=_ContextMeta):
         try:
             if name.startswith('_'):
                 raise AttributeError
-            # noinspection PyProtectedMember
-            return getattr(_get_root()._root_specifics, name)  # delegate to _RootSpecifics
+            return getattr(_get_root_specifics(), name)  # delegate to _RootSpecifics
         except AttributeError:
             raise AttributeError(f'{self.__class__.__qualname__!r} object has no attribute {name!r}') from None
 
@@ -558,14 +554,14 @@ class Context(metaclass=_ContextMeta):
         _contexts.pop()
         self._env = None
         if self._root_specifics:
-            self._root_specifics.cleanup_and_close()
+            self._root_specifics._cleanup_and_close()
             self._root_specifics = None
 
 
 def _get_rundb() -> rundb.Database:
     # use this to access the database from dlb.ex.Tool
     # noinspection PyProtectedMember,PyUnresolvedReferences
-    db = Context.root._root_specifics._rundb
+    db = _get_root_specifics()._rundb
     if db is None:
         raise ValueError('run-database not open')
     return db

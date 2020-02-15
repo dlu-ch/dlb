@@ -55,7 +55,7 @@ Context objects
 
       a. a :term:`root context`, if :term:`dlb is not yet running <run of dlb>`;
 
-      b. an inner context of the current :term:`active context`, otherwise.
+      b. an inner context of the :term:`active context`, otherwise.
 
    When a root context is entered, the working directory of the Python process must be a :term:`working tree`'s root,
    which contains a directory :file:`.dlbroot`, that is not a symbolic link.
@@ -85,27 +85,19 @@ Context objects
 
    .. note::
       Most attributes and methods are available "on the class" as well as "on the instance", and refer to the
-      corresponding attribute of the :term:`root context`::
+      corresponding attribute of the :term:`active context`::
 
        with dlb.ex.Context:
            with dlb.ex.Context as c:
                ... = dlb.ex.Context.working_tree_time_ns   # preferred
-               ... c.root.working_tree_time_ns             # also possible
+               ... c.active.working_tree_time_ns           # also possible
                ... c.working_tree_time_ns                  # also possible
 
    The :class:`Context` class supports the following methods and attributes:
 
-   .. attribute:: root
-
-      The current :term:`root context`.
-
-      Same on class and instance.
-
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
-
    .. attribute:: active
 
-      The current :term:`active context`.
+      The :term:`active context`.
 
       Same on class and instance.
 
@@ -115,7 +107,7 @@ Context objects
 
       The subclass of :class:`.dlb.fs.Path` defined in the constructor.
 
-      When called on class, it refers to the :term:`root context`.
+      When called on class, it refers to the :term:`active context`.
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -123,7 +115,7 @@ Context objects
 
       The absolute path to the :term:`working tree`'s root.
 
-      It is an instance of :attr:`Context.root.path_cls <Context.path_cls>` and
+      It is an instance of :attr:`Context.active.path_cls <Context.path_cls>` and
       is representable as an instance of ``path_cls`` of the :term:`active context` and every possible outer context.
 
       Same on class and instance.
@@ -350,7 +342,7 @@ Exceptions
 
 .. exception:: NotRunningError
 
-   Raised, when an action requires a :term:`root context` while :term:`dlb was not running <run of dlb>`.
+   Raised, when an action requires an :term:`active context` while :term:`dlb was not running <run of dlb>`.
 
 .. exception:: NoWorkingTreeError
 
