@@ -98,31 +98,32 @@ class Path(metaclass=_PathMeta):
             path = path.raw
 
         if isinstance(path, Path):
+            # copy
             self._path = path._path
             self._is_dir = path._is_dir
         else:
-            if isinstance(path, str):
-                p = path
+            # convert
+            if isinstance(path, pathlib.PurePosixPath):  # this should be very efficient
+                self._path = path
+                self._is_dir = False
+            elif isinstance(path, str):
+                if not path:
+                    raise ValueError("invalid path: ''")
+                self._path = pathlib.PurePosixPath(path)  # '' -> pathlib.PurePosixPath('.')
+                self._is_dir = path.endswith('/') or path.endswith('/.')
+            elif isinstance(path, pathlib.PureWindowsPath):
+                self._check_windows_path_anchor(path)
+                p = str(path).replace('\\', '/')
+                if path.anchor and path.anchor[0] not in '/\\':
+                    p = '/' + p
+                self._path = pathlib.PurePosixPath(p)  # '' -> pathlib.PurePosixPath('.')
+                self._is_dir = p.endswith('/')
             elif isinstance(path, pathlib.PurePath):
-                p = str(path)
-                if isinstance(path, pathlib.PurePosixPath):
-                    pass
-                elif isinstance(path, pathlib.PureWindowsPath):
-                    self._check_windows_path_anchor(path)
-                    p = p.replace('\\', '/')
-                    if path.anchor and path.anchor[0] not in '/\\':
-                        p = '/' + p
-                else:
-                    raise TypeError("unknown subclass of 'pathlib.PurePath'")
+                raise TypeError("unknown subclass of 'pathlib.PurePath'")
             else:
-                # like pathlib
-                raise TypeError(f'argument should be a path or str object, not {path.__class__!r}')
+                raise TypeError(f'argument should be a path or str object, not {path.__class__!r}')  # like pathlib
 
-            if not p:
-                raise ValueError("invalid path: ''")
-            self._path = pathlib.PurePosixPath(p)  # '.' represented as empty path
-            self._is_dir = \
-                p.endswith('/') or p.endswith('/.') or not self._path.parts or self._path.parts[-1:] == ('..',)
+            self._is_dir = self._is_dir or not self._path.parts or self._path.parts[-1:] == ('..',)
 
         if is_dir is not None:
             is_dir = bool(is_dir)
