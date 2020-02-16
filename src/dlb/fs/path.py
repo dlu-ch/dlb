@@ -151,6 +151,11 @@ class Path(metaclass=_PathMeta):
             if not path.drive:
                 raise ValueError('neither absolute nor relative: drive is missing')
 
+    def _cast(self, other):
+        if other.__class__ is self.__class__:
+            return other
+        return self.__class__(other)
+
     def is_dir(self) -> bool:
         return self._is_dir
 
@@ -161,7 +166,7 @@ class Path(metaclass=_PathMeta):
         return '..' not in self.parts
 
     def relative_to(self, other):
-        other = self.__class__(other)
+        other = self._cast(other)
         if not other.is_dir():
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
         return self.__class__(self._path.relative_to(other._path), is_dir=self._is_dir)
@@ -283,7 +288,7 @@ class Path(metaclass=_PathMeta):
     def __truediv__(self, other):
         if not self.is_dir():
             raise ValueError(f'cannot append to non-directory path: {self!r}')
-        other = self.__class__(other)
+        other = self._cast(other)
         if other.is_absolute():
             raise ValueError(f'cannot append absolute path: {other!r}')
         return self.__class__(self._path / other._path, is_dir=other._is_dir)
@@ -293,11 +298,11 @@ class Path(metaclass=_PathMeta):
 
     def __eq__(self, other) -> bool:
         # on all platform, comparison is case sensitive
-        other = self.__class__(other)
+        other = self._cast(other)
         return (self._cparts, self._is_dir) == (other._cparts, other._is_dir)
 
     def __lt__(self, other) -> bool:
-        other = self.__class__(other)
+        other = self._cast(other)
         return (self._cparts, self._is_dir) < (other._cparts, other._is_dir)
 
     def __hash__(self) -> int:
