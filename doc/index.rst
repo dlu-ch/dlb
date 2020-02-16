@@ -67,7 +67,7 @@ a. *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
 #. Create a *context*. A context describes how subprocesses (e.g. of the compiler) are executed and how
    diagnostic messages are handled.
 
-#. *Compile* all ``.cpp`` files in directory ``src/X/`` and its subdirectories into object files.
+#. *Compile* all :file:`.cpp` files in directory :file:`src/X/` and its subdirectories into object files.
 
    Compiling also means: automatically find all included files and remember them as input dependencies for future
    runs of dlb.

@@ -32,7 +32,7 @@ Terms
 
       #. end of execution:
 
-         a) successful after awaiting on `r` has been completed or
+         a) successful after awaiting on *r* has been completed or
          b) unsuccessful after exception has been risen.
 
       Between start and end of execution the tool instance is said to be *running*.
@@ -146,7 +146,7 @@ Terms
       A path without :file:`..` components.
 
    managed tree path
-      The :term:`normal path` of an existing filesystem object relative to the :term`managed tree`'s root.
+      The :term:`normal path` of an existing filesystem object relative to the :term:`managed tree`'s root.
 
    run-database
       The database in the :term:`management tree` that stores information on the current and past

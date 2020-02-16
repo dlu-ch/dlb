@@ -14,7 +14,7 @@
 This module provides classes to represent tools to be executed during the build process (typically by calling
 :term:`dynamic helpers <dynamic helper>` like compiler binaries).
 
-Every :term:`tool` is represented by a subclass of:class:`Tool` that describes its abstract behaviour and the way it
+Every :term:`tool` is represented by a subclass of :class:`Tool` that describes its abstract behaviour and the way it
 is run (e.g. meaning of command line and output, interaction with file system and environment variables).
 
 Tools are usually parametrized by dependency roles (e.g. input files) and execution parameters.
@@ -86,24 +86,24 @@ Tool objects
 
       The definition location of the class.
 
-      It is a tuple of the form (``file_path``, ``in_archive_path``, ``lineno``) and uniquely identifies the tool
+      It is a tuple of the form ``(file_path, in_archive_path, lineno)`` and uniquely identifies the tool
       among all subclasses of :class:`Tool`.
 
-      ``in_archive_path`` is ``None``, if the class was defined in an existing Python source file, and ``file_path`` is
+      *in_archive_path* is ``None``, if the class was defined in an existing Python source file, and *file_path* is
       the :func:`python:os.path.realpath()` of this file.
 
-      ``in_archive_path`` is the path relative of the source file in the zip archive, if the class was defined in an
-      existing zip archive with a filename ending in ``'.zip'`` (loaded by :mod:`python:zipimport`) and ``file_path`` is
+      *in_archive_path* is the path relative of the source file in the zip archive, if the class was defined in an
+      existing zip archive with a filename ending in :file:`.zip` (loaded by :mod:`python:zipimport`) and *file_path* is
       the :func:`python:os.path.realpath()` of this zip archive.
 
-      ``lineno`` is the 1-based line number in the source file.
+      *lineno* is the 1-based line number in the source file.
 
    .. attribute:: fingerprint
 
       The *permanent local tool instance fingerprint* of this instance.
 
-      This is a ``bytes`` object of fixed size, calculated from all its concrete
-      dependencies ``d`` with d.explicit`` = ``True``.
+      This is a :class:`python:bytes` object of fixed size, calculated from all its concrete  dependencies *d* with
+      ``d.explicit`` = ``True``.
 
       If two instances of the same subclass of :class:`Tool` have "similar" explicit dependencies, their
       fingerprints are equal.
@@ -125,15 +125,15 @@ to create *concrete dependencies* from their constructor arguments.
 
 Each dependency role has an *multiplicity specification*:
 
-   a. An instance ``d`` of a dependency class ``D`` created with ``D(...)`` has a ``multiplicity`` of ``None`` which
-      means that its concrete dependency must be a *single object* (its type depends on ``D`` only) or ``None``.
+   a. An instance *d* of a dependency class *D* created with ``D(...)`` has a *multiplicity* of ``None`` which
+      means that its concrete dependency must be a *single object* (its type depends on *D* only) or ``None``.
 
-   b. An instance ``d`` of a dependency class ``D`` created with ``D[m](...)`` has a ``multiplicity`` of
-      ``m`` which means that its concrete dependencies are a *sequence of objects* (their type depends on ``D`` only)
-      or ``None``. The accepted number of members is specified by ``m``.
+   b. An instance *d* of a dependency class *D* created with ``D[m](...)`` has a *multiplicity* of
+      *m* which means that its concrete dependencies are a *sequence of objects* (their type depends on *D* only)
+      or ``None``. The accepted number of members is specified by *m*.
 
-      ``m`` can be any non-negative integer or any meaningful :token:`python:proper_slice` (of non-negative integers).
-      A number of members is accepted if and only if is either equal to ``m`` or contained in ``range(n + 1)[m]``.
+      *m* can be any non-negative integer or any meaningful :token:`python:proper_slice` (of non-negative integers).
+      A number of members is accepted if and only if is either equal to *m* or contained in ``range(n + 1)[m]``.
 
 Example::
 
@@ -186,10 +186,10 @@ abstract classes:
 
    A :class:`Tool.Dependency` that describes an output dependency of a tool.
 
-   If ``explicit`` is ``True``, a running :term:`tool instance` will remove it before a :term:`redo`.
+   If *explicit* is ``True``, a running :term:`tool instance` will remove it before a :term:`redo`.
    A successful redo must generate it (e.g. create a regular file).
 
-   If ``explicit`` is ``False``, a running :term:`tool instance` will *not* remove it before a :term:`redo`.
+   If *explicit* is ``False``, a running :term:`tool instance` will *not* remove it before a :term:`redo`.
    An unsuccessful redo must not modify it.
 
 
@@ -234,12 +234,12 @@ Concrete dependency role classes support the following methods and attributes:
 
 .. class:: Tool.Dependency(required=True, explicit=True, unique=True)
 
-   If ``required`` is ``True``, a concrete dependency of this dependency role will never be ``None``.
+   If *required* is ``True``, a concrete dependency of this dependency role will never be ``None``.
 
-   If ``unique`` is ``True``, concrete dependency whose :attr:`multiplicity` is not ``None`` will never contain
+   If *unique* is ``True``, concrete dependency whose :attr:`multiplicity` is not ``None`` will never contain
    the the same member more than once (this is ignored if :attr:`multiplicity` is ``None``).
 
-   If ``explicit`` is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
+   If *explicit* is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
    is created. Otherwise, it cannot and must not be, but automatically assigned by :meth:`Tool.run()`.
 
    .. param required: is a value other than ``None`` required?
@@ -260,14 +260,14 @@ Concrete dependency role classes support the following methods and attributes:
       :type value: Any type the concrete dependency can convert to *T*
       :param context: The concrete dependency to convert and validate except ``None``
       :type context: None | :class:`dlb.ex.Context <dlb.ex.context.Context>`
-      :return: The validated ``value`` of type *T*
+      :return: The validated *value* of type *T*
 
-      :raise TypeError: If :attr:`multiplicity` is not ``None`` and ``value`` is not iterable or is a string
+      :raise TypeError: If :attr:`multiplicity` is not ``None`` and *value* is not iterable or is a string
 
    .. method:: compatible_and_no_less_restrictive(other)
 
-      Is this dependency role an instance of the same class as ``other`` with a multiplicity and properties no less
-      restrictive than the ones of ``other``?
+      Is this dependency role an instance of the same class as *other* with a multiplicity and properties no less
+      restrictive than the ones of *other*?
 
       :param other: reference dependency role
       :type other: Tool.Dependency
@@ -288,21 +288,21 @@ Input dependency role classes
 |                                     +-----------------------+----------------------------+
 |                                     | Name                  | Default value              |
 +=====================================+=======================+============================+
-| :class:`Tool.Input.RegularFile`     | ``cls``               | :class:`dlb.fs.Path`       |
+| :class:`Tool.Input.RegularFile`     | *cls*                 | :class:`dlb.fs.Path`       |
 |                                     +-----------------------+----------------------------+
-|                                     | ``ignore_permission`` | ``True``                   |
+|                                     | *ignore_permission*   | ``True``                   |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Input.NonRegularFile`  | ``cls``               | :class:`dlb.fs.Path`       |
+| :class:`Tool.Input.NonRegularFile`  | *cls*                 | :class:`dlb.fs.Path`       |
 |                                     +-----------------------+----------------------------+
-|                                     | ``ignore_permission`` | ``True``                   |
+|                                     | *ignore_permission*   | ``True``                   |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Input.Directory`       | ``cls``               | :class:`dlb.fs.Path`       |
+| :class:`Tool.Input.Directory`       | *cls*                 | :class:`dlb.fs.Path`       |
 |                                     +-----------------------+----------------------------+
-|                                     | ``ignore_permission`` | ``True``                   |
+|                                     | *ignore_permission*   | ``True``                   |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Input.EnvVar`          | ``restriction``       |                            |
+| :class:`Tool.Input.EnvVar`          | *restriction*         |                            |
 |                                     +-----------------------+----------------------------+
-|                                     | ``example``           |                            |
+|                                     | *example*             |                            |
 +-------------------------------------+-----------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
@@ -311,19 +311,19 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.RegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for a regular files in the :term`managed tree`, identified by their paths.
+   Constructs a dependency role for a regular files in the :term:`managed tree`, identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
 
-   If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
+   If *ignore_permission* is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
    :term:`mtime` is considered a modification of the dependency.
    Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
-   instance of ``cls``.
+   instance of *cls*.
 
    Example::
 
@@ -340,7 +340,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.NonRegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for filesystem objects in the :term`managed tree` that are neither directories nor
+   Constructs a dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor
    regular files, identified by their paths.
 
    If a path is relative, is it treated as relative to
@@ -348,12 +348,12 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
 
-   If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
+   If *ignore_permission* is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
    :term:`mtime` is considered a modification of the dependency.
    Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
-   instance of ``cls``.
+   instance of *cls*.
 
    Example::
 
@@ -370,19 +370,19 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.Directory(cls=dlb.fs.Path)
 
-   Constructs a dependency role for directories in the :term`managed tree`, identified by their paths.
+   Constructs a dependency role for directories in the :term:`managed tree`, identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
 
-   If ``ignore_permission`` is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
+   If *ignore_permission* is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
    :term:`mtime` is considered a modification of the dependency.
    Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
-   as an instance of ``cls``.
+   as an instance of *cls*.
 
    Example::
 
@@ -401,13 +401,13 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    Constructs a dependency role for environment variables.
 
-   The value of the environment variable named ``name`` (as a string or ``None`` if not defined)
-   is validated by matching it to the regular expression ``restriction``.
+   The value of the environment variable named *name* (as a string or ``None`` if not defined)
+   is validated by matching it to the regular expression *restriction*.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is a string or
    a dictionary of strings:
 
-      a. If ``restriction`` contains at least one named group: the dictionary of all groups of the validated value
+      a. If *restriction* contains at least one named group: the dictionary of all groups of the validated value
          of the environment variable.
 
       b. Otherwise, the validated value of the environment variable.
@@ -424,7 +424,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    :param restriction: regular expression
    :type restriction: str | :class:`python:typing.Pattern`
-   :param example: typical value of a environment variable, ``restriction`` must match this
+   :param example: typical value of a environment variable, *restriction* must match this
    :type example: str
 
 
@@ -436,11 +436,11 @@ Concrete output dependency role classes
 |                                     +-----------------------+----------------------------+
 |                                     | Name                  | Default value              |
 +=====================================+=======================+============================+
-| :class:`Tool.Output.RegularFile`    | ``cls``               | :class:`dlb.fs.Path`       |
+| :class:`Tool.Output.RegularFile`    | *cls*                 | :class:`dlb.fs.Path`       |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Output.NonRegularFile` | ``cls``               | :class:`dlb.fs.Path`       |
+| :class:`Tool.Output.NonRegularFile` | *cls*                 | :class:`dlb.fs.Path`       |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Output.Directory`      | ``cls``               | :class:`dlb.fs.Path`       |
+| :class:`Tool.Output.Directory`      | *cls*                 | :class:`dlb.fs.Path`       |
 +-------------------------------------+-----------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
@@ -449,7 +449,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Output.RegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for regular files in the :term`managed tree`, identified by their paths.
+   Constructs a dependency role for regular files in the :term:`managed tree`, identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
@@ -457,7 +457,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    (if the path does not contain :file:`..` components, these requirements are met).
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path
-   as an instance of ``cls``.
+   as an instance of *cls*.
 
    Example:
 
@@ -472,7 +472,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Output.NonRegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for filesystem objects in the :term`managed tree` that are neither directories nor
+   Constructs a dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor
    regular files, identified by their paths.
 
    If a path is relative, is it treated as relative to
@@ -481,7 +481,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    (if the path does not contain :file:`..` components, these requirements are met).
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
-   instance of ``cls``.
+   instance of *cls*.
 
    Example::
 
@@ -496,7 +496,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Output.Directory(cls=dlb.fs.Path)
 
-   Constructs a dependency role for directories in the :term`managed tree`, identified by their paths.
+   Constructs a dependency role for directories in the :term:`managed tree`, identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
@@ -504,7 +504,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    (if the path does not contain :file:`..` components, these requirements are met).
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
-   as an instance of ``cls``.
+   as an instance of *cls*.
 
    Example::
 

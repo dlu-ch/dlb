@@ -23,7 +23,7 @@ Path objects
 
    All represented paths are either absolute or relative to the working directory of a process.
 
-   The interface is similar to :mod:`pathlib` and conversion from and to ``pathlib`` paths is supported.
+   The interface is similar to :mod:`pathlib` and conversion from and to :mod:`pathlib` paths is supported.
 
    If the path represented by a :class:`dlb.fs.Path` is meaningful as a concrete path on the platform the code
    is running on, :attr:`native` returns it in the form of a :class:`dlb.fs.Path.Native` instance, which can
@@ -49,7 +49,7 @@ Path objects
    They are also comparable with strings and :class:`pathlib.PurePath`.
    Comparison is done case-sensitively and component-wise, observing the equivalence relations described below.
    A non-directory path is smaller than an otherwise identical directory path.
-   If a directory path ``d`` is a prefix of another path `p`, then ``d`` < ``p``.
+   If a directory path *d* is a prefix of another path *p*, then *d* < *p*.
    Any relative path is smaller than any absolute path.
 
    Usage example::
@@ -69,26 +69,26 @@ Path objects
 
       Constructs a path from another path or a string.
 
-      If ``path`` is interpreted as a string representation of a path in Posix style with ``/`` as a component
+      If *path* is interpreted as a string representation of a path in Posix style with ``/`` as a component
       separator.
       It must not by empty and must be either absolute or relative.
 
-      If `is_dir` is ``None``, the ending of ``path`` determines whether is considered a directory path or not;
+      If *is_dir* is ``None``, the ending of *path* determines whether is considered a directory path or not;
       it is if it ends with ``'/'`` or a ``'.'`` or ``'..'`` component.
 
-      If `is_dir` is ``True``, the path is considered a directory path irrespective of ``path``.
+      If *is_dir* is ``True``, the path is considered a directory path irrespective of ``path``.
 
-      If `is_dir` is ``False``, the path is considered a non-directory path irrespective of ``path``
-      However, if ``path`` represents ``'.'`` or endwith a ``'..'`` component, a ``ValueError`` exception is raised.
+      If *is_dir* is ``False``, the path is considered a non-directory path irrespective of ``path``
+      However, if *path* represents ``'.'`` or endwith a ``'..'`` component, a :exc:`ValueError` exception is raised.
 
       :param path: portable string representation or path object
       :type path: str | :class:`Path` | :class:`pathlib.PurePath`
-      :param is_dir: ``True`` if this is a directory path, ``False`` if not and ``None`` for derivation from ``path``
+      :param is_dir: ``True`` if this is a directory path, ``False`` if not and ``None`` for derivation from *path*
       :type is_dir: NoneType | bool
 
-      :raises TypeError: if ``path`` is neither a string nor a path
-      :raises ValueError: if ``path`` is an empty string
-      :raises ValueError: if ``path`` is a :class:`pathlib.PurePath` which is neither absolute nor relative
+      :raises TypeError: if *path* is neither a string nor a path
+      :raises ValueError: if *path* is an empty string
+      :raises ValueError: if *path* is a :class:`pathlib.PurePath` which is neither absolute nor relative
 
       Example::
 
@@ -134,40 +134,42 @@ Path objects
 
    .. method:: relative_to(other):
 
-      Returns a version of this path relative to the path represented by ``other``
-      (by removing ``other`` from the start of this path).
+      Returns a version of this path relative to the path represented by *other* (by removing *other* from the start
+      of this path).
 
       :rtype: ``self.__class__``
 
       :raises ValueError: if this is a non-directory path
-      :raises ValueError: if ``other`` is not a prefix of this
+      :raises ValueError: if *other* is not a prefix of this
 
    .. method:: iterdir(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Yields all path objects of the directory contents denoted by this path and matched by the
       name filters.
       The paths are duplicate-free and in a defined and reproducible order, but not necessarily sorted.
-      They are of type ``self.__class__`` if ``cls`` is ``None`` and of type ``cls`` if it is not.
+      They are of type ``self.__class__`` if *cls* is ``None`` and of type *cls* if it is not.
 
       The path of an existing filesystem object is eventually yielded iff
 
-        - its name matches the name filter ``name_filter`` and
+        - its name matches the name filter *name_filter* and
         - it is contained in a matched directory.
 
-      A directory is a matched directory iff it is the directory ``d`` denoted by this path or a direct subdirectory
-      of a matched directory whose name matches the name filter ``recurse_name_filter``.
-      If ``follow_symlinks`` is ``True``, a symbolic link to an existing directory is considered a direct subdirectory
+      A directory is a matched directory iff it is the directory *d* denoted by this path or a direct subdirectory
+      of a matched directory whose name matches the name filter *recurse_name_filter*.
+      If *follow_symlinks* is ``True``, a symbolic link to an existing directory is considered a direct subdirectory
       of the director containing the symbolic link.
-      If ``follow_symlinks`` is ``False`` or the target of the symbolic link does not exist,
+      If *follow_symlinks* is ``False`` or the target of the symbolic link does not exist,
       it is considered a non-directory.
 
-      ``name_filter`` and ``recurse_name_filter`` are *name filters*.
+      *name_filter* and *recurse_name_filter* are *name filters*.
       A name filter can be
 
         - ``None`` --- no name matches this filter
-        - a callable ``c`` accepting exactly one argument --- a name ``n`` matches this filter iff ``bool(c(n))`` is ``True``
-        - a compiled regular expression ``r`` --- a name ``n`` matches this filter iff ``r.fullmatch(n))`` is not ``None``
-        - a non-empty regular expression string ``s``--- a name ``n`` matches this filter iff ``re.compile(s).fullmatch(n))`` is not ``None``
+        - a callable *c* accepting exactly one argument --- a name *n* matches this filter iff ``bool(c(n))``
+          is ``True``
+        - a compiled regular expression *r* --- a name *n* matches this filter iff ``r.fullmatch(n))`` is not ``None``
+        - a non-empty regular expression string ``s``--- a name *n* matches this filter iff
+          ``re.compile(s).fullmatch(n))`` is not ``None``
         - an empty string --- every name matches this filter
 
       Example::
@@ -175,10 +177,10 @@ Path objects
           for p in dlb.fs.Path('src/').iterdir(name_filter=r'(?i).+\.cpp', recurse_name_filter=lambda n: '.' not in n):
               ...
 
-      :rtype: ``cls`` | ``self.__class__``
+      :rtype: *cls* | ``self.__class__``
 
-      :raises TypeError: if ``cls`` is neither ``None`` nor a subclass of :class:`dlb.fs.Path`
-      :raises TypeError: if ``name_filter`` or ``recurse_name_filter`` are not both name filters
+      :raises TypeError: if *cls* is neither ``None`` nor a subclass of :class:`dlb.fs.Path`
+      :raises TypeError: if *name_filter* or *recurse_name_filter* are not both name filters
       :raises ValueError: if this is a non-directory path
 
    .. method:: iterdir_r(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
@@ -224,8 +226,8 @@ Path objects
       :rtype: ``self.__class__``
       :return: subpath
 
-      :raises TypeError: if ``key`` is not a slice
-      :raises ValueError: if this is an absolute path and ``key`` is an empty slice
+      :raises TypeError: if *key* is not a slice
+      :raises ValueError: if this is an absolute path and *key* is an empty slice
 
    .. attribute:: parts
 
@@ -280,10 +282,10 @@ Path objects
 
    A native path whose instances can be used much like ones from :class:`pathlib.Path` and is a :class:`os.PathLike`.
 
-   For each subclass ``P`` of :class:`dlb.fs.Path` there is a corresponding subclass ``P.Native`` which imposes the same
-   restrictions on its representable paths as ``P``.
+   For each subclass *P* of :class:`dlb.fs.Path` there is a corresponding subclass ``P.Native`` which imposes the same
+   restrictions on its representable paths as *P*.
 
-   If ``Q`` is a subclass of ``P`` and ``P`` is a subclass of :class:`dlb.fs.Path`, then ``Q.Native`` is a subclass
+   If *Q* is a subclass of *P* and *P* is a subclass of :class:`dlb.fs.Path`, then ``Q.Native`` is a subclass
    of ``P.Native``.
 
    These properties make subclasses of :class:`dlb.fs.Path.Native` well-suited for use in type specifications
@@ -319,7 +321,7 @@ Restricting paths
 -----------------
 
 By subclassing :class:`dlb.fs.Path`, additional restrictions to the set of value values can be imposed
-(trying to construct a :class:`dlb.fs.Path` from an invalid value raises an ``ValueError`` exception).
+(trying to construct a :class:`dlb.fs.Path` from an invalid value raises an :exc:`ValueError` exception).
 A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restriction_to_base`.
 
 .. inheritance-diagram:: dlb.fs.Path dlb.fs.RelativePath dlb.fs.AbsolutePath dlb.fs.NoSpacePath dlb.fs.PosixPath dlb.fs.PortablePosixPath dlb.fs.PortableWindowsPath dlb.fs.WindowsPath dlb.fs.PortablePath

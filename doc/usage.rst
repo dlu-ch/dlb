@@ -15,7 +15,7 @@ Setup a working tree
    :term:`effective mtime resolution` (no courser than 100 ms). XFS or Ext4 are fine. Avoid FAT32. [#workingtreefs1]_
 
    Make sure the filesystem is mounted with "normal" (immediate) update of :term:`mtime`
-   (e.g. without `lazytime` for Ext4). [#mountoption1]_
+   (e.g. without ``lazytime`` for Ext4). [#mountoption1]_
 
  - Place all input files (that are only read by tool instances) in a filesystem tree in the :term:`working tree`
    that is not modified by tool instances.
@@ -54,7 +54,7 @@ Run dlb
 
    Use :command:`cp` instead.
 
- - Be careful when you modify a file via `mmap` that is an input dependency of a :term:`tool instance`. [#mmap1]_
+ - Be careful when you modify a file via ``mmap`` that is an input dependency of a :term:`tool instance`. [#mmap1]_
 
  - Do not put the system time used as :term:`working tree's system time` back *on purpose* while
    :term:`dlb is running <run of dlb>` or while you are modifying the :term:`managed tree`. [#workingtreetime]_

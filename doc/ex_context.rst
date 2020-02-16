@@ -61,11 +61,11 @@ Context objects
    whose absolute path does not contain unresolved symbolic link.
 
    When a context (root or not) is entered, the path of the :term:`working tree`'s root must be representable as
-   as ``path_cls``. This allows you to impose :ref:`restrictions <restricting_paths>` on the accepted paths.
+   as *path_cls*. This allows you to impose :ref:`restrictions <restricting_paths>` on the accepted paths.
 
    :param path_cls: the subclass of :class:`dlb.fs.Path` to be used to represent the :term:`working tree`'s root
    :type path_cls: dlb.fs.Path
-   :raises TypeError: if ``path_cls`` is not a subclass of :class:`dlb.fs.Path`
+   :raises TypeError: if *path_cls* is not a subclass of :class:`dlb.fs.Path`
 
    Entering or exiting a context may raise the following exceptions:
 
@@ -116,7 +116,8 @@ Context objects
       The absolute path to the :term:`working tree`'s root.
 
       It is an instance of :attr:`Context.active.path_cls <Context.path_cls>` and
-      is representable as an instance of ``path_cls`` of the :term:`active context` and every possible outer context.
+      is representable as an instance of :attr:`path_cls <Context.path_cls>` of the :term:`active context` and every
+      possible outer context.
 
       Same on class and instance.
 
@@ -132,13 +133,13 @@ Context objects
 
    .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False)
 
-      Creates a temporary regular file (for ``is_dir`` = ``False``) or a temporary directory (for ``is_dir`` = ``True``)
+      Creates a temporary regular file (for *is_dir* = ``False``) or a temporary directory (for *is_dir* = ``True``)
       in the :term:`management tree` and returns is absolute path.
 
-      The file name will end with ``suffix`` (without an added dot) and begin with ``prefix``.
+      The file name will end with *suffix* (without an added dot) and begin with *prefix*.
 
-      ``prefix`` must not be empty.
-      ``prefix`` and ``suffix`` must not contain an path separator.
+      *prefix* must not be empty.
+      *prefix* and *suffix* must not contain an path separator.
 
       Permissions:
 
@@ -156,7 +157,7 @@ Context objects
          (provided, the assumption :ref:`A-F1 <assumption-f1>` holds).
 
       .. note::
-         The number of file name candidates tried for a given combination of ``prefix`` and ``suffix`` is limited by an
+         The number of file name candidates tried for a given combination of *prefix* and *suffix* is limited by an
          OS-dependent number. A best practise is therefore to remove the created regular file or directory manually
          after use, although they are removed automatically when the :term:`root context` is exit.
 
@@ -168,11 +169,11 @@ Context objects
 
       :type is_dir: bool
 
-      :return: an instance ``p`` of :attr:`Context.path_cls` with ``p.is_dir() = is_dir``
+      :return: an instance *p* of :attr:`Context.path_cls` with ``p.is_dir() = is_dir``
       :rtype: :class:`.dlb.fs.Path`
 
       :raises ValueError:
-          if ``prefix`` is empty or the resulting path is not representable as a :attr:`Context.path_cls`
+          if *prefix* is empty or the resulting path is not representable as a :attr:`Context.path_cls`
       :raises FileExistsError: if all tried candidates already existed
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -202,12 +203,12 @@ Context objects
       :param collapsable: assume that any relative to the working tree root is :term:`collapsable <collapsable path>`?
       :type collapsable: bool
       :return:
-         an instance ``p`` of :attr:`Context.path_cls` with ``p.is_absolute() == False`` and
+         an instance *p* of :attr:`Context.path_cls` with ``p.is_absolute() == False`` and
          ``p.is_normalized() == True``
       :rtype: :class:`.dlb.fs.Path`
 
-      :raises dlb.fs.PathNormalizationError: if ``path`` does not exist in the  :term:`managed tree`
-      :raises ValueError: if the resulting path is not representable as a ??? :attr:`Context.path_cls`
+      :raises dlb.fs.PathNormalizationError: if *path* does not exist in the  :term:`managed tree`
+      :raises ValueError: if the resulting path is not representable as a :attr:`Context.path_cls`
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: env
@@ -225,9 +226,9 @@ Context objects
 Environment variable dictionary objects
 ---------------------------------------
 
-The environment variable dictionary object ``env`` returned by :attr:`c.env <Context.env>` for a :term:`context` ``c``
-is a dictionary-like object of all environment variables defined in this ``c``.
-``c`` is called the associated :term:`context` of ``env``.
+The environment variable dictionary object *env* returned by :attr:`c.env <Context.env>` for a :term:`context` *c*
+is a dictionary-like object of all environment variables defined in this *c*.
+*c* is called the associated :term:`context` of *env*.
 
 In addition, the environment variable dictionary object manages the import of environment variables from
 environment variables of the outer :term:`context` and restriction of imported or assigned values in the
@@ -275,11 +276,11 @@ Environment variable dictionary object support the following methods and attribu
 
 .. method:: EnvVarDict.import_from_outer(name, restriction, value_if_undefined=None, example=None)
 
-   Sets the value of the environment variable named ``name`` from the innermost outer :term:`context` that
+   Sets the value of the environment variable named *name* from the innermost outer :term:`context` that
    defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
 
    Also sets the importing restriction for the value of the environment variable; when it is or later becomes
-   defined, it regular expression ``restriction`` must match its value.
+   defined, it regular expression *restriction* must match its value.
 
    The possible imported value and the importing restriction apply to the context and all its future inner contexts.
 
@@ -290,35 +291,35 @@ Environment variable dictionary object support the following methods and attribu
    :type name: str
    :param restriction: regular expression
    :type restriction: str | :class:`python:typing.Pattern`
-   :param example: typical value of a environment variable, ``restriction`` must match this
+   :param example: typical value of a environment variable, *restriction* must match this
    :type example: str
 
    :raises ValueError:
-      if an environment variable named ``name`` is defined in the associated or an outer :term:`context`
-      and ``restriction`` does not match its value
+      if an environment variable named *name* is defined in the associated or an outer :term:`context`
+      and *restriction* does not match its value
    :raises NonActiveContextAccessError: if the associated context is not an :term:`active context`
 
 .. method:: EnvVarDict.is_imported(name)
 
-   Returns `True` if ``name`` is the name of an environment variable imported in the associated :term:`context`
+   Returns ``True`` if *name* is the name of an environment variable imported in the associated :term:`context`
    or any of its outer contexts, else `False`.
 
    :param name: non-empty name of an environment variable
    :type name: str
 
-   :raises TypeError: if ``name`` is not a string
-   :raises ValueError: if ``name`` is an empty string
+   :raises TypeError: if *name* is not a string
+   :raises ValueError: if *name* is an empty string
 
 .. method:: EnvVarDict.get(name, default=None)
 
-   Return its value if ``name`` is the name of a defined environment variable in the associated :term:`context`,
-   else ``default``.
+   Return its value if *name* is the name of a defined environment variable in the associated :term:`context`,
+   else *default*.
 
    :param name: non-empty name of an environment variable
    :type name: str
 
-   :raises TypeError: if ``name`` is not a string
-   :raises ValueError: if ``name`` is an empty string
+   :raises TypeError: if *name* is not a string
+   :raises ValueError: if *name* is an empty string
 
 .. method:: EnvVarDict.items()
 
@@ -326,7 +327,7 @@ Environment variable dictionary object support the following methods and attribu
 
 .. describe:: name in env
 
-   Returns `True` if there is a environment variable named ``name`` defined in ``env``, else `False`.
+   Returns `True` if there is a environment variable named *name* defined in *env*, else `False`.
 
 .. describe:: name not in env
 
@@ -334,7 +335,7 @@ Environment variable dictionary object support the following methods and attribu
 
 .. describe:: env[name] = value
 
-   Defines an imported environment variable named ``name`` with value ``value`` in the associated :term:`context` and
+   Defines an imported environment variable named *name* with value *value* in the associated :term:`context` and
    all its future inner contexts.
 
    Raises :exc:`KeyError`, if *name* was not imported in the associated  :term:`context` or one of its outer contexts.
@@ -346,7 +347,7 @@ Environment variable dictionary object support the following methods and attribu
 
 .. describe:: del env[name]
 
-   Undefines a defined environment variable named ``name`` in the associated :term:`context` and all its future
+   Undefines a defined environment variable named *name* in the associated :term:`context` and all its future
    inner contexts.
 
    Raises :exc:`KeyError`, if *name* is not defined in the :term:`context`.
@@ -382,4 +383,4 @@ Exceptions
 .. exception:: NonActiveContextAccessError
 
    Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` is modified
-   while its associated :term`context` is not the :term:`active context`.
+   while its associated :term:`context` is not the :term:`active context`.

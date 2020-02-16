@@ -391,12 +391,12 @@ Timing and concurrency
 
 
 .. [#mmap1]
-   The update of :term:`mtime` for an `mmap`'d file
+   The update of :term:`mtime` for an ``mmap``'d file
    `conforming to ISO 1003.1-2008 <https://pubs.opengroup.org/onlinepubs/9699919799/functions/mmap.html>`_
    after a write to the mapped memory is only guaranteed via :c:func:`msync()`.
    Therefore such a write operation is not considered complete before the next call of :c:func:`msync()`
    (which may never happen).
-   Actual behaviour of `mmap` on different operating systems (2018): https://apenwarr.ca/log/20181113.
+   Actual behaviour of ``mmap`` on different operating systems (2018): https://apenwarr.ca/log/20181113.
 
 .. [#touch1]
    Especially, :term:`mtime` is not manually set with :command:`touch -t` or any tool that uses a coarser time
