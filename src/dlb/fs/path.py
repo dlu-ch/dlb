@@ -157,7 +157,7 @@ class Path(metaclass=_PathMeta):
     def is_absolute(self) -> bool:
         return self._path.is_absolute()
 
-    def is_normalized(self) -> bool:  # ??? -> normalize_dotdot()
+    def is_normalized(self) -> bool:
         return '..' not in self.parts
 
     def relative_to(self, other):

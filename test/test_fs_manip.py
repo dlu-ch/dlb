@@ -327,6 +327,9 @@ class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
         p = dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
         self.assertEqual(dlb.fs.Path('c/d/'), p)
 
+        p = dlb.fs.manip.normalize_dotdot(pathlib.PosixPath('a/b'), '/tmp')
+        self.assertEqual(pathlib.PosixPath('a/b'), p)
+
     def test_with_nonparent_symlink_is_correct(self):
         os.makedirs('a')
         os.makedirs('x/d/e')
@@ -334,18 +337,11 @@ class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
         p = dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
         self.assertEqual(dlb.fs.Path('c/d/'), p)
 
-    def test_fails_for_str(self):
-        with self.assertRaises(TypeError) as cm:
-            # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot(pathlib.PosixPath('a/b'), '/tmp')
-        msg = "'ref_dir_path' must be a dlb.fs.Path or pathlib.Path object"
-        self.assertEqual(msg, str(cm.exception))
-
     def test_fails_for_bytes(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.manip.normalize_dotdot(pathlib.PosixPath('a/b'), b'/tmp')
-        msg = "'ref_dir_path' must be a dlb.fs.Path or pathlib.Path object"
+        msg = "'ref_dir_path' must be a str or a dlb.fs.Path or os.PathLike object returning str"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_purepath(self):
@@ -450,7 +446,7 @@ class BuildNormalPathOfExistingTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.fs.manip.normalize_dotdot_with_memo_relative_to(
                 dlb.fs.Path('a/b'),
                 ref_dir_real_native_path=dlb.fs.Path('/tmp'))
-        msg = "'ref_dir_real_native_path' must be a str"
+        msg = "'ref_dir_real_native_path' must be a str or a os.PathLike object returning str"
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
@@ -458,7 +454,7 @@ class BuildNormalPathOfExistingTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.fs.manip.normalize_dotdot_with_memo_relative_to(
                 dlb.fs.Path('a/b'),
                 ref_dir_real_native_path=b'/tmp')
-        msg = "'ref_dir_real_native_path' must be a str"
+        msg = "'ref_dir_real_native_path' must be a str or a os.PathLike object returning str"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_relative_reference(self):

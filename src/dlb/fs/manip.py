@@ -172,10 +172,7 @@ def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.
     return memo, sr
 
 
-def _normalize_dotdot(path: PP, ref_dir_path: typing.Optional[str]) -> PP:
-
-    # TODO accept str (as a native path) for performance reasons
-
+def _normalize_dotdot(path: PP, ref_dir_path: typing.Union[None, str, os.PathLike]) -> PP:
     path_components = path.parts
 
     root = ()
@@ -191,7 +188,7 @@ def _normalize_dotdot(path: PP, ref_dir_path: typing.Optional[str]) -> PP:
             break
         if i == 0:
             raise PathNormalizationError(f"is an upwards path: {path!r}")
-        if ref_dir_path:
+        if ref_dir_path is not None:
             p = os.path.join(ref_dir_path, *root, *nonroot_components[:i])
             try:
                 sr = os.lstat(p)
@@ -229,7 +226,7 @@ def normalize_dotdot_pure(path: PP) -> PP:
     return _normalize_dotdot(path, None)
 
 
-def normalize_dotdot(path: P, ref_dir_path: typing.Union[path_.Path, pathlib.Path] = None) -> P:
+def normalize_dotdot(path: P, ref_dir_path: typing.Union[str, os.PathLike, path_.Path] = None) -> P:
     """
     Return an equivalent normal *path* with all :file:`..` components replaced, if it is collapsable.
 
@@ -249,18 +246,18 @@ def normalize_dotdot(path: P, ref_dir_path: typing.Union[path_.Path, pathlib.Pat
 
     if isinstance(ref_dir_path, path_.Path):
         ref_dir_path = ref_dir_path.native.raw
-    elif not isinstance(ref_dir_path, pathlib.Path):
-        raise TypeError(f"'ref_dir_path' must be a dlb.fs.Path or pathlib.Path object")
+    if isinstance(ref_dir_path, os.PathLike):  # note: str is not os.PathLike
+        ref_dir_path = os.fspath(ref_dir_path)
+    if not isinstance(ref_dir_path, str):
+        raise TypeError(f"'ref_dir_path' must be a str or a dlb.fs.Path or os.PathLike object returning str")
 
-    if not ref_dir_path.is_absolute():
+    if not os.path.isabs(ref_dir_path):
         raise ValueError("'ref_dir_path' must be absolute")
-
-    ref_dir_path = str(ref_dir_path)  # TODO remove
 
     return _normalize_dotdot(path, ref_dir_path)
 
 
-def normalize_dotdot_with_memo_relative_to(path: P, ref_dir_real_native_path: str) \
+def normalize_dotdot_with_memo_relative_to(path: P, ref_dir_real_native_path: typing.Union[str, os.PathLike]) \
         -> typing.Tuple[P, FilesystemObjectMemo, os.stat_result]:
     """
     Return a tuple ``(normal_path, sr)``, where *normal_path* is a normal path without symbolic links, pointing to the
@@ -284,8 +281,10 @@ def normalize_dotdot_with_memo_relative_to(path: P, ref_dir_real_native_path: st
     if not isinstance(path, (path_.Path, pathlib.Path)):
         raise TypeError(f"'path' must be a dlb.fs.Path or pathlib.Path object")
 
+    if isinstance(ref_dir_real_native_path, os.PathLike):  # note: str is not os.PathLike
+        ref_dir_real_native_path = os.fspath(ref_dir_real_native_path)
     if not isinstance(ref_dir_real_native_path, str):
-        raise TypeError("'ref_dir_real_native_path' must be a str")
+        raise TypeError(f"'ref_dir_real_native_path' must be a str or a os.PathLike object returning str")
 
     if not os.path.isabs(ref_dir_real_native_path):
         raise ValueError("'ref_dir_real_native_path' must be absolute")

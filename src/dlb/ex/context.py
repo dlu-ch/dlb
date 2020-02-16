@@ -240,7 +240,7 @@ class _RootSpecifics:
         working_tree_path_str = os.path.abspath(os.getcwd())
         try:
             self._working_tree_path = path_cls(path_cls.Native(working_tree_path_str), is_dir=True)
-            self._real_working_tree_path = pathlib.Path(os.path.realpath(working_tree_path_str))  # TODO -> str
+            self._real_working_tree_path = os.path.realpath(working_tree_path_str)
             # TODO check if canonical-case path
 
             if not os.path.samefile(working_tree_path_str, str(self._working_tree_path.native)):
@@ -394,8 +394,6 @@ class _RootSpecifics:
         elif not isinstance(path, (fs.Path, pathlib.Path)):
             raise TypeError(f"'path' must be a str or a dlb.fs.Path or pathlib.Path object")
 
-        real_working_tree_path_str = str(self._real_working_tree_path)  # TODO remove
-
         rel_path = None
         if no_symlink_in_managedtree:
             if collapsable:
@@ -408,11 +406,11 @@ class _RootSpecifics:
 
         if rel_path is None:
             # .. then exact version (all existing symlinks are resolved)
-            rel_path, _, sr = manip.normalize_dotdot_with_memo_relative_to(path, real_working_tree_path_str)
+            rel_path, _, sr = manip.normalize_dotdot_with_memo_relative_to(path, self._real_working_tree_path)
         elif not existing:
             rel_path_pathlib = rel_path.pure_posix if isinstance(rel_path, fs.Path) else rel_path
             try:
-                sr = os.stat(os.path.join(real_working_tree_path_str, rel_path_pathlib))
+                sr = os.stat(os.path.join(self._real_working_tree_path, rel_path_pathlib))
             except OSError as e:
                 msg = f"check failed with {e.__class__.__name__}: {rel_path_pathlib!r}"
                 raise manip.PathNormalizationError(msg) from None
