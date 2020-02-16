@@ -20,7 +20,7 @@ from . import platform
 #
 #   - Documentation states: "Never unmarshal data received from an untrusted or unauthenticated source."
 #   - As of today, there is no know ways to exploit 'marshal.loads()'.
-#   - `marshal` was designed to be fast and restricted.
+#   - 'marshal' was designed to be fast and restricted.
 #   - Security holes may due to bugs (since the code "has not been carefully analyzed against buffer overflows and
 #     so on") but not by design.
 #   - https://stackoverflow.com/questions/26931919/marshal-unserialization-not-secure:
@@ -92,11 +92,12 @@ class Database:
 
     def __init__(self, rundb_path: str, suggestion_if_database_error: str = ''):
         """
-        Open or create the database with path 'rundb_path'.
+        Open or create the database with path *rundb_path*.
 
-        `suggestion_if_database_error` should be a non-empty line suggesting a recovery solution for database errors.
+        *suggestion_if_database_error* should be a non-empty line suggesting a recovery solution for database errors.
 
-        Until `close()' is called on this object, no other process must construct an object with the same 'rundb_path'.
+        Until :meth:`close()' is called on this object, no other process must construct an object with the same
+        *rundb_path*.
         """
 
         self._suggestion_if_database_error = str(suggestion_if_database_error)
@@ -161,10 +162,10 @@ class Database:
     def get_and_register_tool_instance_dbid(self, permanent_local_tool_id: bytes,
                                             permanent_local_tool_instance_fingerprint: bytes) -> int:
         """
-        Return a a tool instance dbid `tool_instance_dbid` for a tool instance identified by
-        `permanent_local_tool_id` and `permanent_local_tool_instance_fingerprint` on the current platform.
+        Return a tool instance dbid *tool_instance_dbid* for a tool instance identified by
+        *permanent_local_tool_id* and *permanent_local_tool_instance_fingerprint* on the current platform.
 
-        `tool_instance_dbid` is unique in the run-database until the next cleanup() on this object.
+        *tool_instance_dbid* is unique in the run-database until the next :meth:`cleanup()` on this object.
 
         When called more than one before the next cleanup() on this object, this always returns the same value."""
 
@@ -180,7 +181,7 @@ class Database:
 
     def get_tool_instance_dbid_count(self) -> int:
         """
-        Return the number of (different) registered `tool_instance_dbid` for the current platform.
+        Return the number of (different) registered *tool_instance_dbid* for the current platform.
         """
 
         with self._cursor_with_exception_mapping() as cursor:
@@ -194,13 +195,13 @@ class Database:
     def update_fsobject_input(self, tool_instance_dbid: int, fsobject_dbid: str, is_explicit: bool,
                               memo_before: typing.Optional[bytes]):
         """
-        Add or replace the `memo` of a filesystem object in the managed tree that is an input dependency
-        of the tool instance `tool_instance_dbid`.
+        Add or replace the description of a filesystem object in the managed tree that is an input dependency
+        of the tool instance *tool_instance_dbid* by ``(is_explicit, memo_before``).
 
-        `tool_instance_dbid` must be the value returned by call of `get_and_register_tool_instance_dbid()` since
-        not before the last `cleanup()` (if any).
+        *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
+        not before the last :meth:`cleanup()` (if any).
 
-        `fsobject_dbid` must be the return value of `build_fsobject_dbid()`.
+        *fsobject_dbid* must be the return value of :func:`build_fsobject_dbid()`.
         """
 
         if not is_fsobject_dbid(fsobject_dbid):
@@ -216,10 +217,10 @@ class Database:
     def replace_fsobject_inputs(self, tool_instance_dbid: int,
                                 info_by_by_fsobject_dbid: typing.Dict[str, typing.Tuple[bool, bytes]]):
         """
-        Replace all information on input dependencies for a tool instance `tool_instance_dbid` by
-        `info_by_by_fsobject_dbid`.
+        Replace all information on input dependencies for a tool instance *tool_instance_dbid* by
+        *info_by_by_fsobject_dbid*.
 
-        Includes a `commit()` at the start.
+        Includes a :meth:`commit()` at the start.
         In case of an exception, the information on input dependencies in the run-database remains unchanged.
         """
         with self._cursor_with_exception_mapping() as cursor:
@@ -237,14 +238,14 @@ class Database:
     def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: typing.Optional[bool] = None) \
             -> typing.Dict[str, typing.Tuple[bool, bytes]]:
         """
-        Return the `fsobject_dbid` and the optional memo of all filesystem objects in the managed tree that are
-        input dependencies of the tool instance `tool_instance_dbid`.
+        Return the *fsobject_dbid* and the optional memo of all filesystem objects in the managed tree that are
+        input dependencies of the tool instance *tool_instance_dbid*.
 
-        If `is_explicit_filter` is not None, only the dependencies with `is_explicit` = `is_explicit_filter` are
+        If *is_explicit_filter* is not ``None``, only the dependencies with *is_explicit* = *is_explicit_filter* are
         returned.
 
-        `tool_instance_dbid` must be the value returned by call of `get_and_register_tool_instance_dbid()` since
-        not before the last `cleanup()` (if any).
+        *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
+        the last :meth:`cleanup()` (if any).
         """
 
         with self._cursor_with_exception_mapping() as cursor:
@@ -266,14 +267,14 @@ class Database:
         Declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
         modified if
 
-          - their `fsobject_dbid` = `modified_fsobject_dbid` or
+          - their *fsobject_dbid* = *modified_fsobject_dbid* or
           - their managed tree path is a prefix of the path of the filesystem object identified
-            by `modified_fsobject_dbid`
+            by *modified_fsobject_dbid*
 
-        Includes a `commit()` at the start.
+        Includes a :meth:`commit()` at the start.
         In case of an exception, the information on input dependencies in the run-database remains unchanged.
 
-        Note: call `commit()` before the filesystem object is actually modified.
+        Note: call :meth:`commit()` before the filesystem object is actually modified.
         """
         if not is_fsobject_dbid(modified_fsobject_dbid):
             raise ValueError(f"not a valid 'fsobject_dbid': {modified_fsobject_dbid!r}")
@@ -283,14 +284,14 @@ class Database:
                 self._connection.commit()
                 cursor.execute("BEGIN")
 
-                # remove all explicit dependencies (of all tool instances) whose `fsobject_dbid` have
-                # `modified_fsobject_dbid` as a prefix
+                # remove all explicit dependencies (of all tool instances) whose '`'fsobject_dbid' have
+                # 'modified_fsobject_dbid' as a prefix
                 cursor.execute(
                     "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(fsobject_dbid,?) == 1",
                     (modified_fsobject_dbid,))
 
-                # replace the `memo_before` all non-explicit dependencies (of all tool instances) whose
-                # `fsobject_dbid` have `modified_fsobject_dbid` as a prefix by NULL
+                # replace the 'memo_before' all non-explicit dependencies (of all tool instances) whose
+                # 'fsobject_dbid' have 'modified_fsobject_dbid' as a prefix by NULL
                 cursor.execute(
                     "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 "
                     "AND instr(fsobject_dbid,?) == 1",
