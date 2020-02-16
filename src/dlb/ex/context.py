@@ -237,20 +237,25 @@ class _RootSpecifics:
         self._path_cls = path_cls
 
         # cwd must be a working tree`s root
-        working_tree_path_str = os.path.abspath(os.getcwd())
+
+        working_tree_path = pathlib.Path.cwd()
+
         try:
-            self._working_tree_path = path_cls(path_cls.Native(working_tree_path_str), is_dir=True)
-            self._real_working_tree_path = os.path.realpath(working_tree_path_str)
+            self._working_tree_path = path_cls(path_cls.Native(working_tree_path), is_dir=True)
+            self._real_working_tree_path = working_tree_path.resolve(strict=True)  # FileNotFoundError, RuntimeError
+
+            # from pathlib.py of Python 3.7.3:
+            # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
+
             # TODO check if canonical-case path
 
-            if not os.path.samefile(working_tree_path_str, str(self._working_tree_path.native)):
+            if not self._real_working_tree_path.samefile(self._working_tree_path.native.raw):
                 msg = (
-                    f'current directory probably violates imposed path restrictions: {working_tree_path_str!r}\n'
+                    f'current directory probably violates imposed path restrictions: {str(working_tree_path)!r}\n'
                     f'  | reason: path cannot be checked due to a dlb bug or a moved directory'
                 )
                 raise ValueError(msg)
-            working_tree_path_str = str(self._working_tree_path.native)
-        except (ValueError, OSError) as e:
+        except (ValueError, OSError, RuntimeError) as e:
             msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
                 f'current directory violates imposed path restrictions\n'
                 f'  | reason: {util.exception_to_line(e)}\n'
@@ -262,16 +267,16 @@ class _RootSpecifics:
         self._mtime_probe = None
         self._rundb = None
 
-        management_tree_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/')
+        management_tree_path = working_tree_path / _MANAGEMENTTREE_DIR_NAME
 
         # 1. is this a working tree?
 
         msg = (
-            f'current directory is no working tree: {working_tree_path_str!r}\n'
+            f'current directory is no working tree: {str(working_tree_path)!r}\n'
             f'  | reason: does not contain a directory {_MANAGEMENTTREE_DIR_NAME!r} that is not a symbolic link'
         )
         try:
-            mode = os.lstat(management_tree_path.native).st_mode
+            mode = management_tree_path.lstat().st_mode
         except Exception:
             raise NoWorkingTreeError(msg) from None
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
@@ -281,20 +286,20 @@ class _RootSpecifics:
 
         # 2. if yes: lock it
 
-        lock_dir_path_str = str((management_tree_path / (_LOCK_DIRNAME + '/')).native)
+        lock_dir_path = management_tree_path / _LOCK_DIRNAME
         try:
             try:
-                mode = os.lstat(lock_dir_path_str).st_mode
+                mode = lock_dir_path.lstat().st_mode
                 if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
-                    manip.remove_filesystem_object(lock_dir_path_str)
+                    manip.remove_filesystem_object(lock_dir_path)
             except FileNotFoundError:
                 pass
-            os.mkdir(lock_dir_path_str)
+            lock_dir_path.mkdir()
         except OSError as e:
             msg = (
-                f'cannot acquire lock for exclusive access to working tree {working_tree_path_str!r}\n'
+                f'cannot acquire lock for exclusive access to working tree {str(working_tree_path)!r}\n'
                 f'  | reason: {util.exception_to_line(e)}\n'
-                f'  | to break the lock (if you are sure no other dlb process is running): remove {lock_dir_path_str!r}'
+                f'  | to break the lock (if you are sure no other dlb process is running): remove {str(lock_dir_path)!r}'
             )
             raise ManagementTreeError(msg)
 
@@ -303,35 +308,35 @@ class _RootSpecifics:
         try:  # OSError in this block -> ManagementTreeError
             try:
                 # prepare o for mtime probing
-                mtime_probe_path_str = str((management_tree_path / _MTIME_PROBE_FILE_NAME).native)
-                mtime_probeu_path_str = str((management_tree_path / _MTIME_PROBE_FILE_NAME.upper()).native)
-                manip.remove_filesystem_object(mtime_probe_path_str, ignore_non_existing=True)
-                manip.remove_filesystem_object(mtime_probeu_path_str, ignore_non_existing=True)
+                mtime_probe_path = management_tree_path / _MTIME_PROBE_FILE_NAME
+                mtime_probeu_path = management_tree_path / _MTIME_PROBE_FILE_NAME.upper()
+                manip.remove_filesystem_object(mtime_probe_path, ignore_non_existing=True)
+                manip.remove_filesystem_object(mtime_probeu_path, ignore_non_existing=True)
 
-                self._mtime_probe = open(mtime_probe_path_str, 'xb')  # always a fresh file (no link to an existing one)
-                probe_stat = os.lstat(mtime_probe_path_str)
+                self._mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
+                probe_stat = mtime_probe_path.lstat()
                 try:
-                    probeu_stat = os.lstat(mtime_probeu_path_str)
+                    probeu_stat = mtime_probeu_path.lstat()
                 except FileNotFoundError:
                     pass
                 else:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
-                temporary_path_str = str((management_tree_path / _MTIME_TEMPORARY_DIR_NAME).native)
-                manip.remove_filesystem_object(temporary_path_str, ignore_non_existing=True)
-                os.mkdir(temporary_path_str)
+                temporary_path = management_tree_path / _MTIME_TEMPORARY_DIR_NAME
+                manip.remove_filesystem_object(temporary_path, ignore_non_existing=True)
+                temporary_path.mkdir()
 
-                rundb_path_str = str((management_tree_path / _RUNDB_FILE_NAME).native)
+                rundb_path = management_tree_path / _RUNDB_FILE_NAME
                 try:
-                    mode = os.lstat(rundb_path_str).st_mode
+                    mode = rundb_path.lstat().st_mode
                     if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
-                        manip.remove_filesystem_object(rundb_path_str)
+                        manip.remove_filesystem_object(rundb_path)
                 except FileNotFoundError:
                     pass
 
                 suggestion_if_database_error = \
-                    f"if you suspect database corruption, remove the run-database file(s): {rundb_path_str!r}"
-                self._rundb = rundb.Database(rundb_path_str, suggestion_if_database_error)
+                    f"if you suspect database corruption, remove the run-database file(s): {str(rundb_path)!r}"
+                self._rundb = rundb.Database(str(rundb_path), suggestion_if_database_error)  # TODO remove str
             except Exception:
                 self._close_and_unlock_if_open()
                 raise
@@ -340,7 +345,7 @@ class _RootSpecifics:
         except OSError as e:
             # rundb.DatabaseError on error may have multi-line message
             msg = (
-                f'failed to setup management tree for {working_tree_path_str!r}\n'
+                f'failed to setup management tree for {str(working_tree_path)!r}\n'
                 f'  | reason: {util.exception_to_line(e)}'
             )
             raise ManagementTreeError(msg) from None
