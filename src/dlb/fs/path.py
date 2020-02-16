@@ -141,7 +141,7 @@ class Path(metaclass=_PathMeta):
             msg = f'invalid path for {self.__class__.__qualname__!r}: {str(self._path)!r}'
             if reason:
                 msg = f'{msg} ({reason})'
-            raise ValueError(msg)
+            raise ValueError(msg) from None
 
     @classmethod
     def _check_windows_path_anchor(cls, path):
@@ -157,7 +157,7 @@ class Path(metaclass=_PathMeta):
     def is_absolute(self) -> bool:
         return self._path.is_absolute()
 
-    def is_normalized(self) -> bool:  #??? -> normalize_dotdot()
+    def is_normalized(self) -> bool:  # ??? -> normalize_dotdot()
         return '..' not in self.parts
 
     def relative_to(self, other):

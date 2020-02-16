@@ -296,7 +296,7 @@ def _get_and_register_tool_identity(tool: typing.Type[Tool]) -> typing.Tuple[byt
     definition_path, in_archive_path, lineno = tool.definition_location
 
     try:
-        definition_path_in_managed_tree = context.Context.get_managed_tree_path(definition_path)
+        definition_path_in_managed_tree = context.Context.managed_tree_path_of(definition_path)
         definition_path = definition_path_in_managed_tree.as_string()
         if definition_path.startswith('./'):
             definition_path = definition_path[2:]

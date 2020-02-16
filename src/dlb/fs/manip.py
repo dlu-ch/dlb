@@ -303,6 +303,7 @@ def normalize_dotdot_with_memo_relative_to(path: P, ref_dir_real_native_path: st
         if sr_before is None:
             raise PathNormalizationError(f"does not exist: {str(pathlib_or_str_path)!r}") from None
 
+        # TODO replace os.path.realpath() - only resolve prefix paths that differ
         real_abs_path = os.path.realpath(pathlib_or_str_path)  # access the filesystem (for each prefix path)
 
         memo_after, sr_after = read_filesystem_object_memo(pathlib_or_str_path)  # access the filesystem
