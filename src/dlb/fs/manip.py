@@ -22,7 +22,10 @@ PP = typing.TypeVar('PP', bound=typing.Union[path_.Path, pathlib.PurePath])
 
 
 class PathNormalizationError(ValueError):
-    pass
+    def __init__(self, *args, oserror: typing.Optional[OSError] = None):
+        super().__init__(*args)
+        if oserror is not None:
+            self.oserror = oserror
 
 
 @dataclasses.dataclass
@@ -186,17 +189,17 @@ def _normalize_dotdot(path: PP, ref_dir_path: typing.Union[None, str, os.PathLik
             i = nonroot_components.index('..')
         except ValueError:
             break
+
         if i == 0:
             raise PathNormalizationError(f"is an upwards path: {path!r}")
+
         if ref_dir_path is not None:
             p = os.path.join(ref_dir_path, *root, *nonroot_components[:i])
-            try:
-                sr = os.lstat(p)
-                if stat.S_ISLNK(sr.st_mode):
-                    msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
-                    raise PathNormalizationError(msg) from None
-            except OSError as e:
-                raise PathNormalizationError(f"check failed with {e.__class__.__name__}: {p!r}") from None
+            sr = os.lstat(p)
+            if stat.S_ISLNK(sr.st_mode):
+                msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
+                raise PathNormalizationError(msg) from None
+
         nonroot_components = nonroot_components[:i - 1] + nonroot_components[i + 1:]
 
     components = root + nonroot_components
@@ -210,7 +213,7 @@ def _normalize_dotdot(path: PP, ref_dir_path: typing.Union[None, str, os.PathLik
     return path.__class__(*components)
 
 
-def normalize_dotdot_pure(path: PP) -> PP:
+def normalize_dotdot_collapsable(path: PP) -> PP:
     """
     Return an equivalent normal *path* with all :file:`..` components replaced, *assuming* that *path* is collapsable.
     The return value is of the same type as *path* and contains no :file:`..` components.
@@ -236,9 +239,11 @@ def normalize_dotdot(path: P, ref_dir_path: typing.Union[str, os.PathLike, path_
     The return value is of the same type as *path* and contains no :file:`..` components.
 
     Does not access the filesystem unless *path* contains a :file:`..` component.
-    Does not raise :exc:`OSError`.
 
-    :raise PathNormalizationError: if *path* is an upwards path or not collapsable
+    Does not raise :exc:`OSError`. If an filesystem access fails, a :exc:`PathNormalizationError` is raised with
+    the attribute `oserror` set to a :exc:`OSError` instance.
+
+    :raise PathNormalizationError: if *path* is an upwards path or not collapsable or a filesystem access failed
     :raise ValueError: if the resulting path is not representable with the type of *path*
     """
     if not isinstance(path, (path_.Path, pathlib.Path)):
@@ -254,72 +259,7 @@ def normalize_dotdot(path: P, ref_dir_path: typing.Union[str, os.PathLike, path_
     if not os.path.isabs(ref_dir_path):
         raise ValueError("'ref_dir_path' must be absolute")
 
-    return _normalize_dotdot(path, ref_dir_path)
-
-
-def normalize_dotdot_with_memo_relative_to(path: P, ref_dir_real_native_path: typing.Union[str, os.PathLike]) \
-        -> typing.Tuple[P, FilesystemObjectMemo, os.stat_result]:
-    """
-    Return a tuple ``(normal_path, sr)``, where *normal_path* is a normal path without symbolic links, pointing to the
-    same existing filesystem object as *path* and relative to *ref_dir_real_native_path*, and *sr* is its
-    ``os.stat_result`` object.
-    *normal_path* is of the same type as *path* and contains no :file:`..` components.
-
-    (This is like a more strict and "relative version" of :meth:`:python:os.path.realpath()`).
-
-    *ref_dir_real_native_path* must be equivalent to the return value of :meth:`:python:os.path.realpath()`.
-
-    Does not raise :exc:`OSError`.
-
-    :raise PathNormalizationError:
-        if the result would be an upwards path or *path* is not "inside" *ref_dir_real_native_path*
-    :raise ValueError:
-        if the *ref_dir_real_native_path* is an relative path or
-        if the resulting path is not representable with the type of *path*
-    """
-
-    if not isinstance(path, (path_.Path, pathlib.Path)):
-        raise TypeError(f"'path' must be a dlb.fs.Path or pathlib.Path object")
-
-    if isinstance(ref_dir_real_native_path, os.PathLike):  # note: str is not os.PathLike
-        ref_dir_real_native_path = os.fspath(ref_dir_real_native_path)
-    if not isinstance(ref_dir_real_native_path, str):
-        raise TypeError(f"'ref_dir_real_native_path' must be a str or a os.PathLike object returning str")
-
-    if not os.path.isabs(ref_dir_real_native_path):
-        raise ValueError("'ref_dir_real_native_path' must be absolute")
-
-    pathlib_or_str_path: pathlib.PurePath = path.pure_posix if isinstance(path, path_.Path) else path
-    if not pathlib_or_str_path.is_absolute():
-        was_absolute = False
-        # noinspection PyTypeChecker
-        pathlib_or_str_path: str = os.path.join(ref_dir_real_native_path, pathlib_or_str_path)
-    else:
-        was_absolute = True
-
     try:
-        memo_before, sr_before = read_filesystem_object_memo(pathlib_or_str_path)  # access the filesystem
-        if sr_before is None:
-            raise PathNormalizationError(f"does not exist: {str(pathlib_or_str_path)!r}") from None
-
-        # TODO replace os.path.realpath() - only resolve prefix paths that differ
-        real_abs_path = os.path.realpath(pathlib_or_str_path)  # access the filesystem (for each prefix path)
-
-        memo_after, sr_after = read_filesystem_object_memo(pathlib_or_str_path)  # access the filesystem
-        if sr_after is None or not os.path.samestat(sr_before, sr_after):
-            raise FileNotFoundError
-
-        i = len(ref_dir_real_native_path)
-        if not (real_abs_path.startswith(ref_dir_real_native_path) and real_abs_path[i:i + 1] in ('', os.path.sep)):
-            if was_absolute:
-                raise PathNormalizationError(f"'path' not in reference directory, check exact letter case: {path!r}")
-            raise PathNormalizationError(f"'path' not in reference directory: {path!r}")
-
-        real_rel_path = real_abs_path[i + 1:]
-        if not real_rel_path:
-            real_rel_path = '.'
-
+        return _normalize_dotdot(path, ref_dir_path)
     except OSError as e:
-        raise PathNormalizationError(f"check failed with {e.__class__.__name__}: {pathlib_or_str_path!r}") from None
-
-    return path.__class__(real_rel_path), memo_after, sr_after
+        raise PathNormalizationError(oserror=e) from None

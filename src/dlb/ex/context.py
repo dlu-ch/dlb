@@ -239,23 +239,23 @@ class _RootSpecifics:
         # cwd must be a working tree`s root
 
         working_tree_path = pathlib.Path.cwd()
+        # TODO check if canonical-case path
+
+        try:
+            real_working_tree_path = working_tree_path.resolve(strict=True)  # FileNotFoundError, RuntimeError
+            if not real_working_tree_path.samefile(working_tree_path):
+                raise ValueError
+        except (ValueError, OSError, RuntimeError):
+            msg = (
+                f"supposedly equivalent forms of current directory's path point to different filesystem objects\n"
+                f'  | reason: dlb bug, Python bug or a moved directory\n'
+                f'  | try again?'
+            )
+            raise ValueError(msg) from None
 
         try:
             self._working_tree_path = path_cls(path_cls.Native(working_tree_path), is_dir=True)
-            self._real_working_tree_path = working_tree_path.resolve(strict=True)  # FileNotFoundError, RuntimeError
-
-            # from pathlib.py of Python 3.7.3:
-            # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
-
-            # TODO check if canonical-case path
-
-            if not self._real_working_tree_path.samefile(self._working_tree_path.native.raw):
-                msg = (
-                    f'current directory probably violates imposed path restrictions: {str(working_tree_path)!r}\n'
-                    f'  | reason: path cannot be checked due to a dlb bug or a moved directory'
-                )
-                raise ValueError(msg)
-        except (ValueError, OSError, RuntimeError) as e:
+        except (ValueError, OSError) as e:
             msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
                 f'current directory violates imposed path restrictions\n'
                 f'  | reason: {util.exception_to_line(e)}\n'
@@ -282,6 +282,16 @@ class _RootSpecifics:
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
             raise NoWorkingTreeError(msg) from None
 
+        # from pathlib.py of Python 3.7.3:
+        # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
+
+        if not (real_working_tree_path == self._working_tree_path.native.raw):
+            msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
+                f'path of current directory contains unresolved symbolic links\n'
+                f'  | move the working tree'
+            )
+            raise ValueError(msg) from None
+
         # TODO make sure the "calling" source file is in the managed tree
 
         # 2. if yes: lock it
@@ -299,7 +309,8 @@ class _RootSpecifics:
             msg = (
                 f'cannot acquire lock for exclusive access to working tree {str(working_tree_path)!r}\n'
                 f'  | reason: {util.exception_to_line(e)}\n'
-                f'  | to break the lock (if you are sure no other dlb process is running): remove {str(lock_dir_path)!r}'
+                f'  | to break the lock (if you are sure no other dlb process is running): '
+                f'remove {str(lock_dir_path)!r}'
             )
             raise ManagementTreeError(msg)
 
@@ -313,7 +324,7 @@ class _RootSpecifics:
                 manip.remove_filesystem_object(mtime_probe_path, ignore_non_existing=True)
                 manip.remove_filesystem_object(mtime_probeu_path, ignore_non_existing=True)
 
-                self._mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
+                self._mtime_probe = mtime_probe_path.open('xb')  # always a fresh file (no link to an existing one)
                 probe_stat = mtime_probe_path.lstat()
                 try:
                     probeu_stat = mtime_probeu_path.lstat()
@@ -387,46 +398,53 @@ class _RootSpecifics:
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
-    # TODO remove no_symlink_in_managedtree when implementation no longer relies on os.path.realpath()
-    def managed_tree_path_of(self, path: typing.Union[fs.Path, pathlib.PurePath], *,
-                             existing: bool = False,
-                             collapsable: bool = False,
-                             no_symlink_in_managedtree: bool = False) \
-            -> typing.Union[fs.Path, pathlib.PurePath]:
+    def _strip_working_tree_root_from(self, path: pathlib.Path) -> typing.Optional[pathlib.Path]:
+        components = path.parts
+        root_path_components = self._working_tree_path.parts
+        if components[:len(root_path_components)] == root_path_components:
+            return pathlib.Path(*components[len(root_path_components):])
 
+    def managed_tree_path_of(self, path: typing.Union[fs.Path, pathlib.PurePath], *,
+                             existing: bool = False, collapsable: bool = False) -> typing.Union[fs.Path]:
         if isinstance(path, str):
             path = fs.Path(path)
-        elif not isinstance(path, (fs.Path, pathlib.Path)):
+        if isinstance(path, fs.Path):
+            path = path.native.raw
+        if not isinstance(path, pathlib.Path):
             raise TypeError(f"'path' must be a str or a dlb.fs.Path or pathlib.Path object")
 
-        rel_path = None
-        if no_symlink_in_managedtree:
-            if collapsable:
-                rel_path = manip.normalize_dotdot_pure(path)
-            else:
-                rel_path = manip.normalize_dotdot(path, self._real_working_tree_path)
-
-        is_dir = None
-        sr = None
+        if path.is_absolute():
+            # may raise PathNormalizationError
+            rel_path = self._strip_working_tree_root_from(path) or \
+                       self._strip_working_tree_root_from(
+                           manip.normalize_dotdot(path, self._working_tree_path.native.raw))
+            # note: do _not_ used path.resolve() or os.path.realpath(), since it would resolve the
+            # entire path
+        else:
+            rel_path = path
 
         if rel_path is None:
-            # .. then exact version (all existing symlinks are resolved)
-            rel_path, _, sr = manip.normalize_dotdot_with_memo_relative_to(path, self._real_working_tree_path)
-        elif not existing:
-            rel_path_pathlib = rel_path.pure_posix if isinstance(rel_path, fs.Path) else rel_path
-            try:
-                sr = os.stat(os.path.join(self._real_working_tree_path, rel_path_pathlib))
-            except OSError as e:
-                msg = f"check failed with {e.__class__.__name__}: {rel_path_pathlib!r}"
-                raise manip.PathNormalizationError(msg) from None
+            msg = "does not start with an known representation of the working tree's root path"
+            raise manip.PathNormalizationError(msg)
 
-        if sr is not None:
-            is_dir = stat.S_ISDIR(sr.st_mode)
+        # 'collapsable' means only the part relative to the working tree's root
+        if collapsable:
+            rel_path = manip.normalize_dotdot_collapsable(rel_path)
+        else:
+            # TODO test symlink circle
+            rel_path = manip.normalize_dotdot(rel_path, self._working_tree_path.native.raw)
+
+        is_dir = None
+        if not existing:
+            try:
+                is_dir = stat.S_ISDIR((self._working_tree_path.pure_posix / rel_path).lstat().st_mode)
+            except OSError as e:
+                raise manip.PathNormalizationError(oserror=e) from None
 
         if rel_path.parts[:1] in (('..',), (_MANAGEMENTTREE_DIR_NAME,)):
             raise ValueError(f'path not in managed tree: {path!r}') from None
 
-        if not isinstance(rel_path, self._path_cls) or (is_dir is not None and rel_path.is_dir() != is_dir):
+        if (rel_path.__class__ is not self._path_cls) or (is_dir is not None and rel_path.is_dir() != is_dir):
             rel_path = self._path_cls(rel_path, is_dir=is_dir)
 
         return rel_path

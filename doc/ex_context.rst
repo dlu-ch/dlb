@@ -57,8 +57,8 @@ Context objects
 
       b. an inner context of the :term:`active context`, otherwise.
 
-   When a root context is entered, the working directory of the Python process must be a :term:`working tree`'s root,
-   which contains a directory :file:`.dlbroot`, that is not a symbolic link.
+   When a root context is entered, the working directory of the Python process must be a :term:`working tree`'s root
+   whose absolute path does not contain unresolved symbolic link.
 
    When a context (root or not) is entered, the path of the :term:`working tree`'s root must be representable as
    as ``path_cls``. This allows you to impose :ref:`restrictions <restricting_paths>` on the accepted paths.
@@ -178,12 +178,15 @@ Context objects
 
    .. method:: managed_tree_path_of(path, *, existing=False, collapsable=False)
 
-      Returns the :term:`managed tree path` of ``path``.
+      Returns the :term:`managed tree path` of the *path* of a filesystem object in the :term:`managed tree`.
 
-      The *existing* and *collapsable* describe the assuptions on the filesystem content that may be used to
+      For *path* to be considered as the path of a filesystem object in the :term:`managed tree`, *path* must either
+      be a relative path or it must have :attr:`root_path` as a prefix.
+
+      The arguments *existing* and *collapsable* describe the assuptions on the filesystem content that may be used to
       increase the speed and reduce the number of filesystem accesses.
 
-      If *existing*, *collapsable* are all ``True`` and *path* is relative, no filesystem access is.???
+      If *existing* and *collapsable* are ``True`` and *path* is relative, the filesystem is never accessed.
 
       If *existing* is ``False``, :meth:`is_dir() <dlb.fs.Path.is_dir()>` of the returned path reflects the type
       of the actual filesystem object. Raises :exc:`dlb.fs.PathNormalizationError` if *path* does not exist.
@@ -196,7 +199,7 @@ Context objects
       :type path: :class:`dlb.fs.Path` | :class:`python:pathlib.Path`
       :param existing: assume that all involved filesystem objects exist?
       :type existing: bool
-      :param collapsable: assume that *path* is :term:`collapsable <collapsable path>`?
+      :param collapsable: assume that any relative to the working tree root is :term:`collapsable <collapsable path>`?
       :type collapsable: bool
       :return:
          an instance ``p`` of :attr:`Context.path_cls` with ``p.is_absolute() == False`` and
@@ -204,7 +207,7 @@ Context objects
       :rtype: :class:`.dlb.fs.Path`
 
       :raises dlb.fs.PathNormalizationError: if ``path`` does not exist in the  :term:`managed tree`
-      :raises ValueError: if the resulting path is not representable as a ???:attr:`.dlb.fs.Path`
+      :raises ValueError: if the resulting path is not representable as a ??? :attr:`Context.path_cls`
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: env
