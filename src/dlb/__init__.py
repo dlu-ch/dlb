@@ -5,3 +5,12 @@
 """dlb - a Pythonic build tool."""
 
 from .version import __version__
+
+# inter-dependencies of modules of this package
+# (later line may depend on earlier lines):
+#
+#                 depends on
+#
+#     fs             ->
+#     ex             ->   fs
+#     di             ->   ff  ex

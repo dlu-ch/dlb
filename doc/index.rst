@@ -30,31 +30,31 @@ Tools (e.g. compiler/linker toolchains) are represented as classes. Adapting too
 
 Example::
 
-    import dlb.fs
-    import dlb.ex
-    ...
+   import dlb.fs
+   import dlb.ex
+   ...
 
-    class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
+   class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
 
-    class Compiler(CppCompilerGcc): WARNINGS = ['all']                            # (b)
-    class Linker(StaticLinkerGcc): pass
+   class Compiler(CppCompilerGcc): WARNINGS = ['all']                            # (b)
+   class Linker(StaticLinkerGcc): pass
 
-    with dlb.ex.Context():                                                        # (c)
+   with dlb.ex.Context():                                                        # (c)
 
-        object_files = [                                                          # (d)
-           Compiler(
-               source_file=p,
-               object_file=Path('build/out/' + p.as_string() + '.o')
-           ).run().object_file
-           for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
-        ]
+       object_files = [                                                          # (d)
+          Compiler(
+              source_file=p,
+              object_file=Path('build/out/' + p.as_string() + '.o')
+          ).run().object_file
+          for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
+       ]
 
-        linker = Linker(
-            object_files=object_files,
-            linked_file=Path('build/out/example')                                 # (e)
-        ).run()
+       linker = Linker(
+           object_files=object_files,
+           linked_file=Path('build/out/example')                                 # (e)
+       ).run()
 
-        print('Size:', linker.linked_file.native.stat().st_size, 'B')             # (f)
+       print('Size:', linker.linked_file.native.stat().st_size, 'B')             # (f)
 
 Explanation:
 
@@ -90,9 +90,8 @@ Content
    ex_context.rst
    ex_tool.rst
    ex_tmpl.rst
-
    fs_path.rst
-   diagnostics.rst
+   di.rst
    similar_tools.rst
 
 Indices and tables
