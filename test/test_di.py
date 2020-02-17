@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.di
 import dlb.fs
+import time
+import io
 import logging
 import collections
 import unittest
@@ -17,32 +19,32 @@ import unittest
 class GetLevelMarkerTest(unittest.TestCase):
 
     def test_exact_levels_are_correct(self):
-        self.assertEqual('D', dlb.di.get_level_marker(logging.DEBUG))
-        self.assertEqual('I', dlb.di.get_level_marker(logging.INFO))
-        self.assertEqual('W', dlb.di.get_level_marker(logging.WARNING))
-        self.assertEqual('E', dlb.di.get_level_marker(logging.ERROR))
-        self.assertEqual('C', dlb.di.get_level_marker(logging.CRITICAL))
+        self.assertEqual('D', dlb.di.get_level_indicator(logging.DEBUG))
+        self.assertEqual('I', dlb.di.get_level_indicator(logging.INFO))
+        self.assertEqual('W', dlb.di.get_level_indicator(logging.WARNING))
+        self.assertEqual('E', dlb.di.get_level_indicator(logging.ERROR))
+        self.assertEqual('C', dlb.di.get_level_indicator(logging.CRITICAL))
 
     def test_fails_for_positive_are_debug(self):
         msg = "'level' must be > 0"
 
         with self.assertRaises(ValueError) as cm:
-            dlb.di.get_level_marker(logging.NOTSET)
+            dlb.di.get_level_indicator(logging.NOTSET)
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.di.get_level_marker(-123)
+            dlb.di.get_level_indicator(-123)
         self.assertEqual(msg, str(cm.exception))
 
     def test_exact_greater_than_critical_are_critical(self):
-        self.assertEqual('C', dlb.di.get_level_marker(logging.CRITICAL + 123))
+        self.assertEqual('C', dlb.di.get_level_indicator(logging.CRITICAL + 123))
 
     def test_between_is_next_smaller(self):
-        self.assertEqual('I', dlb.di.get_level_marker(logging.INFO + 1))
-        self.assertEqual('I', dlb.di.get_level_marker(logging.WARNING - 1))
+        self.assertEqual('I', dlb.di.get_level_indicator(logging.INFO + 1))
+        self.assertEqual('I', dlb.di.get_level_indicator(logging.WARNING - 1))
 
 
-class FormatMultilineMessageTest(unittest.TestCase):
+class FormatMessageTest(unittest.TestCase):
     
     def format_info_message(self, message):
         return dlb.di.format_message(message, logging.INFO)
@@ -54,7 +56,7 @@ class FormatMultilineMessageTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
     def test_single_line_returns_stripped(self):
-        self.assertEqual('I bla', self.format_info_message(' bla   '))
+        self.assertEqual('I äüä schoo\U0001f609', self.format_info_message(' äüä schoo\U0001f609   '))
 
     def test_fails_for_none(self):
         with self.assertRaises(TypeError) as cm:
@@ -74,13 +76,19 @@ class FormatMultilineMessageTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             self.format_info_message('abc\n    a\0')
         msg = (
-            "'message' must only contain printable ASCII characters except "
+            "'message' must not contain ASCII control characters except "
             "'\\t' and '\\b', unlike '\\x00' in line 2"
         )
         self.assertEqual(msg, str(cm.exception))
 
     def test_removed_empty_lines_before_and_after(self):
-        m = self.format_info_message('   \n \r\n \ra\n    b\n\n   \n')
+        m = self.format_info_message('   \n \n\n \na  \n    b\n\n   \n')
+        self.assertEqual("I a \n  | b", m)
+
+        m = self.format_info_message('   \r\n \r\n\r\n \r\na  \r\n    b\r\n\r\n   \r\n')
+        self.assertEqual("I a \n  | b", m)
+
+        m = self.format_info_message('   \r \r\r \ra  \r    b\r\r   \r')
         self.assertEqual("I a \n  | b", m)
 
     def test_removed_empty_lines_between(self):
@@ -97,20 +105,6 @@ class FormatMultilineMessageTest(unittest.TestCase):
         self.assertEqual("I bla \n  | a \n  | b", m)
 
     def test_fails_for_underindented(self):
-        msg = (
-            "each continuation line in 'message' must be indented at least 4 spaces more than "
-            "the first non-empty line, unlike line 4"
-        )
-
-        with self.assertRaises(ValueError) as cm:
-            self.format_info_message(
-                """
-                bla
-
-               x 
-                """)
-        self.assertEqual(msg, str(cm.exception))
-
         with self.assertRaises(ValueError) as cm:
             self.format_info_message(
                 """
@@ -118,6 +112,20 @@ class FormatMultilineMessageTest(unittest.TestCase):
                     x
                  y 
                 """)
+        msg = (
+            "each continuation line in 'message' must be indented at least 4 spaces more than "
+            "the first non-empty line, unlike line 4"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            self.format_info_message(
+                """
+                bla
+                    x
+               y 
+                """)
+        msg = "first non-empty line in 'message' must not start with reserved character ' '"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_reserved_start(self):
@@ -135,6 +143,14 @@ class FormatMultilineMessageTest(unittest.TestCase):
             """)
         self.assertEqual('I a    b33100 \n  | a2 b2  10 \n  | a33b    1', m)
 
+        m = self.format_info_message(
+            """
+            table:
+                a:\t A =\b 1\b
+                b2:\t B =\b 23\b
+            """)
+        self.assertEqual('I table: \n  | a:  A =  1 \n  | b2: B = 23', m)
+
     def test_fails_for_dot_at_end_of_first_line(self):
         with self.assertRaises(ValueError) as cm:
             self.format_info_message("start...")
@@ -147,9 +163,208 @@ class FormatMultilineMessageTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
+class MessageThresholdTest(unittest.TestCase):
+
+    def test_default_is_info(self):
+        dlb.di.set_threshold_level(logging.WARNING + 1)
+        self.assertTrue(dlb.di.is_unsuppressed_level(logging.WARNING + 1))
+        self.assertFalse(dlb.di.is_unsuppressed_level(logging.WARNING))
+
+        dlb.di.set_threshold_level(logging.CRITICAL + 100)
+        self.assertTrue(dlb.di.is_unsuppressed_level(logging.CRITICAL + 100))
+        self.assertFalse(dlb.di.is_unsuppressed_level(logging.CRITICAL + 99))
+
+    def test_fails_on_nonpositve(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.di.set_threshold_level(0)
+        msg = "'level' must be > 0"
+        self.assertEqual(msg, str(cm.exception))
+
+
+class SetOutputFileTest(unittest.TestCase):
+
+    class File:
+        def write(self, text: str):
+            pass
+
+    def test_fails_for_none(self):
+        with self.assertRaises(TypeError) as cm:
+            dlb.di.set_output_file(None)
+        msg = "'file' does not have a 'write' method: None"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_successful_for_stdout_and_stderr(self):
+        dlb.di.set_output_file(sys.stdout)
+        r = dlb.di.set_output_file(sys.stderr)
+        self.assertEqual(sys.stdout, r)
+        r = dlb.di.set_output_file(sys.stderr)
+        self.assertEqual(sys.stderr, r)
+
+    def test_successful_for_custom_class_with_only_write(self):
+        f = SetOutputFileTest.File()
+        r = dlb.di.set_output_file(f)
+        r = dlb.di.set_output_file(r)
+        self.assertEqual(f, r)
+
+
+class ClusterTest(unittest.TestCase):
+
+    def setUp(self):
+        dlb.di.set_threshold_level(logging.INFO)
+        _ = dlb.di._first_time_ns  # make sure attribute exists
+        dlb.di._first_time_ns = None
+
+    def test_works_as_context_manager(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        c = dlb.di.Cluster('A\n    a')
+        self.assertEqual('', output.getvalue())  # does not output anything
+
+        with c as cr:
+            self.assertEqual('I A \n  | a\n', output.getvalue())  # does not output anything
+
+        self.assertIsNone(cr)
+
+    def test_cluster_do_nest(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.di.Cluster('A'):
+            with dlb.di.Cluster('B'):
+                with dlb.di.Cluster('C'):
+                    pass
+            with dlb.di.Cluster('D'):
+                pass
+
+        self.assertEqual('I A\n  I B\n    I C\n  I D\n', output.getvalue())  # does not output anything
+
+    def test_level_threshold_is_observed_when_nested(self):
+        dlb.di.set_threshold_level(logging.WARNING)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.di.Cluster('A', level=logging.ERROR):
+            self.assertEqual('E A\n', output.getvalue())
+
+            with dlb.di.Cluster('B'):
+                self.assertEqual('E A\n', output.getvalue())
+
+                with dlb.di.Cluster('C', level=logging.WARNING):
+                    self.assertEqual('E A\n  I B\n    W C\n', output.getvalue())
+
+            with dlb.di.Cluster('D'):
+                self.assertEqual('E A\n  I B\n    W C\n', output.getvalue())
+
+    def test_progress_only_if_not_suppress_at_enter(self):
+        dlb.di.set_threshold_level(logging.WARNING)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        with dlb.di.Cluster('A', is_progress=True):
+            self.assertEqual('', output.getvalue())
+        self.assertEqual('', output.getvalue())
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        with self.assertRaises(AssertionError):
+            with dlb.di.Cluster('A', is_progress=True):
+                assert False
+        self.assertEqual('', output.getvalue())
+
+    def test_progress_success_is_at_most_info(self):
+        dlb.di.set_threshold_level(logging.DEBUG)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        with dlb.di.Cluster('A', level=logging.DEBUG, is_progress=True):
+            self.assertEqual('D A...\n', output.getvalue())
+        self.assertEqual('D A...\n  D done.\n', output.getvalue())
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        with dlb.di.Cluster('A', level=logging.CRITICAL, is_progress=True):
+            self.assertEqual('C A...\n', output.getvalue())
+        self.assertEqual('C A...\n  I done.\n', output.getvalue())  # at most logging.INFO
+
+    def test_progress_failure_is_at_least_error(self):
+        dlb.di.set_threshold_level(logging.DEBUG)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        with self.assertRaises(AssertionError):
+            with dlb.di.Cluster('A', level=logging.DEBUG, is_progress=True):
+                assert False
+        self.assertEqual('D A...\n  E failed with AssertionError.\n', output.getvalue())  # at least logging.ERROR
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        with self.assertRaises(AssertionError):
+            with dlb.di.Cluster('A', level=logging.CRITICAL, is_progress=True):
+                assert False
+        self.assertEqual('C A...\n  C failed with AssertionError.\n', output.getvalue())
+
+    def test_timing_information_is_correct_for_delayed_output_of_title(self):
+        dlb.di.set_threshold_level(logging.WARNING)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.di.Cluster('A', with_time=True):
+            self.assertEqual('', output.getvalue())
+            time.sleep(0.1)
+
+            with dlb.di.Cluster('B'):
+                self.assertEqual('', output.getvalue())
+
+                with dlb.di.Cluster('C', level=logging.WARNING):
+                    self.assertEqual('I A [+0.000000s]\n  I B\n    W C\n', output.getvalue())
+
+
+class InformTest(unittest.TestCase):
+
+    def test_output_without_cluster_is_not_indented(self):
+        dlb.di.set_threshold_level(logging.INFO)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        dlb.di.inform('M\n    m')
+
+        self.assertEqual('I M \n  | m\n', output.getvalue())
+
+    def test_output_in_cluster_is_indented(self):
+        dlb.di.set_threshold_level(logging.INFO)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.di.Cluster('A'):
+            dlb.di.inform('M\n    m')
+            self.assertEqual('I A\n  I M \n    | m\n', output.getvalue())
+
+        dlb.di.set_threshold_level(logging.WARNING)
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.di.Cluster('A'):
+            with dlb.di.Cluster('B'):
+                dlb.di.inform('M\n    m', level=logging.WARNING)
+                self.assertEqual('I A\n  I B\n    W M \n      | m\n', output.getvalue())
+
+
 class UsageExampleTest(unittest.TestCase):
 
+    def setUp(self):
+        dlb.di.set_threshold_level(logging.INFO)
+        _ = dlb.di._first_time_ns  # make sure attribute exists
+        dlb.di._first_time_ns = None
+
     def test_example1(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
         with dlb.di.Cluster('title', level=logging.DEBUG):
             dlb.di.inform(
                 """
@@ -158,7 +373,12 @@ class UsageExampleTest(unittest.TestCase):
                     second\t 200\t
                 """)
 
+        self.assertEqual('D title\n  I summary \n    | first   1 \n    | second 200\n', output.getvalue())
+
     def test_example2(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
         rom_max = 128
         logfile = dlb.fs.Path('out/linker.log')
 
@@ -175,3 +395,34 @@ class UsageExampleTest(unittest.TestCase):
 
             if rom > 0.8 * rom_max:
                 dlb.di.inform("more than 80 % of ROM used", level=logging.WARNING)
+
+        o = (
+            "I analyze memory usage... \n"
+            "  | note: see 'out/linker.log' for details\n"
+            "  I in use: \n"
+            "    | RAM:              12 kB \n"
+            "    | ROM (NOR flash): 108 kB \n"
+            "    | eMMC:            512 kB\n"
+            "  W more than 80 % of ROM used\n"
+            "  I done.\n"
+        )
+        self.assertEqual(o, output.getvalue())
+
+    def test_example3(self):
+        # https://en.wikipedia.org/wiki/Halstead_complexity_measures
+        metrics = [
+            ('volume', 'V', 1.7, ''),
+            ('programming required', 'T', 127.3, ' s'),
+            ('difficulty', 'D', 12.8, '')
+        ]
+
+        m = ''.join(f"\n    {n}:\t {s} =\b {v}\b{u}" for n, s, v, u in metrics)
+        s = dlb.di.format_message('Halstead complexity measures:' + m, logging.INFO)
+
+        o = (
+            "I Halstead complexity measures: \n" 
+            "  | volume:               V =   1.7 \n" 
+            "  | programming required: T = 127.3 s \n"
+            "  | difficulty:           D =  12.8"
+        )
+        self.assertEqual(o, s)

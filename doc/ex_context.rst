@@ -19,8 +19,8 @@ E.g:
  - search paths for :term:`dynamic helper` files
  - environment variables to be imported from :data:`python:os.environ` for use in :term:`tool instances <tool instance>`
 
-It also controls how diagnostic messages are handled and helps with filesystem abstraction
-(e.g. :term:`working tree time`, case sensitivity of names in the :term:`working tree`).
+It also controls how diagnostic messages of :term:`tool instances <tool instance>` are handled and helps with filesystem
+abstraction (e.g. :term:`working tree time`, case sensitivity of names in the :term:`working tree`).
 
 A context is represented as an instance of :class:`dlb.ex.Context <dlb.ex.context.Context>` used as a context manager.
 The context is entered with the call of :meth:`_enter__` and exit with the return of :meth:`__exit__`.

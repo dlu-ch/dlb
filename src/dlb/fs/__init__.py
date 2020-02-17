@@ -10,4 +10,4 @@ from .path import *
 #                 depends on
 #
 #     path           ->
-#     util           ->   path
+#     manip          ->   path
