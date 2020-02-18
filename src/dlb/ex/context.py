@@ -424,7 +424,7 @@ class _RootSpecifics:
             rel_path = path
 
         if rel_path is None:
-            msg = "does not start with an known representation of the working tree's root path"
+            msg = "does not start with the working tree's root path"
             raise manip.PathNormalizationError(msg)
 
         # 'collapsable' means only the part relative to the working tree's root

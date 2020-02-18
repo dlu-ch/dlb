@@ -565,7 +565,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             with dlb.ex.Context():
                 with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
                     dlb.ex.Context.managed_tree_path_of(old_cw / 'a/b2/c2')
-                msg = "does not start with an known representation of the working tree's root path"
+                msg = "does not start with the working tree's root path"
                 self.assertEqual(msg, str(cm.exception))
 
     def test_fails_on_nonrepresentable(self):
