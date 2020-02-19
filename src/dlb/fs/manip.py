@@ -127,16 +127,13 @@ def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path_.Pat
             raise
 
 
-# TODO retun only info
-def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.Path]) \
-        -> typing.Tuple[FilesystemObjectMemo, typing.Optional[os.stat_result]]:
+def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.Path]) -> FilesystemObjectMemo:
     """
-    Return a tuple `(memo, sr)`, where *memo* is the summary of the filesystem's meta-information for a
-    filesystem object with absolute path *abs_path*, and *sr* is the corresponding ``os.stat_result`` object.
-    *memo* is a ``FilesystemObjectMemo`` object.
+    Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
+    as a ``FilesystemObjectMemo`` object.
 
-    If *abs_path* exists, *sr* is its ``stat_result`` and ``memo.stat`` contains the following members from *sr*
-    (with ``st_`` removed from their names, all integers):
+    If ``memo.stat`` contains the following members from ``stat_result`` (with ``st_`` removed from their names,
+    all integers):
 
       - ``mode``
       - ``size``
@@ -144,12 +141,8 @@ def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.
       - ``uid``
       - ``gid``
 
-    If *abs_path* does not exists, *sr* and *memo.stat* are ``Ǹone``.
-
-    If *memo.stat* is not ``None`` and *memo.stat.mode* indicates a symbolic link, *memo.symlink_target* is the path of
-    its target as a string. Otherwise, *memo.symlink_target* is None.
-
-    Does not raise ``FileNotFoundError``.
+    If  *memo.stat.mode* indicates a symbolic link, *memo.symlink_target* is the path of its target as a string.
+    Otherwise, *memo.symlink_target* is None.
     """
     if isinstance(abs_path, bytes):
         raise TypeError("'abs_path' must be a str or path, not bytes")  # prevent special treatment by byte paths
@@ -161,18 +154,16 @@ def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.
         raise ValueError(f"not an absolute path: {str(abs_path)!r}")
 
     memo = FilesystemObjectMemo()
-    try:
-        sr = os.lstat(abs_path)
-        memo.stat = FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
-                                          uid=sr.st_uid, gid=sr.st_gid)
-    except FileNotFoundError:
-        return memo, None
+
+    sr = os.lstat(abs_path)
+    memo.stat = FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
+                                      uid=sr.st_uid, gid=sr.st_gid)
 
     if not stat.S_ISLNK(sr.st_mode):
-        return memo, sr
+        return memo
 
     memo.symlink_target = os.readlink(abs_path)  # a trailing '/' is preserved
-    return memo, sr
+    return memo
 
 
 def _normalize_dotdot(path: PP, ref_dir_path: typing.Union[None, str, os.PathLike]) -> PP:

@@ -84,12 +84,9 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
 
         encoded_path = rundb.encode_path(path)
         memo = memo_by_encoded_path.get(encoded_path)
-
         if memo is None:
-            # may raise OSError except FileNotFoundError:
-            memo, _ = manip.read_filesystem_object_memo(context.root_path / path)
-        if memo.stat is None:
-            raise FileNotFoundError
+            memo = manip.read_filesystem_object_memo(context.root_path / path)  # may raise OSError
+        assert memo.stat is not None
 
     except FileNotFoundError:
         msg = (
@@ -97,7 +94,6 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
             f"non-existing filesystem object: {path.as_string()!r}"
         )
         raise DependencyCheckError(msg) from None
-
     except OSError as e:
         msg = (
             f"input dependency {name!r} contains a path of an "
@@ -127,33 +123,25 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
         return memo, needs_redo
 
     try:
+
         try:
-            # may raise OSError except FileNotFoundError:
-            path = context.managed_tree_path_of(path, existing=False, collapsable=False)
-            memo, _ = manip.read_filesystem_object_memo(context.root_path / path)
-        except manip.PathNormalizationError as e:
-            if e.oserror is None:
-                raise
-
-            if not isinstance(e.oserror, FileNotFoundError):
+            try:
+                path = context.managed_tree_path_of(path, existing=False, collapsable=False)
+            except manip.PathNormalizationError as e:
+                if e.oserror is None:
+                    raise
                 raise e.oserror from None
-
+            memo = manip.read_filesystem_object_memo(context.root_path / path)
+        except FileNotFoundError:
+            # ignore if did not exist according to valid 'encoded_memo'
             did_not_exist_before_last_redo = False
             try:
                 did_not_exist_before_last_redo = \
                     last_encoded_memo is None or rundb.decode_encoded_fsobject_memo(last_encoded_memo).stat is None
             except ValueError:
                 pass
-
-            # ignore if did not exist according to valid 'encoded_memo'
             if not did_not_exist_before_last_redo:
-                raise e.oserror from None
-
-        if last_encoded_memo is None:  # TODO is this the right place?
-            if not needs_redo:
-                di.inform(f"redo necessary because potentially modified by output dependency: {path.as_string()!r}",
-                          level=logging.WARNING)
-                needs_redo = True
+                raise
 
     except (ValueError, OSError):
         if not needs_redo:
@@ -163,6 +151,14 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
             )
             di.inform(msg, level=logging.INFO)
             needs_redo = True  # comparision not possible -> redo
+
+    if last_encoded_memo is None:  # TODO is this the right place?
+        if not needs_redo:
+            di.inform(f"redo necessary because potentially modified by output dependency: {path.as_string()!r}",
+                      level=logging.WARNING)
+            needs_redo = True
+
+    assert memo.stat is not None or needs_redo
 
     return memo, needs_redo  # memo.state may be None
 
@@ -619,6 +615,7 @@ def get_and_register_tool_info(tool: typing.Type) -> ToolInfo:
             base_info = get_and_register_tool_info(c)
             definition_paths = definition_paths.union(base_info.definition_paths)
 
+    # noinspection PyUnresolvedReferences
     definition_path, in_archive_path, lineno = tool.definition_location
     permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
     if definition_path is not None:

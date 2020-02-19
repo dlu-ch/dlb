@@ -173,12 +173,9 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.fs.manip.read_filesystem_object_memo(b'x')
         self.assertEqual("'abs_path' must be a str or path, not bytes", str(cm.exception))
 
-    def test_return_none_for_nonexisting(self):
-        m, sr = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
-        self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
-        self.assertIsNone(sr)
-        self.assertIsNone(m.stat)
-        self.assertIsNone(m.symlink_target)
+    def test_fails_for_nonexisting(self):
+        with self.assertRaises(FileNotFoundError):
+            dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
 
     def test_return_stat_for_existing_regular(self):
         with open('x', 'wb'):
@@ -186,9 +183,8 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 
         sr0 = os.lstat('x')
 
-        m, sr = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
+        m = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
         self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
-        self.assertIsInstance(sr, os.stat_result)
 
         self.assertEqual(sr0.st_mode, m.stat.mode)
         self.assertEqual(sr0.st_size, m.stat.size)
@@ -196,7 +192,6 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(sr0.st_uid, m.stat.uid)
         self.assertEqual(sr0.st_gid, m.stat.gid)
         self.assertIsNone(m.symlink_target)
-        self.assertEqual(sr0, sr)
 
     def test_return_stat_and_target_for_existing_directory_for_str(self):
         os.mkdir('d')
@@ -206,13 +201,11 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             # note: trailing os.path.sep is necessary irrespective of target_is_directory
 
             sr0 = os.lstat('s')
-            m, sr = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
+            m = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
             self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
-            self.assertIsInstance(sr, os.stat_result)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertEqual(m.symlink_target, 'd' + os.path.sep)
-            self.assertEqual(sr0, sr)
 
         finally:
             os.chmod('d', 0x777)
@@ -225,9 +218,8 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             # note: trailing os.path.sep is necessary irrespective of target_is_directory
 
             sr0 = os.lstat('s')
-            m, sr = dlb.fs.manip.read_filesystem_object_memo(pathlib.Path(os.path.join(os.getcwd()) / pathlib.Path('s')))
+            m = dlb.fs.manip.read_filesystem_object_memo(pathlib.Path(os.path.join(os.getcwd()) / pathlib.Path('s')))
             self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
-            self.assertIsInstance(sr, os.stat_result)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertIsInstance(m.symlink_target, str)
