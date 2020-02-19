@@ -309,7 +309,7 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
 
 class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
 
-    def test_path_for_tool_defined_out_managed_is_not_available(self):
+    def test_path_for_tool_is_absolute(self):
         class A(dlb.ex.Tool):
             pass
 
@@ -317,8 +317,12 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.Context():
             info = dlb.ex.tool.get_and_register_tool_info(A)
 
+        p = os.path.realpath(__file__)
         self.assertGreater(len(info.permanent_local_tool_id), 1)
-        self.assertEqual(info.definition_paths, set())
+
+        for p in info.definition_paths:
+            self.assertTrue(os.path.isabs(p), p)
+        self.assertTrue(p in info.definition_paths, [p, info.definition_paths])
 
     def test_path_of_tools_defined_in_managed_tree_are_correct(self):
         os.mkdir('a')
@@ -363,7 +367,12 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
 
         self.assertIsInstance(info1.permanent_local_tool_id, bytes)
         self.assertGreater(len(info1.permanent_local_tool_id), 1)
-        self.assertEqual(info1.definition_paths, {dlb.fs.Path('a/u.py'), dlb.fs.Path('w.py')})
+
+        p1 = os.path.realpath(os.path.join(os.getcwd(), 'a', 'u.py'))
+        p2 = os.path.realpath(os.path.join(os.getcwd(), 'w.py'))
+        self.assertEqual(3, len(info1.definition_paths), info1.definition_paths)  # incl. .../tool.py
+        self.assertTrue(p1 in info1.definition_paths)
+        self.assertTrue(p2 in info1.definition_paths)
         self.assertEqual(info1, info2)
 
     def test_definition_fails_in_import_with_relative_search_path(self):

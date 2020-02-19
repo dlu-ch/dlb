@@ -105,7 +105,7 @@ class Dependency(mult.MultiplicityHolder):
 
     def tuple_from_value(self, value: typing.Union[V, typing.Iterable[V]]) -> typing.Tuple[V]:
         if value is None:
-            return None
+            return ()
         if self.multiplicity is None:
             return (value,)
         return tuple(v for v in value)

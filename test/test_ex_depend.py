@@ -319,7 +319,7 @@ class TupleFromValueTest(unittest.TestCase):
     def test_returns_none_or_tuple(self):
         D = dlb.ex.depend.RegularFileInput(required=False)
 
-        self.assertEqual(None, D.tuple_from_value(None))
+        self.assertEqual((), D.tuple_from_value(None))
 
         self.assertEqual((dlb.fs.Path('a/b'),), D.tuple_from_value(D.validate('a/b', None)))
 

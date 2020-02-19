@@ -62,6 +62,51 @@ class DependencyCheckError(Exception):
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
+def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
+                                      memo_by_fsobject_dbid: typing.Dict[str, manip.FilesystemObjectMemo],
+                                      context: context_.Context) -> typing.Tuple[str, manip.FilesystemObjectMemo]:
+    try:
+
+        try:
+            path = context.managed_tree_path_of(path, existing=False, collapsable=False)
+        except manip.PathNormalizationError as e:
+            if e.oserror is not None:
+                raise e.oserror
+            msg = (
+                f"input dependency {name!r} contains a path that is not a managed tree path: "
+                f"{path.as_string()!r}\n"
+                f"  | reason: {util.exception_to_line(e)}"
+            )
+            raise DependencyCheckError(msg) from None
+
+        fsobject_dbid = rundb.build_fsobject_dbid(path)
+        memo = memo_by_fsobject_dbid.get(fsobject_dbid)
+
+        if memo is None:
+            p_abs = context.root_path / path
+            # may raise OSError except FileNotFoundError:
+            memo, _ = manip.read_filesystem_object_memo(p_abs)
+        if memo.stat is None:
+            raise FileNotFoundError
+
+    except FileNotFoundError:
+        msg = (
+            f"input dependency {name!r} contains a path of an "
+            f"non-existing filesystem object: {path.as_string()!r}"
+        )
+        raise DependencyCheckError(msg) from None
+
+    except OSError as e:
+        msg = (
+            f"input dependency {name!r} contains a path of an "
+            f"inaccessible filesystem object: {path.as_string()!r}\n"
+            f"  | reason: {util.exception_to_line(e)}"
+        )
+        raise DependencyCheckError(msg) from None
+
+    return fsobject_dbid, memo
+
+
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class _ToolBase:
     def __init__(self, **kwargs):
@@ -139,48 +184,6 @@ class _ToolBase:
         # different self.__class__!)
         object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
 
-    @staticmethod
-    def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
-                                          memo_by_fsobject_dbid: typing.Dict[str, manip.FilesystemObjectMemo],
-                                          context: context_.Context) -> typing.Tuple[str, manip.FilesystemObjectMemo]:
-        try:
-            try:
-                path = context.managed_tree_path_of(path, existing=False, collapsable=False)
-            except manip.PathNormalizationError as e:
-                if e.oserror is not None:
-                    raise e.oserror
-                msg = (
-                    f"input dependency {name!r} contains a path that is not a managed tree path: "
-                    f"{path.as_string()!r}\n"
-                    f"  | reason: {util.exception_to_line(e)}"
-                )
-                raise DependencyCheckError(msg) from None
-
-            fsobject_dbid = rundb.build_fsobject_dbid(path)
-            memo = memo_by_fsobject_dbid.get(fsobject_dbid)
-
-            if memo is None:
-                p_abs = context.root_path / path
-                # may raise OSError except FileNotFoundError:
-                memo, _ = manip.read_filesystem_object_memo(p_abs)
-            if memo.stat is None:
-                raise FileNotFoundError
-        except FileNotFoundError:
-            msg = (
-                f"input dependency {name!r} contains a path of an "
-                f"non-existing filesystem object: {path.as_string()!r}"
-            )
-            raise DependencyCheckError(msg) from None
-        except OSError as e:
-            msg = (
-                f"input dependency {name!r} contains a path of an "
-                f"inaccessible filesystem object: {path.as_string()!r}\n"
-                f"  | reason: {util.exception_to_line(e)}"
-            )
-            raise DependencyCheckError(msg) from None
-
-        return fsobject_dbid, memo
-
     # final
     def run(self):
         dependency_info = tuple(
@@ -189,7 +192,20 @@ class _ToolBase:
         )
 
         context = context_.Context.active
+        rundb = context_._get_rundb()
+
+        with di.Cluster('register tool instance', with_time=True, is_progress=True):
+            tool_info = get_and_register_tool_info(self.__class__)
+            tool_instance_dbid = rundb.get_and_register_tool_instance_dbid(
+                tool_info.permanent_local_tool_id,
+                self.fingerprint)
+            di.inform(f"tool instance dbid is {tool_instance_dbid!r}")
+
         memo_by_fsobject_dbid = {}
+
+        with di.Cluster('read state of filesystem objects before last redo from run-database',
+                        with_time=True, is_progress=True):
+            inputs_from_last_redo = rundb.get_fsobject_inputs(tool_instance_dbid)
 
         # read memo of each filesystem object of a explicit input dependency in a reproducible order
         with di.Cluster('read and check state of filesystem objects that are input dependencies',
@@ -206,11 +222,22 @@ class _ToolBase:
 
                     checked_fsobject_dbid = set()
                     for p in validated_value_tuple:
-                        fsobject_dbid, memo = self._get_memo_for_fs_input_dependency(
+                        fsobject_dbid, memo = _get_memo_for_fs_input_dependency(
                             name, p, memo_by_fsobject_dbid, context)
                         if fsobject_dbid not in checked_fsobject_dbid:  # check exactly once
                             action.check_filesystem_object_memo(memo)  # raise exception if memo is not as expected
                             checked_fsobject_dbid.add(fsobject_dbid)
+                            memo_by_fsobject_dbid[fsobject_dbid] = memo
+
+                with di.Cluster(f"tool definition files", is_progress=True):
+                    for p in tool_info.definition_paths:
+                        try:
+                            fsobject_dbid, memo = _get_memo_for_fs_input_dependency(
+                                None, fs.Path(p), memo_by_fsobject_dbid, context)
+                            memo_by_fsobject_dbid[fsobject_dbid] = memo
+                        except (ValueError, DependencyCheckError):
+                            # silently ignore all definition files not in managed tree
+                            pass
 
         # TODO: implement, document
         return
@@ -229,6 +256,42 @@ class _ToolBase:
 
 # noinspection PyProtectedMember
 depend._inject_into(_ToolBase, 'Tool', '.'.join(_ToolBase.__module__.split('.')[:-1]))
+
+
+def _get_and_register_tool_info(tool: typing.Type[_ToolBase]) -> ToolInfo:
+    # Return a ToolInfo with a permanent local id of tool and a set of all source file in the managed tree in
+    # which the class or one of its baseclass of type `base_cls` is defined.
+    #
+    # The result is cached.
+    #
+    # The permanent local id is the same on every Python run as long as dlb.ex.platform.PERMANENT_PLATFORM_ID
+    # remains the same (at least that's the idea).
+    # Note however, that the behaviour of tools not only depends on their own code but also on all imported
+    # objects. So, its up to the programmer of the tool, how much variability a tool with a unchanged
+    # permanent local id can show.
+
+    info = _registered_info_by_tool.get(tool)
+    if info is not None:
+        return info
+
+    # collect the managed tree paths of tool and its base classes that are tools
+
+    definition_paths = set()
+    for c in reversed(tool.mro()):
+        if c is not tool and issubclass(c, Tool):
+            base_info = get_and_register_tool_info(c)
+            definition_paths = definition_paths.union(base_info.definition_paths)
+
+
+    definition_path, in_archive_path, lineno = tool.definition_location
+    permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
+    if definition_path is not None:
+        definition_paths.add(definition_path)
+
+    info = ToolInfo(permanent_local_tool_id=permanent_local_id, definition_paths=definition_paths)
+    _registered_info_by_tool[tool] = info
+
+    return info
 
 
 class _ToolMeta(type):
@@ -378,62 +441,10 @@ class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
 
 
-def _get_and_register_tool_identity(tool: typing.Type[Tool]) -> typing.Tuple[bytes, fs.Path]:
-    # Return a ToolIdentity with a permanent local id of tool and the managed tree path of the defining source file,
-    # if it is in the managed tree.
-
-    definition_path_in_managed_tree = None
-
-    # noinspection PyUnresolvedReferences
-    definition_path, in_archive_path, lineno = tool.definition_location
-
-    try:
-        definition_path_in_managed_tree = context_.Context.managed_tree_path_of(definition_path)
-        definition_path = definition_path_in_managed_tree.as_string()
-        if definition_path.startswith('./'):
-            definition_path = definition_path[2:]
-    except ValueError:
-        pass
-
-    permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
-    return permanent_local_id, definition_path_in_managed_tree
-
-
 def get_and_register_tool_info(tool: typing.Type[Tool]) -> ToolInfo:
-    # Return a ToolInfo with a permanent local id of tool and a set of all source file in the managed tree in
-    # which the class or one of its baseclass of type `base_cls` is defined.
-    #
-    # The result is cached.
-    #
-    # The permanent local id is the same on every Python run as long as dlb.ex.platform.PERMANENT_PLATFORM_ID
-    # remains the same (at least that's the idea).
-    # Note however, that the behaviour of tools not only depends on their own code but also on all imported
-    # objects. So, its up to the programmer of the tool, how much variability a tool with a unchanged
-    # permanent local id can show.
-
     if not issubclass(tool, Tool):
         raise TypeError("'tool' must be a 'dlb.ex.Tool'")
-
-    info = _registered_info_by_tool.get(tool)
-    if info is not None:
-        return info
-
-    # collect the managed tree paths of tool and its base classes that are tools
-
-    definition_paths = set()
-    for c in reversed(tool.mro()):
-        if c is not tool and issubclass(c, Tool):
-            base_info = get_and_register_tool_info(c)
-            definition_paths = definition_paths.union(base_info.definition_paths)
-
-    permanent_local_id, definition_path = _get_and_register_tool_identity(tool)
-    if definition_path is not None:
-        definition_paths.add(definition_path)
-
-    info = ToolInfo(permanent_local_tool_id=permanent_local_id, definition_paths=definition_paths)
-    _registered_info_by_tool[tool] = info
-
-    return info
+    return _get_and_register_tool_info(tool)
 
 
 # noinspection PyCallByClass
