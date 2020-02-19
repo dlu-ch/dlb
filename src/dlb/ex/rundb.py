@@ -211,16 +211,18 @@ class Database:
                 ");"
                                 
                 "CREATE TABLE IF NOT EXISTS ToolInstFsInput("
-                    "tool_inst_dbid INTEGER, "            # tool instance
-                    "path TEXT NOT NULL, "                # encoded path of filesystem object in managed tree
-                    "is_explicit INTEGER NOT NULL, "      # 0 for implicit, 1 for explicit dependency of tool instance
-                    "memo_before BLOB, "                  # encoded memo of filesystem object before last redo of tool instance,
-                                                          # NULL if filesystem object was modified since last redo
+                    "tool_inst_dbid INTEGER, "         # tool instance
+                    "path TEXT NOT NULL, "             # path of filesystem object in managed tree,
+                                                       # encoded by encode_path
+                    "is_explicit INTEGER NOT NULL, "   # 0 for implicit, 1 for explicit dependency of tool instance
+                    "memo_before BLOB, "               # memo of filesystem object before last redo of tool instance,
+                                                       # encoded by encode_fsobject_memo(), or NULL if
+                                                       # filesystem object was modified since last redo
                     "PRIMARY KEY(tool_inst_dbid, path), "
                     "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"
                 ");"
         
-                "PRAGMA foreign_keys = ON;"               # https://www.sqlite.org/foreignkeys.html
+                "PRAGMA foreign_keys = ON;"            # https://www.sqlite.org/foreignkeys.html
             )
             connection.commit()
 

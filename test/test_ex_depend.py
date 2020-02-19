@@ -316,6 +316,7 @@ class SingleOutputValidationTest(unittest.TestCase):
 
 class TupleFromValueTest(unittest.TestCase):
 
+    # noinspection PyPep8Naming
     def test_returns_none_or_tuple(self):
         D = dlb.ex.depend.RegularFileInput(required=False)
 

@@ -146,10 +146,12 @@ class EncodeFsobjectMemoTest(unittest.TestCase):
 
     def test_fails_for_none(self):
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             dlb.ex.rundb.encode_fsobject_memo(None)
 
     def test_fails_for_bytes(self):
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             dlb.ex.rundb.encode_fsobject_memo(b'')
 
     def test_fails_for_symlink_without_target(self):
@@ -160,6 +162,7 @@ class EncodeFsobjectMemoTest(unittest.TestCase):
             dlb.ex.rundb.encode_fsobject_memo(m)
 
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             m = dlb.fs.manip.FilesystemObjectMemo(
                 stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFLNK, size=0, mtime_ns=0, uid=0, gid=0),
                 symlink_target=b'')
@@ -182,10 +185,12 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
 
     def test_fails_for_none(self):
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             dlb.ex.rundb.decode_encoded_fsobject_memo(None)
 
     def test_fails_for_str(self):
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             dlb.ex.rundb.decode_encoded_fsobject_memo('')
 
     def test_runtrip_works(self):
