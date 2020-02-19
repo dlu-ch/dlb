@@ -375,7 +375,7 @@ class _RootSpecifics:
         if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
             raise ValueError("'prefix' must not contain a path separator")
 
-        t = (self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')).native
+        t = self._working_tree_path.native.raw / _MANAGEMENTTREE_DIR_NAME / _MTIME_TEMPORARY_DIR_NAME
         is_dir = bool(is_dir)
         if is_dir:
             p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
@@ -452,8 +452,8 @@ class _RootSpecifics:
     def _cleanup(self):
         self._rundb.cleanup()
         self._rundb.commit()
-        temporary_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _MTIME_TEMPORARY_DIR_NAME + '/')
-        manip.remove_filesystem_object(temporary_path.native, ignore_non_existing=True)
+        temporary_path = self._working_tree_path.native.raw / _MANAGEMENTTREE_DIR_NAME / _MTIME_TEMPORARY_DIR_NAME
+        manip.remove_filesystem_object(temporary_path, ignore_non_existing=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
         t0 = time.time_ns()  # since Python 3.7
