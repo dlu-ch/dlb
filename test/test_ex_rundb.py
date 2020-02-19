@@ -128,6 +128,14 @@ class DecodeEncodedPathTest(unittest.TestCase):
         ]
         self.assertEqual(paths, paths_roundtrip)
 
+    def test_fails_for_encoded_path_with_dotdot(self):
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_path('a/../')
+
+    def test_fails_for_encoded_path_with_slash(self):
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_path('/')
+
     def test_isdir_is_correct(self):
         self.assertFalse(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('a/b')), is_dir=False).is_dir())
         self.assertTrue(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('a/b')), is_dir=True).is_dir())

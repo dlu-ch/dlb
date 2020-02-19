@@ -54,12 +54,12 @@ def is_encoded_path(encoded_path: str) -> bool:
     return encoded_path[-1] == '/' and not encoded_path.startswith('./')
 
 
-def encode_path(managed_tree_path: fs.Path) -> str:
-    if not isinstance(managed_tree_path, fs.Path):
+def encode_path(path: fs.Path) -> str:
+    if not isinstance(path, fs.Path):
         raise TypeError
-    if managed_tree_path.is_absolute() or not managed_tree_path.is_normalized():
+    if path.is_absolute() or not path.is_normalized():
         raise ValueError
-    encoded_path = managed_tree_path.as_string()
+    encoded_path = path.as_string()
     if encoded_path[-1:] != '/':
         encoded_path = encoded_path + '/'  # to enable efficient search for path prefixes in SQL
     if encoded_path[:2] == './':
@@ -72,7 +72,10 @@ def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
         raise ValueError
     if not encoded_path:
         return fs.Path('.')
-    return fs.Path(encoded_path[:-1], is_dir=is_dir)
+    path = fs.Path(encoded_path[:-1], is_dir=is_dir)
+    if path.is_absolute() or not path.is_normalized():
+        raise ValueError
+    return path
 
 
 def encode_fsobject_memo(memo: manip.FilesystemObjectMemo) -> bytes:
@@ -108,7 +111,10 @@ def decode_encoded_fsobject_memo(encoded_memo: bytes) -> manip.FilesystemObjectM
     if not t:
         return manip.FilesystemObjectMemo()
 
-    mode, size, mtime_ns, uid, gid, symlink_target = t
+    try:
+        mode, size, mtime_ns, uid, gid, symlink_target = t
+    except TypeError:
+        raise ValueError from None
     if not all(isinstance(f, int) for f in t[:5]):
         raise ValueError
 
@@ -297,7 +303,7 @@ class Database:
                 raise
 
     def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: typing.Optional[bool] = None) \
-            -> typing.Dict[str, typing.Tuple[bool, bytes]]:
+            -> typing.Dict[str, typing.Tuple[bool, typing.Optional[bytes]]]:
         """
         Return the *encoded_path* and the optional encoded memo of all filesystem objects in the managed tree that are
         input dependencies of the tool instance *tool_instance_dbid*.
