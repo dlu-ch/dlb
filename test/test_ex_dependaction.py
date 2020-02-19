@@ -108,21 +108,27 @@ class RegularFileInputPermanentLocalValueIdTest(unittest.TestCase):
     def test_is_different_for_different_value(self):
         d1 = dlb.ex.Tool.Input.RegularFile()
         d2 = dlb.ex.Tool.Input.RegularFile()
-        plvi1 = dlb.ex.dependaction.get_action(d1).get_permanent_local_value_id(d1.validate('x', None))
-        plvi2 = dlb.ex.dependaction.get_action(d2).get_permanent_local_value_id(d2.validate('x/y', None))
+        plvi1 = dlb.ex.dependaction.get_action(d1).get_permanent_local_value_id(
+            d1.tuple_from_value(d1.validate('x', None)))
+        plvi2 = dlb.ex.dependaction.get_action(d2).get_permanent_local_value_id(
+            d2.tuple_from_value(d2.validate('x/y', None)))
         self.assertNotEqual(plvi1, plvi2)
 
         d1 = dlb.ex.Tool.Input.RegularFile[:]()
         d2 = dlb.ex.Tool.Input.RegularFile[:]()
-        plvi1 = dlb.ex.dependaction.get_action(d1).get_permanent_local_value_id(d1.validate(['x', 'y'], None))
-        plvi2 = dlb.ex.dependaction.get_action(d2).get_permanent_local_value_id(d2.validate(['a'], None))
+        plvi1 = dlb.ex.dependaction.get_action(d1).get_permanent_local_value_id(
+            d1.tuple_from_value(d1.validate(['x', 'y'], None)))
+        plvi2 = dlb.ex.dependaction.get_action(d2).get_permanent_local_value_id(
+            d2.tuple_from_value(d2.validate(['a'], None)))
         self.assertNotEqual(plvi1, plvi2)
 
     def test_is_equal_for_different_cls(self):
         d1 = dlb.ex.Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath)
         d2 = dlb.ex.Tool.Input.RegularFile()
-        plvi1 = dlb.ex.dependaction.get_action(d1).get_permanent_local_value_id(d1.validate('x/y', None))
-        plvi2 = dlb.ex.dependaction.get_action(d2).get_permanent_local_value_id(d2.validate('x/y', None))
+        plvi1 = dlb.ex.dependaction.get_action(d1).get_permanent_local_value_id(
+            d1.tuple_from_value(d1.validate('x/y', None)))
+        plvi2 = dlb.ex.dependaction.get_action(d2).get_permanent_local_value_id(
+            d2.tuple_from_value(d2.validate('x/y', None)))
         self.assertEqual(plvi1, plvi2)
 
 

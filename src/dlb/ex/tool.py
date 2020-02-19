@@ -117,7 +117,10 @@ class _ToolBase:
                 try:
                     action = dependaction.get_action(role)
                     dependency_fingerprint = action.get_permanent_local_instance_id()
-                    dependency_fingerprint += action.get_permanent_local_value_id(getattr(self, name))
+
+                    validated_values = role.tuple_from_value(getattr(self, name))
+                    dependency_fingerprint += action.get_permanent_local_value_id(validated_values)
+
                     # since 'dependency_names' and 'r.explicit of all their members r are fixed for all instances
                     # of this class, the order of dependency roles is sufficient for their identification
                     hashalg.update(dependency_fingerprint)  # dependency_fingerprint must not be empty

@@ -32,16 +32,18 @@ class Action:
         return self._dependency
 
     # overwrite in subclasses
-    def get_permanent_local_value_id(self, validated_value) -> bytes:
-        # Returns a short non-empty byte string as a permanent local id for this validated value of a given instance.
+    def get_permanent_local_value_id(self, validated_values: typing.Optional[typing.Sequence[typing.Any]]) -> bytes:
+        # Returns a short non-empty byte string as a permanent local id for this validated values of a given instance.
+        #
+        # 'validated_values' is None or a tuple of the validated values (regardless of self.dependency.multiplicity).
         #
         # Two instances of the same or of different dependency classes may return different permanent local value ids
         # for the same validated value.
         #
         # Two instances of the same dependency class, whose properties differ, must return different
-        # permanent local value ids if the meaning of this validated value `validated_value` of a concrete dependency
+        # permanent local value ids if the meaning of this validated values `validated_values` of a concrete dependency
         # for a running tool instance depends on the difference.
-        return marshal.dumps(util.make_fundamental(validated_value, True))
+        return marshal.dumps(util.make_fundamental(validated_values, True))
 
     # overwrite and prepend super().get_permanent_local_instance_id() to return value
     def get_permanent_local_instance_id(self) -> bytes:
@@ -64,14 +66,11 @@ class Action:
 
 
 class _FilesystemObjectMixin(Action):
-    def get_permanent_local_value_id(self, value) -> bytes:
-        if value is not None:
-            if self.dependency.multiplicity is None:
-                value = value.as_string()
-            else:
-                value = tuple(v.as_string() for v in value)
+    def get_permanent_local_value_id(self, validated_values: typing.Optional[typing.Sequence[fs.Path]]) -> bytes:
+        if validated_values is not None:
+            validated_values = tuple(v.as_string() for v in validated_values)
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
-        return marshal.dumps(value)
+        return marshal.dumps(validated_values)
 
 
 class _FilesystemObjectInputMixin(_FilesystemObjectMixin):
