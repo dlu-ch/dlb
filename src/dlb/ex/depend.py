@@ -21,9 +21,6 @@ class Dependency(mult.MultiplicityHolder):
     # The return value of d.validate() is a concrete dependency, if d.multiplicity is None and
     # a tuple of concrete dependencies otherwise.
 
-    #: Rank for ordering (the higher the rank, the earlier the dependency is needed)
-    RANK = 0  # type: int
-
     def __init__(self, *, required: bool = True, explicit: bool = True, unique: bool = True):
         super().__init__()
         self._required = bool(required)  # not checked by validate(), only for the caller
@@ -71,7 +68,7 @@ class Dependency(mult.MultiplicityHolder):
         return value
 
     # final
-    def validate(self, value, context) -> typing.Union[typing.Hashable, typing.Tuple[typing.Hashable, ...]]:
+    def validate(self, value, context) -> typing.Optional[typing.Union[V, typing.Tuple[V, ...]]]:
         if not isinstance(self, ConcreteDependency):
             msg = (
                 f"{self.__class__!r} is abstract\n"
@@ -119,18 +116,24 @@ class ConcreteDependency:
 
 
 class Input(Dependency):
-    RANK = 3  # type: int
+    pass
 
 
 class Intermediate(Dependency):
-    RANK = 2  # type: int
+    pass
 
 
 class Output(Dependency):
-    RANK = 1  # type: int
+    pass
 
 
-class _FilesystemObjectMixin(Dependency):
+# validated value is a dlb.fs.Path instance (if multiplicity is None) or a tuple of dlb.fs.Path instance (otherwise)
+# TODO document
+class FilesystemObject(Dependency):
+    pass
+
+
+class _FilesystemObjectMixin(FilesystemObject):
     def __init__(self, *, cls: typing.Type[fs.Path] = fs.Path, **kwargs):
         super().__init__(**kwargs)
         if not (isinstance(cls, type) and issubclass(cls, fs.Path)):

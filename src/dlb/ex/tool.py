@@ -276,7 +276,15 @@ class _ToolMeta(type):
 
     def _get_dependency_names(cls) -> typing.Tuple[str, ...]:
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
-        pairs = [(-v.RANK, not v.required, n) for n, v in dependencies.items() if isinstance(v, depend.Dependency)]
+
+        def rank_of(d):
+            if isinstance(d, depend.Input):
+                return 0
+            if isinstance(d, depend.Output):
+                return 1
+            return 2
+
+        pairs = [(rank_of(d), not d.required, n) for n, d in dependencies.items() if isinstance(d, depend.Dependency)]
         pairs.sort()
         # order: input - intermediate - output, required first
         return tuple(p[-1] for p in pairs)
