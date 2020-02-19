@@ -80,20 +80,17 @@ class BuildFsobjectDbidTest(unittest.TestCase):
         fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a/'))
         self.assertEqual('a/', fsobject_dbid)
 
-        fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('./a/b/c/../'))
+        fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('./a/b/c/'))
         self.assertTrue(dlb.ex.rundb.is_fsobject_dbid(fsobject_dbid))
 
         fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('.'))
         self.assertEqual('', fsobject_dbid)
 
-        fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('..'))
-        self.assertEqual('../', fsobject_dbid)
-
     def test_is_valid(self):
         fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a'))
         self.assertTrue(dlb.ex.rundb.is_fsobject_dbid(fsobject_dbid))
 
-        fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('./a/b/c/../'))
+        fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('./a/b/c/'))
         self.assertTrue(dlb.ex.rundb.is_fsobject_dbid(fsobject_dbid))
 
         fsobject_dbid = dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('.'))
@@ -107,6 +104,12 @@ class BuildFsobjectDbidTest(unittest.TestCase):
     def test_fails_for_absolute(self):
         with self.assertRaises(ValueError):
             dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('/a/b'))
+
+    def test_fails_for_non_normalized(self):
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('a/b/c/../'))
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.build_fsobject_dbid(dlb.fs.Path('..'))
 
 
 class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):

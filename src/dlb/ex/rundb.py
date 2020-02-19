@@ -52,7 +52,7 @@ def is_fsobject_dbid(fsobject_dbid: str) -> bool:
 
 
 def build_fsobject_dbid(managed_tree_path: fs.Path) -> str:
-    if managed_tree_path.is_absolute():
+    if managed_tree_path.is_absolute() or not managed_tree_path.is_normalized():
         raise ValueError
     fsobject_dbid = managed_tree_path.as_string()
     if fsobject_dbid[-1:] != '/':
