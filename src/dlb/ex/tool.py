@@ -69,11 +69,10 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
                                       context: context_.Context) -> typing.Tuple[str, manip.FilesystemObjectMemo]:
     # TODO document
     try:
-
         try:
-            path = context.managed_tree_path_of(path, existing=False, collapsable=False)
-        except manip.PathNormalizationError as e:
-            if e.oserror is not None:
+            path = context.managed_tree_path_of(path, existing=True, collapsable=False)
+        except (ValueError, manip.PathNormalizationError) as e:
+            if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
                 raise e.oserror
             msg = (
                 f"input dependency {name!r} contains a path that is not a managed tree path: "
@@ -87,7 +86,6 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
         if memo is None:
             memo = manip.read_filesystem_object_memo(context.root_path / path)  # may raise OSError
         assert memo.stat is not None
-
     except FileNotFoundError:
         msg = (
             f"input dependency {name!r} contains a path of an "
@@ -126,11 +124,11 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
 
         try:
             try:
-                path = context.managed_tree_path_of(path, existing=False, collapsable=False)
-            except manip.PathNormalizationError as e:
-                if e.oserror is None:
-                    raise
-                raise e.oserror from None
+                path = context.managed_tree_path_of(path, existing=True, collapsable=False)
+            except (ValueError, manip.PathNormalizationError) as e:
+                if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
+                    raise e.oserror from None
+                raise
             memo = manip.read_filesystem_object_memo(context.root_path / path)
         except FileNotFoundError:
             # ignore if did not exist according to valid 'encoded_memo'
@@ -151,12 +149,6 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
             )
             di.inform(msg, level=logging.INFO)
             needs_redo = True  # comparision not possible -> redo
-
-    if last_encoded_memo is None:  # TODO is this the right place?
-        if not needs_redo:
-            di.inform(f"redo necessary because potentially modified by output dependency: {path.as_string()!r}",
-                      level=logging.WARNING)
-            needs_redo = True
 
     assert memo.stat is not None or needs_redo
 
@@ -312,7 +304,16 @@ class _ToolBase:
                 # all elements of validated_value_tuple are dlb.fs.Path
                 validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
                 for p in validated_value_tuple:
-                    encoded_path = rundb.encode_path(p)  # Exceptions ???
+                    try:
+                        p = context.managed_tree_path_of(p, existing=True, collapsable=True)
+                    except ValueError as e:
+                        msg = (
+                            f"output dependency {name!r} contains a path that is not a managed tree path: "
+                            f"{path.as_string()!r}\n"
+                            f"  | reason: {util.exception_to_line(e)}"
+                        )
+                        raise DependencyCheckError(msg) from None
+                    encoded_path = rundb.encode_path(p)
                     db.declare_fsobject_input_as_modified(encoded_path)
 
         with di.Cluster('read state of filesystem objects before last redo from run-database',
@@ -343,7 +344,6 @@ class _ToolBase:
             with di.Cluster('compare state of filesystem objects with state that are non-explicit '
                             'input dependencies of the last redo', with_time=True, is_progress=True):
 
-                # use encoded_paths_of_explicit_input_dependencies ???
                 encoded_path = None
 
                 for encoded_path, memo in memo_by_encoded_path.items():  # sorting not necessary for repeatability
@@ -401,7 +401,7 @@ class _ToolBase:
 
                 if encoded_path is not None:
                     path = rundb.decode_encoded_path(encoded_path)
-                    msg = f"redo necessary because state ???: {path.as_string()!r}"
+                    msg = f"redo necessary because filesystem object has changed: {path.as_string()!r}"
                     di.inform(msg)
 
         db.commit()

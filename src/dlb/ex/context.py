@@ -445,7 +445,7 @@ class _RootSpecifics:
             raise ValueError(f'path not in managed tree: {path!r}') from None
 
         if (rel_path.__class__ is not self._path_cls) or (is_dir is not None and rel_path.is_dir() != is_dir):
-            rel_path = self._path_cls(rel_path, is_dir=is_dir)
+            rel_path = self._path_cls(rel_path, is_dir=is_dir)  # may raise ValueError
 
         return rel_path
 
