@@ -269,7 +269,7 @@ class Cluster:
                     e=exc_val.__class__.__qualname__)
 
             if self._time_ns is not None:
-                suffix = _get_relative_time_suffix(self._time_ns)
+                suffix = _get_relative_time_suffix(time.time_ns())
                 result = _append_to_title_of_formatted(result, suffix)
 
             indented_result = _indent_message(result, nesting + 1)

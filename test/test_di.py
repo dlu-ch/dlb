@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.di
 import dlb.fs
+import re
 import time
 import io
 import logging
@@ -320,6 +321,24 @@ class ClusterTest(unittest.TestCase):
 
                 with dlb.di.Cluster('C', level=logging.WARNING):
                     self.assertEqual('I A [+0.000000s]\n  I B\n    W C\n', output.getvalue())
+
+    def test_timing_information_is_correct_for_progress(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        regex = re.compile("(?m)(.|\n)* \[\+(?P<time>[0-9.]+)s\]\n\Z")
+
+        with dlb.di.Cluster('A', with_time=True, is_progress=True):
+            s = output.getvalue()
+            m = regex.match(s)
+            t0 = m.group('time')
+            self.assertEqual('0.000000', t0)
+            time.sleep(0.1)
+
+        s = output.getvalue()
+        m = regex.match(s)
+        t = m.group('time')
+        self.assertNotEqual(t, t0, s)
 
 
 class InformTest(unittest.TestCase):
