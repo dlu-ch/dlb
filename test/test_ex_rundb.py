@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex.rundb
+import dlb.fs.manip
+import stat
 import collections
 import contextlib
 import unittest
@@ -130,6 +132,71 @@ class DecodeEncodedPathTest(unittest.TestCase):
         self.assertFalse(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('a/b')), is_dir=False).is_dir())
         self.assertTrue(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('a/b')), is_dir=True).is_dir())
         self.assertTrue(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('.')), is_dir=False).is_dir())
+
+
+class EncodeFsobjectMemoTest(unittest.TestCase):
+
+    def test_fails_for_none(self):
+        with self.assertRaises(TypeError):
+            dlb.ex.rundb.encode_fsobject_memo(None)
+
+    def test_fails_for_bytes(self):
+        with self.assertRaises(TypeError):
+            dlb.ex.rundb.encode_fsobject_memo(b'')
+
+    def test_fails_for_symlink_without_target(self):
+        with self.assertRaises(TypeError):
+            m = dlb.fs.manip.FilesystemObjectMemo(
+                stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFLNK, size=0, mtime_ns=0, uid=0, gid=0),
+                symlink_target=None)
+            dlb.ex.rundb.encode_fsobject_memo(m)
+
+        with self.assertRaises(TypeError):
+            m = dlb.fs.manip.FilesystemObjectMemo(
+                stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFLNK, size=0, mtime_ns=0, uid=0, gid=0),
+                symlink_target=b'')
+            dlb.ex.rundb.encode_fsobject_memo(m)
+
+    def test_fails_for_nosymlink_with_target(self):
+        with self.assertRaises(ValueError):
+            m = dlb.fs.manip.FilesystemObjectMemo(
+                stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFREG, size=0, mtime_ns=0, uid=0, gid=0),
+                symlink_target='/')
+            dlb.ex.rundb.encode_fsobject_memo(m)
+
+    def test_returns_nonempty_for_non_existing(self):
+        m = dlb.fs.manip.FilesystemObjectMemo()
+        e = dlb.ex.rundb.encode_fsobject_memo(m)
+        self.assertNotEqual(b'', e)
+
+
+class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
+
+    def test_fails_for_none(self):
+        with self.assertRaises(TypeError):
+            dlb.ex.rundb.decode_encoded_fsobject_memo(None)
+
+    def test_fails_for_str(self):
+        with self.assertRaises(TypeError):
+            dlb.ex.rundb.decode_encoded_fsobject_memo('')
+
+    def test_runtrip_works(self):
+        paths = [
+            dlb.fs.manip.FilesystemObjectMemo(),
+            dlb.fs.manip.FilesystemObjectMemo(
+                stat=dlb.fs.manip.FilesystemStatSummary(
+                    mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
+                symlink_target=None),
+            dlb.fs.manip.FilesystemObjectMemo(
+                stat=dlb.fs.manip.FilesystemStatSummary(
+                    mode=stat.S_IFLNK | stat.S_IRWXG, size=2, mtime_ns=3, uid=4, gid=5),
+                symlink_target='/a/b/c/')
+        ]
+        paths_roundtrip = [
+            dlb.ex.rundb.decode_encoded_fsobject_memo(dlb.ex.rundb.encode_fsobject_memo(m))
+            for m in paths
+        ]
+        self.assertEqual(paths, paths_roundtrip)
 
 
 class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):

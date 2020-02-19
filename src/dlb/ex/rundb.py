@@ -6,10 +6,13 @@
 This is an implementation detail - do not import it unless you know what you are doing."""
 
 import os.path
+import stat
+import dataclasses
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
 import sqlite3
 import typing
 from .. import fs
+from ..fs import manip
 from . import util
 from . import platform
 
@@ -42,7 +45,7 @@ from . import platform
 #   - A round-trip for typical data takes abound 5 to 10 as long with json as with marshal
 #   - The serialized data is of about the same length; some data is a bit shorter with marshal, some a bit longer.
 
-
+# TODO remove
 def is_encoded_path(encoded_path: str) -> bool:
     if not isinstance(encoded_path, str):
         return False
@@ -53,7 +56,7 @@ def is_encoded_path(encoded_path: str) -> bool:
 
 def encode_path(managed_tree_path: fs.Path) -> str:
     if not isinstance(managed_tree_path, fs.Path):
-        raise TypeError("'managed_tree_path' must be a dlb.fs.Path object")
+        raise TypeError
     if managed_tree_path.is_absolute() or not managed_tree_path.is_normalized():
         raise ValueError
     encoded_path = managed_tree_path.as_string()
@@ -66,10 +69,58 @@ def encode_path(managed_tree_path: fs.Path) -> str:
 
 def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
     if not is_encoded_path(encoded_path):
-        raise ValueError("not an encoded path: {encoded_path!r}")
+        raise ValueError
     if not encoded_path:
         return fs.Path('.')
     return fs.Path(encoded_path[:-1], is_dir=is_dir)
+
+
+def encode_fsobject_memo(memo: manip.FilesystemObjectMemo) -> bytes:
+    if not isinstance(memo, manip.FilesystemObjectMemo):
+        raise TypeError
+
+    if memo.stat is None:  # filesystem object did not exist
+        return marshal.dumps(())  # != b''
+
+    t = dataclasses.astuple(memo.stat)
+    if not all(isinstance(f, int) for f in t):
+        raise TypeError
+
+    if not stat.S_ISLNK(memo.stat.mode) and memo.symlink_target is not None:
+        raise ValueError
+
+    if stat.S_ISLNK(memo.stat.mode) and not isinstance(memo.symlink_target, str):
+        raise TypeError
+
+    return marshal.dumps((
+        memo.stat.mode, memo.stat.size, memo.stat.mtime_ns, memo.stat.uid, memo.stat.gid,
+        memo.symlink_target))
+
+
+def decode_encoded_fsobject_memo(encoded_memo: bytes) -> manip.FilesystemObjectMemo:
+    if not isinstance(encoded_memo, bytes):
+        raise TypeError
+
+    t = marshal.loads(encoded_memo)
+    if not isinstance(t, tuple):
+        raise ValueError
+
+    if not t:
+        return manip.FilesystemObjectMemo()
+
+    mode, size, mtime_ns, uid, gid, symlink_target = t
+    if not all(isinstance(f, int) for f in t[:5]):
+        raise ValueError
+
+    if not stat.S_ISLNK(mode) and symlink_target is not None:
+        raise ValueError
+
+    if stat.S_ISLNK(mode) and not isinstance(symlink_target, str):
+        raise ValueError
+
+    return manip.FilesystemObjectMemo(
+        stat=manip.FilesystemStatSummary(mode=mode, size=size, mtime_ns=mtime_ns, uid=uid, gid=gid),
+        symlink_target=symlink_target)
 
 
 class DatabaseError(Exception):
