@@ -4,7 +4,7 @@
 
 """Dependency-aware tool execution."""
 
-__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError')
+__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError', 'DependencyCheckError')
 
 import sys
 import re
@@ -15,8 +15,11 @@ import typing
 import inspect
 import marshal
 from .. import fs
+from ..fs import manip
+from .. import di
 from . import util
-from . import context
+from . import rundb
+from . import context as context_
 from . import depend
 from . import dependaction
 assert sys.version_info >= (3, 7)
@@ -49,6 +52,10 @@ class DefinitionAmbiguityError(SyntaxError):
 
 
 class DependencyRoleAssignmentError(ValueError):
+    pass
+
+
+class DependencyCheckError(Exception):
     pass
 
 
@@ -132,8 +139,79 @@ class _ToolBase:
         # different self.__class__!)
         object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
 
+    @staticmethod
+    def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
+                                          memo_by_fsobject_dbid: typing.Dict[str, manip.FilesystemObjectMemo],
+                                          context: context_.Context) -> typing.Tuple[str, manip.FilesystemObjectMemo]:
+        try:
+            try:
+                path = context.managed_tree_path_of(path, existing=False, collapsable=False)
+            except manip.PathNormalizationError as e:
+                if e.oserror is not None:
+                    raise e.oserror
+                msg = (
+                    f"input dependency {name!r} contains a path that is not a managed tree path: "
+                    f"{path.as_string()!r}\n"
+                    f"  | reason: {util.exception_to_line(e)}"
+                )
+                raise DependencyCheckError(msg) from None
+
+            fsobject_dbid = rundb.build_fsobject_dbid(path)
+            memo = memo_by_fsobject_dbid.get(fsobject_dbid)
+
+            if memo is None:
+                p_abs = context.root_path / path
+                # may raise OSError except FileNotFoundError:
+                memo, _ = manip.read_filesystem_object_memo(p_abs)
+            if memo.stat is None:
+                raise FileNotFoundError
+        except FileNotFoundError:
+            msg = (
+                f"input dependency {name!r} contains a path of an "
+                f"non-existing filesystem object: {path.as_string()!r}"
+            )
+            raise DependencyCheckError(msg) from None
+        except OSError as e:
+            msg = (
+                f"input dependency {name!r} contains a path of an "
+                f"inaccessible filesystem object: {path.as_string()!r}\n"
+                f"  | reason: {util.exception_to_line(e)}"
+            )
+            raise DependencyCheckError(msg) from None
+
+        return fsobject_dbid, memo
+
     # final
     def run(self):
+        dependency_info = tuple(
+            (n, dependaction.get_action(getattr(self.__class__, n)))
+            for n in self.__class__._dependency_names
+        )
+
+        context = context_.Context.active
+        memo_by_fsobject_dbid = {}
+
+        # read memo of each filesystem object of a explicit input dependency in a reproducible order
+        with di.Cluster('read and check state of filesystem objects that are input dependencies',
+                        with_time=True, is_progress=True):
+
+            for name, action in dependency_info:
+                if not (action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
+                        isinstance(action.dependency, depend.FilesystemObject)):
+                    continue
+
+                with di.Cluster(f"dependency role {name!r}", is_progress=True):
+                    validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
+                    # all elements of validated_value_tuple are dlb.fs.Path
+
+                    checked_fsobject_dbid = set()
+                    for p in validated_value_tuple:
+                        fsobject_dbid, memo = self._get_memo_for_fs_input_dependency(
+                            name, p, memo_by_fsobject_dbid, context)
+                        if fsobject_dbid not in checked_fsobject_dbid:  # check exactly once
+                            action.check_filesystem_object_memo(memo)  # raise exception if memo is not as expected
+                            checked_fsobject_dbid.add(fsobject_dbid)
+
         # TODO: implement, document
         return
 
@@ -310,7 +388,7 @@ def _get_and_register_tool_identity(tool: typing.Type[Tool]) -> typing.Tuple[byt
     definition_path, in_archive_path, lineno = tool.definition_location
 
     try:
-        definition_path_in_managed_tree = context.Context.managed_tree_path_of(definition_path)
+        definition_path_in_managed_tree = context_.Context.managed_tree_path_of(definition_path)
         definition_path = definition_path_in_managed_tree.as_string()
         if definition_path.startswith('./'):
             definition_path = definition_path[2:]

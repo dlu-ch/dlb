@@ -24,8 +24,7 @@ PP = typing.TypeVar('PP', bound=typing.Union[path_.Path, pathlib.PurePath])
 class PathNormalizationError(ValueError):
     def __init__(self, *args, oserror: typing.Optional[OSError] = None):
         super().__init__(*args)
-        if oserror is not None:
-            self.oserror = oserror
+        self.oserror = oserror
 
 
 @dataclasses.dataclass
@@ -128,6 +127,7 @@ def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path_.Pat
             raise
 
 
+# TODO retun only info
 def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.Path]) \
         -> typing.Tuple[FilesystemObjectMemo, typing.Optional[os.stat_result]]:
     """
@@ -191,6 +191,7 @@ def _normalize_dotdot(path: PP, ref_dir_path: typing.Union[None, str, os.PathLik
             break
 
         if i == 0:
+            path = path.as_string() if isinstance(path, path_.Path) else str(path)
             raise PathNormalizationError(f"is an upwards path: {path!r}")
 
         if ref_dir_path is not None:

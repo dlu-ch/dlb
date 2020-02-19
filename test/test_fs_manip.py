@@ -315,7 +315,7 @@ class NormalizeDotDotCollapsableTest(unittest.TestCase):
             dlb.fs.manip.normalize_dotdot_collapsable(pathlib.PurePosixPath(r'/tmp/../..'))
         with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
             dlb.fs.manip.normalize_dotdot_collapsable(pathlib.PureWindowsPath(r'C:\\Windows\\..\\Temp\\..\\..'))
-        msg = "is an upwards path: PureWindowsPath('C:/Windows/../Temp/../..')"
+        msg = r"is an upwards path: 'C:\\Windows\\..\\Temp\\..\\..'"
         self.assertEqual(msg, str(cm.exception))
 
 

@@ -11,9 +11,11 @@ __all__ = (
     'get_action'
 )
 
+import stat
 import marshal
 import typing
 from .. import fs
+from ..fs import manip
 from . import util
 from . import depend
 
@@ -65,6 +67,9 @@ class Action:
         # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.
         return marshal.dumps((dependency_id, d.explicit))
 
+    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+        pass
+
 
 class _FilesystemObjectMixin(Action):
     def get_permanent_local_value_id(self, validated_values: typing.Optional[typing.Sequence[fs.Path]]) -> bytes:
@@ -79,17 +84,33 @@ class _FilesystemObjectInputMixin(_FilesystemObjectMixin):
         d: typing.Union[depend.RegularFileInput, depend.NonRegularFileInput, depend.DirectoryInput] = self.dependency
         return super().get_permanent_local_instance_id() + marshal.dumps(d.ignore_permission)
 
+    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+        if memo.stat is None:
+            raise Exception("?")  # TODO raise meaningful exception
+
 
 class RegularFileInputAction(_FilesystemObjectInputMixin, Action):
-    pass
+
+    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+        super().check_filesystem_object_memo(memo)
+        if not stat.S_ISREG(memo.stat.mode):
+            raise Exception("?")  # TODO raise meaningful exception
 
 
 class NonRegularFileInputAction(_FilesystemObjectInputMixin, Action):
-    pass
+
+    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+        super().check_filesystem_object_memo(memo)
+        if stat.S_ISREG(memo.stat.mode) or stat.S_ISDIR(memo.stat.mode):
+            raise Exception("?")  # TODO raise meaningful exception
 
 
 class DirectoryInputAction(_FilesystemObjectInputMixin, Action):
-    pass
+
+    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+        super().check_filesystem_object_memo(memo)
+        if not stat.S_ISDIR(memo.stat.mode):
+            raise Exception("?")  # TODO raise meaningful exception
 
 
 class EnvVarInputAction(Action):
