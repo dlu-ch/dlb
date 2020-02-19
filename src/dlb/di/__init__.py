@@ -12,8 +12,8 @@ import sys
 import re
 import time
 import textwrap
-import typing
 import logging
+from typing import Optional, Dict, List
 
 
 _RESERVED_TITLEEND_CHARACTERS = " .]"
@@ -29,7 +29,7 @@ _clusters = []
 _lowest_unsuppressed_level: int = logging.INFO
 
 # time.time_ns() of the first output message with enabled timing information
-_first_time_ns: typing.Optional[int] = None
+_first_time_ns: Optional[int] = None
 
 
 # these correspond to the first characters of the standard logging.getLevelName[...]
@@ -43,13 +43,13 @@ _level_indicator_by_level = {
 }
 
 
-def _first_control_character_in(s: str, keep: str = '') -> typing.Optional[str]:
+def _first_control_character_in(s: str, keep: str = '') -> Optional[str]:
     for c in s:
         if ord(c) < 0x20 and c not in keep:
             return c
 
 
-def _format_messages(*, _prefix='', **messages: str) -> typing.List[str]:
+def _format_messages(*, _prefix='', **messages: str) -> List[str]:
     formatted_messages = []
 
     for message_name, message in messages.items():
@@ -104,8 +104,8 @@ def _format_messages(*, _prefix='', **messages: str) -> typing.List[str]:
         # - first line does not start with character in _RESERVED_LINESTART_CHARACTERS
         # - every non-empty line except the first starts with 2 space character followed by a non-space character
 
-        fields_per_line: typing.List[typing.List[str]] = []
-        len_by_field_index: typing.Dict[int, int] = dict()
+        fields_per_line: List[List[str]] = []
+        len_by_field_index: Dict[int, int] = dict()
 
         for line in normalized_lines:
             r = re.split(r'([\t\b])', line)  # length of list is uneven
@@ -211,7 +211,7 @@ def _get_relative_time_ns(time_ns):
     return max(0, time_ns - _first_time_ns)
 
 
-def _get_relative_time_suffix(time_ns: typing.Optional[int]):
+def _get_relative_time_suffix(time_ns: Optional[int]):
     if time_ns is None:
         return ''
     return ' [+{:.6f}s]'.format(_get_relative_time_ns(time_ns) / 1e9)
@@ -224,9 +224,9 @@ class Cluster:
         self._formatted_title = _format_messages(_prefix=get_level_indicator(level) + ' ', title=message)[0]
         self._is_progress = bool(is_progress)
         self._with_time: bool = bool(with_time)
-        self._time_ns: typing.Optional[int] = None
+        self._time_ns: Optional[int] = None
         self._did_inform: bool = False
-        self._nesting_level: typing.Optional[int] = None  # set in __enter__()
+        self._nesting_level: Optional[int] = None  # set in __enter__()
 
     def inform_title(self):
         if not self._did_inform:

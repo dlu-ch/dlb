@@ -6,13 +6,13 @@
 This is an implementation detail - do not import it unless you know what you are doing."""
 
 import re
-import typing
+from typing import Pattern, TypeVar, Type, Optional, Iterable, Dict, Hashable, Union, Tuple
 from .. import fs
 from . import mult
 from . import context as context_
 
 
-V = typing.TypeVar('V', bound=typing.Hashable)
+V = TypeVar('V', bound=Hashable)
 
 
 # noinspection PyUnresolvedReferences
@@ -61,14 +61,14 @@ class Dependency(mult.MultiplicityHolder):
         return True
 
     # overwrite in base classes
-    def validate_single(self, value: typing.Optional[typing.Hashable], context: typing.Optional[context_.Context]) \
-            -> typing.Hashable:
+    def validate_single(self, value: Optional[Hashable], context: Optional[context_.Context]) \
+            -> Hashable:
         if value is None:
             raise TypeError("'value' must not be None")
         return value
 
     # final
-    def validate(self, value, context) -> typing.Optional[typing.Union[V, typing.Tuple[V, ...]]]:
+    def validate(self, value, context) -> Optional[Union[V, Tuple[V, ...]]]:
         if not isinstance(self, ConcreteDependency):
             msg = (
                 f"{self.__class__!r} is abstract\n"
@@ -103,7 +103,7 @@ class Dependency(mult.MultiplicityHolder):
 
         return tuple(values)
 
-    def tuple_from_value(self, value: typing.Union[V, typing.Iterable[V]]) -> typing.Tuple[V, ...]:
+    def tuple_from_value(self, value: Union[V, Iterable[V]]) -> Tuple[V, ...]:
         if value is None:
             return ()
         if self.multiplicity is None:
@@ -134,14 +134,14 @@ class FilesystemObject(Dependency):
 
 
 class _FilesystemObjectMixin(FilesystemObject):
-    def __init__(self, *, cls: typing.Type[fs.Path] = fs.Path, **kwargs):
+    def __init__(self, *, cls: Type[fs.Path] = fs.Path, **kwargs):
         super().__init__(**kwargs)
         if not (isinstance(cls, type) and issubclass(cls, fs.Path)):
             raise TypeError("'cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = cls
 
     @property
-    def cls(self) -> typing.Type[fs.Path]:
+    def cls(self) -> Type[fs.Path]:
         return self._path_cls
 
     def compatible_and_no_less_restrictive(self, other) -> bool:
@@ -150,7 +150,7 @@ class _FilesystemObjectMixin(FilesystemObject):
 
         return issubclass(self.cls, other.cls)
 
-    def validate_single(self, value, context: typing.Optional[context_.Context]) -> fs.Path:
+    def validate_single(self, value, context: Optional[context_.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         return self._path_cls(value)
 
@@ -175,7 +175,7 @@ class _FilesystemObjectInputMixin(Dependency):
 
 
 class _NonDirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: typing.Optional[context_.Context]) -> fs.Path:
+    def validate_single(self, value, context: Optional[context_.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         if value.is_dir():
             raise ValueError(f'directory path not valid for non-directory dependency: {value!r}')
@@ -183,7 +183,7 @@ class _NonDirectoryMixin(_FilesystemObjectMixin):
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: typing.Optional[context_.Context]) -> fs.Path:
+    def validate_single(self, value, context: Optional[context_.Context]) -> fs.Path:
         value = super().validate_single(value, context)
         if not value.is_dir():
             raise ValueError(f'non-directory path not valid for directory dependency: {value!r}')
@@ -216,12 +216,12 @@ class DirectoryOutput(_DirectoryMixin, ConcreteDependency, Output):
 
 class EnvVarInput(ConcreteDependency, Input):
 
-    def __init__(self, *, restriction: typing.Union[str, typing.Pattern], example: str, **kwargs):
+    def __init__(self, *, restriction: Union[str, Pattern], example: str, **kwargs):
         super().__init__(**kwargs)
 
         if isinstance(restriction, str):
             restriction = re.compile(restriction)
-        if not isinstance(restriction, typing.Pattern):
+        if not isinstance(restriction, Pattern):
             raise TypeError("'restriction' must be regular expression (compiled or str)")
         if not isinstance(example, str):
             raise TypeError("'example' must be a str")
@@ -246,8 +246,8 @@ class EnvVarInput(ConcreteDependency, Input):
 
         return self.restriction == other.restriction  # ignore example
 
-    def validate_single(self, value, context: typing.Optional[context_.Context]) \
-            -> typing.Union[str, typing.Dict[str, str]]:
+    def validate_single(self, value, context: Optional[context_.Context]) \
+            -> Union[str, Dict[str, str]]:
         # value is the name of an environment variable
 
         value = str(super().validate_single(value, None))

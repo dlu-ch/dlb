@@ -10,7 +10,7 @@ import stat
 import dataclasses
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
 import sqlite3
-import typing
+from typing import Optional, Dict, Tuple
 from .. import fs
 from ..fs import manip
 from . import util
@@ -262,7 +262,7 @@ class Database:
         return n
 
     def update_fsobject_input(self, tool_instance_dbid: int, encoded_path: str, is_explicit: bool,
-                              encoded_memo_before: typing.Optional[bytes]):
+                              encoded_memo_before: Optional[bytes]):
         """
         Add or replace the description of a filesystem object in the managed tree that is an input dependency
         of the tool instance *tool_instance_dbid* by ``(is_explicit, encoded_memo_before``).
@@ -284,7 +284,7 @@ class Database:
                            (tool_instance_dbid, encoded_path, 1 if is_explicit else 0, encoded_memo_before))
 
     def replace_fsobject_inputs(self, tool_instance_dbid: int,
-                                info_by_by_fsobject_dbid: typing.Dict[str, typing.Tuple[bool, bytes]]):
+                                info_by_by_fsobject_dbid: Dict[str, Tuple[bool, bytes]]):
         """
         Replace all information on input dependencies for a tool instance *tool_instance_dbid* by
         *info_by_by_fsobject_dbid*.
@@ -304,8 +304,8 @@ class Database:
                 self._connection.rollback()
                 raise
 
-    def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: typing.Optional[bool] = None) \
-            -> typing.Dict[str, typing.Tuple[bool, typing.Optional[bytes]]]:
+    def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: Optional[bool] = None) \
+            -> Dict[str, Tuple[bool, Optional[bytes]]]:
         """
         Return the *encoded_path* and the optional encoded memo of all filesystem objects in the managed tree that are
         input dependencies of the tool instance *tool_instance_dbid*.

@@ -9,7 +9,7 @@ __all__ = ('is_immutable_fundamental', 'make_fundamental')
 
 import sys
 import collections.abc
-import typing
+from typing import Iterable, Dict, Any
 assert sys.version_info >= (3, 7)
 
 
@@ -62,7 +62,7 @@ def set_module_name_to_parent(cls):  # e.g. dlb.ex.context.Context -> dlb.ex.Con
     cls.__module__ = '.'.join(cls.__module__.split('.')[:-1])
 
 
-def set_module_name_to_parent_by_name(obj_by_name: typing.Dict[str, typing.Any], names: typing.Iterable):
+def set_module_name_to_parent_by_name(obj_by_name: Dict[str, Any], names: Iterable):
     for name in names:
         obj = obj_by_name[name]
         obj.__module__ = '.'.join(obj.__module__.split('.')[:-1])

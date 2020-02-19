@@ -16,7 +16,7 @@ import re
 import os
 import functools
 import pathlib  # since Python 3.4
-import typing
+from typing import Pattern, Optional, Tuple
 assert sys.version_info >= (3, 7)
 
 
@@ -90,7 +90,7 @@ class _PathMeta(type):
 
 @functools.total_ordering
 class Path(metaclass=_PathMeta):
-    def __init__(self, path, is_dir: typing.Optional[bool] = None):
+    def __init__(self, path, is_dir: Optional[bool] = None):
         if path is None:
             raise ValueError('invalid path: None')
 
@@ -180,7 +180,7 @@ class Path(metaclass=_PathMeta):
                 return lambda s: False
             if callable(f):
                 return f
-            if isinstance(f, typing.Pattern):
+            if isinstance(f, Pattern):
                 return lambda s: f.fullmatch(s)  # since Python 3.4
             if isinstance(f, str):
                 if f:
@@ -241,7 +241,7 @@ class Path(metaclass=_PathMeta):
         return self.parts if self.is_absolute() else ('',) + self.parts
 
     @property
-    def parts(self) -> typing.Tuple[str, ...]:
+    def parts(self) -> Tuple[str, ...]:
         return self._path.parts
 
     @property

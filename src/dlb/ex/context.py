@@ -21,8 +21,8 @@ import os.path
 import pathlib
 import stat
 import time
-import typing
 import tempfile
+from typing import Pattern, Type, Optional, Dict, Union
 from .. import fs
 from ..fs import manip
 from . import util
@@ -78,7 +78,7 @@ _RUNDB_FILE_NAME = 'runs.sqlite'
 
 class _EnvVarDict:
 
-    def __init__(self, parent=None, top_value_by_name: typing.Optional[typing.Dict[str, str]] = None):
+    def __init__(self, parent=None, top_value_by_name: Optional[Dict[str, str]] = None):
         if not (parent is None or isinstance(parent, _EnvVarDict)):
             raise TypeError
 
@@ -91,12 +91,12 @@ class _EnvVarDict:
             self._value_by_name = dict(parent._value_by_name)  # type: typing.Dict[str, str]
         self._restriction_by_name = dict()  # type: typing.Dict[str, typing.Pattern]
 
-    def import_from_outer(self, name: str, restriction: typing.Union[str, typing.Pattern], example: str):
+    def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):
         self._check_non_empty_str(name=name)
 
         if isinstance(restriction, str):
             restriction = re.compile(restriction)
-        if not isinstance(restriction, typing.Pattern):
+        if not isinstance(restriction, Pattern):
             raise TypeError("'restriction' must be regular expression (compiled or str)")
         if not isinstance(example, str):
             raise TypeError("'example' must be a str")
@@ -233,7 +233,7 @@ class _ContextMeta(type):
 
 
 class _RootSpecifics:
-    def __init__(self, path_cls: typing.Type[fs.Path]):
+    def __init__(self, path_cls: Type[fs.Path]):
         self._path_cls = path_cls
 
         # cwd must be a working tree`s root
@@ -398,14 +398,14 @@ class _RootSpecifics:
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
-    def _strip_working_tree_root_from(self, path: pathlib.Path) -> typing.Optional[pathlib.Path]:
+    def _strip_working_tree_root_from(self, path: pathlib.Path) -> Optional[pathlib.Path]:
         components = path.parts
         root_path_components = self._working_tree_path.parts
         if components[:len(root_path_components)] == root_path_components:
             return pathlib.Path(*components[len(root_path_components):])
 
-    def managed_tree_path_of(self, path: typing.Union[fs.Path, pathlib.PurePath], *,
-                             existing: bool = False, collapsable: bool = False) -> typing.Union[fs.Path]:
+    def managed_tree_path_of(self, path: Union[fs.Path, pathlib.PurePath], *,
+                             existing: bool = False, collapsable: bool = False) -> Union[fs.Path]:
         if isinstance(path, str):
             path = fs.Path(path)
         if isinstance(path, fs.Path):
@@ -531,12 +531,12 @@ class Context(metaclass=_ContextMeta):
 
     EnvVarDict = NotImplemented  # only Context should construct an _EnvVarDict
 
-    def __init__(self, *, path_cls: typing.Type[fs.Path] = fs.Path):
+    def __init__(self, *, path_cls: Type[fs.Path] = fs.Path):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' is not a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls
-        self._root_specifics: typing.Optional[_RootSpecifics] = None
-        self._env: typing.Optional[_EnvVarDict] = None
+        self._root_specifics: Optional[_RootSpecifics] = None
+        self._env: Optional[_EnvVarDict] = None
 
     @property
     def active(self):
@@ -545,7 +545,7 @@ class Context(metaclass=_ContextMeta):
         return _contexts[-1]
 
     @property
-    def path_cls(self) -> typing.Type[fs.Path]:
+    def path_cls(self) -> Type[fs.Path]:
         return self._path_cls
 
     @property

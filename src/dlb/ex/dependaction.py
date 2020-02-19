@@ -13,7 +13,7 @@ __all__ = (
 
 import stat
 import marshal
-import typing
+from typing import Type, Set, Optional, Sequence, Any, Union
 from .. import fs
 from ..fs import manip
 from . import util
@@ -22,7 +22,7 @@ from . import depend
 
 # this prevents actions to be exposed to the user via dependency classes
 _action_by_dependency = {}  # key: registered dependency class, value: (unique id of dependency class id, action)
-_dependency_class_ids: typing.Set[int] = set()  # contains the first element of each value of _action_by_dependency
+_dependency_class_ids: Set[int] = set()  # contains the first element of each value of _action_by_dependency
 
 
 # noinspection PyMethodMayBeStatic
@@ -35,7 +35,7 @@ class Action:
         return self._dependency
 
     # overwrite in subclasses
-    def get_permanent_local_value_id(self, validated_values: typing.Optional[typing.Sequence[typing.Any]]) -> bytes:
+    def get_permanent_local_value_id(self, validated_values: Optional[Sequence[Any]]) -> bytes:
         # Returns a short non-empty byte string as a permanent local id for this validated values of a given instance.
         #
         # 'validated_values' is None or a tuple of the validated values (regardless of self.dependency.multiplicity).
@@ -72,7 +72,7 @@ class Action:
 
 
 class _FilesystemObjectMixin(Action):
-    def get_permanent_local_value_id(self, validated_values: typing.Optional[typing.Sequence[fs.Path]]) -> bytes:
+    def get_permanent_local_value_id(self, validated_values: Optional[Sequence[fs.Path]]) -> bytes:
         if validated_values is not None:
             validated_values = tuple(v.as_string() for v in validated_values)
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
@@ -81,7 +81,7 @@ class _FilesystemObjectMixin(Action):
 
 class _FilesystemObjectInputMixin(_FilesystemObjectMixin):
     def get_permanent_local_instance_id(self) -> bytes:
-        d: typing.Union[depend.RegularFileInput, depend.NonRegularFileInput, depend.DirectoryInput] = self.dependency
+        d: Union[depend.RegularFileInput, depend.NonRegularFileInput, depend.DirectoryInput] = self.dependency
         return super().get_permanent_local_instance_id() + marshal.dumps(d.ignore_permission)
 
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
@@ -129,7 +129,7 @@ class DirectoryOutputAction(_FilesystemObjectMixin, Action):
     pass
 
 
-def register_action(dependency_id: int, dependency: typing.Type[depend.Dependency], action: typing.Type[Action]):
+def register_action(dependency_id: int, dependency: Type[depend.Dependency], action: Type[Action]):
     # Registers the dependency class 'dependency' and assigns it an action 'action' as well as the
     # dependency id 'dependency_id'.
     # 'dependency_id' must be an integer unique among all registered dependency class and must not change between

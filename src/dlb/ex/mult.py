@@ -8,7 +8,7 @@ This is an implementation detail - do not import it unless you know what you are
 __all__ = ('MultiplicityRange',)
 
 import re
-import typing
+from typing import Optional, Union
 
 
 class MultiplicityRange:
@@ -17,7 +17,7 @@ class MultiplicityRange:
     # If MultiplicityRange(m) is valid:
     # An integer ``n`` is considered a multiplicity in the range iff ``n in [i for i in range(n + 1)[m]``.
 
-    def __init__(self, multiplicity=typing.Union[int, slice]):
+    def __init__(self, multiplicity=Union[int, slice]):
         if isinstance(multiplicity, int):
             multiplicity = slice(multiplicity, multiplicity + 1)
 
@@ -98,7 +98,7 @@ class MultiplicityRange:
 
 
 class _MultiplicityHolderProxy:
-    def __init__(self, element_class: type, multiplicity: typing.Optional[MultiplicityRange]):
+    def __init__(self, element_class: type, multiplicity: Optional[MultiplicityRange]):
         self._element_class = element_class
         self._multiplicity = multiplicity
         s = '' if multiplicity is None else str(multiplicity)
@@ -127,7 +127,7 @@ class _MultiplicityHolderProxy:
 
 
 class _MultiplicityHolderMeta(type):
-    def __getitem__(cls, multiplicity: typing.Union[int, slice]) -> _MultiplicityHolderProxy:
+    def __getitem__(cls, multiplicity: Union[int, slice]) -> _MultiplicityHolderProxy:
         return _MultiplicityHolderProxy(cls, MultiplicityRange(multiplicity))
 
 

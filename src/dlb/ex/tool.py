@@ -12,10 +12,10 @@ import os
 import stat
 import collections
 import hashlib
-import typing
 import logging
 import inspect
 import marshal
+from typing import Type, Optional, Dict, Tuple
 from .. import fs
 from ..fs import manip
 from .. import di
@@ -65,8 +65,8 @@ ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'defin
 
 
 def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
-                                      memo_by_encoded_path: typing.Dict[str, manip.FilesystemObjectMemo],
-                                      context: context_.Context) -> typing.Tuple[str, manip.FilesystemObjectMemo]:
+                                      memo_by_encoded_path: Dict[str, manip.FilesystemObjectMemo],
+                                      context: context_.Context) -> Tuple[str, manip.FilesystemObjectMemo]:
     # TODO document
     try:
         try:
@@ -104,7 +104,7 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
 
 
 # TODO test
-def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: typing.Optional[bytes],
+def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
                                                  needs_redo: bool, context: context_.Context):
     path = None
     memo = manip.FilesystemObjectMemo()
@@ -455,7 +455,7 @@ class _ToolMeta(type):
         super().__setattr__('definition_location', location)
         _tool_class_by_definition_location[location] = cls
 
-    def _find_definition_location(cls, defining_frame) -> typing.Tuple[str, typing.Optional[str], int]:
+    def _find_definition_location(cls, defining_frame) -> Tuple[str, Optional[str], int]:
         # Return the location, cls is defined.
         # Raises DefinitionAmbiguityError, if the location is unknown or already a class with the same metaclass
         # was defined at the same location (realpath of an existing source file and line number).
@@ -562,7 +562,7 @@ class _ToolMeta(type):
                 )
                 raise AttributeError(msg)
 
-    def _get_dependency_names(cls) -> typing.Tuple[str, ...]:
+    def _get_dependency_names(cls) -> Tuple[str, ...]:
         dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
 
         def rank_of(d):
@@ -588,7 +588,7 @@ class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
 
 
-def get_and_register_tool_info(tool: typing.Type) -> ToolInfo:
+def get_and_register_tool_info(tool: Type) -> ToolInfo:
     # Return a ToolInfo with a permanent local id of tool and a set of all source file in the managed tree in
     # which the class or one of its baseclass of type `base_cls` is defined.
     #

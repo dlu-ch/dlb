@@ -10,19 +10,19 @@ import stat
 import pathlib
 import shutil
 import dataclasses
-import typing
+from typing import TypeVar, Optional, Union
 from . import path as path_
 
 
 # path
-P = typing.TypeVar('P', bound=typing.Union[path_.Path, pathlib.Path])
+P = TypeVar('P', bound=Union[path_.Path, pathlib.Path])
 
 # pure path
-PP = typing.TypeVar('PP', bound=typing.Union[path_.Path, pathlib.PurePath])
+PP = TypeVar('PP', bound=Union[path_.Path, pathlib.PurePath])
 
 
 class PathNormalizationError(ValueError):
-    def __init__(self, *args, oserror: typing.Optional[OSError] = None):
+    def __init__(self, *args, oserror: Optional[OSError] = None):
         super().__init__(*args)
         self.oserror = oserror
 
@@ -38,8 +38,8 @@ class FilesystemStatSummary:
 
 @dataclasses.dataclass
 class FilesystemObjectMemo:
-    stat: typing.Optional[FilesystemStatSummary] = None
-    symlink_target: typing.Optional[str] = None
+    stat: Optional[FilesystemStatSummary] = None
+    symlink_target: Optional[str] = None
 
 
 class _KeepFirstRmTreeException:
@@ -52,8 +52,8 @@ class _KeepFirstRmTreeException:
             self.first_exception = value
 
 
-def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path_.Path], *,
-                             abs_empty_dir_path: typing.Union[None, str, pathlib.Path, path_.Path] = None,
+def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
+                             abs_empty_dir_path: Union[None, str, pathlib.Path, path_.Path] = None,
                              ignore_non_existing: bool = False):
     """
     Remove the filesystem objects with absolute path *abs_path*.
@@ -127,7 +127,7 @@ def remove_filesystem_object(abs_path: typing.Union[str, pathlib.Path, path_.Pat
             raise
 
 
-def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.Path]) -> FilesystemObjectMemo:
+def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) -> FilesystemObjectMemo:
     """
     Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
     as a ``FilesystemObjectMemo`` object.
@@ -166,7 +166,7 @@ def read_filesystem_object_memo(abs_path: typing.Union[str, pathlib.Path, path_.
     return memo
 
 
-def _normalize_dotdot(path: PP, ref_dir_path: typing.Union[None, str, os.PathLike]) -> PP:
+def _normalize_dotdot(path: PP, ref_dir_path: Union[None, str, os.PathLike]) -> PP:
     path_components = path.parts
 
     root = ()
@@ -221,7 +221,7 @@ def normalize_dotdot_collapsable(path: PP) -> PP:
     return _normalize_dotdot(path, None)
 
 
-def normalize_dotdot(path: P, ref_dir_path: typing.Union[str, os.PathLike, path_.Path] = None) -> P:
+def normalize_dotdot(path: P, ref_dir_path: Union[str, os.PathLike, path_.Path] = None) -> P:
     """
     Return an equivalent normal *path* with all :file:`..` components replaced, if it is collapsable.
 
