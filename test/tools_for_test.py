@@ -14,26 +14,27 @@ def sanitize_module_search_path():
 sanitize_module_search_path()
 
 import os
+import pathlib
 import tempfile
 import shutil
 import unittest
 
 
 class DirectoryChanger:  # change directory temporarily
-    def __init__(self, path, show_dir_change=False):
-        self._path = path
+    def __init__(self, path: os.PathLike, show_dir_change=False):
+        self._path = pathlib.Path(path)
         self._show_dir_change = show_dir_change
 
     def __enter__(self):
-        self._original_path = os.getcwd()
+        self._original_path = pathlib.Path.cwd()
         os.chdir(self._path)
         if self._show_dir_change:
-            print(f'changed current working directory of process to {self._path!r}')
+            print(f'changed current working directory of process to {str(self._path)!r}')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         os.chdir(self._original_path)
         if self._show_dir_change:
-            print(f'changed current working directory of process back to {self._original_path!r}')
+            print(f'changed current working directory of process back to {str(self._original_path)!r}')
 
 
 class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary directory during test

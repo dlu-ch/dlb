@@ -102,8 +102,12 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
     try:
         try:
             os.remove(abs_path)  # does remove symlink, not target
+            # according to the Python 3.8 documentation, 'IsADirectoryError' is raised if 'abs_path' is a directory;
+            # however, on Windows 10 PermissionError is raised instead
         except IsADirectoryError:
             is_directory = True
+        except PermissionError:
+            is_directory = os.path.isdir(abs_path)
     except FileNotFoundError:
         if not ignore_non_existing:
             raise

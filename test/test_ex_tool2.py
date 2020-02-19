@@ -187,7 +187,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             import u.v
             del sys.path[0]
 
-        self.assertEqual(u.v.A.definition_location, (os.path.realpath(zip_file_path), 'u/v.py', 2))
+        self.assertEqual(u.v.A.definition_location, (os.path.realpath(zip_file_path), os.path.join('u', 'v.py'), 2))
 
     def test_definition_location_is_readonly(self):
         class A(Tool):
@@ -278,7 +278,7 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
 
     def test_is_equal_for_same_concrete_dependencies(self):
         tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'],
-                                                  object_file=pathlib.PosixPath('e.o'))
+                                                  object_file=pathlib.Path('e.o'))
         tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', dlb.fs.Path('src/d.c')], object_file='e.o')
         self.assertEqual(tool1.fingerprint, tool2.fingerprint)
 

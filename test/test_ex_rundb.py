@@ -20,6 +20,10 @@ import tools_for_test
 class CreationTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_file_exists_after_construction(self):
+        try:
+            os.mkdir('a:b')
+        except OSError:
+            raise unittest.SkipTest from None  # POSIX does not required the support of ':' in a file name
         with contextlib.closing(dlb.ex.rundb.Database(':memory:')):
             os.path.isfile(':memory:')
 
@@ -35,6 +39,14 @@ class CreationTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_fails_with_meaningful_message_on_permission_problem_when_nonexisting(self):
         os.mkdir('t')
         os.chmod('t', 0x000)
+        try:
+            with open(os.path.join('t', 'x'), 'xb'):
+                pass
+        except OSError:
+            pass
+        else:
+            self.assertNotEqual(os.name, 'posix', "on any POSIX system permission should be denied")
+            raise unittest.SkipTest
         try:
             regex = (
                 r"(?m)\A"

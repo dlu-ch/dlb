@@ -95,7 +95,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         try:
             os.symlink('f', 's', target_is_directory=False)
             self.assertTrue(os.path.islink('s'))
-        except (NotImplementedError, PermissionError):  # on platform or filesystem that does not support symlinks
+        except OSError:  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
@@ -197,8 +197,12 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('d')
         os.chmod('d', 0x000)
         try:
-            os.symlink('d' + os.path.sep, 's', target_is_directory=True)
-            # note: trailing os.path.sep is necessary irrespective of target_is_directory
+            try:
+                os.symlink('d' + os.path.sep, 's', target_is_directory=True)
+                # note: trailing os.path.sep is necessary irrespective of target_is_directory
+            except OSError:  # on platform or filesystem that does not support symlinks
+                self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
+                raise unittest.SkipTest from None
 
             sr0 = os.lstat('s')
             m = dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
@@ -206,7 +210,6 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertEqual(m.symlink_target, 'd' + os.path.sep)
-
         finally:
             os.chmod('d', 0x777)
 
@@ -214,8 +217,12 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('d')
         os.chmod('d', 0x000)
         try:
-            os.symlink('d' + os.path.sep, 's', target_is_directory=True)
-            # note: trailing os.path.sep is necessary irrespective of target_is_directory
+            try:
+                os.symlink('d' + os.path.sep, 's', target_is_directory=True)
+                # note: trailing os.path.sep is necessary irrespective of target_is_directory
+            except OSError:  # on platform or filesystem that does not support symlinks
+                self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
+                raise unittest.SkipTest from None
 
             sr0 = os.lstat('s')
             m = dlb.fs.manip.read_filesystem_object_memo(pathlib.Path(os.path.join(os.getcwd()) / pathlib.Path('s')))
@@ -224,7 +231,6 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertIsInstance(m.symlink_target, str)
             self.assertEqual(m.symlink_target, 'd' + os.path.sep)
-
         finally:
             os.chmod('d', 0x777)
 
@@ -315,24 +321,30 @@ class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_without_symlink_is_correct(self):
         os.makedirs('a')
-        os.makedirs('c/d/e')
+        os.makedirs(os.path.join('c', 'd', 'e'))
         p = dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
         self.assertEqual(dlb.fs.Path('c/d/'), p)
 
-        p = dlb.fs.manip.normalize_dotdot(pathlib.PosixPath('a/b'), '/tmp')
-        self.assertEqual(pathlib.PosixPath('a/b'), p)
+        p = dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), '/tmp')
+        self.assertEqual(pathlib.Path('a/b'), p)
 
     def test_with_nonparent_symlink_is_correct(self):
         os.makedirs('a')
-        os.makedirs('x/d/e')
-        os.symlink('x', 'c', target_is_directory=True)
+        os.makedirs(os.path.join('x', 'd', 'e'))
+
+        try:
+            os.symlink('x', 'c', target_is_directory=True)
+        except OSError:  # on platform or filesystem that does not support symlinks
+            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
+            raise unittest.SkipTest from None
+
         p = dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
         self.assertEqual(dlb.fs.Path('c/d/'), p)
 
     def test_fails_for_bytes(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot(pathlib.PosixPath('a/b'), b'/tmp')
+            dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), b'/tmp')
         msg = "'ref_dir_path' must be a str or a dlb.fs.Path or os.PathLike object returning str"
         self.assertEqual(msg, str(cm.exception))
 
@@ -346,21 +358,27 @@ class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_fails_for_relative_ref_dir(self):
         with self.assertRaises(ValueError) as cm:
             # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot(pathlib.PosixPath('a/b'), pathlib.PosixPath('tmp'))
+            dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), pathlib.Path('tmp'))
         msg = "'ref_dir_path' must be absolute"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_nonexisting_symlink(self):
         os.makedirs('a')
-        os.makedirs('c/d')
+        os.makedirs(os.path.join('c', 'd'))
         with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
             dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
         self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_for_parent_symlink(self):
         os.makedirs('x')
-        os.makedirs('c/d')
-        os.symlink('x', 'a', target_is_directory=True)
+        os.makedirs(os.path.join('c', 'd'))
+
+        try:
+            os.symlink('x', 'a', target_is_directory=True)
+        except OSError:  # on platform or filesystem that does not support symlinks
+            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
+            raise unittest.SkipTest from None
+
         regex = r"\A()not a collapsable path, since this is a symbolic link: '.+'\Z"
         with self.assertRaisesRegex(dlb.fs.manip.PathNormalizationError, regex):
             dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
