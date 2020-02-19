@@ -9,9 +9,11 @@ __all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError', 
 import sys
 import re
 import os
+import stat
 import collections
 import hashlib
 import typing
+import logging
 import inspect
 import marshal
 from .. import fs
@@ -63,8 +65,9 @@ ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'defin
 
 
 def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
-                                      memo_by_fsobject_dbid: typing.Dict[str, manip.FilesystemObjectMemo],
+                                      memo_by_encoded_path: typing.Dict[str, manip.FilesystemObjectMemo],
                                       context: context_.Context) -> typing.Tuple[str, manip.FilesystemObjectMemo]:
+    # TODO document
     try:
 
         try:
@@ -79,13 +82,12 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
             )
             raise DependencyCheckError(msg) from None
 
-        fsobject_dbid = rundb.encode_path(path)
-        memo = memo_by_fsobject_dbid.get(fsobject_dbid)
+        encoded_path = rundb.encode_path(path)
+        memo = memo_by_encoded_path.get(encoded_path)
 
         if memo is None:
-            p_abs = context.root_path / path
             # may raise OSError except FileNotFoundError:
-            memo, _ = manip.read_filesystem_object_memo(p_abs)
+            memo, _ = manip.read_filesystem_object_memo(context.root_path / path)
         if memo.stat is None:
             raise FileNotFoundError
 
@@ -104,7 +106,65 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
         )
         raise DependencyCheckError(msg) from None
 
-    return fsobject_dbid, memo
+    return encoded_path, memo
+
+
+# TODO test
+def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: typing.Optional[bytes],
+                                                 needs_redo: bool, context: context_.Context):
+    path = None
+    memo = manip.FilesystemObjectMemo()
+
+    try:
+        path = rundb.decode_encoded_path(encoded_path)  # may raise ValueError
+    except ValueError:
+        if not needs_redo:
+            di.inform(f"redo necessary because of invalid encoded path: {encoded_path!r}",
+                      level=logging.WARNING)
+            needs_redo = True
+
+    if path is None:
+        return memo, needs_redo
+
+    try:
+        try:
+            # may raise OSError except FileNotFoundError:
+            path = context.managed_tree_path_of(path, existing=False, collapsable=False)
+            memo, _ = manip.read_filesystem_object_memo(context.root_path / path)
+        except manip.PathNormalizationError as e:
+            if e.oserror is None:
+                raise
+
+            if not isinstance(e.oserror, FileNotFoundError):
+                raise e.oserror from None
+
+            did_not_exist_before_last_redo = False
+            try:
+                did_not_exist_before_last_redo = \
+                    last_encoded_memo is None or rundb.decode_encoded_fsobject_memo(last_encoded_memo).stat is None
+            except ValueError:
+                pass
+
+            # ignore if did not exist according to valid 'encoded_memo'
+            if not did_not_exist_before_last_redo:
+                raise e.oserror from None
+
+        if last_encoded_memo is None:  # TODO is this the right place?
+            if not needs_redo:
+                di.inform(f"redo necessary because potentially modified by output dependency: {path.as_string()!r}",
+                          level=logging.WARNING)
+                needs_redo = True
+
+    except (ValueError, OSError):
+        if not needs_redo:
+            msg = (
+                f"redo necessary because of inexisting or inaccessible "
+                f"filesystem object: {path.as_string()!r}"
+            )
+            di.inform(msg, level=logging.INFO)
+            needs_redo = True  # comparision not possible -> redo
+
+    return memo, needs_redo  # memo.state may be None
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -185,62 +245,187 @@ class _ToolBase:
         object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
 
     # final
+    # TODO split into smaller parts
+    # TODO test all execution paths
+    # TODO analyze code coverage of tests
     def run(self):
         dependency_info = tuple(
             (n, dependaction.get_action(getattr(self.__class__, n)))
             for n in self.__class__._dependency_names
         )
 
-        context = context_.Context.active
-        rundb = context_._get_rundb()
+        # noinspection PyTypeChecker
+        context: context_.Context = context_.Context.active
+        db = context_._get_rundb()
+
+        needs_redo = False
 
         with di.Cluster('register tool instance', with_time=True, is_progress=True):
             tool_info = get_and_register_tool_info(self.__class__)
-            tool_instance_dbid = rundb.get_and_register_tool_instance_dbid(
+            tool_instance_dbid = db.get_and_register_tool_instance_dbid(
                 tool_info.permanent_local_tool_id,
                 self.fingerprint)
             di.inform(f"tool instance dbid is {tool_instance_dbid!r}")
 
-        memo_by_fsobject_dbid = {}
+        memo_by_encoded_path = {}
 
-        with di.Cluster('read state of filesystem objects before last redo from run-database',
-                        with_time=True, is_progress=True):
-            inputs_from_last_redo = rundb.get_fsobject_inputs(tool_instance_dbid)
-
-        # read memo of each filesystem object of a explicit input dependency in a reproducible order
-        with di.Cluster('read and check state of filesystem objects that are input dependencies',
+        with di.Cluster('read and check state of filesystem objects that are explicit input dependencies',
                         with_time=True, is_progress=True):
 
             for name, action in dependency_info:
-                if not (action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
+                # read memo of each filesystem object of a explicit input dependency in a reproducible order
+                if not (action.dependency.explicit and isinstance(action.dependency, depend.Input) and
+                        isinstance(action.dependency, depend.FilesystemObject)):
+                    continue
+                with di.Cluster(f"dependency role {name!r}", is_progress=True):
+                    # all elements of validated_value_tuple are dlb.fs.Path
+                    validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
+                    checked_encoded_path = set()
+                    for p in validated_value_tuple:
+                        encoded_path, memo = _get_memo_for_fs_input_dependency(name, p, memo_by_encoded_path, context)
+                        if encoded_path not in checked_encoded_path:  # check exactly once
+                            action.check_filesystem_object_memo(memo)  # raise exception if memo is not as expected
+                            checked_encoded_path.add(encoded_path)
+                            memo_by_encoded_path[encoded_path] = memo
+                            assert memo.stat is not None
+
+            with di.Cluster(f"tool definition files", is_progress=True):
+                # treat all files used for definition of self.__class__ like explicit input dependencies if they
+                # have a managed tree path.
+                definition_file_count = 0
+                for p in tool_info.definition_paths:
+                    try:
+                        encoded_path, memo = _get_memo_for_fs_input_dependency(
+                            None, fs.Path(p), memo_by_encoded_path, context)  # TODO fix type and exceptions
+                        definition_file_count += 1
+                        memo_by_encoded_path[encoded_path] = memo
+                        assert memo.stat is not None
+                    except (ValueError, DependencyCheckError):
+                        # silently ignore all definition files not in managed tree
+                        pass
+                di.inform(f"added {definition_file_count} files as input dependencies")
+
+        with di.Cluster('clear filesystem objects that are explict output dependencies',
+                        with_time=True, is_progress=True):
+            for name, action in dependency_info:
+                # read memo of each filesystem object of a explicit input dependency in a reproducible order
+                if not (action.dependency.explicit and isinstance(action.dependency, depend.Output) and
                         isinstance(action.dependency, depend.FilesystemObject)):
                     continue
 
-                with di.Cluster(f"dependency role {name!r}", is_progress=True):
-                    validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
-                    # all elements of validated_value_tuple are dlb.fs.Path
+                # all elements of validated_value_tuple are dlb.fs.Path
+                validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
+                for p in validated_value_tuple:
+                    encoded_path = rundb.encode_path(p)  # Exceptions ???
+                    db.declare_fsobject_input_as_modified(encoded_path)
 
-                    checked_fsobject_dbid = set()
-                    for p in validated_value_tuple:
-                        fsobject_dbid, memo = _get_memo_for_fs_input_dependency(
-                            name, p, memo_by_fsobject_dbid, context)
-                        if fsobject_dbid not in checked_fsobject_dbid:  # check exactly once
-                            action.check_filesystem_object_memo(memo)  # raise exception if memo is not as expected
-                            checked_fsobject_dbid.add(fsobject_dbid)
-                            memo_by_fsobject_dbid[fsobject_dbid] = memo
+        with di.Cluster('read state of filesystem objects before last redo from run-database',
+                        with_time=True, is_progress=True):
+            inputs_from_last_redo = db.get_fsobject_inputs(tool_instance_dbid)
 
-                with di.Cluster(f"tool definition files", is_progress=True):
-                    for p in tool_info.definition_paths:
-                        try:
-                            fsobject_dbid, memo = _get_memo_for_fs_input_dependency(
-                                None, fs.Path(p), memo_by_fsobject_dbid, context)
-                            memo_by_fsobject_dbid[fsobject_dbid] = memo
-                        except (ValueError, DependencyCheckError):
-                            # silently ignore all definition files not in managed tree
-                            pass
+        encoded_paths_of_explicit_input_dependencies = set(memo_by_encoded_path.keys())
 
-        # TODO: implement, document
-        return
+        with di.Cluster('read and check state of filesystem objects that are non-explicit '
+                        'input dependencies of the last redo', is_progress=True):
+            for encoded_path, (is_explicit, last_encoded_memo) in inputs_from_last_redo.items():
+                if not is_explicit and encoded_path not in memo_by_encoded_path:
+                    memo, needs_redo = _get_memo_for_fs_input_dependency_from_rundb(
+                        encoded_path, last_encoded_memo, needs_redo, context)
+                    memo_by_encoded_path[encoded_path] = memo  # memo.state may be None
+
+        # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
+        # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
+        # last successful redo of the same tool instance according to the run-database
+
+        if not needs_redo and memo_by_encoded_path and not inputs_from_last_redo:
+            # there _are_ input dependencies
+            msg = f"redo necessary because state of all input dependencies before the last successful redo is unknown"
+            di.inform(msg)
+            needs_redo = True
+
+        if not needs_redo:
+            with di.Cluster('compare state of filesystem objects with state that are non-explicit '
+                            'input dependencies of the last redo', with_time=True, is_progress=True):
+
+                # use encoded_paths_of_explicit_input_dependencies ???
+                encoded_path = None
+
+                for encoded_path, memo in memo_by_encoded_path.items():  # sorting not necessary for repeatability
+                    is_explicit, last_encoded_memo = inputs_from_last_redo.get(encoded_path, (True, None))
+                    assert memo.stat is not None or not is_explicit
+
+                    if last_encoded_memo is None:
+                        # state before last successful redo is unknown (maybe because it was declared as modified)
+                        needs_redo = True
+                        break
+
+                    try:
+                        last_memo = rundb.decode_encoded_fsobject_memo(last_encoded_memo)
+                    except ValueError:
+                        # state before last successful redo is unknown
+                        needs_redo = True
+                        break
+
+                    if encoded_path in encoded_paths_of_explicit_input_dependencies:
+                        assert memo.stat is not None
+                        if last_memo.stat is None:
+                            needs_redo = True
+                            break
+                    elif (memo.stat is None) != (last_memo.stat is None):
+                        # existence has changed
+                        needs_redo = True
+                        break
+                    elif memo.stat is None:
+                        continue
+
+                    assert memo.stat is not None
+                    assert last_memo.stat is not None
+
+                    if stat.S_IFMT(memo.stat.mode) != stat.S_IFMT(last_memo.stat.mode):
+                        # type of filesystem object has changed
+                        needs_redo = True
+                        break
+
+                    if stat.S_ISLNK(memo.stat.mode) and memo.symlink_target != last_memo.symlink_target:
+                        # symlink target has changed
+                        needs_redo = True
+                        break
+
+                    if (memo.stat.size, memo.stat.mtime_ns) != (last_memo.stat.size, last_memo.stat.mtime_ns):
+                        # size or mtime has changed
+                        needs_redo = True
+                        break
+
+                    if (memo.stat.mode, memo.stat.uid, memo.stat.gid) != \
+                            (last_memo.stat.mode, last_memo.stat.size, last_memo.stat.mtime_ns):
+                        # TODO
+                        # permissions have changed
+                        needs_redo = True
+                        break
+
+                if encoded_path is not None:
+                    path = rundb.decode_encoded_path(encoded_path)
+                    msg = f"redo necessary because state ???: {path.as_string()!r}"
+                    di.inform(msg)
+
+        db.commit()
+
+        result = None
+        if needs_redo:
+            with di.Cluster('redo', with_time=True, is_progress=True):
+                result = self.redo()
+
+        # redo was successful, so save the state before the redo to the run-database
+
+        info_by_by_fsobject_dbid = {
+            encoded_path: (True, rundb.encode_fsobject_memo(memo))
+            for encoded_path, memo in memo_by_encoded_path.items()
+        }
+        db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
+
+        db.commit()
+
+        return result
 
     def __setattr__(self, name: str, value):
         raise AttributeError
@@ -256,42 +441,6 @@ class _ToolBase:
 
 # noinspection PyProtectedMember
 depend._inject_into(_ToolBase, 'Tool', '.'.join(_ToolBase.__module__.split('.')[:-1]))
-
-
-def _get_and_register_tool_info(tool: typing.Type[_ToolBase]) -> ToolInfo:
-    # Return a ToolInfo with a permanent local id of tool and a set of all source file in the managed tree in
-    # which the class or one of its baseclass of type `base_cls` is defined.
-    #
-    # The result is cached.
-    #
-    # The permanent local id is the same on every Python run as long as dlb.ex.platform.PERMANENT_PLATFORM_ID
-    # remains the same (at least that's the idea).
-    # Note however, that the behaviour of tools not only depends on their own code but also on all imported
-    # objects. So, its up to the programmer of the tool, how much variability a tool with a unchanged
-    # permanent local id can show.
-
-    info = _registered_info_by_tool.get(tool)
-    if info is not None:
-        return info
-
-    # collect the managed tree paths of tool and its base classes that are tools
-
-    definition_paths = set()
-    for c in reversed(tool.mro()):
-        if c is not tool and issubclass(c, Tool):
-            base_info = get_and_register_tool_info(c)
-            definition_paths = definition_paths.union(base_info.definition_paths)
-
-
-    definition_path, in_archive_path, lineno = tool.definition_location
-    permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
-    if definition_path is not None:
-        definition_paths.add(definition_path)
-
-    info = ToolInfo(permanent_local_tool_id=permanent_local_id, definition_paths=definition_paths)
-    _registered_info_by_tool[tool] = info
-
-    return info
 
 
 class _ToolMeta(type):
@@ -378,7 +527,9 @@ class _ToolMeta(type):
 
     def check_own_attributes(cls):
         for name, value in cls.__dict__.items():
-            if RESERVED_NAME_REGEX.match(name):
+            if name in ('redo',):
+                pass
+            elif RESERVED_NAME_REGEX.match(name):
                 pass
             elif EXECUTION_PARAMETER_NAME_REGEX.match(name):
                 # if overridden: must be instance of type of overridden attribute
@@ -441,10 +592,42 @@ class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
 
 
-def get_and_register_tool_info(tool: typing.Type[Tool]) -> ToolInfo:
+def get_and_register_tool_info(tool: typing.Type) -> ToolInfo:
+    # Return a ToolInfo with a permanent local id of tool and a set of all source file in the managed tree in
+    # which the class or one of its baseclass of type `base_cls` is defined.
+    #
+    # The result is cached.
+    #
+    # The permanent local id is the same on every Python run as long as dlb.ex.platform.PERMANENT_PLATFORM_ID
+    # remains the same (at least that's the idea).
+    # Note however, that the behaviour of tools not only depends on their own code but also on all imported
+    # objects. So, its up to the programmer of the tool, how much variability a tool with a unchanged
+    # permanent local id can show.
+
     if not issubclass(tool, Tool):
-        raise TypeError("'tool' must be a 'dlb.ex.Tool'")
-    return _get_and_register_tool_info(tool)
+        raise TypeError
+
+    info = _registered_info_by_tool.get(tool)
+    if info is not None:
+        return info
+
+    # collect the managed tree paths of tool and its base classes that are tools
+
+    definition_paths = set()
+    for c in reversed(tool.mro()):
+        if c is not tool and issubclass(c, Tool):  # note: needs Tool with metaclass _ToolMeta, not _BaseTool
+            base_info = get_and_register_tool_info(c)
+            definition_paths = definition_paths.union(base_info.definition_paths)
+
+    definition_path, in_archive_path, lineno = tool.definition_location
+    permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
+    if definition_path is not None:
+        definition_paths.add(definition_path)
+
+    info = ToolInfo(permanent_local_tool_id=permanent_local_id, definition_paths=definition_paths)
+    _registered_info_by_tool[tool] = info
+
+    return info
 
 
 # noinspection PyCallByClass
