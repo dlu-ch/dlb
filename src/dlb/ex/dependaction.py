@@ -13,6 +13,7 @@ __all__ = (
 
 import marshal
 import typing
+from .. import fs
 from . import util
 from . import depend
 
