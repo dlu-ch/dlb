@@ -60,7 +60,7 @@ class _ToolBase:
     def __init__(self, **kwargs):
         super().__init__()
 
-        # replace all dependency roles by concrete dependencies or None
+        # replace all dependency roles by concrete dependencies or None or NotImplemented
 
         # order is important:
         dependency_names = self.__class__._dependency_names   # type: typing.Tuple[str, ...]
@@ -105,10 +105,13 @@ class _ToolBase:
         for name in dependency_names:  # order is important
             role = getattr(self.__class__, name)
             if name in names_of_notassigned:
-                if role.required and role.explicit:
-                    msg = f"missing keyword argument for required and explicit dependency role: {name!r}"
-                    raise DependencyRoleAssignmentError(msg)
-                object.__setattr__(self, name, None)
+                if role.explicit:
+                    if role.required:
+                        msg = f"missing keyword argument for required and explicit dependency role: {name!r}"
+                        raise DependencyRoleAssignmentError(msg)
+                    object.__setattr__(self, name, None)
+                else:
+                    object.__setattr__(self, name, NotImplemented)
             if role.explicit:
                 # this remains unchanged between dlb run if dlb.ex.platform.PERMANENT_PLATFORM_ID remains unchanged
                 try:

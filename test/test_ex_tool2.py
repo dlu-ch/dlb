@@ -32,18 +32,28 @@ class ConstructionTest(unittest.TestCase):
     class CTool(Tool):
         envvar = Tool.Input.EnvVar(restriction='.*', example='', required=False)
 
+    class DTool(BTool):
+        include_directories = Tool.Input.Directory[:](required=False)
+
     def test_tool_can_be_constructed_without_arguments(self):
         Tool()
 
     def test_dependencies_are_assigned(self):
-        t = ConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o')
-        self.assertEqual(t.source_file, 'x.cpp')
-        self.assertEqual(t.object_file, 'x.cpp.o')
+        t = ConstructionTest.DTool(source_file='x.cpp', object_file='x.cpp.o')
+        self.assertEqual('x.cpp', t.source_file)
+        self.assertEqual('x.cpp.o', t.object_file)
+        self.assertIsNone(t.include_directories)
         self.assertIsNone(t.map_file)
+        self.assertEqual(NotImplemented, t.log_file)
 
-        self.assertIsInstance(ConstructionTest.BTool.source_file, Tool.Input)
-        self.assertIsInstance(ConstructionTest.BTool.object_file, Tool.Output)
-        self.assertIsInstance(ConstructionTest.BTool.map_file, Tool.Output)
+        t = ConstructionTest.DTool(source_file='x.cpp', object_file='x.cpp.o',
+                                   include_directories=['src/a/', 'src/b/c/'])
+        self.assertEqual((dlb.fs.Path('src/a/'), dlb.fs.Path('src/b/c/')), t.include_directories)
+
+        self.assertIsInstance(ConstructionTest.DTool.source_file, Tool.Input)
+        self.assertIsInstance(ConstructionTest.DTool.object_file, Tool.Output)
+        self.assertIsInstance(ConstructionTest.DTool.include_directories, Tool.Input)
+        self.assertIsInstance(ConstructionTest.DTool.map_file, Tool.Output)
 
     def test_must_have_argument_for_required_explicit_dependency(self):
         with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
@@ -141,7 +151,7 @@ class ReprTest(unittest.TestCase):
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_of_tools_are_correct(self):
-        lineno = 144  # of this line
+        lineno = 154  # of this line
 
         class A(Tool):
             pass
