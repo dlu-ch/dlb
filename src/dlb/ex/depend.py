@@ -12,6 +12,9 @@ from . import mult
 from . import context as context_
 
 
+V = typing.TypeVar('V', bound=typing.Hashable)
+
+
 # noinspection PyUnresolvedReferences
 class Dependency(mult.MultiplicityHolder):
     # Each instance d represents a dependency role.
@@ -61,7 +64,8 @@ class Dependency(mult.MultiplicityHolder):
         return True
 
     # overwrite in base classes
-    def validate_single(self, value, context: typing.Optional[context_.Context]) -> typing.Hashable:
+    def validate_single(self, value: typing.Optional[typing.Hashable], context: typing.Optional[context_.Context]) \
+            -> typing.Hashable:
         if value is None:
             raise TypeError("'value' must not be None")
         return value
@@ -101,6 +105,13 @@ class Dependency(mult.MultiplicityHolder):
             raise ValueError(msg)
 
         return tuple(values)
+
+    def tuple_from_value(self, value: typing.Union[V, typing.Iterable[V]]) -> typing.Tuple[V]:
+        if value is None:
+            return None
+        if self.multiplicity is None:
+            return (value,)
+        return tuple(v for v in value)
 
 
 class ConcreteDependency:
