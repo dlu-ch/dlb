@@ -43,23 +43,33 @@ from . import platform
 #   - The serialized data is of about the same length; some data is a bit shorter with marshal, some a bit longer.
 
 
-def is_fsobject_dbid(fsobject_dbid: str) -> bool:
-    if not isinstance(fsobject_dbid, str):
+def is_encoded_path(encoded_path: str) -> bool:
+    if not isinstance(encoded_path, str):
         return False
-    if not fsobject_dbid:
+    if not encoded_path:
         return True
-    return fsobject_dbid[-1] == '/' and not fsobject_dbid.startswith('./')
+    return encoded_path[-1] == '/' and not encoded_path.startswith('./')
 
 
-def build_fsobject_dbid(managed_tree_path: fs.Path) -> str:
+def encode_path(managed_tree_path: fs.Path) -> str:
+    if not isinstance(managed_tree_path, fs.Path):
+        raise TypeError("'managed_tree_path' must be a dlb.fs.Path object")
     if managed_tree_path.is_absolute() or not managed_tree_path.is_normalized():
         raise ValueError
-    fsobject_dbid = managed_tree_path.as_string()
-    if fsobject_dbid[-1:] != '/':
-        fsobject_dbid = fsobject_dbid + '/'  # to enable efficient search for path prefixes in SQL
-    if fsobject_dbid[:2] == './':
-        fsobject_dbid = fsobject_dbid[2:]
-    return fsobject_dbid
+    encoded_path = managed_tree_path.as_string()
+    if encoded_path[-1:] != '/':
+        encoded_path = encoded_path + '/'  # to enable efficient search for path prefixes in SQL
+    if encoded_path[:2] == './':
+        encoded_path = encoded_path[2:]
+    return encoded_path
+
+
+def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
+    if not is_encoded_path(encoded_path):
+        raise ValueError("not an encoded path: {encoded_path!r}")
+    if not encoded_path:
+        return fs.Path('.')
+    return fs.Path(encoded_path[:-1], is_dir=is_dir)
 
 
 class DatabaseError(Exception):
@@ -145,11 +155,11 @@ class Database:
                                 
                 "CREATE TABLE IF NOT EXISTS ToolInstFsInput("
                     "tool_inst_dbid INTEGER, "            # tool instance
-                    "fsobject_dbid TEXT NOT NULL, "       # path of filesystem object in managed tree in a special form
+                    "path TEXT NOT NULL, "                # encoded path of filesystem object in managed tree
                     "is_explicit INTEGER NOT NULL, "      # 0 for implicit, 1 for explicit dependency of tool instance
-                    "memo_before BLOB, "                  # memo of filesystem object before last redo of tool instance,
+                    "memo_before BLOB, "                  # encoded memo of filesystem object before last redo of tool instance,
                                                           # NULL if filesystem object was modified since last redo
-                    "PRIMARY KEY(tool_inst_dbid, fsobject_dbid), "
+                    "PRIMARY KEY(tool_inst_dbid, path), "
                     "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"
                 ");"
         
@@ -192,27 +202,27 @@ class Database:
 
         return n
 
-    def update_fsobject_input(self, tool_instance_dbid: int, fsobject_dbid: str, is_explicit: bool,
-                              memo_before: typing.Optional[bytes]):
+    def update_fsobject_input(self, tool_instance_dbid: int, encoded_path: str, is_explicit: bool,
+                              encoded_memo_before: typing.Optional[bytes]):
         """
         Add or replace the description of a filesystem object in the managed tree that is an input dependency
-        of the tool instance *tool_instance_dbid* by ``(is_explicit, memo_before``).
+        of the tool instance *tool_instance_dbid* by ``(is_explicit, encoded_memo_before``).
 
         *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
         not before the last :meth:`cleanup()` (if any).
 
-        *fsobject_dbid* must be the return value of :func:`build_fsobject_dbid()`.
+        *encoded_path* must be the return value of :func:`encode_path()`.
         """
 
-        if not is_fsobject_dbid(fsobject_dbid):
-            raise ValueError(f"not a valid 'fsobject_dbid': {fsobject_dbid!r}")
+        if not is_encoded_path(encoded_path):
+            raise ValueError(f"not a valid 'encoded_path': {encoded_path!r}")
 
-        if memo_before is not None and not isinstance(memo_before, bytes):
-            raise ValueError(f"not a valid 'memo_before': {memo_before!r}")
+        if encoded_memo_before is not None and not isinstance(encoded_memo_before, bytes):
+            raise ValueError(f"not a valid 'encoded_memo_before': {encoded_memo_before!r}")
 
         with self._cursor_with_exception_mapping() as cursor:
             cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?)",
-                           (tool_instance_dbid, fsobject_dbid, 1 if is_explicit else 0, memo_before))
+                           (tool_instance_dbid, encoded_path, 1 if is_explicit else 0, encoded_memo_before))
 
     def replace_fsobject_inputs(self, tool_instance_dbid: int,
                                 info_by_by_fsobject_dbid: typing.Dict[str, typing.Tuple[bool, bytes]]):
@@ -228,9 +238,9 @@ class Database:
                 self._connection.commit()
                 cursor.execute("BEGIN")
                 cursor.execute("DELETE FROM ToolInstFsInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
-                for fsobject_dbid, info in info_by_by_fsobject_dbid.items():
-                    is_explicit, memo_before = info
-                    self.update_fsobject_input(tool_instance_dbid, fsobject_dbid, is_explicit, memo_before)
+                for encoded_path, info in info_by_by_fsobject_dbid.items():
+                    is_explicit, encoded_memo_before = info
+                    self.update_fsobject_input(tool_instance_dbid, encoded_path, is_explicit, encoded_memo_before)
             except:
                 self._connection.rollback()
                 raise
@@ -238,7 +248,7 @@ class Database:
     def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: typing.Optional[bool] = None) \
             -> typing.Dict[str, typing.Tuple[bool, bytes]]:
         """
-        Return the *fsobject_dbid* and the optional memo of all filesystem objects in the managed tree that are
+        Return the *encoded_path* and the optional encoded memo of all filesystem objects in the managed tree that are
         input dependencies of the tool instance *tool_instance_dbid*.
 
         If *is_explicit_filter* is not ``None``, only the dependencies with *is_explicit* = *is_explicit_filter* are
@@ -252,50 +262,52 @@ class Database:
 
             if is_explicit_filter is None:
                 rows = cursor.execute(
-                    "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput WHERE tool_inst_dbid == ?",
+                    "SELECT path, is_explicit, memo_before FROM ToolInstFsInput WHERE tool_inst_dbid == ?",
                     (tool_instance_dbid,)).fetchall()
             else:
                 rows = cursor.execute(
-                    "SELECT fsobject_dbid, is_explicit, memo_before FROM ToolInstFsInput "
+                    "SELECT path, is_explicit, memo_before FROM ToolInstFsInput "
                     "WHERE tool_inst_dbid == ? AND is_explicit == ?",
                     (tool_instance_dbid, 1 if is_explicit_filter else 0)).fetchall()
 
-        return {fsobject_dbid: (bool(is_explicit), memo_before) for fsobject_dbid, is_explicit, memo_before in rows}
+        return {
+            encoded_path: (bool(is_explicit), encoded_memo_before)
+            for encoded_path, is_explicit, encoded_memo_before in rows
+        }
 
-    def declare_fsobject_input_as_modified(self, modified_fsobject_dbid: str):
+    def declare_fsobject_input_as_modified(self, modified_encoded_path: str):
         """
         Declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
         modified if
 
-          - their *fsobject_dbid* = *modified_fsobject_dbid* or
+          - their *encoded_path* = *modified_encoded_path* or
           - their managed tree path is a prefix of the path of the filesystem object identified
-            by *modified_fsobject_dbid*
+            by *modified_encoded_path*
 
         Includes a :meth:`commit()` at the start.
         In case of an exception, the information on input dependencies in the run-database remains unchanged.
 
         Note: call :meth:`commit()` before the filesystem object is actually modified.
         """
-        if not is_fsobject_dbid(modified_fsobject_dbid):
-            raise ValueError(f"not a valid 'fsobject_dbid': {modified_fsobject_dbid!r}")
+        if not is_encoded_path(modified_encoded_path):
+            raise ValueError(f"not a valid 'encoded_path': {modified_encoded_path!r}")
 
         with self._cursor_with_exception_mapping() as cursor:
             try:
                 self._connection.commit()
                 cursor.execute("BEGIN")
 
-                # remove all explicit dependencies (of all tool instances) whose '`'fsobject_dbid' have
-                # 'modified_fsobject_dbid' as a prefix
+                # remove all explicit dependencies (of all tool instances) whose '`'path' have
+                # 'modified_encoded_path' as a prefix
                 cursor.execute(
-                    "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(fsobject_dbid,?) == 1",
-                    (modified_fsobject_dbid,))
+                    "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(path, ?) == 1",
+                    (modified_encoded_path,))
 
                 # replace the 'memo_before' all non-explicit dependencies (of all tool instances) whose
-                # 'fsobject_dbid' have 'modified_fsobject_dbid' as a prefix by NULL
+                # 'encoded_path' have 'modified_encoded_path' as a prefix by NULL
                 cursor.execute(
-                    "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 "
-                    "AND instr(fsobject_dbid,?) == 1",
-                    (modified_fsobject_dbid,))
+                    "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 AND instr(path, ?) == 1",
+                    (modified_encoded_path,))
 
                 self._connection.commit()
             except:

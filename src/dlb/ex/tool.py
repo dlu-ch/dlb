@@ -79,7 +79,7 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
             )
             raise DependencyCheckError(msg) from None
 
-        fsobject_dbid = rundb.build_fsobject_dbid(path)
+        fsobject_dbid = rundb.encode_path(path)
         memo = memo_by_fsobject_dbid.get(fsobject_dbid)
 
         if memo is None:
