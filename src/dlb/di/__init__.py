@@ -9,11 +9,13 @@ This module uses levels of the 'logging' module.
 __all__ = ()
 
 import sys
+import math
 import re
 import time
 import textwrap
 import logging
 from typing import Optional, Dict, List
+from .. import ut
 
 
 _RESERVED_TITLEEND_CHARACTERS = " .]"
@@ -30,6 +32,20 @@ _lowest_unsuppressed_level: int = logging.INFO
 
 # time.monotonic_ns() of the first output message with enabled timing information
 _first_monotonic_ns: Optional[int] = None
+
+
+def _get_time_resolution():
+    dt = time.get_clock_info('monotonic').resolution
+    if dt > 0.0:
+        n = math.ceil(-math.log10(dt)) + 1
+    else:
+        n = 0
+    return max(1, min(6, n))
+
+
+# number of decimal places of relative time in seconds
+_decimal_places_for_time: int = _get_time_resolution()
+del _get_time_resolution
 
 
 # these correspond to the first characters of the standard logging.getLevelName[...]
@@ -214,7 +230,8 @@ def _get_relative_monotonic_ns(monotonic_ns):
 def _get_relative_time_suffix(monotonic_ns: Optional[int]):
     if monotonic_ns is None:
         return ''
-    return ' [+{:.6f}s]'.format(_get_relative_monotonic_ns(monotonic_ns) / 1e9)
+
+    return " [+{}s]".format(ut.format_time_ns(_get_relative_monotonic_ns(monotonic_ns), _decimal_places_for_time))
 
 
 class Cluster:

@@ -93,7 +93,7 @@ An optional relative file path and 1-based line number of an *affected regular f
 
 The timing information is optional and can be enabled per message. It contains the time elapsed in seconds since the
 first time a message with enabled timing information was output. Later outputs of timing information never show earlier
-times.
+times. The number of decimal places is the same for all output timing information on a given platform and is at most 6.
 
 .. productionlist:: diagmessage
    relative_time_suffix: '[+' `time_since_first_time_use` ']'
