@@ -63,3 +63,30 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
                     print(f'changed current working directory of process back to {self._original_cwd!r}')
             finally:
                 shutil.rmtree(self._temp_dir_path, ignore_errors=True)
+
+
+class TemporaryDirectoryWithChmodTestCase(TemporaryDirectoryTestCase):
+
+    def setUp(self):
+        super().setUp()
+
+        probe_dir = pathlib.Path('chmodprobe')
+        probe_dir.mkdir()
+
+        probe_dir.chmod(0o000)
+        probe_file = probe_dir / 'x'
+
+        try:
+            try:
+                with probe_file.open('xb'):
+                    pass
+            except OSError:
+                pass
+            else:
+                self.assertNotEqual(os.name, 'posix', "on any POSIX system permission should be denied")
+                raise unittest.SkipTest
+        finally:
+            probe_dir.chmod(0o700)
+            if probe_file.exists():
+                probe_file.unlink()
+            probe_dir.rmdir()

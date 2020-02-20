@@ -29,40 +29,47 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirector
 
     def test_fails_for_inexisting_inputfile(self):
         os.mkdir('.dlbroot')
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        regex = (
+            r"\Ainput dependency 'source_file' contains a path of an non-existing "
+            r"filesystem object: 'src[\\/]+a\.cpp'\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='src/a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
                 t.run()
-        msg = "input dependency 'source_file' contains a path of an non-existing filesystem object: 'src/a.cpp'"
-        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_nonnormalized_inputfile_path(self):
+        os.mkdir('.dlbroot')
+
+        regex = (
+            r"(?m)\A"
+            r"input dependency 'source_file' contains a path that is not a managed tree path: '\.\.[\\/]+a\.cpp'\n"
+            r"  | reason: is an upwards path: '\.\.[\\/]+a\.cpp'\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+            with dlb.ex.Context():
+                t = ATool(source_file='../a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
+                t.run()
+
+
+class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
     def test_fails_for_inaccessible_inputfile(self):
         os.mkdir('.dlbroot')
         os.mkdir('src')
         os.chmod('src', 0o000)
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+
+        regex = (
+            r"(?m)\A"
+            r"input dependency 'source_file' contains a path of an inaccessible filesystem object: 'src[\\/]+a\.cpp'\n"
+            r"  \| reason: .*\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='src/a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
                 t.run()
-        regex = (
-            r"(?m)\A"
-            r"input dependency 'source_file' contains a path of an inaccessible filesystem object: 'src/a.cpp'\n"
-            r"  \| reason: .*\Z"
-        )
-        self.assertRegex(str(cm.exception), regex)
-        os.chmod('src', 0o600)
 
-    def test_fails_for_nonnormalized_inputfile_path(self):
-        os.mkdir('.dlbroot')
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
-            with dlb.ex.Context():
-                t = ATool(source_file='../a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
-                t.run()
-        msg = (
-            "input dependency 'source_file' contains a path that is not a managed tree path: '../a.cpp'\n"
-            "  | reason: is an upwards path: '../a.cpp'"
-        )
-        self.assertEqual(msg, str(cm.exception))
+        os.chmod('src', 0o600)
 
 
 class RunTwiceTest(tools_for_test.TemporaryDirectoryTestCase):

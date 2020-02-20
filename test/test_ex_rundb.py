@@ -36,17 +36,13 @@ class CreationTest(tools_for_test.TemporaryDirectoryTestCase):
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')):
             pass
 
+
+class CreationWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+
     def test_fails_with_meaningful_message_on_permission_problem_when_nonexisting(self):
         os.mkdir('t')
         os.chmod('t', 0x000)
-        try:
-            with open(os.path.join('t', 'x'), 'xb'):
-                pass
-        except OSError:
-            pass
-        else:
-            self.assertNotEqual(os.name, 'posix', "on any POSIX system permission should be denied")
-            raise unittest.SkipTest
+
         try:
             regex = (
                 r"(?m)\A"

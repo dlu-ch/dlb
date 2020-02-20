@@ -194,6 +194,7 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
         sr1 = wdr_t.stat()
         if stat.S_IMODE(sr0.st_mode) == stat.S_IMODE(sr1.st_mode):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, the permission should have changed')
+            raise unittest.SkipTest
 
         with dlb.ex.Context():
             self.assertTrue(wdr_t.is_dir())
@@ -250,18 +251,20 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertTrue((wdr / 'o').is_file())
             self.assertFalse((wdr / 'O').exists())
 
+
+class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+
     def test_meaningful_exception_on_permission_error_while_setup(self):
         wdr = pathlib.Path('.dlbroot')
         wdr.mkdir()
         wdr_t = wdr / 't'
         wdr_t.mkdir()
-        (wdr_t / 'c').mkdir()
         wdr_t.chmod(0o000)
 
         regex = (
             r"(?m)\A"
             r"failed to setup management tree for '.*'\n"
-            r"  \| reason: .*'.+[/\\]+\.dlbroot[/\\]+t'.*\Z"
+            r"  \| reason: .*'.+[\/\]+\.dlbroot[\\/]+t'.*\Z"
         )
         with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
             with dlb.ex.Context():
@@ -283,6 +286,7 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
             with dlb.ex.Context():
                 (wdr_t / 'c').mkdir()
                 wdr_t.chmod(0o000)
+
         wdr_t.chmod(0o777)
 
 
@@ -407,13 +411,16 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
         regex = (
             r"(?m)\A"
             r"cannot acquire lock for exclusive access to working tree '.*'\n"
-            r"  \| reason: .*'.+[/\\]+\.dlbroot[/\\]+lock'.*\n"
+            r"  \| reason: .*'.+[\\/]+\.dlbroot[\\/]+lock'.*\n"
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
-            r"remove '.*[/\\]+\.dlbroot[/\\]+lock'\Z"
+            r"remove '.*[\\/]+\.dlbroot[\\/]+lock'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
             with dlb.ex.Context():
                 pass
+
+
+class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
     def test_meaningful_exception_on_permission_error(self):
         wdr = pathlib.Path('.dlbroot')
@@ -423,9 +430,9 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
         regex = (
             r"(?m)\A"
             r"cannot acquire lock for exclusive access to working tree '.*'\n"
-            r"  \| reason: .*'.+[/\\]+\.dlbroot[/\\]+lock'.*\n"
+            r"  \| reason: .*'.+[\\/]+\.dlbroot[\\/]+lock'.*\n"
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
-            r"remove '.*[/\\]+\.dlbroot[/\\]+lock'\Z"
+            r"remove '.*[\\/]+\.dlbroot[\\/]+lock'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
             with dlb.ex.Context():
