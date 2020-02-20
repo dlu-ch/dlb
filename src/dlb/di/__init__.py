@@ -28,8 +28,8 @@ _clusters = []
 
 _lowest_unsuppressed_level: int = logging.INFO
 
-# time.time_ns() of the first output message with enabled timing information
-_first_time_ns: Optional[int] = None
+# time.monotonic_ns() of the first output message with enabled timing information
+_first_monotonic_ns: Optional[int] = None
 
 
 # these correspond to the first characters of the standard logging.getLevelName[...]
@@ -204,17 +204,17 @@ def _append_to_title_of_formatted(formatted_message: str, suffix: str) -> str:
     return initial_line[:-1] + suffix + initial_line[-1] + lf + rest
 
 
-def _get_relative_time_ns(time_ns):
-    global _first_time_ns
-    if _first_time_ns is None:
-        _first_time_ns = time_ns
-    return max(0, time_ns - _first_time_ns)
+def _get_relative_monotonic_ns(monotonic_ns):
+    global _first_monotonic_ns
+    if _first_monotonic_ns is None:
+        _first_monotonic_ns = monotonic_ns
+    return max(0, monotonic_ns - _first_monotonic_ns)
 
 
-def _get_relative_time_suffix(time_ns: Optional[int]):
-    if time_ns is None:
+def _get_relative_time_suffix(monotonic_ns: Optional[int]):
+    if monotonic_ns is None:
         return ''
-    return ' [+{:.6f}s]'.format(_get_relative_time_ns(time_ns) / 1e9)
+    return ' [+{:.6f}s]'.format(_get_relative_monotonic_ns(monotonic_ns) / 1e9)
 
 
 class Cluster:
@@ -224,7 +224,7 @@ class Cluster:
         self._formatted_title = _format_messages(_prefix=get_level_indicator(level) + ' ', title=message)[0]
         self._is_progress = bool(is_progress)
         self._with_time: bool = bool(with_time)
-        self._time_ns: Optional[int] = None
+        self._monotonic_ns: Optional[int] = None
         self._did_inform: bool = False
         self._nesting_level: Optional[int] = None  # set in __enter__()
 
@@ -237,7 +237,7 @@ class Cluster:
 
             title = self._formatted_title
             suffix = '...' if self._is_progress else ''
-            suffix += _get_relative_time_suffix(self._time_ns)
+            suffix += _get_relative_time_suffix(self._monotonic_ns)
             if suffix:
                 title = _append_to_title_of_formatted(title, suffix)
 
@@ -248,7 +248,7 @@ class Cluster:
     def __enter__(self) -> None:
         self._nesting_level = len(_clusters)
         if self._with_time:
-            self._time_ns = time.time_ns()
+            self._monotonic_ns = time.monotonic_ns()
         if is_unsuppressed_level(self._level):
             self.inform_title()
         _clusters.append(self)
@@ -268,8 +268,8 @@ class Cluster:
                     l=get_level_indicator(max(self._level, logging.ERROR)),
                     e=exc_val.__class__.__qualname__)
 
-            if self._time_ns is not None:
-                suffix = _get_relative_time_suffix(time.time_ns())
+            if self._monotonic_ns is not None:
+                suffix = _get_relative_time_suffix(time.monotonic_ns())
                 result = _append_to_title_of_formatted(result, suffix)
 
             indented_result = _indent_message(result, nesting + 1)
@@ -281,7 +281,7 @@ def inform(message, *, level: int = logging.INFO, with_time: bool = False) -> bo
 
     indented_message = _indent_message(format_message(message, level=level), len(_clusters))
     if with_time:
-        suffix = _get_relative_time_suffix(time.time_ns())
+        suffix = _get_relative_time_suffix(time.monotonic_ns())
         indented_message = _append_to_title_of_formatted(indented_message, suffix)
 
     if not is_unsuppressed_level(level):

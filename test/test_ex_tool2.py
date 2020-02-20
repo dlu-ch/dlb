@@ -355,13 +355,13 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
 
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
-            t = time.time_ns()
+            t = time.monotonic_ns()
             info1 = dlb.ex.tool.get_and_register_tool_info(w.E)
-            dt1 = time.time_ns() - t
+            dt1 = time.monotonic_ns() - t
 
-            t = time.time_ns()
+            t = time.monotonic_ns()
             info2 = dlb.ex.tool.get_and_register_tool_info(w.E)
-            dt2 = time.time_ns() - t
+            dt2 = time.monotonic_ns() - t
 
         print(f'get_and_register_tool_info(): {dt1/1e3:.0f} us (first call), {dt2/1e3:.0f} us (second call)')
 

@@ -92,7 +92,8 @@ An optional relative file path and 1-based line number of an *affected regular f
    progress_suffix: '.' | '...'
 
 The timing information is optional and can be enabled per message. It contains the time elapsed in seconds since the
-first time a message with enabled timing information was output.
+first time a message with enabled timing information was output. Later outputs of timing information never show earlier
+times.
 
 .. productionlist:: diagmessage
    relative_time_suffix: '[+' `time_since_first_time_use` ']'

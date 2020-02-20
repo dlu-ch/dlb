@@ -212,8 +212,8 @@ class ClusterTest(unittest.TestCase):
 
     def setUp(self):
         dlb.di.set_threshold_level(logging.INFO)
-        _ = dlb.di._first_time_ns  # make sure attribute exists
-        dlb.di._first_time_ns = None
+        _ = dlb.di._first_monotonic_ns  # make sure attribute exists
+        dlb.di._first_monotonic_ns = None
 
     def test_works_as_context_manager(self):
         output = io.StringIO()
@@ -377,8 +377,8 @@ class UsageExampleTest(unittest.TestCase):
 
     def setUp(self):
         dlb.di.set_threshold_level(logging.INFO)
-        _ = dlb.di._first_time_ns  # make sure attribute exists
-        dlb.di._first_time_ns = None
+        _ = dlb.di._first_monotonic_ns  # make sure attribute exists
+        dlb.di._first_monotonic_ns = None
 
     def test_example1(self):
         output = io.StringIO()
