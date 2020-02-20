@@ -381,6 +381,7 @@ class _RootSpecifics:
             p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
         else:
             fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
+            os.close(fd)
         try:
             p = self._path_cls(pathlib.Path(p_str), is_dir=is_dir)
         except ValueError as e:
