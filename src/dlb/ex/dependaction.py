@@ -14,9 +14,9 @@ __all__ = (
 import stat
 import marshal
 from typing import Type, Set, Optional, Sequence, Any, Union
+from .. import ut
 from .. import fs
 from ..fs import manip
-from . import util
 from . import depend
 
 
@@ -46,7 +46,7 @@ class Action:
         # Two instances of the same dependency class, whose properties differ, must return different
         # permanent local value ids if the meaning of this validated values `validated_values` of a concrete dependency
         # for a running tool instance depends on the difference.
-        return marshal.dumps(util.make_fundamental(validated_values, True))
+        return marshal.dumps(ut.make_fundamental(validated_values, True))
 
     # overwrite and prepend super().get_permanent_local_instance_id() to return value
     def get_permanent_local_instance_id(self) -> bytes:

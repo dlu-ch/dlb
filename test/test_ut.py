@@ -7,7 +7,7 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-import dlb.ex.util
+import dlb.ut
 import collections
 import unittest
 
@@ -15,32 +15,32 @@ import unittest
 class MakeFundamentalTest(unittest.TestCase):
 
     def test_returns_none_for_none(self):
-        self.assertIsNone(dlb.ex.util.make_fundamental(None))
+        self.assertIsNone(dlb.ut.make_fundamental(None))
 
     def test_returns_frozenset_for_set(self):
         s = {1, 2, 3}
-        r = dlb.ex.util.make_fundamental(s)
+        r = dlb.ut.make_fundamental(s)
         self.assertIsInstance(r, frozenset)
         self.assertEqual(r, s)
 
-        r = dlb.ex.util.make_fundamental(s, True)
+        r = dlb.ut.make_fundamental(s, True)
         self.assertEqual((1, 2, 3), r)
 
     def test_returns_dict_for_ordereddict(self):
         d = collections.OrderedDict([(1, 2), (3, 4)])
 
-        r = dlb.ex.util.make_fundamental(d)
+        r = dlb.ut.make_fundamental(d)
         self.assertIsInstance(r, dict)
         self.assertEqual(r, d)
 
-        r = dlb.ex.util.make_fundamental(d, True)
+        r = dlb.ut.make_fundamental(d, True)
         self.assertEqual(((1, 2), (3, 4)), r)
 
     def test_fails_for_recursive_list(self):
         l = [1]
         l.append(l)
         with self.assertRaises(TypeError):
-            dlb.ex.util.make_fundamental(dlb.ex.util.make_fundamental(l))
+            dlb.ut.make_fundamental(dlb.ut.make_fundamental(l))
 
     def test_example_is_correct(self):
         s = [
@@ -49,14 +49,14 @@ class MakeFundamentalTest(unittest.TestCase):
             {b'abc': None}
         ]
 
-        r = dlb.ex.util.make_fundamental(s)
+        r = dlb.ut.make_fundamental(s)
         self.assertEqual((
             (1, 2.5, False),
             (frozenset([6, 9, 13]), ('hello',), complex(7, 8)),
             {b'abc': None}
         ), r)
 
-        r = dlb.ex.util.make_fundamental(s, True)
+        r = dlb.ut.make_fundamental(s, True)
         self.assertEqual((
             (1, 2.5, False),
             ((6, 9, 13), ('hello',), complex(7, 8)),
@@ -68,25 +68,25 @@ class MakeFundamentalTest(unittest.TestCase):
             pass
 
         with self.assertRaises(TypeError):
-            dlb.ex.util.make_fundamental(A())
+            dlb.ut.make_fundamental(A())
 
 
 class ExceptionToLine(unittest.TestCase):
 
     def test_uses_classname_if_no_message(self):
-        msg = dlb.ex.util.exception_to_line(Exception())
+        msg = dlb.ut.exception_to_line(Exception())
         self.assertEqual('builtins.Exception', msg)
 
-        msg = dlb.ex.util.exception_to_line(Exception('\t    '))
+        msg = dlb.ut.exception_to_line(Exception('\t    '))
         self.assertEqual('builtins.Exception', msg)
 
-        msg = dlb.ex.util.exception_to_line(Exception(' \rA'))
+        msg = dlb.ut.exception_to_line(Exception(' \rA'))
         self.assertEqual('builtins.Exception', msg)
 
     def test_uses_first_line_if_message(self):
-        msg = dlb.ex.util.exception_to_line(Exception('  hehe  \r\n'))
+        msg = dlb.ut.exception_to_line(Exception('  hehe  \r\n'))
         self.assertEqual('hehe', msg)
 
     def test_uses_classname_and_first_line_if_message_and_forced(self):
-        msg = dlb.ex.util.exception_to_line(Exception('  hehe  \r\n'), True)
+        msg = dlb.ut.exception_to_line(Exception('  hehe  \r\n'), True)
         self.assertEqual('builtins.Exception: hehe', msg)

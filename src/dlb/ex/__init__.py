@@ -11,14 +11,13 @@ from .tool import *
 #
 #                 depends on
 #
-#     util           ->
 #     mult           ->
-#     tmpl           ->   util
+#     tmpl           ->
 #
-#     platform       ->   util
-#     rundb          ->                platform
-#     context        ->   util                   rundb
+#     platform       ->
+#     rundb          ->         platform
+#     context        ->                   rundb
 #
-#     depend         ->          mult                   context
-#     dependaction   ->   util                                    depend
-#     tool           ->   util                          context   depend   dependaction
+#     depend         ->   mult                   context
+#     dependaction   ->                                    depend
+#     tool           ->                          context   depend   dependaction

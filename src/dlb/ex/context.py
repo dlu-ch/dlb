@@ -23,9 +23,9 @@ import stat
 import time
 import tempfile
 from typing import Pattern, Type, Optional, Dict, Union
+from .. import ut
 from .. import fs
 from ..fs import manip
-from . import util
 from . import rundb
 assert sys.version_info >= (3, 7)
 
@@ -256,9 +256,9 @@ class _RootSpecifics:
         try:
             self._working_tree_path = path_cls(path_cls.Native(working_tree_path), is_dir=True)
         except (ValueError, OSError) as e:
-            msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
+            msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
                 f'current directory violates imposed path restrictions\n'
-                f'  | reason: {util.exception_to_line(e)}\n'
+                f'  | reason: {ut.exception_to_line(e)}\n'
                 f'  | move the working directory or choose a less restrictive path class for the root context'
             )
             raise ValueError(msg) from None
@@ -286,7 +286,7 @@ class _RootSpecifics:
         # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
 
         if not (real_working_tree_path == self._working_tree_path.native.raw):
-            msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
+            msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
                 f'path of current directory contains unresolved symbolic links\n'
                 f'  | move the working tree'
             )
@@ -308,7 +308,7 @@ class _RootSpecifics:
         except OSError as e:
             msg = (
                 f'cannot acquire lock for exclusive access to working tree {str(working_tree_path)!r}\n'
-                f'  | reason: {util.exception_to_line(e)}\n'
+                f'  | reason: {ut.exception_to_line(e)}\n'
                 f'  | to break the lock (if you are sure no other dlb process is running): '
                 f'remove {str(lock_dir_path)!r}'
             )
@@ -357,7 +357,7 @@ class _RootSpecifics:
             # rundb.DatabaseError on error may have multi-line message
             msg = (
                 f'failed to setup management tree for {str(working_tree_path)!r}\n'
-                f'  | reason: {util.exception_to_line(e)}'
+                f'  | reason: {ut.exception_to_line(e)}'
             )
             raise ManagementTreeError(msg) from None
 
@@ -387,7 +387,7 @@ class _RootSpecifics:
         except ValueError as e:
             msg = (
                 f'path violates imposed path restrictions\n'
-                f'  | reason: {util.exception_to_line(e)}\n'
+                f'  | reason: {ut.exception_to_line(e)}\n'
                 f"  | check specified 'prefix' and 'suffix'"
             )
             raise ValueError(msg) from None
@@ -516,7 +516,7 @@ class _RootSpecifics:
             if isinstance(first_exception, (OSError, rundb.DatabaseError)):
                 msg = (
                     f'failed to cleanup management tree for {str(self._working_tree_path.native)!r}\n'
-                    f'  | reason: {util.exception_to_line(first_exception)}'
+                    f'  | reason: {ut.exception_to_line(first_exception)}'
                 )
                 raise ManagementTreeError(msg) from None
             else:
@@ -525,7 +525,7 @@ class _RootSpecifics:
 
 _EnvVarDict.__name__ = 'EnvVarDict'
 _EnvVarDict.__qualname__ = 'Context.EnvVarDict'
-util.set_module_name_to_parent(_EnvVarDict)
+ut.set_module_name_to_parent(_EnvVarDict)
 
 
 class Context(metaclass=_ContextMeta):
@@ -574,9 +574,9 @@ class Context(metaclass=_ContextMeta):
                 # noinspection PyCallingNonCallable
                 self._path_cls(self.root_path)
             except ValueError as e:
-                msg = (  # assume that util.exception_to_string(e) contains the working_tree_path
+                msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
                     f"working tree's root path violates path restrictions imposed by this context\n"
-                    f'  | reason: {util.exception_to_line(e)}\n'
+                    f'  | reason: {ut.exception_to_line(e)}\n'
                     f'  | move the working directory or choose a less restrictive path class for the root context'
                 )
                 raise ValueError(msg) from None
@@ -607,4 +607,4 @@ def _get_rundb() -> rundb.Database:
     return db
 
 
-util.set_module_name_to_parent_by_name(vars(), __all__)
+ut.set_module_name_to_parent_by_name(vars(), __all__)

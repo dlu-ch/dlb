@@ -16,10 +16,10 @@ import logging
 import inspect
 import marshal
 from typing import Type, Optional, Dict, Tuple
+from .. import ut
 from .. import fs
 from ..fs import manip
 from .. import di
-from . import util
 from . import rundb
 from . import context as context_
 from . import depend
@@ -77,7 +77,7 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
             msg = (
                 f"input dependency {name!r} contains a path that is not a managed tree path: "
                 f"{path.as_string()!r}\n"
-                f"  | reason: {util.exception_to_line(e)}"
+                f"  | reason: {ut.exception_to_line(e)}"
             )
             raise DependencyCheckError(msg) from None
 
@@ -96,7 +96,7 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
         msg = (
             f"input dependency {name!r} contains a path of an "
             f"inaccessible filesystem object: {path.as_string()!r}\n"
-            f"  | reason: {util.exception_to_line(e)}"
+            f"  | reason: {ut.exception_to_line(e)}"
         )
         raise DependencyCheckError(msg) from None
 
@@ -310,7 +310,7 @@ class _ToolBase:
                         msg = (
                             f"output dependency {name!r} contains a path that is not a managed tree path: "
                             f"{path.as_string()!r}\n"
-                            f"  | reason: {util.exception_to_line(e)}"
+                            f"  | reason: {ut.exception_to_line(e)}"
                         )
                         raise DependencyCheckError(msg) from None
                     encoded_path = rundb.encode_path(p)
@@ -629,4 +629,4 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
 
 # noinspection PyCallByClass
 type.__setattr__(Tool, '__module__', '.'.join(_ToolBase.__module__.split('.')[:-1]))
-util.set_module_name_to_parent_by_name(vars(), [n for n in __all__ if not 'Tool'])
+ut.set_module_name_to_parent_by_name(vars(), [n for n in __all__ if not 'Tool'])

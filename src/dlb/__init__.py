@@ -11,6 +11,7 @@ from .version import __version__
 #
 #                 depends on
 #
+#     ut             ->
 #     fs             ->
-#     di             ->   fs
-#     ex             ->   fs  di
+#     di             ->   fs  ut
+#     ex             ->   fs  ut  di

@@ -12,7 +12,7 @@ import collections
 import collections.abc
 import enum
 import inspect
-from . import util
+from .. import ut
 assert sys.version_info >= (3, 7)
 
 
@@ -710,4 +710,4 @@ class TokensTemplate:
         return scanned_root
 
 
-util.set_module_name_to_parent_by_name(vars(), __all__)
+ut.set_module_name_to_parent_by_name(vars(), __all__)

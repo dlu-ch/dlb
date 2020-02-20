@@ -11,9 +11,9 @@ import dataclasses
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
 import sqlite3
 from typing import Optional, Dict, Tuple
+from .. import ut
 from .. import fs
 from ..fs import manip
-from . import util
 from . import platform
 
 
@@ -148,7 +148,7 @@ class _CursorWithExceptionMapping:
 
             if self._summary_message_line:
                 lines.append(f"reason: {self._summary_message_line}")
-            lines.append(util.exception_to_line(exc_val, True))
+            lines.append(ut.exception_to_line(exc_val, True))
             if self._solution_message_line:
                 lines.append(self._solution_message_line)
 
@@ -180,7 +180,7 @@ class Database:
                 pass
 
             state_msg = 'existing' if exists else 'non-existing'
-            reason = util.exception_to_line(e, True)
+            reason = ut.exception_to_line(e, True)
             msg = (
                 f"could not open {state_msg} run-database: {rundb_abs_path!r}\n"
                 f"  | reason: {reason}\n"
