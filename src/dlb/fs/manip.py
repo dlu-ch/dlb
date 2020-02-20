@@ -171,7 +171,7 @@ def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) 
 
 
 def _normalize_dotdot(path: PP, ref_dir_path: Union[None, str, os.PathLike]) -> PP:
-    path_components = path.parts
+    path_components = path.native.raw.parts if isinstance(path, path_.Path) else path.parts
 
     root = ()
     nonroot_components = path_components

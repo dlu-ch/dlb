@@ -382,7 +382,7 @@ class _RootSpecifics:
         else:
             fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
         try:
-            p = self._path_cls(p_str, is_dir=is_dir)
+            p = self._path_cls(pathlib.Path(p_str), is_dir=is_dir)
         except ValueError as e:
             msg = (
                 f'path violates imposed path restrictions\n'
@@ -400,7 +400,7 @@ class _RootSpecifics:
 
     def _strip_working_tree_root_from(self, path: pathlib.Path) -> Optional[pathlib.Path]:
         components = path.parts
-        root_path_components = self._working_tree_path.parts
+        root_path_components = self._working_tree_path.native.raw.parts
         if components[:len(root_path_components)] == root_path_components:
             return pathlib.Path(*components[len(root_path_components):])
 
@@ -437,7 +437,7 @@ class _RootSpecifics:
         is_dir = None
         if not existing:
             try:
-                is_dir = stat.S_ISDIR((self._working_tree_path.pure_posix / rel_path).lstat().st_mode)
+                is_dir = stat.S_ISDIR((self._working_tree_path.native.raw / rel_path).lstat().st_mode)
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
 
