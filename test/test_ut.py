@@ -71,7 +71,7 @@ class MakeFundamentalTest(unittest.TestCase):
             dlb.ut.make_fundamental(A())
 
 
-class ExceptionToLine(unittest.TestCase):
+class ExceptionToLineTest(unittest.TestCase):
 
     def test_uses_classname_if_no_message(self):
         msg = dlb.ut.exception_to_line(Exception())
@@ -90,3 +90,29 @@ class ExceptionToLine(unittest.TestCase):
     def test_uses_classname_and_first_line_if_message_and_forced(self):
         msg = dlb.ut.exception_to_line(Exception('  hehe  \r\n'), True)
         self.assertEqual('builtins.Exception: hehe', msg)
+
+
+class FormatTimeNsTest(unittest.TestCase):
+
+    def test_zero_is_correct(self):
+        self.assertEqual('0.000000000', dlb.ut.format_time_ns(0))
+        self.assertEqual('0.000000000000', dlb.ut.format_time_ns(0, 12))
+        self.assertEqual('0.0', dlb.ut.format_time_ns(0, -12))
+
+    def test_small_positive_is_correct(self):
+        self.assertEqual('0.000000123', dlb.ut.format_time_ns(123))
+        self.assertEqual('0.000000123000', dlb.ut.format_time_ns(123, 12))
+        self.assertEqual('0.0000001', dlb.ut.format_time_ns(123, 7))
+        self.assertEqual('0.0', dlb.ut.format_time_ns(123, -12))
+
+    def test_small_negative_is_correct(self):
+        self.assertEqual('-0.000000123', dlb.ut.format_time_ns(-123))
+        self.assertEqual('-0.000000123000', dlb.ut.format_time_ns(-123, 12))
+        self.assertEqual('-0.0000001', dlb.ut.format_time_ns(-123, 7))
+        self.assertEqual('-0.0', dlb.ut.format_time_ns(-123, -12))
+
+    def test_large_positive_is_correct(self):
+        self.assertEqual('1267650600228229401496.703205376', dlb.ut.format_time_ns(2**100))
+
+    def test_large_negative_is_correct(self):
+        self.assertEqual('-1267650600228229401496.703205376', dlb.ut.format_time_ns(-2**100))

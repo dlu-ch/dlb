@@ -80,3 +80,28 @@ def exception_to_line(exc: Exception, force_classname: bool = False):
         parts.append(first_line)
 
     return ': '.join(parts)
+
+
+def format_time_ns(time_ns: int, number_of_decimal_places: int = 9):
+    """
+    Returns a string representation for a time in seconds.
+    It is exact for *n* >= 9 and rounded towards 0 for *n* < 9.
+
+    :param time_ns: an integer like from :func:`time.monotonic_ns()`
+    :param number_of_decimal_places: number of decimal places; a value smaller than 1 is treated like 1
+    :return: str
+    """
+
+    time_ns = int(time_ns)
+    if time_ns < 0:
+        return '-' + format_time_ns(-time_ns, number_of_decimal_places)  # -0.0... is possible
+
+    s = str(time_ns).rjust(10, '0')
+    i = len(s) - 9
+    s = s[:i] + '.' + s[i:]  # has exactly 9 decimal places
+
+    number_of_decimal_places = max(1, int(number_of_decimal_places))
+    m = number_of_decimal_places - 9  # number of decimal places to remove
+    if m >= 0:
+        return s + '0' * m
+    return s[:m]  # round towards zero
