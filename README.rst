@@ -3,7 +3,7 @@
 Explicit is better than implicit
 ================================
 
-|batch-unittest| |batch-doc|
+|batch-unittest| |batch-doc| |batch-cov|
 
 dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool that does not try to mimic
 `Make <https://en.wikipedia.org/wiki/Make_%28software%29>`_, but brings the benefits of object-oriented languages
@@ -26,3 +26,7 @@ See here for more:
 .. |batch-doc| image:: https://readthedocs.org/projects/dlb/badge/?version=latest
    :alt: Documentation status (Sphinx)
    :target: https://dlb.readthedocs.io/
+
+.. |batch-cov| image:: https://coveralls.io/repos/github/dlu-ch/dlb/badge.svg?branch=master
+   :alt: Test coverage status
+   :target: https://coveralls.io/github/dlu-ch/dlb?branch=master
