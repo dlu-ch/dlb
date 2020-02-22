@@ -229,7 +229,7 @@ class EnvVarInput(ConcreteDependency, Input):
         if not restriction.fullmatch(example):
             raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
 
-        self._restriction = restriction  # type: typing.Pattern
+        self._restriction: Pattern = restriction
         self._example = example
 
     @property

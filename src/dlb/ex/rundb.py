@@ -45,7 +45,7 @@ from . import platform
 #   - A round-trip for typical data takes abound 5 to 10 as long with json as with marshal
 #   - The serialized data is of about the same length; some data is a bit shorter with marshal, some a bit longer.
 
-# TODO remove
+
 def is_encoded_path(encoded_path: str) -> bool:
     if not isinstance(encoded_path, str):
         return False
@@ -157,7 +157,7 @@ class _CursorWithExceptionMapping:
 
 class Database:
 
-    def __init__(self, rundb_path: str, suggestion_if_database_error: str = ''):
+    def __init__(self, rundb_path: os.PathLike, suggestion_if_database_error: str = ''):
         """
         Open or create the database with path *rundb_path*.
 

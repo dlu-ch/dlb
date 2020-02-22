@@ -88,8 +88,8 @@ class _EnvVarDict:
             self._value_by_name = dict()
         else:
             self._top_value_by_name = dict()
-            self._value_by_name = dict(parent._value_by_name)  # type: typing.Dict[str, str]
-        self._restriction_by_name = dict()  # type: typing.Dict[str, typing.Pattern]
+            self._value_by_name = dict(parent._value_by_name)
+        self._restriction_by_name: Dict[str, Pattern] = dict()
 
     def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):
         self._check_non_empty_str(name=name)
@@ -273,7 +273,7 @@ class _RootSpecifics:
 
         msg = (
             f'current directory is no working tree: {str(working_tree_path)!r}\n'
-            f'  | reason: does not contain a directory {_MANAGEMENTTREE_DIR_NAME!r} that is not a symbolic link'
+            f'  | reason: does not contain a directory {_MANAGEMENTTREE_DIR_NAME!r} (that is not a symbolic link)'
         )
         try:
             mode = management_tree_path.lstat().st_mode
@@ -347,7 +347,7 @@ class _RootSpecifics:
 
                 suggestion_if_database_error = \
                     f"if you suspect database corruption, remove the run-database file(s): {str(rundb_path)!r}"
-                self._rundb = rundb.Database(str(rundb_path), suggestion_if_database_error)  # TODO remove str
+                self._rundb = rundb.Database(rundb_path, suggestion_if_database_error)
             except Exception:
                 self._close_and_unlock_if_open()
                 raise

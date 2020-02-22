@@ -27,12 +27,12 @@ class DirectoryChanger:  # change directory temporarily
 
     def __enter__(self):
         self._original_path = pathlib.Path.cwd()
-        os.chdir(self._path)
+        os.chdir(os.fspath(self._path))
         if self._show_dir_change:
             print(f'changed current working directory of process to {str(self._path)!r}')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        os.chdir(self._original_path)
+        os.chdir(os.fspath(self._original_path))
         if self._show_dir_change:
             print(f'changed current working directory of process back to {str(self._original_path)!r}')
 
