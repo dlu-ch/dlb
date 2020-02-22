@@ -3,5 +3,6 @@ python:
   - "3.7"
   - "3.8"
   - "nightly"
-
+install: pip3 install coverage coveralls
 script: ./run-unittests.bash
+after_success: coveralls --base_dir test
