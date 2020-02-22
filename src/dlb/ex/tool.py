@@ -157,8 +157,9 @@ def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_me
     """
     Returns ``None`` if no redo is necessary and a short line describing the reason otherwise.
     """
+
     if last_encoded_memo is None:
-        return 'was an output dependency of a redo'  # TODO test
+        return 'was an output dependency of a redo'
 
     try:
         last_memo = rundb.decode_encoded_fsobject_memo(last_encoded_memo)
@@ -168,7 +169,7 @@ def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_me
     if is_explicit:
         assert memo.stat is not None
         if last_memo.stat is None:
-            return 'filesystem object does not exist'  # TODO test
+            return 'filesystem object did not exist'  # TODO test
     elif (memo.stat is None) != (last_memo.stat is None):
         return 'existence has changed'
     elif memo.stat is None:  # TODO test

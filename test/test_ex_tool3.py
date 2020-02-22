@@ -262,3 +262,31 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirec
             self.assertIsNotNone(t.run())
             self.assertRegex(output.getvalue(), r'\b()type of filesystem object has changed\b')
             self.assertIsNone(t.run())
+
+
+class RunDoesRedoIfInputIsOutput(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_redo(self):
+        pathlib.Path('.dlbroot').mkdir()
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+        with (src / 'b.cpp').open('xb'):
+            pass
+
+        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        t2 = ATool(source_file='src/b.cpp', object_file='src/a.cpp')
+
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNone(t.run())
+
+        with dlb.ex.Context():
+            self.assertIsNotNone(t2.run())
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            self.assertRegex(output.getvalue(), r'\b()was an output dependency of a redo\b')
+            self.assertIsNone(t.run())

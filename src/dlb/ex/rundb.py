@@ -343,7 +343,6 @@ class Database:
           - their managed tree path is a prefix of the path of the filesystem object identified
             by *modified_encoded_path*
 
-        Includes a :meth:`commit()` at the start.
         In case of an exception, the information on input dependencies in the run-database remains unchanged.
 
         Note: call :meth:`commit()` before the filesystem object is actually modified.
@@ -352,26 +351,11 @@ class Database:
             raise ValueError(f"not a valid 'encoded_path': {modified_encoded_path!r}")
 
         with self._cursor_with_exception_mapping() as cursor:
-            try:
-                self._connection.commit()
-                cursor.execute("BEGIN")
-
-                # remove all explicit dependencies (of all tool instances) whose '`'path' have
-                # 'modified_encoded_path' as a prefix
-                cursor.execute(
-                    "DELETE FROM ToolInstFsInput WHERE is_explicit == 1 AND instr(path, ?) == 1",
-                    (modified_encoded_path,))
-
-                # replace the 'memo_before' all non-explicit dependencies (of all tool instances) whose
-                # 'encoded_path' have 'modified_encoded_path' as a prefix by NULL
-                cursor.execute(
-                    "UPDATE ToolInstFsInput SET memo_before = NULL WHERE is_explicit == 0 AND instr(path, ?) == 1",
-                    (modified_encoded_path,))
-
-                self._connection.commit()
-            except:
-                self._connection.rollback()
-                raise
+            # replace the 'memo_before' all non-explicit dependencies (of all tool instances) whose
+            # 'encoded_path' have 'modified_encoded_path' as a prefix by NULL
+            cursor.execute(
+                "UPDATE ToolInstFsInput SET memo_before = NULL WHERE instr(path, ?) == 1",
+                (modified_encoded_path,))
 
     def commit(self):
         with self._cursor_with_exception_mapping('commit failed'):

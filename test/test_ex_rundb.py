@@ -348,6 +348,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
                 encoded_paths[2]: (False, b'n1'),
                 encoded_paths[3]: (True,  b'e1'),
                 encoded_paths[4]: (False, None),
+                encoded_paths[5]: (True,  None),
                 encoded_paths[6]: (False, None)
             }, encoded_paths1)
 
@@ -357,6 +358,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
                 encoded_paths[1]: (False, b'n2'),
                 encoded_paths[2]: (True,  b'e2'),
                 encoded_paths[3]: (True,  b'e2'),
+                encoded_paths[5]: (True,  None),
                 encoded_paths[6]: (False, None)
             }, encoded_paths2)
 
@@ -369,14 +371,21 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
             encoded_paths1 = rundb.get_fsobject_inputs(tool_dbid1)
             self.assertEqual({
                 encoded_paths[0]: (False, None),
+                encoded_paths[1]: (True,  None),
                 encoded_paths[2]: (False, None),
+                encoded_paths[3]: (True,  None),
                 encoded_paths[4]: (False, None),
+                encoded_paths[5]: (True,  None),
                 encoded_paths[6]: (False, None)
             }, encoded_paths1)
 
             encoded_paths2 = rundb.get_fsobject_inputs(tool_dbid2)
             self.assertEqual({
+                encoded_paths[0]: (True,  None),
                 encoded_paths[1]: (False, None),
+                encoded_paths[2]: (True,  None),
+                encoded_paths[3]: (True,  None),
+                encoded_paths[5]: (True,  None),
                 encoded_paths[6]: (False, None)
             }, encoded_paths2)
 
