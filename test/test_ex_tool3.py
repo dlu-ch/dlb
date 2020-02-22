@@ -23,6 +23,7 @@ class ATool(dlb.ex.Tool):
     log_file = dlb.ex.Tool.Output.RegularFile(required=False, explicit=False)
     include_directories = dlb.ex.Tool.Input.Directory[:](required=False)
     dummy_file = dlb.ex.Tool.Input.NonRegularFile(required=False)
+    dummy_dir = dlb.ex.Tool.Output.Directory(required=False)
 
     def redo(self):
         dlb.di.inform("redoing right now")
@@ -158,6 +159,8 @@ class RunDoesNoRedoForIfInputNotModifiedTest(tools_for_test.TemporaryDirectoryTe
 
         with (src / 'a.cpp').open('xb'):
             pass
+        with pathlib.Path('a.out').open('xb'):
+            pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.out')
 
@@ -181,6 +184,8 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryDirector
         src.mkdir()
 
         with (src / 'a.cpp').open('xb'):
+            pass
+        with pathlib.Path('a.out').open('xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.out')
@@ -225,6 +230,8 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirec
         src.mkdir()
         with (src / 'a.cpp').open('xb'):
             pass
+        with pathlib.Path('a.out').open('xb'):
+            pass
 
         nonregular = src / 'n'
 
@@ -264,7 +271,7 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirec
             self.assertIsNone(t.run())
 
 
-class RunDoesRedoIfInputIsOutput(tools_for_test.TemporaryDirectoryTestCase):
+class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_redo(self):
         pathlib.Path('.dlbroot').mkdir()
@@ -274,6 +281,8 @@ class RunDoesRedoIfInputIsOutput(tools_for_test.TemporaryDirectoryTestCase):
         with (src / 'a.cpp').open('xb'):
             pass
         with (src / 'b.cpp').open('xb'):
+            pass
+        with pathlib.Path('a.out').open('xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.out')
@@ -290,3 +299,49 @@ class RunDoesRedoIfInputIsOutput(tools_for_test.TemporaryDirectoryTestCase):
             self.assertIsNotNone(t.run())
             self.assertRegex(output.getvalue(), r'\b()was an output dependency of a redo\b')
             self.assertIsNone(t.run())
+
+
+class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_redo_if_not_existing(self):
+        pathlib.Path('.dlbroot').mkdir()
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+
+        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            regex = r"\b()redo necessary because of filesystem object that is an output dependency: 'a\.out'"
+            self.assertRegex(output.getvalue(), regex)
+
+    def test_redo_if_not_output_is_directory(self):
+        pathlib.Path('.dlbroot').mkdir()
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+
+        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+
+        pathlib.Path('a.out').mkdir()
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            regex = (
+                r"(?m)\b"
+                r"redo necessary because of filesystem object that is an output dependency: 'a\.out' \n"
+                r".*  \| reason: filesystem object exists, but is not a regular file\n"
+            )
+            self.assertRegex(output.getvalue(), regex)

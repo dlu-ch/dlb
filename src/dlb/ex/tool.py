@@ -308,18 +308,14 @@ class _ToolBase:
                         isinstance(action.dependency, depend.FilesystemObject)):
                     continue
                 with di.Cluster(f"dependency role {name!r}", is_progress=True):
-                    # all elements of validated_value_tuple are dlb.fs.Path
                     validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
-                    checked_encoded_path = set()
-                    for p in validated_value_tuple:
+                    for p in validated_value_tuple:  # p is a dlb.fs.Path
                         try:
                             encoded_path, memo = _get_memo_for_fs_input_dependency(
                                 name, p, memo_by_encoded_path, context)
-                            if encoded_path not in checked_encoded_path:  # check exactly once
-                                action.check_filesystem_object_memo(memo)  # raise exception if memo is not as expected
-                                checked_encoded_path.add(encoded_path)
-                                memo_by_encoded_path[encoded_path] = memo
-                                assert memo.stat is not None
+                            action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
+                            memo_by_encoded_path[encoded_path] = memo
+                            assert memo.stat is not None
                         except ValueError as e:
                             msg = (
                                 f"invalid value of dependency {name!r}: {p.as_string()!r}\n"
@@ -343,30 +339,6 @@ class _ToolBase:
                         pass
                 di.inform(f"added {definition_file_count} files as input dependencies")
 
-        with di.Cluster('clear filesystem objects that are explicit output dependencies',
-                        with_time=True, is_progress=True):
-            for name, action in dependency_info:
-                # read memo of each filesystem object of a explicit input dependency in a reproducible order
-                if not (action.dependency.explicit and isinstance(action.dependency, depend.Output) and
-                        isinstance(action.dependency, depend.FilesystemObject)):
-                    continue
-
-                # all elements of validated_value_tuple are dlb.fs.Path
-                validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
-                for p in validated_value_tuple:
-                    # TODO check if also input (only non-explicit output dependency can also by input dependency)
-                    try:
-                        p = context.managed_tree_path_of(p, existing=True, collapsable=True)
-                    except ValueError as e:
-                        msg = (
-                            f"output dependency {name!r} contains a path that is not a managed tree path: "
-                            f"{p.as_string()!r}\n"
-                            f"  | reason: {ut.exception_to_line(e)}"
-                        )
-                        raise DependencyCheckError(msg) from None
-                    encoded_path = rundb.encode_path(p)
-                    db.declare_fsobject_input_as_modified(encoded_path)
-
         with di.Cluster('read state of filesystem objects before last redo from run-database',
                         with_time=True, is_progress=True):
             inputs_from_last_redo = db.get_fsobject_inputs(tool_instance_dbid)
@@ -380,6 +352,44 @@ class _ToolBase:
                     memo, needs_redo = _get_memo_for_fs_input_dependency_from_rundb(
                         encoded_path, last_encoded_memo, needs_redo, context)
                     memo_by_encoded_path[encoded_path] = memo  # memo.state may be None
+
+        with di.Cluster('check filesystem objects that are explicit output dependencies',
+                        with_time=True, is_progress=True):
+            for name, action in dependency_info:
+                # read memo of each filesystem object of a explicit input dependency in a reproducible order
+                if not (action.dependency.explicit and isinstance(action.dependency, depend.Output) and
+                        isinstance(action.dependency, depend.FilesystemObject)):
+                    continue
+
+                validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
+                for p in validated_value_tuple:  # p is a dlb.fs.Path
+                    try:
+                        p = context.managed_tree_path_of(p, existing=True, collapsable=True)
+                    except ValueError as e:
+                        msg = (
+                            f"output dependency {name!r} contains a path that is not a managed tree path: "
+                            f"{p.as_string()!r}\n"
+                            f"  | reason: {ut.exception_to_line(e)}"  # TODO: test
+                        )
+                        raise DependencyCheckError(msg) from None
+                    if rundb.encode_path(p) in encoded_paths_of_explicit_input_dependencies:
+                        msg = (
+                            f"output dependency {name!r} contains a path that is also an explicit input dependency: "
+                            f"{p.as_string()!r}"
+                        )
+                        raise DependencyCheckError(msg)  # TODO: test
+                    try:
+                        memo = manip.read_filesystem_object_memo(context.root_path / p)
+                        action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
+                    except (ValueError, OSError) as e:
+                        if not needs_redo:
+                            msg = (
+                                f"redo necessary because of filesystem object that "
+                                f"is an output dependency: {p.as_string()!r}\n"
+                                f"    reason: {ut.exception_to_line(e)}"
+                            )
+                            di.inform(msg)
+                            needs_redo = True
 
         # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
         # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
@@ -410,10 +420,23 @@ class _ToolBase:
                         needs_redo = True
                         break
 
-        db.commit()
-
         result = None
+
         if needs_redo:
+
+            with di.Cluster('clear filesystem objects that are explicit output dependencies',
+                            with_time=True, is_progress=True):
+                for name, action in dependency_info:
+                    if not (action.dependency.explicit and isinstance(action.dependency, depend.Output) and
+                            isinstance(action.dependency, depend.FilesystemObject)):
+                        continue
+                    validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
+                    for p in validated_value_tuple:  # p is a dlb.fs.Path that represents a (valid) managed tree path
+                        encoded_path = rundb.encode_path(p)
+                        db.declare_fsobject_input_as_modified(encoded_path)
+
+            db.commit()
+
             with di.Cluster('redo', with_time=True, is_progress=True):
                 result = self.redo()
                 # TODO check if all non-explicit output dependencies were "replaced" by redo

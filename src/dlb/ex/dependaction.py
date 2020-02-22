@@ -79,26 +79,24 @@ class _FilesystemObjectMixin(Action):
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
         return marshal.dumps(validated_values)
 
+    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+        pass
+
 
 class _FilesystemObjectInputMixin(_FilesystemObjectMixin):
     def get_permanent_local_instance_id(self) -> bytes:
         d: Union[depend.RegularFileInput, depend.NonRegularFileInput, depend.DirectoryInput] = self.dependency
         return super().get_permanent_local_instance_id() + marshal.dumps(d.ignore_permission)
 
-    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
-        pass
 
-
-class RegularFileInputAction(_FilesystemObjectInputMixin, Action):
-
+class _RegularFileMixin(_FilesystemObjectMixin):
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISREG(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a regular file")
 
 
-class NonRegularFileInputAction(_FilesystemObjectInputMixin, Action):
-
+class _NonRegularFileMixin(_FilesystemObjectMixin):
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if stat.S_ISREG(memo.stat.mode):
@@ -107,27 +105,39 @@ class NonRegularFileInputAction(_FilesystemObjectInputMixin, Action):
             raise ValueError("filesystem object exists, but is a directory")
 
 
-class DirectoryInputAction(_FilesystemObjectInputMixin, Action):
-
+class _DirectoryMixin(_FilesystemObjectMixin):
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISDIR(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a directory")
 
 
+class RegularFileInputAction(_RegularFileMixin, _FilesystemObjectInputMixin, Action):
+    pass
+
+
+class NonRegularFileInputAction(_NonRegularFileMixin, _FilesystemObjectInputMixin, Action):
+    pass
+
+
+class DirectoryInputAction(_DirectoryMixin, _FilesystemObjectInputMixin, Action):
+    pass
+
+
+
 class EnvVarInputAction(Action):
     pass  # does _not_ depend on 'restriction'
 
 
-class RegularFileOutputAction(_FilesystemObjectMixin, Action):
+class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action):
     pass
 
 
-class NonRegularFileOutputAction(_FilesystemObjectMixin, Action):
+class NonRegularFileOutputAction(_NonRegularFileMixin, _FilesystemObjectMixin, Action):
     pass
 
 
-class DirectoryOutputAction(_FilesystemObjectMixin, Action):
+class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
     pass
 
 
