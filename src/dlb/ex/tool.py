@@ -64,10 +64,12 @@ class DependencyCheckError(Exception):
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
-def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
+def _get_memo_for_fs_input_dependency(name: Optional[str], path: fs.Path,
                                       memo_by_encoded_path: Dict[str, manip.FilesystemObjectMemo],
                                       context: context_.Context) -> Tuple[str, manip.FilesystemObjectMemo]:
     # TODO document
+
+    path_role = 'is' if name is None else f"input dependency {name!r} contains"
     try:
         try:
             path = context.managed_tree_path_of(path, existing=True, collapsable=False)
@@ -75,8 +77,7 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
             if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
                 raise e.oserror
             msg = (
-                f"input dependency {name!r} contains a path that is not a managed tree path: "
-                f"{path.as_string()!r}\n"
+                f"{path_role} a path that is not a managed tree path: {path.as_string()!r}\n"
                 f"  | reason: {ut.exception_to_line(e)}"
             )
             raise DependencyCheckError(msg) from None
@@ -87,15 +88,11 @@ def _get_memo_for_fs_input_dependency(name: str, path: fs.Path,
             memo = manip.read_filesystem_object_memo(context.root_path / path)  # may raise OSError
         assert memo.stat is not None
     except FileNotFoundError:
-        msg = (
-            f"input dependency {name!r} contains a path of an "
-            f"non-existing filesystem object: {path.as_string()!r}"
-        )
+        msg = f"{path_role} a path of an non-existing filesystem object: {path.as_string()!r}"
         raise DependencyCheckError(msg) from None
     except OSError as e:
         msg = (
-            f"input dependency {name!r} contains a path of an "
-            f"inaccessible filesystem object: {path.as_string()!r}\n"
+            f"{path_role} a path of an inaccessible filesystem object: {path.as_string()!r}\n"
             f"  | reason: {ut.exception_to_line(e)}"
         )
         raise DependencyCheckError(msg) from None
@@ -153,6 +150,50 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
     assert memo.stat is not None or needs_redo
 
     return memo, needs_redo  # memo.state may be None
+
+
+def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
+                               is_explicit: bool) -> Optional[str]:
+    """
+    Returns ``None`` if no redo is necessary and a short line describing the reason otherwise.
+    """
+    if last_encoded_memo is None:
+        return 'was an output dependency of a redo'  # TODO test
+
+    try:
+        last_memo = rundb.decode_encoded_fsobject_memo(last_encoded_memo)
+    except ValueError:
+        return 'state before last successful redo is unknown'  # TODO test
+
+    if is_explicit:
+        assert memo.stat is not None
+        if last_memo.stat is None:
+            return 'filesystem object does not exist'  # TODO test
+    elif (memo.stat is None) != (last_memo.stat is None):
+        return 'existence has changed'
+    elif memo.stat is None:  # TODO test
+        # non-explict dependency of a filesystem object that does not exist and did not exist before the
+        # last successful redo
+        return None
+
+    assert memo.stat is not None
+    assert last_memo.stat is not None
+
+    if stat.S_IFMT(memo.stat.mode) != stat.S_IFMT(last_memo.stat.mode):
+        return 'type of filesystem object has changed'
+
+    if stat.S_ISLNK(memo.stat.mode) and memo.symlink_target != last_memo.symlink_target:
+        return 'symbolic link target has changed'
+
+    if memo.stat.size != last_memo.stat.size:
+        return 'size has changed'
+
+    if memo.stat.mtime_ns != last_memo.stat.mtime_ns:
+        return 'mtime has changed'
+
+    if (memo.stat.mode, memo.stat.uid, memo.stat.gid) != \
+            (last_memo.stat.mode, last_memo.stat.uid, last_memo.stat.gid):
+        return 'permissions or owner have changed'
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -234,8 +275,8 @@ class _ToolBase:
 
     # final
     # TODO split into smaller parts
-    # TODO test all execution paths
     # TODO analyze code coverage of tests
+    # TODO test all execution paths
     def run(self):
         dependency_info = tuple(
             (n, dependaction.get_action(getattr(self.__class__, n)))
@@ -270,12 +311,20 @@ class _ToolBase:
                     validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
                     checked_encoded_path = set()
                     for p in validated_value_tuple:
-                        encoded_path, memo = _get_memo_for_fs_input_dependency(name, p, memo_by_encoded_path, context)
-                        if encoded_path not in checked_encoded_path:  # check exactly once
-                            action.check_filesystem_object_memo(memo)  # raise exception if memo is not as expected
-                            checked_encoded_path.add(encoded_path)
-                            memo_by_encoded_path[encoded_path] = memo
-                            assert memo.stat is not None
+                        try:
+                            encoded_path, memo = _get_memo_for_fs_input_dependency(
+                                name, p, memo_by_encoded_path, context)
+                            if encoded_path not in checked_encoded_path:  # check exactly once
+                                action.check_filesystem_object_memo(memo)  # raise exception if memo is not as expected
+                                checked_encoded_path.add(encoded_path)
+                                memo_by_encoded_path[encoded_path] = memo
+                                assert memo.stat is not None
+                        except ValueError as e:
+                            msg = (
+                                f"invalid value of dependency {name!r}: {p.as_string()!r}\n"
+                                f"  | reason: {ut.exception_to_line(e)}"
+                            )
+                            raise DependencyCheckError(msg) from None
 
             with di.Cluster(f"tool definition files", is_progress=True):
                 # treat all files used for definition of self.__class__ like explicit input dependencies if they
@@ -284,7 +333,7 @@ class _ToolBase:
                 for p in tool_info.definition_paths:
                     try:
                         encoded_path, memo = _get_memo_for_fs_input_dependency(
-                            None, fs.Path(p), memo_by_encoded_path, context)  # TODO fix type and exceptions
+                            None, fs.Path(p), memo_by_encoded_path, context)
                         definition_file_count += 1
                         memo_by_encoded_path[encoded_path] = memo
                         assert memo.stat is not None
@@ -293,7 +342,7 @@ class _ToolBase:
                         pass
                 di.inform(f"added {definition_file_count} files as input dependencies")
 
-        with di.Cluster('clear filesystem objects that are explict output dependencies',
+        with di.Cluster('clear filesystem objects that are explicit output dependencies',
                         with_time=True, is_progress=True):
             for name, action in dependency_info:
                 # read memo of each filesystem object of a explicit input dependency in a reproducible order
@@ -304,12 +353,13 @@ class _ToolBase:
                 # all elements of validated_value_tuple are dlb.fs.Path
                 validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
                 for p in validated_value_tuple:
+                    # TODO check if also input (only non-explicit output dependency can also by input dependency)
                     try:
                         p = context.managed_tree_path_of(p, existing=True, collapsable=True)
                     except ValueError as e:
                         msg = (
                             f"output dependency {name!r} contains a path that is not a managed tree path: "
-                            f"{path.as_string()!r}\n"
+                            f"{p.as_string()!r}\n"
                             f"  | reason: {ut.exception_to_line(e)}"
                         )
                         raise DependencyCheckError(msg) from None
@@ -343,66 +393,21 @@ class _ToolBase:
         if not needs_redo:
             with di.Cluster('compare state of filesystem objects with state that are non-explicit '
                             'input dependencies of the last redo', with_time=True, is_progress=True):
-
-                encoded_path = None
-
                 for encoded_path, memo in memo_by_encoded_path.items():  # sorting not necessary for repeatability
                     is_explicit, last_encoded_memo = inputs_from_last_redo.get(encoded_path, (True, None))
                     assert memo.stat is not None or not is_explicit
-
-                    if last_encoded_memo is None:
-                        # state before last successful redo is unknown (maybe because it was declared as modified)
+                    redo_reason = _check_input_memo_for_redo(
+                        memo, last_encoded_memo,
+                        encoded_path in encoded_paths_of_explicit_input_dependencies)
+                    if redo_reason is not None:
+                        path = rundb.decode_encoded_path(encoded_path)
+                        msg = (
+                            f"redo necessary because of filesystem object: {path.as_string()!r}\n"
+                            f"    reason: {redo_reason}"
+                        )
+                        di.inform(msg)
                         needs_redo = True
                         break
-
-                    try:
-                        last_memo = rundb.decode_encoded_fsobject_memo(last_encoded_memo)
-                    except ValueError:
-                        # state before last successful redo is unknown
-                        needs_redo = True
-                        break
-
-                    if encoded_path in encoded_paths_of_explicit_input_dependencies:
-                        assert memo.stat is not None
-                        if last_memo.stat is None:
-                            needs_redo = True
-                            break
-                    elif (memo.stat is None) != (last_memo.stat is None):
-                        # existence has changed
-                        needs_redo = True
-                        break
-                    elif memo.stat is None:
-                        continue
-
-                    assert memo.stat is not None
-                    assert last_memo.stat is not None
-
-                    if stat.S_IFMT(memo.stat.mode) != stat.S_IFMT(last_memo.stat.mode):
-                        # type of filesystem object has changed
-                        needs_redo = True
-                        break
-
-                    if stat.S_ISLNK(memo.stat.mode) and memo.symlink_target != last_memo.symlink_target:
-                        # symlink target has changed
-                        needs_redo = True
-                        break
-
-                    if (memo.stat.size, memo.stat.mtime_ns) != (last_memo.stat.size, last_memo.stat.mtime_ns):
-                        # size or mtime has changed
-                        needs_redo = True
-                        break
-
-                    if (memo.stat.mode, memo.stat.uid, memo.stat.gid) != \
-                            (last_memo.stat.mode, last_memo.stat.size, last_memo.stat.mtime_ns):
-                        # TODO
-                        # permissions have changed
-                        needs_redo = True
-                        break
-
-                if encoded_path is not None:
-                    path = rundb.decode_encoded_path(encoded_path)
-                    msg = f"redo necessary because filesystem object has changed: {path.as_string()!r}"
-                    di.inform(msg)
 
         db.commit()
 
@@ -410,6 +415,8 @@ class _ToolBase:
         if needs_redo:
             with di.Cluster('redo', with_time=True, is_progress=True):
                 result = self.redo()
+                # TODO check if all non-explicit output dependencies were "replaced" by redo
+                # TODO check if all output dependencies exist
 
         # redo was successful, so save the state before the redo to the run-database
 
@@ -421,7 +428,7 @@ class _ToolBase:
 
         db.commit()
 
-        return result
+        return result  # None if no redo
 
     def __setattr__(self, name: str, value):
         raise AttributeError

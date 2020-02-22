@@ -67,8 +67,9 @@ class Action:
         # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.
         return marshal.dumps((dependency_id, d.explicit))
 
+    # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
-        pass
+        raise ValueError("is not a filesystem object")
 
 
 class _FilesystemObjectMixin(Action):
@@ -85,8 +86,7 @@ class _FilesystemObjectInputMixin(_FilesystemObjectMixin):
         return super().get_permanent_local_instance_id() + marshal.dumps(d.ignore_permission)
 
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
-        if memo.stat is None:
-            raise Exception("?")  # TODO raise meaningful exception
+        pass
 
 
 class RegularFileInputAction(_FilesystemObjectInputMixin, Action):
@@ -94,15 +94,17 @@ class RegularFileInputAction(_FilesystemObjectInputMixin, Action):
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISREG(memo.stat.mode):
-            raise Exception("?")  # TODO raise meaningful exception
+            raise ValueError("filesystem object exists, but is not a regular file")
 
 
 class NonRegularFileInputAction(_FilesystemObjectInputMixin, Action):
 
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
-        if stat.S_ISREG(memo.stat.mode) or stat.S_ISDIR(memo.stat.mode):
-            raise Exception("?")  # TODO raise meaningful exception
+        if stat.S_ISREG(memo.stat.mode):
+            raise ValueError("filesystem object exists, but is a regular file")
+        if stat.S_ISDIR(memo.stat.mode):
+            raise ValueError("filesystem object exists, but is a directory")
 
 
 class DirectoryInputAction(_FilesystemObjectInputMixin, Action):
@@ -110,7 +112,7 @@ class DirectoryInputAction(_FilesystemObjectInputMixin, Action):
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISDIR(memo.stat.mode):
-            raise Exception("?")  # TODO raise meaningful exception
+            raise ValueError("filesystem object exists, but is not a directory")
 
 
 class EnvVarInputAction(Action):
