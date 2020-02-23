@@ -114,6 +114,7 @@ class EncodePathTest(unittest.TestCase):
 
     def test_fails_for_str(self):
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             dlb.ex.rundb.encode_path('/a/b')
 
     def test_fails_for_absolute(self):
@@ -175,6 +176,7 @@ class EncodeFsobjectMemoTest(unittest.TestCase):
 
     def test_fails_for_noninteger_mtime(self):
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             m = dlb.fs.manip.FilesystemObjectMemo(
                 stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFREG, size=0, mtime_ns=1.25, uid=0, gid=0),
                 symlink_target=None)

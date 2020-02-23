@@ -17,11 +17,12 @@ import os
 import pathlib
 import tempfile
 import shutil
+from typing import Union
 import unittest
 
 
 class DirectoryChanger:  # change directory temporarily
-    def __init__(self, path: os.PathLike, show_dir_change=False):
+    def __init__(self, path: Union[str, os.PathLike, pathlib.Path], show_dir_change=False):
         self._path = pathlib.Path(path)
         self._show_dir_change = show_dir_change
 

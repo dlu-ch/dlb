@@ -10,7 +10,8 @@ import stat
 import dataclasses
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
 import sqlite3
-from typing import Optional, Dict, Tuple
+import pathlib
+from typing import Optional, Union, Dict, Tuple
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -158,7 +159,7 @@ class _CursorWithExceptionMapping:
 
 class Database:
 
-    def __init__(self, rundb_path: os.PathLike, suggestion_if_database_error: str = ''):
+    def __init__(self, rundb_path: Union[str, os.PathLike, pathlib.Path], suggestion_if_database_error: str = ''):
         """
         Open or create the database with path *rundb_path*.
 

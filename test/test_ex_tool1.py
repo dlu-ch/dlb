@@ -46,6 +46,7 @@ class InheritanceTest(unittest.TestCase):
 class AttributeDefineTest(unittest.TestCase):
 
     def test_can_define_execution_parameter(self):
+        # noinspection PyUnusedLocal
         class ATool(Tool):
             """Hohoho"""
             X = 2
@@ -54,12 +55,14 @@ class AttributeDefineTest(unittest.TestCase):
         del ATool
 
     def test_can_define_dependency(self):
+        # noinspection PyUnusedLocal
         class ATool(Tool):
             source_file = Tool.Input.RegularFile()
             object_file = Tool.Output.RegularFile()
         del ATool
 
     def test_can_define_classmethod(self):
+        # noinspection PyUnusedLocal
         class ATool(Tool):
             pass
         del ATool

@@ -417,6 +417,7 @@ class ExpansionTest(unittest.TestCase):
         self.assertEqual("node 0: value of variable 'x' (with type option '+', without '?') is empty",
                          str(cm.exception))
 
+        # noinspection PyUnusedLocal
         class A:
             def __init__(self, x, y):
                 del x, y
@@ -427,6 +428,7 @@ class ExpansionTest(unittest.TestCase):
         self.assertRegex(str(cm.exception),
                          r"^node 0: cannot construct object of declared type 'A' from value 1 of variable 'a': .*")
 
+        # noinspection PyUnusedLocal
         class B:
             def __init__(self, x):
                 del x
@@ -477,6 +479,7 @@ class ExpansionTest(unittest.TestCase):
         self.assertRegex(str(cm.exception),
                          r"^node 0: cannot convert object of declared type 'C' of variable 'c' to 'bool': .*")
 
+        # noinspection PyUnusedLocal
         class D:
             def __init__(self, x):
                 del x

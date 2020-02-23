@@ -124,7 +124,6 @@ class DirectoryInputAction(_DirectoryMixin, _FilesystemObjectInputMixin, Action)
     pass
 
 
-
 class EnvVarInputAction(Action):
     pass  # does _not_ depend on 'restriction'
 

@@ -657,6 +657,7 @@ class TokensTemplate:
 
         if scope is cls.LookupScope.KNOWN:
             for i in range(len(frames)):
+                # noinspection PyUnusedLocal
                 frame = None
                 try:
                     frame = frames[i][0]
@@ -670,6 +671,7 @@ class TokensTemplate:
                 finally:
                     del frame
         else:
+            # noinspection PyUnusedLocal
             frame = None
             try:
                 frame = frames[0][0]
