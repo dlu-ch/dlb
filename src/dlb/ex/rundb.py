@@ -175,12 +175,7 @@ class Database:
         try:
             connection = sqlite3.connect(rundb_abs_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
         except sqlite3.Error as e:
-            exists = False
-            try:
-                exists = os.path.isfile(rundb_abs_path)
-            except OSError:
-                pass
-
+            exists = os.path.isfile(rundb_abs_path)  # does not raise OSError
             state_msg = 'existing' if exists else 'non-existing'
             reason = ut.exception_to_line(e, True)
             msg = (

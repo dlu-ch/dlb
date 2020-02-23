@@ -118,12 +118,10 @@ class _MultiplicityHolderProxy:
         raise TypeError(f'{self._element_class.__name__!r} with multiplicity is not subscriptable')
 
     def __repr__(self):
-        o = super().__repr__()
-        m = re.fullmatch('<(.+)>', o)
-        if not m:
-            return o
-        s = '' if self._multiplicity is None else str(self._multiplicity)
-        return f"<{m.group(1)} for {self._element_class!r} with multiplicity {s}>"
+        multiplicity_suffix = f"{self._element_class!r} with multiplicity {self._multiplicity}"
+        g = re.fullmatch('<(.+)>|(.+)', super().__repr__()).groups()
+        proxy = g[0] or g[1]
+        return f"<{proxy} for {multiplicity_suffix}>"
 
 
 class _MultiplicityHolderMeta(type):

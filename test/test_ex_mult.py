@@ -93,6 +93,10 @@ class StrTest(unittest.TestCase):
         m = dlb.ex.mult.MultiplicityRange(slice(2, 2))
         self.assertEqual('[:0]', str(m))
 
+    def test_single_is_correct(self):
+        m = dlb.ex.mult.MultiplicityRange(slice(2, 3))
+        self.assertEqual('[2]', str(m))
+
     def test_minimum_is_correct(self):
         m = dlb.ex.mult.MultiplicityRange(slice(3, None))
         self.assertEqual('[3:]', str(m))
@@ -100,6 +104,10 @@ class StrTest(unittest.TestCase):
     def test_upper_bound_is_correct(self):
         m = dlb.ex.mult.MultiplicityRange(slice(None, 4))
         self.assertEqual('[:4]', str(m))
+
+    def test_step_is_correct(self):
+        m = dlb.ex.mult.MultiplicityRange(slice(3, 42, 5))
+        self.assertEqual('[3:39:5]', str(m))
 
     def test_unrestricted_is_correct(self):
         m = dlb.ex.mult.MultiplicityRange(slice(None))
@@ -114,6 +122,15 @@ class ReprTest(unittest.TestCase):
 
 
 class MatchesCountTest(unittest.TestCase):
+
+    def test_fails_for_nonint(self):
+        m = dlb.ex.mult.MultiplicityRange(2)
+
+        with self.assertRaises(TypeError):
+            None in m
+
+        with self.assertRaises(TypeError):
+            '1' in m
 
     def test_integer_matches_exact_count(self):
         m = dlb.ex.mult.MultiplicityRange(2)
@@ -178,9 +195,18 @@ class MultiplicityHolderTest(unittest.TestCase):
         self.assertEqual(MultiplicityHolderTest.M.__qualname__ + '[:3]', M.__qualname__)
 
     def test_repr_is_meaningful(self):
+        r = repr(MultiplicityHolderTest.M)
+        regex = (
+            r"<class '.+\.MultiplicityHolderTest\.M'>\Z"
+        )
+        self.assertRegex(r, regex)
+
         r = repr(MultiplicityHolderTest.M[:3])
         regex = (
             r"\A<dlb\.ex\.mult\._MultiplicityHolderProxy object at 0x[0-9a-fA-F]+ for "
             r"<class '.+\.MultiplicityHolderTest\.M'> with multiplicity \[:3\]>\Z"
         )
         self.assertRegex(r, regex)
+
+    def test_proxy_has_element_class(self):
+        self.assertIs(MultiplicityHolderTest.M, MultiplicityHolderTest.M[:3].element_class)

@@ -110,6 +110,11 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_ignores_for_nonexisting_if_required(self):
         dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'n'), ignore_non_existing=True)
 
+    def test_fails_for_relative_tmp(self):
+        self.create_dir_a_in_cwd()
+        with self.assertRaises(ValueError):
+            dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'a'), abs_empty_dir_path='a')
+
     def test_removes_nonempty_directory_in_place(self):
         self.create_dir_a_in_cwd()
         dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'a'))
@@ -120,7 +125,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         with tempfile.TemporaryDirectory(dir='.') as abs_temp_dir_path:
             dlb.fs.manip.remove_filesystem_object(
                 os.path.join(os.getcwd(), 'a'),
-                abs_empty_dir_path=os.path.abspath(abs_temp_dir_path))
+                abs_empty_dir_path=dlb.fs.Path(pathlib.Path(os.path.abspath(abs_temp_dir_path)).as_posix()))
         self.assertFalse(os.path.exists('a'))
 
     def test_removes_most_of_nonempty_directory_in_place_if_permission_denied_in_subdirectory(self):
@@ -326,6 +331,9 @@ class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(dlb.fs.Path('c/d/'), p)
 
         p = dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), '/tmp')
+        self.assertEqual(pathlib.Path('a/b'), p)
+
+        p = dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), dlb.fs.Path('/tmp'))
         self.assertEqual(pathlib.Path('a/b'), p)
 
     def test_with_nonparent_symlink_is_correct(self):

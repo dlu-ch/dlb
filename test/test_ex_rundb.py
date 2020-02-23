@@ -311,10 +311,17 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual({encoded_path: (False, b'234')}, rows)
 
     def test_fails_if_tool_dbid_does_no_exist(self):
-        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
-            with self.assertRaises(dlb.ex.rundb.DatabaseError):
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite',
+                                                      suggestion_if_database_error="don't panic")) as rundb:
+            with self.assertRaises(dlb.ex.rundb.DatabaseError) as cm:
                 encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
                 rundb.update_fsobject_input(12, encoded_path, True, b'')
+            msg = (
+                "reason: run-database access failed\n"
+                "  | sqlite3.IntegrityError: FOREIGN KEY constraint failed\n"
+                "  | don't panic"
+            )
+            self.assertEqual(msg, str(cm.exception))
 
     def test_update_fails_for_invalid_encoded_path(self):
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
@@ -446,6 +453,12 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
                 encoded_paths[5]: (True,  None),
                 encoded_paths[6]: (False, None)
             }, encoded_paths2)
+
+    def test_scenario2(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            with self.assertRaises(ValueError):
+                rundb.declare_fsobject_input_as_modified('..')
 
 
 class ReplaceFsobjectInputsTest(tools_for_test.TemporaryDirectoryTestCase):
