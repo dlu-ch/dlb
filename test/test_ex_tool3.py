@@ -34,8 +34,6 @@ class ATool(dlb.ex.Tool):
         with (context.root_path / self.object_file).native.raw.open('xb'):
             pass
 
-        return 1
-
 
 class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
 

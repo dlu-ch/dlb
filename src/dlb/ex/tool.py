@@ -210,11 +210,11 @@ def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_me
         return 'permissions or owner have changed'
 
 
-def _check_and_memorize_explicit_input_dependencies(tool, dependency_info: Tuple[Tuple[str, dependaction.Action], ...],
+def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
                                                     context: context_.Context) \
         -> Dict[str, manip.FilesystemObjectMemo]:
 
-    # For all explicit input dependencies of *tool* in *dependency_info* for filesystem objects:
+    # For all explicit input dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.
     #
     # Treats all definitions file of this tool class that are in the managed tree as explicit input dependencies.
@@ -225,22 +225,22 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_info: Tuple
     memo_by_encoded_path = {}
 
     with di.Cluster('from dependency roles', is_progress=True):
-        for name, action in dependency_info:
+        for action in dependency_actions:
             # read memo of each filesystem object of a explicit input dependency in a reproducible order
             if action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
                     isinstance(action.dependency, depend.FilesystemObject):
-                with di.Cluster(f"dependency role {name!r}", is_progress=True):
-                    validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, name))
+                with di.Cluster(f"dependency role {action.name!r}", is_progress=True):
+                    validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
                     for p in validated_value_tuple:  # p is a dlb.fs.Path
                         try:
                             encoded_path, memo = _get_memo_for_fs_input_dependency(
-                                name, p, memo_by_encoded_path, context)
+                                action.name, p, memo_by_encoded_path, context)
                             action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
                             memo_by_encoded_path[encoded_path] = memo
                             assert memo.stat is not None
                         except ValueError as e:
                             msg = (
-                                f"invalid value of dependency {name!r}: {p.as_string()!r}\n"
+                                f"invalid value of dependency {action.name!r}: {p.as_string()!r}\n"
                                 f"  | reason: {ut.exception_to_line(e)}"
                             )
                             raise DependencyCheckError(msg) from None
@@ -264,35 +264,35 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_info: Tuple
     return memo_by_encoded_path
 
 
-def _check_explicit_output_dependencies(tool, dependency_info: Tuple[Tuple[str, dependaction.Action], ...],
+def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
                                         encoded_paths_of_explicit_input_dependencies: Set[str],
                                         needs_redo: bool,
                                         context: context_.Context) -> bool:
-    # For all explicit output dependencies of *tool* in *dependency_info* for filesystem objects:
+    # For all explicit output dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.
     #
     # Returns ``True`` if at least one of the filesystem objects does not exist.
 
-    for name, action in dependency_info:
+    for action in dependency_actions:
 
         # read memo of each filesystem object of a explicit input dependency in a reproducible order
         if action.dependency.explicit and isinstance(action.dependency, depend.Output) and \
                 isinstance(action.dependency, depend.FilesystemObject):
 
-            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, name))
+            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
             for p in validated_value_tuple:  # p is a dlb.fs.Path
                 try:
                     p = context.managed_tree_path_of(p, existing=True, collapsable=True)
                 except ValueError as e:
                     msg = (
-                        f"output dependency {name!r} contains a path that is not a managed tree path: "
+                        f"output dependency {action.name!r} contains a path that is not a managed tree path: "
                         f"{p.as_string()!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"
                     )
                     raise DependencyCheckError(msg) from None
                 if rundb.encode_path(p) in encoded_paths_of_explicit_input_dependencies:
                     msg = (
-                        f"output dependency {name!r} contains a path that is also an explicit "
+                        f"output dependency {action.name!r} contains a path that is also an explicit "
                         f"input dependency: {p.as_string()!r}"
                     )
                     raise DependencyCheckError(msg)
@@ -312,17 +312,17 @@ def _check_explicit_output_dependencies(tool, dependency_info: Tuple[Tuple[str, 
     return needs_redo
 
 
-def _remove_explicit_output_dependencies(tool, dependency_info: Tuple[Tuple[str, dependaction.Action], ...],
+def _remove_explicit_output_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
                                          context: context_.Context):
     # Remove all filesystem objects that are explicit output dependencies of *tool*.
 
     tmp_dir = None
     db = context_._get_rundb()
 
-    for name, action in dependency_info:
+    for action in dependency_actions:
         if action.dependency.explicit and isinstance(action.dependency, depend.Output) and \
                 isinstance(action.dependency, depend.FilesystemObject):
-            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, name))
+            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
             for p in validated_value_tuple:  # p is a (valid) managed tree path as a dlb.fs.Path
                 if tmp_dir is None:
                     tmp_dir = context.create_temporary(is_dir=True)  # may raise OSError
@@ -400,7 +400,7 @@ class _ToolBase:
             if role.explicit:
                 # this remains unchanged between dlb run if dlb.ex.platform.PERMANENT_PLATFORM_ID remains unchanged
                 try:
-                    action = dependaction.get_action(role)
+                    action = dependaction.get_action(role, name)
                     dependency_fingerprint = action.get_permanent_local_instance_id()
 
                     validated_values = role.tuple_from_value(getattr(self, name))
@@ -421,8 +421,8 @@ class _ToolBase:
     def run(self):
         with di.Cluster('run tool instance', with_time=True, is_progress=True):
 
-            dependency_info = tuple(
-                (n, dependaction.get_action(getattr(self.__class__, n)))
+            dependency_actions = tuple(
+                dependaction.get_action(getattr(self.__class__, n), n)
                 for n in self.__class__._dependency_names
             )
 
@@ -440,7 +440,7 @@ class _ToolBase:
                 with di.Cluster('filesystem objects that are explicit input dependencies',
                                 with_time=True, is_progress=True):
                     memo_by_encoded_path = _check_and_memorize_explicit_input_dependencies(
-                        self, dependency_info, context)
+                        self, dependency_actions, context)
 
                 # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
                 # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
@@ -450,7 +450,7 @@ class _ToolBase:
                                 with_time=True, is_progress=True):
                     encoded_paths_of_explicit_input_dependencies = set(memo_by_encoded_path.keys())
                     needs_redo = _check_explicit_output_dependencies(
-                        self, dependency_info, encoded_paths_of_explicit_input_dependencies, False, context)
+                        self, dependency_actions, encoded_paths_of_explicit_input_dependencies, False, context)
 
                 with di.Cluster('filesystem objects that were input dependencies of the last redo',
                                 with_time=True, is_progress=True):
@@ -485,16 +485,19 @@ class _ToolBase:
                                 needs_redo = True
                                 break
 
-            result = None
-            if needs_redo:
-                with di.Cluster('remove filesystem objects that are explicit output dependencies',
-                                with_time=True, is_progress=True):
-                    _remove_explicit_output_dependencies(self, dependency_info, context)
-                with di.Cluster('redo', with_time=True, is_progress=True):
-                    db.commit()
-                    result = self.redo(context)
-                    # TODO check if all non-explicit output dependencies were "replaced" by redo
-                    # TODO check if all output dependencies exist?
+            if not needs_redo:
+                return None  # no redo
+
+            with di.Cluster('remove filesystem objects that are explicit output dependencies',
+                            with_time=True, is_progress=True):
+                _remove_explicit_output_dependencies(self, dependency_actions, context)
+
+            with di.Cluster('redo', with_time=True, is_progress=True):
+                db.commit()
+                self.redo(context)
+                result = True  # TODO replace by asynch result object
+                # TODO check if all non-explicit output dependencies were "replaced" by redo
+                # TODO check if all output dependencies exist?
 
             with di.Cluster('store state before redo in run-database'):
                 # redo was successful, so save the state before the redo to the run-database
@@ -505,7 +508,11 @@ class _ToolBase:
                 db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
                 db.commit()
 
-        return result  # None if no redo
+            return result
+
+
+    def redo(self, context: context_.Context):
+        raise NotImplementedError
 
     def __setattr__(self, name: str, value):
         raise AttributeError
@@ -524,16 +531,20 @@ depend._inject_into(_ToolBase, 'Tool', '.'.join(_ToolBase.__module__.split('.')[
 
 
 class _ToolMeta(type):
+
+    OVERRIDEABLE_ATTRIBUTES = frozenset(('redo', '__doc__', '__module__'))
+
     def __init__(cls, name, bases, nmspc):
         super().__init__(name, bases, nmspc)
 
         # prevent attributes of _ToolBase from being overridden
-        protected_attrs = (set(_ToolBase.__dict__.keys()) - {'__doc__', '__module__'} | {'__new__'})
-        attrs = set(cls.__dict__) & protected_attrs
-        if attrs:
-            raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
+        if cls is not _ToolBase:
+            protected_attrs = (set(_ToolBase.__dict__.keys()) - _ToolMeta.OVERRIDEABLE_ATTRIBUTES | {'__new__'})
+            attrs = set(cls.__dict__) & protected_attrs
+            if attrs:
+                raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
+            cls.check_own_attributes()
 
-        cls.check_own_attributes()
         super().__setattr__('_dependency_names', cls._get_dependency_names())
         location = cls._find_definition_location(inspect.stack(context=0)[1])
         super().__setattr__('definition_location', location)
@@ -607,7 +618,7 @@ class _ToolMeta(type):
 
     def check_own_attributes(cls):
         for name, value in cls.__dict__.items():
-            if name in ('redo',):
+            if name in _ToolMeta.OVERRIDEABLE_ATTRIBUTES:
                 pass
             elif RESERVED_NAME_REGEX.match(name):
                 pass

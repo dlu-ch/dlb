@@ -27,12 +27,17 @@ _dependency_class_ids: Set[int] = set()  # contains the first element of each va
 
 # noinspection PyMethodMayBeStatic
 class Action:
-    def __init__(self, dependency: depend.Dependency):
+    def __init__(self, dependency: depend.Dependency, name: str):
         self._dependency = dependency
-        
+        self._name = name
+
     @property
     def dependency(self):
         return self._dependency
+
+    @property
+    def name(self):
+        return self._name
 
     # overwrite in subclasses
     def get_permanent_local_value_id(self, validated_values: Optional[Sequence[Any]]) -> bytes:
@@ -159,9 +164,9 @@ def register_action(dependency_id: int, dependency: Type[depend.Dependency], act
         _action_by_dependency[dependency] = (dependency_id, action)
 
 
-def get_action(dependency: depend.Dependency) -> Action:
+def get_action(dependency: depend.Dependency, name: str) -> Action:
     _, a = _action_by_dependency[dependency.__class__]
-    return a(dependency)
+    return a(dependency, name)
 
 
 register_action(0, depend.RegularFileInput, RegularFileInputAction)
