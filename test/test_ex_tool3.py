@@ -11,6 +11,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb.fs.manip
+import dlb.ex.rundb
+import marshal
 import io
 import pathlib
 import unittest
@@ -36,12 +39,21 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirector
         pathlib.Path('.dlbroot').mkdir()
 
         regex = (
-            r"\Ainput dependency 'source_file' contains a path of an non-existing "
+            r"\A()input dependency 'source_file' contains a path of an non-existing "
             r"filesystem object: 'src[\\/]+a\.cpp'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='src/a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
+                t.run()
+
+        regex = (
+            r"\A()input dependency 'source_file' contains a path of an non-existing "
+            r"filesystem object: 'src[\\/]+b[\\/]+\.\.[\\/]+a\.cpp'\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+            with dlb.ex.Context():
+                t = ATool(source_file='src/b/../a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
                 t.run()
 
     def test_fails_for_nonnormalized_inputfile_path(self):
@@ -55,6 +67,25 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirector
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='../a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
+                t.run()
+
+
+class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_fails_for_nonnormalized_outputfile_path(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        with pathlib.Path('a.cpp').open('xb'):
+            pass
+
+        regex = (
+            r"(?m)\A"
+            r"output dependency 'object_file' contains a path that is not a managed tree path: '\.\.[\\/]+a\.out'\n"
+            r"  | reason: is an upwards path: '\.\.[\\/]+a\.out'\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+            with dlb.ex.Context():
+                t = ATool(source_file='a.cpp', object_file='../a.out')
                 t.run()
 
 
@@ -77,6 +108,22 @@ class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_t
                 t.run()
 
         os.chmod('src', 0o600)
+
+
+class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_fails_for_input_as_output(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        with pathlib.Path('a.cpp').open('xb'):
+            pass
+
+        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+            with dlb.ex.Context():
+                t = ATool(source_file='a.cpp', object_file='a.cpp')
+                t.run()
+        msg = "output dependency 'object_file' contains a path that is also an explicit input dependency: 'a.cpp'"
+        self.assertEqual(msg, str(cm.exception))
 
 
 class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -220,6 +267,31 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryDirector
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
             self.assertRegex(output.getvalue(), r'\b()permissions or owner have changed\b')
+
+        with dlb.ex.Context():
+            # replace memo by invalid memo
+            rundb = dlb.ex.context._get_rundb()
+            rundb.replace_fsobject_inputs(1, {
+                dlb.ex.rundb.encode_path(dlb.fs.Path('src/a.cpp')): (True, marshal.dumps(42))
+            })
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            self.assertRegex(output.getvalue(), r'\b()state before last successful redo is unknown\b')
+
+        with dlb.ex.Context():
+            # replace memo by invalid memo
+            rundb = dlb.ex.context._get_rundb()
+            rundb.replace_fsobject_inputs(1, {
+                dlb.ex.rundb.encode_path(dlb.fs.Path('src/a.cpp')):
+                    (True, dlb.ex.rundb.encode_fsobject_memo(dlb.fs.manip.FilesystemObjectMemo()))
+            })
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            self.assertRegex(output.getvalue(), r'\b()filesystem object did not exist\b')
 
 
 class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirectoryTestCase):

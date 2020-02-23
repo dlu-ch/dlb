@@ -150,8 +150,9 @@ class ReprTest(unittest.TestCase):
 
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
+
     def test_location_of_tools_are_correct(self):
-        lineno = 154  # of this line
+        lineno = 155  # of this line
 
         class A(Tool):
             pass
@@ -179,15 +180,46 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
                 zip_file_path = os.path.join(tmp_dir_path, 'abc.zip')
                 with zipfile.ZipFile(zip_file_path, 'w') as z:
-                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u/__init__.py')
-                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u/v.py')
+                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u1/__init__.py')
+                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u1/v.py')
 
             sys.path.insert(0, zip_file_path)
             # noinspection PyUnresolvedReferences
-            import u.v
+            import u1.v
             del sys.path[0]
 
-        self.assertEqual(u.v.A.definition_location, (os.path.realpath(zip_file_path), os.path.join('u', 'v.py'), 2))
+        self.assertEqual(u1.v.A.definition_location, (os.path.realpath(zip_file_path), os.path.join('u1', 'v.py'), 2))
+
+    def test_fails_for_zip_without_zip_suffix(self):
+        with tempfile.TemporaryDirectory() as tmp_dir_path:
+            with tempfile.TemporaryDirectory() as content_tmp_dir_path:
+                with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w'):
+                    pass
+                with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
+                    f.write(
+                        'import dlb.ex\n'
+                        'class A(dlb.ex.Tool): pass'
+                    )
+
+                zip_file_path = os.path.join(tmp_dir_path, 'abc.zi')
+                with zipfile.ZipFile(zip_file_path, 'w') as z:
+                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u2/__init__.py')
+                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u2/v.py')
+
+            sys.path.insert(0, zip_file_path)
+            # noinspection PyUnresolvedReferences
+            with self.assertRaises(dlb.ex.DefinitionAmbiguityError) as cm:
+                import u2.v
+            del sys.path[0]
+
+        msg = (
+            "invalid tool definition: location of definition is unknown\n"
+            "  | class: <class 'u2.v.A'>\n"
+            "  | define the class in a regular file or in a zip archived with '.zip'\n"
+            "  | note also the importance of upper and lower case of module search paths "
+            "on case-insensitive filesystems"
+        )
+        self.assertEqual(msg, str(cm.exception))
 
     def test_definition_location_is_readonly(self):
         class A(Tool):
@@ -308,6 +340,15 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
 
 
 class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_fails_for_nontool(self):
+        class A:
+            pass
+
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            with self.assertRaises(TypeError):
+                dlb.ex.tool.get_and_register_tool_info(A)
 
     def test_path_for_tool_is_absolute(self):
         class A(dlb.ex.Tool):
