@@ -181,6 +181,12 @@ class MessageThresholdTest(unittest.TestCase):
         msg = "'level' must be > 0"
         self.assertEqual(msg, str(cm.exception))
 
+    def test_fails_on_none(self):
+        with self.assertRaises(TypeError) as cm:
+            dlb.di.set_threshold_level(None)
+        msg = "'level' must be something convertible to an int"
+        self.assertEqual(msg, str(cm.exception))
+
 
 class SetOutputFileTest(unittest.TestCase):
 
@@ -343,23 +349,24 @@ class ClusterTest(unittest.TestCase):
 
 class InformTest(unittest.TestCase):
 
-    def test_output_without_cluster_is_not_indented(self):
+    def setUp(self):
         dlb.di.set_threshold_level(logging.INFO)
+        _ = dlb.di._first_monotonic_ns  # make sure attribute exists
+        dlb.di._first_monotonic_ns = None
 
+    def test_output_without_cluster_is_not_indented(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        dlb.di.inform('M\n    m')
+        self.assertTrue(dlb.di.inform('M\n    m'))
 
         self.assertEqual('I M \n  | m\n', output.getvalue())
 
     def test_output_in_cluster_is_indented(self):
-        dlb.di.set_threshold_level(logging.INFO)
-
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
         with dlb.di.Cluster('A'):
-            dlb.di.inform('M\n    m')
+            self.assertTrue(dlb.di.inform('M\n    m'))
             self.assertEqual('I A\n  I M \n    | m\n', output.getvalue())
 
         dlb.di.set_threshold_level(logging.WARNING)
@@ -369,8 +376,20 @@ class InformTest(unittest.TestCase):
 
         with dlb.di.Cluster('A'):
             with dlb.di.Cluster('B'):
-                dlb.di.inform('M\n    m', level=logging.WARNING)
+                self.assertTrue(dlb.di.inform('M\n    m', level=logging.WARNING))
                 self.assertEqual('I A\n  I B\n    W M \n      | m\n', output.getvalue())
+
+    def test_suppresses_below_threshold(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        self.assertFalse(dlb.di.inform('M\n    m', level=logging.DEBUG))
+        self.assertEqual('', output.getvalue())
+
+    def test_timing_information_is_correct(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        self.assertTrue(dlb.di.inform('M\n    m', with_time=True))
+        self.assertEqual('I M [+0.000000s] \n  | m\n', output.getvalue())
 
 
 class UsageExampleTest(unittest.TestCase):

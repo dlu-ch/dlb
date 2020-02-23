@@ -13,6 +13,7 @@ import dlb.fs.manip
 import stat
 import collections
 import contextlib
+import marshal
 import unittest
 import tools_for_test
 
@@ -111,6 +112,10 @@ class EncodePathTest(unittest.TestCase):
         encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a'))
         self.assertTrue(encoded_path.startswith(encoded_path_root))
 
+    def test_fails_for_str(self):
+        with self.assertRaises(TypeError):
+            dlb.ex.rundb.encode_path('/a/b')
+
     def test_fails_for_absolute(self):
         with self.assertRaises(ValueError):
             dlb.ex.rundb.encode_path(dlb.fs.Path('/a/b'))
@@ -139,6 +144,12 @@ class DecodeEncodedPathTest(unittest.TestCase):
     def test_fails_for_encoded_path_with_dotdot(self):
         with self.assertRaises(ValueError):
             dlb.ex.rundb.decode_encoded_path('a/../')
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_path('a/../b/')
+
+    def test_fails_for_encoded_path_withot_trailing_slash(self):
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_path('a/b')
 
     def test_fails_for_encoded_path_with_slash(self):
         with self.assertRaises(ValueError):
@@ -161,6 +172,13 @@ class EncodeFsobjectMemoTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             # noinspection PyTypeChecker
             dlb.ex.rundb.encode_fsobject_memo(b'')
+
+    def test_fails_for_noninteger_mtime(self):
+        with self.assertRaises(TypeError):
+            m = dlb.fs.manip.FilesystemObjectMemo(
+                stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFREG, size=0, mtime_ns=1.25, uid=0, gid=0),
+                symlink_target=None)
+            dlb.ex.rundb.encode_fsobject_memo(m)
 
     def test_fails_for_symlink_without_target(self):
         with self.assertRaises(TypeError):
@@ -205,8 +223,7 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
         paths = [
             dlb.fs.manip.FilesystemObjectMemo(),
             dlb.fs.manip.FilesystemObjectMemo(
-                stat=dlb.fs.manip.FilesystemStatSummary(
-                    mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
+                stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
                 symlink_target=None),
             dlb.fs.manip.FilesystemObjectMemo(
                 stat=dlb.fs.manip.FilesystemStatSummary(
@@ -218,6 +235,45 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
             for m in paths
         ]
         self.assertEqual(paths, paths_roundtrip)
+
+    def test_fails_for_invalid_encoded(self):
+        m = dlb.fs.manip.FilesystemObjectMemo(
+             stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
+             symlink_target=None)
+
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_fsobject_memo(marshal.dumps(0))  # int instead of tuple
+
+        b = dlb.ex.rundb.encode_fsobject_memo(m)
+        t = marshal.loads(b)
+        t = (t[0], '1') + t[2:]
+        b = marshal.dumps(t)
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_fsobject_memo(b)  # str element instead of int element
+
+        b = dlb.ex.rundb.encode_fsobject_memo(m)
+        t = marshal.loads(b)
+        t = t + (7,)
+        b = marshal.dumps(t)
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_fsobject_memo(b)  # too many elements
+
+        b = dlb.ex.rundb.encode_fsobject_memo(m)
+        t = marshal.loads(b)
+        t = t[:-1] + ('a',)
+        b = marshal.dumps(t)
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_fsobject_memo(b)  # symlink target for non-symlink
+
+        m = dlb.fs.manip.FilesystemObjectMemo(
+             stat=dlb.fs.manip.FilesystemStatSummary(mode=stat.S_IFLNK, size=2, mtime_ns=3, uid=4, gid=5),
+             symlink_target='a')
+        b = dlb.ex.rundb.encode_fsobject_memo(m)
+        t = marshal.loads(b)
+        t = t[:-1] + (None,)
+        b = marshal.dumps(t)
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_encoded_fsobject_memo(b)  # non symlink target for symlink
 
 
 class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):

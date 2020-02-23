@@ -79,6 +79,10 @@ def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
 
 
 def encode_fsobject_memo(memo: manip.FilesystemObjectMemo) -> bytes:
+    """
+    Returns a representation of *memo* as marshal-encoded tuple.
+    """
+
     if not isinstance(memo, manip.FilesystemObjectMemo):
         raise TypeError
 
@@ -111,10 +115,7 @@ def decode_encoded_fsobject_memo(encoded_memo: bytes) -> manip.FilesystemObjectM
     if not t:
         return manip.FilesystemObjectMemo()
 
-    try:
-        mode, size, mtime_ns, uid, gid, symlink_target = t
-    except TypeError:
-        raise ValueError from None
+    mode, size, mtime_ns, uid, gid, symlink_target = t  # ValueError if number does not match
     if not all(isinstance(f, int) for f in t[:5]):
         raise ValueError
 

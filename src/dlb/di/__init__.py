@@ -36,10 +36,7 @@ _first_monotonic_ns: Optional[int] = None
 
 def _get_time_resolution():
     dt = time.get_clock_info('monotonic').resolution
-    if dt > 0.0:
-        n = math.ceil(-math.log10(dt)) + 1
-    else:
-        n = 0
+    n = math.ceil(-math.log10(dt)) + 1
     return max(1, min(6, n))
 
 
