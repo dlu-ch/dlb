@@ -425,18 +425,31 @@ class _ToolBase:
 
             with di.Cluster('clear filesystem objects that are explicit output dependencies',
                             with_time=True, is_progress=True):
+                tmp_dir = None
+
                 for name, action in dependency_info:
                     if action.dependency.explicit and isinstance(action.dependency, depend.Output) and \
                             isinstance(action.dependency, depend.FilesystemObject):
                         validated_value_tuple = action.dependency.tuple_from_value(getattr(self, name))
                         for p in validated_value_tuple:  # p is a (valid) managed tree path as a dlb.fs.Path
+                            if tmp_dir is None:
+                                tmp_dir = context.create_temporary(is_dir=True)  # may raise OSError
+                            manip.remove_filesystem_object(context.root_path / p,
+                                                           abs_empty_dir_path=tmp_dir,
+                                                           ignore_non_existing=True)  # may raise OSError
                             encoded_path = rundb.encode_path(p)
                             db.declare_fsobject_input_as_modified(encoded_path)
+
+                if tmp_dir is not None:
+                    try:
+                        manip.remove_filesystem_object(tmp_dir)
+                    except OSError:
+                        pass
 
             db.commit()
 
             with di.Cluster('redo', with_time=True, is_progress=True):
-                result = self.redo()
+                result = self.redo(context)
                 # TODO check if all non-explicit output dependencies were "replaced" by redo
                 # TODO check if all output dependencies exist?
 

@@ -28,8 +28,12 @@ class ATool(dlb.ex.Tool):
     dummy_file = dlb.ex.Tool.Input.NonRegularFile(required=False)
     dummy_dir = dlb.ex.Tool.Output.Directory(required=False)
 
-    def redo(self):
+    def redo(self, context):
         dlb.di.inform("redoing right now")
+
+        with (context.root_path / self.object_file).native.raw.open('xb'):
+            pass
+
         return 1
 
 
@@ -232,8 +236,6 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryDirector
 
         with (src / 'a.cpp').open('xb'):
             pass
-        with pathlib.Path('a.out').open('xb'):
-            pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.out')
 
@@ -302,8 +304,6 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirec
         src.mkdir()
         with (src / 'a.cpp').open('xb'):
             pass
-        with pathlib.Path('a.out').open('xb'):
-            pass
 
         nonregular = src / 'n'
 
@@ -354,8 +354,6 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryDirectoryTestCase):
             pass
         with (src / 'b.cpp').open('xb'):
             pass
-        with pathlib.Path('a.out').open('xb'):
-            pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.out')
         t2 = ATool(source_file='src/b.cpp', object_file='src/a.cpp')
@@ -387,6 +385,7 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
 
+        pathlib.Path('a.out').unlink()
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -406,6 +405,7 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
 
+        pathlib.Path('a.out').unlink()
         pathlib.Path('a.out').mkdir()
         with dlb.ex.Context():
             output = io.StringIO()
@@ -417,3 +417,65 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
                 r".*  \| reason: filesystem object exists, but is not a regular file\n"
             )
             self.assertRegex(output.getvalue(), regex)
+
+
+class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_redo_ignores_unexisting_output_file(self):
+        pathlib.Path('.dlbroot').mkdir()
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+
+        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+        self.assertFalse(pathlib.Path('d').exists())
+
+    def test_redo_removes_existing_output_dir(self):
+        pathlib.Path('.dlbroot').mkdir()
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+        pathlib.Path('d').mkdir()
+
+        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+        self.assertFalse(pathlib.Path('d').exists())
+
+    def test_redo_removes_existing_output_file(self):
+        pathlib.Path('.dlbroot').mkdir()
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+        with pathlib.Path('d').open('xb'):
+            pass
+
+        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+        self.assertFalse(pathlib.Path('d').exists())
+
+    def test_run_without_redo_does_not_remove_output_file(self):
+        pathlib.Path('.dlbroot').mkdir()
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+
+        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+
+        pathlib.Path('d').mkdir()
+        with dlb.ex.Context():
+            self.assertIsNone(t.run())
+        self.assertTrue(pathlib.Path('d').exists())  # still exists
