@@ -358,7 +358,15 @@ class _RedoResult:
 
         if role.explicit:
             raise AttributeError(f"{key!r} is not a non-explicit dependency")
-        super().__setattr__(key, role.validate(value, None))
+
+        if value is not None:
+            validated_value = role.validate(value, None)
+        elif not role.required:
+            validated_value = None
+        else:
+            raise ValueError('value for required dependency must not be None')
+
+        super().__setattr__(key, validated_value)
 
     def __getattr__(self, item):
         try:
@@ -539,11 +547,14 @@ class _ToolBase:
                     if not action.dependency.explicit and isinstance(action.dependency, depend.Input):
                         v = getattr(result, action.name)
                         if v is NotImplemented:
-                            msg = (
-                                f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
-                                f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
-                            )
-                            raise RedoError(msg)
+                            if action.dependency.required:
+                                msg = (
+                                    f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
+                                    f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
+                                )
+                                raise RedoError(msg)
+                            v = None
+                            setattr(result, action.name, v)
                         if isinstance(action.dependency, depend.FilesystemObject):
                             paths = action.dependency.tuple_from_value(v)
                             for p in paths:

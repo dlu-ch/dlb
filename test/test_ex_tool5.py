@@ -161,7 +161,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
 
 class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
 
-    def test_fails_for_redo_that_does_not_assign(self):
+    def test_fails_for_redo_that_does_not_assign_required(self):
         pathlib.Path('.dlbroot').mkdir()
 
         class BTool(dlb.ex.Tool):
@@ -181,7 +181,22 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-    def test_fails_for_input_dependency_not_managed_tree(self):
+    def test_nonrequired_is_none_if_redo_does_not_assign(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
+
+            def redo(self, result, context):
+                pass
+
+        t = BTool(object_file='a.o')
+        with dlb.ex.Context():
+            result = t.run()
+        self.assertIsNone(result.included_files)
+
+    def test_fails_if_input_dependency_not_in_managed_tree(self):
         pathlib.Path('.dlbroot').mkdir()
 
         class BTool(dlb.ex.Tool):
@@ -197,6 +212,38 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
                 t.run()
         msg = "non-explicit input dependency 'included_files' contains a path that is not a managed tree path: 'a/../b'"
         self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_if_redo_assigns_none_to_required(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+            def redo(self, result, context):
+                result.included_files = None
+
+        t = BTool(object_file='a.o')
+        with dlb.ex.Context():
+            with self.assertRaises(ValueError) as cm:
+                t.run()
+        msg = "value for required dependency must not be None"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_redo_can_assigns_none_to_nonrequired(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
+
+            def redo(self, result, context):
+                result.included_files = None
+
+        t = BTool(object_file='a.o')
+        with dlb.ex.Context():
+            result = t.run()
+        self.assertIsNone(result.included_files)
 
 
 class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
