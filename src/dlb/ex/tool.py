@@ -4,7 +4,7 @@
 
 """Dependency-aware tool execution."""
 
-__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError', 'DependencyCheckError')
+__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError', 'DependencyCheckError', 'RedoError')
 
 import sys
 import re
@@ -58,6 +58,10 @@ class DependencyRoleAssignmentError(ValueError):
 
 
 class DependencyCheckError(Exception):
+    pass
+
+
+class RedoError(Exception):
     pass
 
 
@@ -186,7 +190,7 @@ def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_me
     elif (memo.stat is None) != (last_memo.stat is None):
         return 'existence has changed'  # TODO test
     elif memo.stat is None:
-        # non-explict dependency of a filesystem object that does not exist and did not exist before the
+        # non-explicit dependency of a filesystem object that does not exist and did not exist before the
         # last successful redo
         return None  # TODO test
 
@@ -337,6 +341,45 @@ def _remove_explicit_output_dependencies(tool, dependency_actions: Tuple[dependa
             manip.remove_filesystem_object(tmp_dir)
         except OSError:
             pass  # try again when root context is cleaned-up
+
+
+class _RedoResult:
+    # Attribute represent concrete dependencies of a tool instance.
+    # Explicit dependencies are referred to the tool instance.
+    # Non-explicit dependencies can be set exactly once.
+    #
+    # To be used by redo.
+
+    def __init__(self, tool):
+        super().__setattr__('_tool', tool)
+
+    def __setattr__(self, key, value):
+        try:
+            role = getattr(self._tool.__class__, key)
+            if not isinstance(role, depend.Dependency):
+                raise AttributeError
+        except AttributeError:
+            raise AttributeError(f"{key!r} is not a dependency")
+
+        if key in self.__dict__:
+            raise AttributeError(f"{key!r} is already assigned")
+
+        if role.explicit:
+            raise AttributeError(f"{key!r} is not a non-explicit dependency")
+        super().__setattr__(key, role.validate(value, None))
+
+    def __getattr__(self, item):
+        try:
+            role = getattr(self._tool.__class__, item)
+            if not isinstance(role, depend.Dependency):
+                raise AttributeError
+        except AttributeError:
+            raise AttributeError(f"{item!r} is not a dependency")
+
+        if role.explicit:
+            return getattr(self._tool, item)
+
+        return NotImplemented
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -492,26 +535,51 @@ class _ToolBase:
                             with_time=True, is_progress=True):
                 _remove_explicit_output_dependencies(self, dependency_actions, context)
 
+            result = _RedoResult(self)
+
             with di.Cluster('redo', with_time=True, is_progress=True):
-                db.commit()
-                self.redo(context)
-                result = True  # TODO replace by asynch result object
-                # TODO check if all non-explicit output dependencies were "replaced" by redo
-                # TODO check if all output dependencies exist?
+                # note: no db.commit() necessary as long as root context does commit on exception
+                self.redo(result, context)
+
+                # collect non-explicit input dependencies of this redo
+                encoded_paths_of_nonexplicit_input_dependencies = set()
+                for action in dependency_actions:
+                    if not action.dependency.explicit and isinstance(action.dependency, depend.Input):
+                        v = getattr(result, action.name)
+                        if v is NotImplemented:
+                            msg = (
+                                f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
+                                f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
+                            )
+                            raise RedoError(msg)  # TODO test
+                        if isinstance(action.dependency, depend.FilesystemObject):
+                            paths = action.dependency.tuple_from_value(v)
+                            for p in paths:
+                                # TODO managed tree???
+                                encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
+
+            encoded_paths_of_input_dependencies = \
+                encoded_paths_of_explicit_input_dependencies | encoded_paths_of_nonexplicit_input_dependencies
 
             with di.Cluster('store state before redo in run-database'):
                 # redo was successful, so save the state before the redo to the run-database
                 info_by_by_fsobject_dbid = {
-                    encoded_path: (True, rundb.encode_fsobject_memo(memo))
+                    encoded_path: (
+                        encoded_path in encoded_paths_of_explicit_input_dependencies,
+                        rundb.encode_fsobject_memo(memo))
                     for encoded_path, memo in memo_by_encoded_path.items()
+                    if encoded_path in encoded_paths_of_input_dependencies  # drop obsolete non-explicit dependencies
                 }
+                info_by_by_fsobject_dbid.update({  # add new non-explicit dependencies
+                    encoded_path: (False, None)  # TODO replace None (has double meaning)
+                    for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_by_fsobject_dbid)
+                })
                 db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
-                db.commit()
+                # note: no db.commit() necessary as long as root context does commit on exception
 
             return result
 
-
-    def redo(self, context: context_.Context):
+    def redo(self, result: _RedoResult, context: context_.Context):
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):
@@ -621,7 +689,7 @@ class _ToolMeta(type):
             if name in _ToolMeta.OVERRIDEABLE_ATTRIBUTES:
                 pass
             elif RESERVED_NAME_REGEX.match(name):
-                pass
+                pass  # TODO test
             elif EXECUTION_PARAMETER_NAME_REGEX.match(name):
                 # if overridden: must be instance of type of overridden attribute
                 for base_class in cls.__bases__:

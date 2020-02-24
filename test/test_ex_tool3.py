@@ -28,7 +28,7 @@ class ATool(dlb.ex.Tool):
     dummy_file = dlb.ex.Tool.Input.NonRegularFile(required=False)
     dummy_dir = dlb.ex.Tool.Output.Directory(required=False)
 
-    def redo(self, context):
+    def redo(self, result, context):
         dlb.di.inform("redoing right now")
 
         with (context.root_path / self.object_file).native.raw.open('xb'):
