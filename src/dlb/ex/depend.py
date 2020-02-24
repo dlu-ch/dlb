@@ -240,7 +240,7 @@ class EnvVarInput(ConcreteDependency, Input):
 
     def validate_single(self, value) -> Union[str, Dict[str, str]]:
         # value is used to defined the content of a (future) environment variable
-        value = str(super().validate_single(value))
+        value = super().validate_single(value)
 
         if not isinstance(value, str):
             raise TypeError("'value' must be a str")

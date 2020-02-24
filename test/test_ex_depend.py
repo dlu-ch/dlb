@@ -110,6 +110,15 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
         self.assertEqual(str(cm.exception), msg)
 
 
+class CommonOfConcreteFilesystemObjectTest(unittest.TestCase):
+
+    def test_fails_for_nonpath_cls(self):
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.Tool.Input.RegularFile(cls=str)
+        msg = "'cls' is not a subclass of 'dlb.fs.Path'"
+        self.assertEqual(str(cm.exception), msg)
+
+
 class AbstractDependencyValidationTest(unittest.TestCase):
 
     def test_fails_with_meaningful_message(self):
@@ -165,13 +174,22 @@ class SingleInputValidationTest(unittest.TestCase):
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
     def test_envvar_returns_str_or_dict(self):
-        v = dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+[a-z]+', example='42s').validate('123mm')
-        self.assertEqual(v, '123mm')
+        d = dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+[a-z]+', example='42s')
+        self.assertEqual('123mm', d.validate('123mm'))
 
-        v = dlb.ex.depend.EnvVarInput(
+        d = dlb.ex.depend.EnvVarInput(
             name='number',
-            restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s').validate('123mm')
-        self.assertEqual(v, {'num': '123', 'unit': 'mm'})
+            restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s')
+
+        self.assertEqual({'num': '123', 'unit': 'mm'}, d.validate('123mm'))
+
+        with self.assertRaises(TypeError) as cm:
+            d.validate(b'')
+        self.assertEqual(str(cm.exception), "'value' must be a str")
+
+        with self.assertRaises(ValueError) as cm:
+            d.validate('')
+        self.assertEqual(str(cm.exception), "'value' must not be empty")
 
 
 class InputPropertyTest(unittest.TestCase):
@@ -240,6 +258,16 @@ class EnvVarInputValidationTest(unittest.TestCase):
             dlb.ex.depend.EnvVarInput(name='', restriction=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "'name' must not be empty")
 
+    def test_fails_if_restriction_is_bytes(self):
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.depend.EnvVarInput(name='number', restriction=b'42', example='42')
+        self.assertEqual(str(cm.exception), "'restriction' must be regular expression (compiled or str)")
+
+    def test_fails_if_example_is_none(self):
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.depend.EnvVarInput(name='number', restriction='42', example=None)
+        self.assertEqual(str(cm.exception), "'example' must be a str")
+
     def test_fails_with_nonmatching_example(self):
         with self.assertRaises(ValueError) as cm:
             dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+', example='42s')
@@ -299,7 +327,7 @@ class TupleFromValueTest(unittest.TestCase):
 
 
 # noinspection PyPep8Naming
-class CompatibilityTest:
+class CompatibilityTest(unittest.TestCase):
 
     def test_is_compatible_to_self(self):
         Ds = [
@@ -314,8 +342,8 @@ class CompatibilityTest:
         for D in Ds:
             self.assertTrue(D().compatible_and_no_less_restrictive(D()))
 
-        d1 = dlb.ex.depend.EnvVarInput(restriction=r'.', example='')
-        d2 = dlb.ex.depend.EnvVarInput(restriction=r'.', example='')
+        d1 = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.*', example='')
+        d2 = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.*', example='')
         self.assertTrue(d1.compatible_and_no_less_restrictive(d2))
 
     def test_different_dependency_classes_are_not_compatible(self):
@@ -339,6 +367,33 @@ class CompatibilityTest:
         B = dlb.ex.depend.RegularFileInput[1:5:2]
         self.assertFalse(A().compatible_and_no_less_restrictive(B()))
         self.assertFalse(B().compatible_and_no_less_restrictive(A()))
+
+    def test_different_explicit_are_not_compatible(self):
+        C = dlb.ex.depend.RegularFileInput
+        self.assertFalse(C().compatible_and_no_less_restrictive(C(explicit=False)))
+        self.assertFalse(C(explicit=False).compatible_and_no_less_restrictive(C()))
+
+    def test_required_is_more_restrictive_than_notrequired(self):
+        C = dlb.ex.depend.RegularFileInput
+        self.assertTrue(C().compatible_and_no_less_restrictive(C(required=False)))
+        self.assertFalse(C(required=False).compatible_and_no_less_restrictive(C()))
+
+    def test_unique_is_more_restrictive_than_notunique(self):
+        C = dlb.ex.depend.RegularFileInput
+        self.assertTrue(C().compatible_and_no_less_restrictive(C(unique=False)))
+        self.assertFalse(C(unique=False).compatible_and_no_less_restrictive(C()))
+
+    def test_envvar_with_different_names_are_not_compatible(self):
+        d1 = dlb.ex.depend.EnvVarInput(name='n1', restriction=r'.*', example='')
+        d2 = dlb.ex.depend.EnvVarInput(name='n2', restriction=r'.*', example='')
+        self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
+        self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
+
+    def test_envvar_with_different_restrictions_are_not_compatible(self):
+        d1 = dlb.ex.depend.EnvVarInput(name='n', restriction=r'', example='')
+        d2 = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.*', example='')
+        self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
+        self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 
 
 class CoverageTest(unittest.TestCase):
