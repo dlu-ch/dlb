@@ -37,10 +37,6 @@ assert DEPENDENCY_NAME_REGEX.match('object_file')
 assert not DEPENDENCY_NAME_REGEX.match('_object_file_')
 assert not DEPENDENCY_NAME_REGEX.match('Object_file_')
 
-RESERVED_NAME_REGEX = re.compile('^__[^_].*[^_]?__$')
-assert RESERVED_NAME_REGEX.match('__init__')
-assert not RESERVED_NAME_REGEX.match('__init')
-
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
 _tool_class_by_definition_location = {}
@@ -691,8 +687,6 @@ class _ToolMeta(type):
         for name, value in cls.__dict__.items():
             if name in _ToolMeta.OVERRIDEABLE_ATTRIBUTES:
                 pass
-            elif RESERVED_NAME_REGEX.match(name):
-                pass  # TODO test
             elif EXECUTION_PARAMETER_NAME_REGEX.match(name):
                 # if overridden: must be instance of type of overridden attribute
                 for base_class in cls.__bases__:
