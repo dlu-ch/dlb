@@ -530,3 +530,11 @@ Exceptions
 
    Raised at the construction of a subclass of :class:`Tool`, when the arguments of the constructor do not
    match the declared dependency roles of the class.
+
+.. exception:: DependencyCheckError
+
+   Raised when a running :term:`tool instance` detects a problem with its dependencies before a :term:`redo`.
+
+.. exception:: RedoError
+
+   Raised when a running :term:`tool instance` detects a problem with its dependencies after a :term:`redo`.

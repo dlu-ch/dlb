@@ -26,7 +26,7 @@ There is no magic code before or after the script.
 Since dlb build scripts are Python scripts, you can easily analyse, run or debug them in your favorite Python IDE.
 
 Tools (e.g. compiler/linker toolchains) are represented as classes. Adapting tools means adapting classes
-(by subclassing).
+by subclassing.
 
 Example::
 
@@ -49,12 +49,12 @@ Example::
           for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
        ]
 
-       linker = Linker(
+       application_file = Linker(
            object_files=object_files,
-           linked_file=Path('build/out/example')                                 # (e)
-       ).run()
+           linked_file=Path('build/out/example')                               # (e)
+       ).run().linked_file
 
-       print('Size:', linker.linked_file.native.stat().st_size, 'B')             # (f)
+       print('Size:', application_file.native.stat().st_size, 'B')             # (f)
 
 Explanation:
 
