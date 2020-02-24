@@ -289,16 +289,10 @@ Input dependency role classes
 |                                     | Name                  | Default value              |
 +=====================================+=======================+============================+
 | :class:`Tool.Input.RegularFile`     | *cls*                 | :class:`dlb.fs.Path`       |
-|                                     +-----------------------+----------------------------+
-|                                     | *ignore_permission*   | ``True``                   |
 +-------------------------------------+-----------------------+----------------------------+
 | :class:`Tool.Input.NonRegularFile`  | *cls*                 | :class:`dlb.fs.Path`       |
-|                                     +-----------------------+----------------------------+
-|                                     | *ignore_permission*   | ``True``                   |
 +-------------------------------------+-----------------------+----------------------------+
 | :class:`Tool.Input.Directory`       | *cls*                 | :class:`dlb.fs.Path`       |
-|                                     +-----------------------+----------------------------+
-|                                     | *ignore_permission*   | ``True``                   |
 +-------------------------------------+-----------------------+----------------------------+
 | :class:`Tool.Input.EnvVar`          | *restriction*         |                            |
 |                                     +-----------------------+----------------------------+
@@ -318,10 +312,6 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
 
-   If *ignore_permission* is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
-   :term:`mtime` is considered a modification of the dependency.
-   Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
-
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
    instance of *cls*.
 
@@ -335,8 +325,6 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
-   :param ignore_permission: ignore permission modifications?
-   :type ignore_permission: bool
 
 .. class:: Tool.Input.NonRegularFile(cls=dlb.fs.Path)
 
@@ -347,10 +335,6 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
-
-   If *ignore_permission* is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
-   :term:`mtime` is considered a modification of the dependency.
-   Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
    instance of *cls*.
@@ -365,8 +349,6 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
-   :param ignore_permission: ignore permission modifications?
-   :type ignore_permission: bool
 
 .. class:: Tool.Input.Directory(cls=dlb.fs.Path)
 
@@ -376,10 +358,6 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
-
-   If *ignore_permission* is ``False``, a modification of owner (UID, GID), permission (rwx), existence, type or
-   :term:`mtime` is considered a modification of the dependency.
-   Otherwise, only a modification of existence, type or :term:`mtime` is considered a modification of the dependency.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
    as an instance of *cls*.
@@ -394,8 +372,6 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
-   :param ignore_permission: ignore permission modifications?
-   :type ignore_permission: bool
 
 .. class:: Tool.Input.EnvVar(restriction, example)
 

@@ -88,12 +88,6 @@ class _FilesystemObjectMixin(Action):
         pass
 
 
-class _FilesystemObjectInputMixin(_FilesystemObjectMixin):
-    def get_permanent_local_instance_id(self) -> bytes:
-        d: Union[depend.RegularFileInput, depend.NonRegularFileInput, depend.DirectoryInput] = self.dependency
-        return super().get_permanent_local_instance_id() + marshal.dumps(d.ignore_permission)
-
-
 class _RegularFileMixin(_FilesystemObjectMixin):
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
@@ -117,15 +111,15 @@ class _DirectoryMixin(_FilesystemObjectMixin):
             raise ValueError("filesystem object exists, but is not a directory")
 
 
-class RegularFileInputAction(_RegularFileMixin, _FilesystemObjectInputMixin, Action):
+class RegularFileInputAction(_RegularFileMixin, Action):
     pass
 
 
-class NonRegularFileInputAction(_NonRegularFileMixin, _FilesystemObjectInputMixin, Action):
+class NonRegularFileInputAction(_NonRegularFileMixin, Action):
     pass
 
 
-class DirectoryInputAction(_DirectoryMixin, _FilesystemObjectInputMixin, Action):
+class DirectoryInputAction(_DirectoryMixin, Action):
     pass
 
 

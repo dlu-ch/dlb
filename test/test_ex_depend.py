@@ -189,25 +189,18 @@ class SingleInputValidationTest(tools_for_test.TemporaryDirectoryTestCase):
 
 class InputPropertyTest(unittest.TestCase):
 
-    def test_filesystem_input_dependency_has_cls_and_(self):
+    def test_filesystem_input_dependency_has_cls(self):
         d = dlb.ex.depend.RegularFileInput()
         self.assertIs(d.cls, dlb.fs.Path)
-        self.assertTrue(d.ignore_permission)
 
         d = dlb.ex.depend.RegularFileInput(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
-        d = dlb.ex.depend.RegularFileInput(ignore_permission=False)
-        self.assertFalse(d.ignore_permission)
 
         d = dlb.ex.depend.NonRegularFileInput(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
-        d = dlb.ex.depend.RegularFileInput(ignore_permission=False)
-        self.assertFalse(d.ignore_permission)
 
         d = dlb.ex.depend.DirectoryInput(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
-        d = dlb.ex.depend.RegularFileInput(ignore_permission=False)
-        self.assertFalse(d.ignore_permission)
 
     def test_filesystem_output_dependency_has_cls(self):
 

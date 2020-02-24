@@ -155,25 +155,6 @@ class _FilesystemObjectMixin(FilesystemObject):
         return self._path_cls(value)
 
 
-class _FilesystemObjectInputMixin(Dependency):
-    def __init__(self, *, ignore_permission: bool = True, **kwargs):
-        super().__init__(**kwargs)
-        self._ignore_permission = bool(ignore_permission)
-
-    @property
-    def ignore_permission(self) -> bool:
-        return self._ignore_permission
-
-    def compatible_and_no_less_restrictive(self, other) -> bool:
-        if not super().compatible_and_no_less_restrictive(other):
-            return False
-
-        if not other.ignore_permission and self.ignore_permission:
-            return False
-
-        return True
-
-
 class _NonDirectoryMixin(_FilesystemObjectMixin):
     def validate_single(self, value, context: Optional[context_.Context]) -> fs.Path:
         value = super().validate_single(value, context)
@@ -190,15 +171,15 @@ class _DirectoryMixin(_FilesystemObjectMixin):
         return value
 
 
-class RegularFileInput(_NonDirectoryMixin, _FilesystemObjectInputMixin, ConcreteDependency, Input):
+class RegularFileInput(_NonDirectoryMixin, ConcreteDependency, Input):
     pass
 
 
-class NonRegularFileInput(_NonDirectoryMixin, _FilesystemObjectInputMixin, ConcreteDependency, Input):
+class NonRegularFileInput(_NonDirectoryMixin, ConcreteDependency, Input):
     pass
 
 
-class DirectoryInput(_DirectoryMixin, _FilesystemObjectInputMixin, ConcreteDependency, Input):
+class DirectoryInput(_DirectoryMixin, ConcreteDependency, Input):
     pass
 
 

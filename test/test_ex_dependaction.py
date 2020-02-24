@@ -77,13 +77,6 @@ class RegularFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
         plii2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertNotEqual(plii1, plii2)
 
-    def test_is_different_for_different_ignore_permission(self):
-        d1 = dlb.ex.Tool.Input.RegularFile(ignore_permission=False)
-        d2 = dlb.ex.Tool.Input.RegularFile[:]()
-        plii1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
-        plii2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
-        self.assertNotEqual(plii1, plii2)
-
 
 class EnvVarFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
 
