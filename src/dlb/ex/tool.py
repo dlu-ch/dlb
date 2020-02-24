@@ -88,7 +88,7 @@ def _get_memo_for_fs_input_dependency(name: Optional[str], path: fs.Path,
     try:
         try:
             path = context.managed_tree_path_of(path, existing=True, collapsable=False)
-        except (ValueError, manip.PathNormalizationError) as e:
+        except ValueError as e:
             if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
                 raise e.oserror
             msg = (
@@ -136,12 +136,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
     try:
 
         try:
-            try:
-                path = context.managed_tree_path_of(path, existing=True, collapsable=False)
-            except ValueError as e:
-                if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
-                    raise e.oserror from None
-                raise
+            path = context.managed_tree_path_of(path, existing=True, collapsable=False)
             memo = manip.read_filesystem_object_memo(context.root_path / path)
         except FileNotFoundError:
             # ignore if did not exist according to valid 'encoded_memo'
@@ -552,11 +547,18 @@ class _ToolBase:
                                 f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
                                 f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
                             )
-                            raise RedoError(msg)  # TODO test
+                            raise RedoError(msg)
                         if isinstance(action.dependency, depend.FilesystemObject):
                             paths = action.dependency.tuple_from_value(v)
                             for p in paths:
-                                # TODO in managed tree?
+                                try:
+                                    p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                                except ValueError:
+                                    msg = (
+                                        f"non-explicit input dependency {action.name!r} contains a path that is not a "
+                                        f"managed tree path: {p.as_string()!r}"
+                                    )
+                                    raise RedoError(msg) from None
                                 encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
 
             encoded_paths_of_input_dependencies = \

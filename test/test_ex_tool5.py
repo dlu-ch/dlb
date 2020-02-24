@@ -33,7 +33,7 @@ class ATool(dlb.ex.Tool):
         result.included_files = [dlb.fs.Path('a.h'), dlb.fs.Path('b.h')]
 
 
-class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):  # ???
+class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_new_or_missing_dependency_causes_redo(self):
         pathlib.Path('.dlbroot').mkdir()
@@ -140,9 +140,58 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
-            regex = (
-                r"(?m)\b"
-                r"redo necessary because of inexisting or inaccessible filesystem object: '\.dlbroot/o'\n"
-            )
+            regex = r"\b()redo necessary because of inexisting or inaccessible filesystem object: '\.dlbroot/o'\n"
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
+
+        with dlb.ex.Context():
+            # add non-existing dependency with invalid memo
+            rundb = dlb.ex.context._get_rundb()
+            rundb.update_fsobject_input(1, 'd.h/', False, marshal.dumps(42))
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            regex = r"\b()redo necessary because of inexisting or inaccessible filesystem object: 'd\.h'\n"
+            self.assertRegex(output.getvalue(), regex)
+            self.assertIsNone(t.run())
+
+
+class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_fails_for_redo_that_does_not_assign(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+            def redo(self, result, context):
+                pass
+
+        t = BTool(object_file='a.o')
+        with dlb.ex.Context():
+            with self.assertRaises(dlb.ex.RedoError) as cm:
+                t.run()
+        msg = (
+            "non-explicit input dependency not assigned during redo: 'included_files'\n"
+            "  | use 'result.included_files = ...' in body of redo(self, result, context)"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_input_dependency_not_managed_tree(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+            def redo(self, result, context):
+                result.included_files = ['a/../b']
+
+        t = BTool(object_file='a.o')
+        with dlb.ex.Context():
+            with self.assertRaises(dlb.ex.RedoError) as cm:
+                t.run()
+        msg = "non-explicit input dependency 'included_files' contains a path that is not a managed tree path: 'a/../b'"
+        self.assertEqual(msg, str(cm.exception))
