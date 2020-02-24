@@ -42,20 +42,20 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirector
 
         regex = (
             r"\A()input dependency 'source_file' contains a path of an non-existing "
-            r"filesystem object: 'src[\\/]+a\.cpp'\Z"
+            r"filesystem object: 'src/a\.cpp'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
-                t = ATool(source_file='src/a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
+                t = ATool(source_file='src/a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
 
         regex = (
             r"\A()input dependency 'source_file' contains a path of an non-existing "
-            r"filesystem object: 'src[\\/]+b[\\/]+\.\.[\\/]+a\.cpp'\Z"
+            r"filesystem object: 'src/b/\.\./a\.cpp'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
-                t = ATool(source_file='src/b/../a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
+                t = ATool(source_file='src/b/../a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
 
     def test_fails_for_nonnormalized_inputfile_path(self):
@@ -63,12 +63,12 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirector
 
         regex = (
             r"(?m)\A"
-            r"input dependency 'source_file' contains a path that is not a managed tree path: '\.\.[\\/]+a\.cpp'\n"
+            r"input dependency 'source_file' contains a path that is not a managed tree path: '\.\./a\.cpp'\n"
             r"  | reason: is an upwards path: '\.\.[\\/]+a\.cpp'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
-                t = ATool(source_file='../a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
+                t = ATool(source_file='../a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
 
 
@@ -82,12 +82,12 @@ class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryDirectoryTestC
 
         regex = (
             r"(?m)\A"
-            r"output dependency 'object_file' contains a path that is not a managed tree path: '\.\.[\\/]+a\.out'\n"
-            r"  | reason: is an upwards path: '\.\.[\\/]+a\.out'\Z"
+            r"output dependency 'object_file' contains a path that is not a managed tree path: '\.\./a\.o'\n"
+            r"  | reason: is an upwards path: '\.\.[\\/]+a\.o'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
-                t = ATool(source_file='a.cpp', object_file='../a.out')
+                t = ATool(source_file='a.cpp', object_file='../a.o')
                 t.run()
 
 
@@ -101,12 +101,12 @@ class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_t
 
         regex = (
             r"(?m)\A"
-            r"input dependency 'source_file' contains a path of an inaccessible filesystem object: 'src[\\/]+a\.cpp'\n"
+            r"input dependency 'source_file' contains a path of an inaccessible filesystem object: 'src/a\.cpp'\n"
             r"  \| reason: .*\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
-                t = ATool(source_file='src/a.cpp', object_file='out/a.out', include_directories=['src/serdes/'])
+                t = ATool(source_file='src/a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
 
         os.chmod('src', 0o600)
@@ -140,7 +140,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
         with (src / 'b').open('xb'):
             pass
 
-        t = ATool(source_file='src', object_file='a.out')
+        t = ATool(source_file='src', object_file='a.o')
         with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
             with dlb.ex.Context():
                 t.run()
@@ -150,7 +150,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-        t = ATool(source_file='src/a.cpp', include_directories=['src/b/'], object_file='a.out')
+        t = ATool(source_file='src/a.cpp', include_directories=['src/b/'], object_file='a.o')
         with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
             with dlb.ex.Context():
                 t.run()
@@ -160,7 +160,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-        t = ATool(source_file='src/a.cpp', dummy_file='src/a.cpp', object_file='a.out')
+        t = ATool(source_file='src/a.cpp', dummy_file='src/a.cpp', object_file='a.o')
         with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
             with dlb.ex.Context():
                 t.run()
@@ -170,7 +170,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-        t = ATool(source_file='src/a.cpp', dummy_file='src', object_file='a.out')
+        t = ATool(source_file='src/a.cpp', dummy_file='src', object_file='a.o')
         with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
             with dlb.ex.Context():
                 t.run()
@@ -188,7 +188,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
         with (src / 'a.cpp').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', include_directories=['src/a.cpp/'], object_file='a.out')
+        t = ATool(source_file='src/a.cpp', include_directories=['src/a.cpp/'], object_file='a.o')
         with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
             with dlb.ex.Context():
                 t.run()
@@ -208,20 +208,20 @@ class RunDoesNoRedoForIfInputNotModifiedTest(tools_for_test.TemporaryDirectoryTe
 
         with (src / 'a.cpp').open('xb'):
             pass
-        with pathlib.Path('a.out').open('xb'):
+        with pathlib.Path('a.o').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        t = ATool(source_file='src/a.cpp', object_file='a.o')
 
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
             self.assertIsNone(t.run())
 
-            t = ATool(source_file='src/a.cpp', object_file='a.out')
+            t = ATool(source_file='src/a.cpp', object_file='a.o')
             self.assertIsNone(t.run())
 
         with dlb.ex.Context():
-            t = ATool(source_file='src/a.cpp', object_file='a.out')
+            t = ATool(source_file='src/a.cpp', object_file='a.o')
             self.assertIsNone(t.run())
 
 
@@ -235,7 +235,7 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryDirector
         with (src / 'a.cpp').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        t = ATool(source_file='src/a.cpp', object_file='a.o')
 
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
@@ -311,7 +311,7 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirec
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_file='src/n')
+        t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_file='src/n')
 
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
@@ -353,7 +353,7 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryDirectoryTestCase):
         with (src / 'b.cpp').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        t = ATool(source_file='src/a.cpp', object_file='a.o')
         t2 = ATool(source_file='src/b.cpp', object_file='src/a.cpp')
 
         with dlb.ex.Context():
@@ -379,16 +379,16 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
         with (src / 'a.cpp').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
 
-        pathlib.Path('a.out').unlink()
+        pathlib.Path('a.o').unlink()
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
-            regex = r"\b()redo necessary because of filesystem object that is an output dependency: 'a\.out'"
+            regex = r"\b()redo necessary because of filesystem object that is an output dependency: 'a\.o'"
             self.assertRegex(output.getvalue(), regex)
 
     def test_redo_if_not_output_is_directory(self):
@@ -399,19 +399,19 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
         with (src / 'a.cpp').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out')
+        t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
 
-        pathlib.Path('a.out').unlink()
-        pathlib.Path('a.out').mkdir()
+        pathlib.Path('a.o').unlink()
+        pathlib.Path('a.o').mkdir()
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
             regex = (
                 r"(?m)\b"
-                r"redo necessary because of filesystem object that is an output dependency: 'a\.out' \n"
+                r"redo necessary because of filesystem object that is an output dependency: 'a\.o' \n"
                 r".*  \| reason: filesystem object exists, but is not a regular file\n"
             )
             self.assertRegex(output.getvalue(), regex)
@@ -427,7 +427,7 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase
         with (src / 'a.cpp').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
         self.assertFalse(pathlib.Path('d').exists())
@@ -441,7 +441,7 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase
             pass
         pathlib.Path('d').mkdir()
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
         self.assertFalse(pathlib.Path('d').exists())
@@ -456,7 +456,7 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase
         with pathlib.Path('d').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
         self.assertFalse(pathlib.Path('d').exists())
@@ -469,7 +469,7 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase
         with (src / 'a.cpp').open('xb'):
             pass
 
-        t = ATool(source_file='src/a.cpp', object_file='a.out', dummy_dir='d/')
+        t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
 
