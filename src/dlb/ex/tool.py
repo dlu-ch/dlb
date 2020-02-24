@@ -115,9 +115,10 @@ def _get_memo_for_fs_input_dependency(name: Optional[str], path: fs.Path,
     return encoded_path, memo
 
 
-# TODO test
 def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
-                                                 needs_redo: bool, context: context_.Context):
+                                                 needs_redo: bool, context: context_.Context) \
+        -> Tuple[manip.FilesystemObjectMemo, bool]:
+
     path = None
     memo = manip.FilesystemObjectMemo()
 
@@ -137,7 +138,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
         try:
             try:
                 path = context.managed_tree_path_of(path, existing=True, collapsable=False)
-            except (ValueError, manip.PathNormalizationError) as e:
+            except ValueError as e:
                 if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
                     raise e.oserror from None
                 raise
@@ -157,12 +158,10 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
         if not needs_redo:
             msg = (
                 f"redo necessary because of inexisting or inaccessible "
-                f"filesystem object: {path.as_string()!r}"
+                f"filesystem object: {path.as_string()!r}"  # also if not in managed tree
             )
             di.inform(msg, level=logging.INFO)
             needs_redo = True  # comparision not possible -> redo
-
-    assert memo.stat is not None or needs_redo
 
     return memo, needs_redo  # memo.state may be None
 
@@ -176,7 +175,9 @@ def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_me
     # a short line describing the reason otherwise.
 
     if last_encoded_memo is None:
-        return 'was an output dependency of a redo'
+        if is_explicit:
+            return 'was an output dependency of a redo'
+        return 'was an new dependency or an output dependency of a redo'
 
     try:
         last_memo = rundb.decode_encoded_fsobject_memo(last_encoded_memo)
@@ -188,11 +189,11 @@ def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_me
         if last_memo.stat is None:
             return 'filesystem object did not exist'
     elif (memo.stat is None) != (last_memo.stat is None):
-        return 'existence has changed'  # TODO test
+        return 'existence has changed'
     elif memo.stat is None:
         # non-explicit dependency of a filesystem object that does not exist and did not exist before the
         # last successful redo
-        return None  # TODO test
+        return None
 
     assert memo.stat is not None
     assert last_memo.stat is not None
@@ -555,7 +556,7 @@ class _ToolBase:
                         if isinstance(action.dependency, depend.FilesystemObject):
                             paths = action.dependency.tuple_from_value(v)
                             for p in paths:
-                                # TODO managed tree???
+                                # TODO in managed tree?
                                 encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
 
             encoded_paths_of_input_dependencies = \
@@ -571,7 +572,7 @@ class _ToolBase:
                     if encoded_path in encoded_paths_of_input_dependencies  # drop obsolete non-explicit dependencies
                 }
                 info_by_by_fsobject_dbid.update({  # add new non-explicit dependencies
-                    encoded_path: (False, None)  # TODO replace None (has double meaning)
+                    encoded_path: (False, None)
                     for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_by_fsobject_dbid)
                 })
                 db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
@@ -747,6 +748,7 @@ class _ToolMeta(type):
         raise AttributeError
 
 
+# noinspection PyAbstractClass
 class Tool(_ToolBase, metaclass=_ToolMeta):
     pass
 
