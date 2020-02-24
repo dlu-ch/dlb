@@ -14,6 +14,8 @@ import dlb.ex
 import dlb.ex.rundb
 import pathlib
 import marshal
+import tempfile
+import zipfile
 import io
 import unittest
 import tools_for_test
@@ -195,3 +197,51 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
                 t.run()
         msg = "non-explicit input dependency 'included_files' contains a path that is not a managed tree path: 'a/../b'"
         self.assertEqual(msg, str(cm.exception))
+
+
+class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_redo_if_source_has_changed(self):
+
+        with tempfile.TemporaryDirectory() as content_tmp_dir_path:
+            with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w'):
+                pass
+            with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
+                f.write(
+                    'import dlb.ex\n'
+                    'class A(dlb.ex.Tool):\n'
+                    '    def redo(self, result, context):\n'
+                    '       pass'
+                )
+
+            zip_file_path = os.path.abspath('abc.zip')
+            with zipfile.ZipFile(zip_file_path, 'w') as z:
+                z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u3/__init__.py')
+                z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u3/v.py')
+
+        sys.path.insert(0, zip_file_path)
+        # noinspection PyUnresolvedReferences
+        import u3.v
+        del sys.path[0]
+
+        pathlib.Path('.dlbroot').mkdir()
+
+        t = u3.v.A()
+
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            regex = r"\b()added 1 files as input dependencies\n"
+            self.assertRegex(output.getvalue(), regex)
+            self.assertIsNone(t.run())
+
+        with zipfile.ZipFile(zip_file_path, 'w') as z:
+            z.writestr('dummy', '')
+
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertIsNotNone(t.run())
+            regex = r"\b()redo necessary because of filesystem object: 'abc.zip' \n"
+            self.assertRegex(output.getvalue(), regex)

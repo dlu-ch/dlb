@@ -35,6 +35,21 @@ class ATool(dlb.ex.Tool):
             pass
 
 
+class RunWithoutRedoTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_fails_without_redo(self):
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+
+        pathlib.Path('.dlbroot').mkdir()
+
+        with dlb.ex.Context():
+            t = BTool(object_file='a.o')
+            with self.assertRaises(NotImplementedError):
+                t.run()
+
+
 class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fails_for_inexisting_inputfile(self):
