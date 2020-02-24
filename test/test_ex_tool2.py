@@ -30,7 +30,7 @@ class ConstructionTest(unittest.TestCase):
         log_file = Tool.Output.RegularFile(required=True, explicit=False)
 
     class CTool(Tool):
-        envvar = Tool.Input.EnvVar(restriction='.*', example='', required=False)
+        envvar = Tool.Input.EnvVar(name='n', restriction='.*', example='', required=False)
 
     class DTool(BTool):
         include_directories = Tool.Input.Directory[:](required=False)

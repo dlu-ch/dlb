@@ -13,10 +13,11 @@ __all__ = (
 
 import stat
 import marshal
-from typing import Type, Set, Optional, Sequence, Any, Union
+from typing import Type, Set, Optional, Union, Sequence, Hashable
 from .. import ut
 from .. import fs
 from ..fs import manip
+from . import context as context_
 from . import depend
 
 
@@ -40,7 +41,7 @@ class Action:
         return self._name
 
     # overwrite in subclasses
-    def get_permanent_local_value_id(self, validated_values: Optional[Sequence[Any]]) -> bytes:
+    def get_permanent_local_value_id(self, validated_values: Optional[Sequence[Hashable]]) -> bytes:
         # Returns a short non-empty byte string as a permanent local id for this validated values of a given instance.
         #
         # 'validated_values' is None or a tuple of the validated values (regardless of self.dependency.multiplicity).
@@ -71,6 +72,11 @@ class Action:
         d = self.dependency
         # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.
         return marshal.dumps((dependency_id, d.explicit))
+
+    # (unvalidated) initial value before redo
+    # overwrite in subclass; only called if 'dependency.explicit' is False
+    def get_initial_result_for_nonexplicit(self, context: context_.Context):
+        return NotImplemented
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
@@ -124,7 +130,20 @@ class DirectoryInputAction(_DirectoryMixin, Action):
 
 
 class EnvVarInputAction(Action):
-    pass  # does _not_ depend on 'restriction'
+
+    def get_permanent_local_instance_id(self) -> bytes:
+        # does _not_ depend on 'restriction'
+        d = self.dependency
+        return super().get_permanent_local_instance_id() + marshal.dumps((d.name,))
+
+    def get_initial_result_for_nonexplicit(self, context: context_.Context):
+        d = self.dependency
+        n = d.name
+        try:
+            value = context.env[n] if d.required else context.env.get(n)
+        except KeyError as e:
+            raise ValueError(*e.args) from None
+        return value
 
 
 class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action):

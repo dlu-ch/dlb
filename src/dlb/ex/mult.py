@@ -110,8 +110,10 @@ class _MultiplicityHolderProxy:
         return self._element_class
 
     def __call__(self, *args, **kwargs):  # simulate a constructor call
-        element = self._element_class(*args, **kwargs)
-        element._multiplicity = self._multiplicity
+        element = self._element_class.__new__(self._element_class, *args, **kwargs)
+        if isinstance(element, self._element_class):
+            element._multiplicity = self._multiplicity
+            element.__init__(*args, **kwargs)
         return element
 
     def __getitem__(self, multiplicity):
@@ -137,7 +139,8 @@ class MultiplicityHolder(metaclass=_MultiplicityHolderMeta):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._multiplicity = None
+        if '_multiplicity' not in self.__dict__:
+            self._multiplicity = None
 
     @property
     def multiplicity(self):

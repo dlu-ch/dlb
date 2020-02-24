@@ -82,6 +82,10 @@ Tool objects
 
       Run the tool instance in the :term:`active context`.
 
+      Returns a result object if a :term:`redo` was necessary and ``None`` otherwise.
+      The result object contains an attribute for every dependency role of the tool which contains the concrete
+      dependencies (not only the explicit dependencies as on the :term:`tool instance`, but also the non-explicit ones).
+
    .. attribute:: definition_location
 
       The definition location of the class.
@@ -254,12 +258,10 @@ Concrete dependency role classes support the following methods and attributes:
    :raise DependencyRoleAssignmentError:
       if the arguments of the constructor do not match the declared dependency roles of the class
 
-   .. method:: validate(value, context)
+   .. method:: validate(value)
 
       :param value: The concrete dependency to convert and validate except ``None``
       :type value: Any type the concrete dependency can convert to *T*
-      :param context: The concrete dependency to convert and validate except ``None``
-      :type context: None | :class:`dlb.ex.Context <dlb.ex.context.Context>`
       :return: The validated *value* of type *T*
 
       :raise TypeError: If :attr:`multiplicity` is not ``None`` and *value* is not iterable or is a string
@@ -294,7 +296,9 @@ Input dependency role classes
 +-------------------------------------+-----------------------+----------------------------+
 | :class:`Tool.Input.Directory`       | *cls*                 | :class:`dlb.fs.Path`       |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Input.EnvVar`          | *restriction*         |                            |
+| :class:`Tool.Input.EnvVar`          | *name*                |                            |
+|                                     +-----------------------+----------------------------+
+|                                     | *restriction*         |                            |
 |                                     +-----------------------+----------------------------+
 |                                     | *example*             |                            |
 +-------------------------------------+-----------------------+----------------------------+
@@ -373,12 +377,17 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
 
-.. class:: Tool.Input.EnvVar(restriction, example)
+.. class:: Tool.Input.EnvVar(name, restriction, example)
 
-   Constructs a dependency role for environment variables.
+   Constructs a dependency role for a environment variable named *name*.
+   It must not have a multiplicity (other than ``None``).
 
-   The value of the environment variable named *name* (as a string or ``None`` if not defined)
-   is validated by matching it to the regular expression *restriction*.
+   If *explicit* is ``False``, the value assign in the constructor of the :term:`tool instance` is used for all
+   future runs of the tool instance.
+   Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.run()` is called.
+
+   The value of the environment variable is valid if it a string that matches the regular expression *restriction*,
+   or if it is ``None`` and *required* is ``False``.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is a string or
    a dictionary of strings:
@@ -392,11 +401,17 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       >>> class Tool(dlb.ex.Tool):
       >>>    language = dlb.ex.Tool.Input.EnvVar(
+      >>>                   name='LANG',
       >>>                   restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
       >>>                   example='sv_SE')
-      >>> tool = Tool(language='LANG')
+      >>>     flags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction=r'.+', example='-Wall')
+      >>> tool = Tool(language='de_CH')  # use 'de_CH' as value of the environment variable for all
       >>> tool.language['territory']
       'CH'
+      >>> tool.flags
+      NotImplemented
+      >>> tool.run().flags  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
+      '-O2'
 
    :param restriction: regular expression
    :type restriction: str | :class:`python:typing.Pattern`

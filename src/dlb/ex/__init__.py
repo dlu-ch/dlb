@@ -18,6 +18,6 @@ from .tool import *
 #     rundb          ->         platform
 #     context        ->                   rundb
 #
-#     depend         ->   mult                   context
-#     dependaction   ->                                    depend
+#     depend         ->   mult
+#     dependaction   ->                          context   depend
 #     tool           ->                          context   depend   dependaction

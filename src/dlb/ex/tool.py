@@ -360,7 +360,7 @@ class _RedoResult:
             raise AttributeError(f"{key!r} is not a non-explicit dependency")
 
         if value is not None:
-            validated_value = role.validate(value, None)
+            validated_value = role.validate(value)
         elif not role.required:
             validated_value = None
         else:
@@ -418,7 +418,7 @@ class _ToolBase:
                     msg = f"keyword argument for required dependency role must not be None: {name!r}"
                     raise DependencyRoleAssignmentError(msg)
             else:
-                validated_value = role.validate(value, None)
+                validated_value = role.validate(value)
 
             object.__setattr__(self, name, validated_value)
             names_of_assigned.add(name)
@@ -537,6 +537,15 @@ class _ToolBase:
 
             result = _RedoResult(self)
 
+            for action in dependency_actions:
+                if not action.dependency.explicit and getattr(result, action.name) is NotImplemented:
+                    try:
+                        value = action.get_initial_result_for_nonexplicit(context)
+                        if value is not NotImplemented:
+                            setattr(result, action.name, value)
+                    except ValueError as e:
+                        raise RedoError(*e.args)
+
             with di.Cluster('redo', with_time=True, is_progress=True):
                 # note: no db.commit() necessary as long as root context does commit on exception
                 self.redo(result, context)
@@ -545,18 +554,18 @@ class _ToolBase:
                 encoded_paths_of_nonexplicit_input_dependencies = set()
                 for action in dependency_actions:
                     if not action.dependency.explicit and isinstance(action.dependency, depend.Input):
-                        v = getattr(result, action.name)
-                        if v is NotImplemented:
+                        validated_value = getattr(result, action.name)
+                        if validated_value is NotImplemented:
                             if action.dependency.required:
                                 msg = (
                                     f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
                                     f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
                                 )
                                 raise RedoError(msg)
-                            v = None
-                            setattr(result, action.name, v)
+                            validated_value = None
+                            setattr(result, action.name, validated_value)
                         if isinstance(action.dependency, depend.FilesystemObject):
-                            paths = action.dependency.tuple_from_value(v)
+                            paths = action.dependency.tuple_from_value(validated_value)
                             for p in paths:
                                 try:
                                     p = context.managed_tree_path_of(p, existing=True, collapsable=False)

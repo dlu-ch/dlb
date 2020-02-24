@@ -5,7 +5,6 @@
 import sys
 import os.path
 here = os.path.dirname(__file__) or os.curdir
-sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
@@ -13,7 +12,6 @@ import dlb.ex.mult
 import dlb.ex.depend
 import re
 import unittest
-import tools_for_test
 
 
 class BaseDependencyTest(unittest.TestCase):
@@ -30,12 +28,12 @@ class BaseDependencyTest(unittest.TestCase):
 
         d = dlb.ex.depend.Dependency()
         with self.assertRaises(NotImplementedError) as cm:
-            d.validate('', None)
+            d.validate('')
         self.assertEqual(msg, str(cm.exception))
 
         d = dlb.ex.depend.Dependency[:]()
         with self.assertRaises(NotImplementedError) as cm:
-            d.validate([1], None)
+            d.validate([1])
         self.assertEqual(msg, str(cm.exception))
 
 
@@ -51,39 +49,39 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
         msg = "'value' must not be None"
 
         with self.assertRaises(TypeError) as cm:
-            D().validate(None, None)
+            D().validate(None)
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            D(required=False).validate(None, None)
+            D(required=False).validate(None)
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            D().validate([None], None)
+            D().validate([None])
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            D(required=False).validate([None], None)
+            D(required=False).validate([None])
         self.assertEqual(msg, str(cm.exception))
 
     def test_validate_with_multiplicity_mismatch_fails_with_meaningful_message(self):
         d = CommonOfConcreteValidationTest.D[1:]()
         with self.assertRaises(ValueError) as cm:
-            d.validate([], None)
+            d.validate([])
         msg = 'value has 0 members, which is not accepted according to the specified multiplicity [1:]'
         self.assertEqual(msg, str(cm.exception))
 
     def test_duplicate_free_cannot_contain_duplicates(self):
         paths = ['1', '2', '1']
-        CommonOfConcreteValidationTest.D[:](unique=False).validate(paths, None)
+        CommonOfConcreteValidationTest.D[:](unique=False).validate(paths)
         with self.assertRaises(ValueError) as cm:
-            CommonOfConcreteValidationTest.D[:](unique=True).validate(paths, None)
+            CommonOfConcreteValidationTest.D[:](unique=True).validate(paths)
         msg = "sequence of dependencies must be duplicate-free, but contains Path('1') more than once"
         self.assertEqual(str(cm.exception), msg)
 
     def test_value_must_be_iterable(self):
         with self.assertRaises(TypeError) as cm:
-            CommonOfConcreteValidationTest.D[:]().validate(1, None)
+            CommonOfConcreteValidationTest.D[:]().validate(1)
         msg = "'int' object is not iterable"
         self.assertEqual(str(cm.exception), msg)
 
@@ -92,22 +90,22 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
         d = CommonOfConcreteValidationTest.D[:]()
 
         with self.assertRaises(TypeError) as cm:
-            d.validate('', None)
+            d.validate('')
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            d.validate(b'', None)
+            d.validate(b'')
         self.assertEqual(msg, str(cm.exception))
 
     def test_each_member_is_validated(self):
         with self.assertRaises(ValueError):
-            CommonOfConcreteValidationTest.D[:]().validate(['a', 'b/'], None)
+            CommonOfConcreteValidationTest.D[:]().validate(['a', 'b/'])
         with self.assertRaises(ValueError):
-            CommonOfConcreteValidationTest.D[:]().validate(['a/', 'b'], None)
+            CommonOfConcreteValidationTest.D[:]().validate(['a/', 'b'])
 
     def test_member_count_must_match_multiplicity(self):
         with self.assertRaises(ValueError) as cm:
-            CommonOfConcreteValidationTest.D[2:]().validate([], None)
+            CommonOfConcreteValidationTest.D[2:]().validate([])
         msg = "value has 0 members, which is not accepted according to the specified multiplicity [2:]"
         self.assertEqual(str(cm.exception), msg)
 
@@ -121,70 +119,59 @@ class AbstractDependencyValidationTest(unittest.TestCase):
         )
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Dependency().validate(0, None)
+            dlb.ex.Tool.Dependency().validate(0)
         self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Dependency'))
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Input().validate(0, None)
+            dlb.ex.Tool.Input().validate(0)
         self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Input'))
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Intermediate().validate(0, None)
+            dlb.ex.Tool.Intermediate().validate(0)
         self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Intermediate'))
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Output().validate(0, None)
+            dlb.ex.Tool.Output().validate(0)
         self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Output'))
 
 
-class SingleInputValidationTest(tools_for_test.TemporaryDirectoryTestCase):
+class SingleInputValidationTest(unittest.TestCase):
 
     def test_fails_for_none(self):
         msg = "'value' must not be None"
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.depend.RegularFileInput().validate(None, None)
+            dlb.ex.depend.RegularFileInput().validate(None)
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.depend.RegularFileInput(required=False).validate(None, None)
+            dlb.ex.depend.RegularFileInput(required=False).validate(None)
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_invalid_path_conversion(self):
         with self.assertRaises(ValueError):
-            dlb.ex.depend.RegularFileInput(cls=dlb.fs.NoSpacePath).validate('a /b', None)
+            dlb.ex.depend.RegularFileInput(cls=dlb.fs.NoSpacePath).validate('a /b')
 
     def test_regular_file_returns_path(self):
-        v = dlb.ex.depend.RegularFileInput(cls=dlb.fs.NoSpacePath).validate('a/b', None)
+        v = dlb.ex.depend.RegularFileInput(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_nonregular_file_returns_path(self):
-        v = dlb.ex.depend.NonRegularFileInput(cls=dlb.fs.NoSpacePath).validate('a/b', None)
+        v = dlb.ex.depend.NonRegularFileInput(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_directory_returns_path(self):
-        v = dlb.ex.depend.DirectoryInput(cls=dlb.fs.NoSpacePath).validate('a/b/', None)
+        v = dlb.ex.depend.DirectoryInput(cls=dlb.fs.NoSpacePath).validate('a/b/')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
     def test_envvar_returns_str_or_dict(self):
-        os.mkdir('.dlbroot')
+        v = dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+[a-z]+', example='42s').validate('123mm')
+        self.assertEqual(v, '123mm')
 
-        try:
-            del os.environ['UV']
-        except KeyError:
-            pass
-
-        with dlb.ex.Context() as c:
-            c.env.import_from_outer('UV', r'.*', '')
-            c.env['UV'] = '123mm'
-
-            v = dlb.ex.depend.EnvVarInput(
-                restriction=r'[0-9]+[a-z]+', example='42s').validate('UV', c)
-            self.assertEqual(v, '123mm')
-
-            v = dlb.ex.depend.EnvVarInput(
-                restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s').validate('UV', c)
-            self.assertEqual(v, {'num': '123', 'unit': 'mm'})
+        v = dlb.ex.depend.EnvVarInput(
+            name='number',
+            restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s').validate('123mm')
+        self.assertEqual(v, {'num': '123', 'unit': 'mm'})
 
 
 class InputPropertyTest(unittest.TestCase):
@@ -213,8 +200,9 @@ class InputPropertyTest(unittest.TestCase):
         d = dlb.ex.depend.DirectoryOutput(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
-    def test_envvar_intput_dependency_has_restriction_example(self):
-        d = dlb.ex.depend.EnvVarInput(restriction=r'.', example='!')
+    def test_envvar_intput_dependency_has_name_restriction_and_example(self):
+        d = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.', example='!')
+        self.assertEqual('n', d.name)
         self.assertEqual(re.compile(r'.'), d.restriction)
         self.assertEqual('!', d.example)
 
@@ -223,11 +211,11 @@ class FileInputValidationTest(unittest.TestCase):
 
     def test_fails_for_directory(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.depend.RegularFileInput().validate('a/b/', None)
+            dlb.ex.depend.RegularFileInput().validate('a/b/')
         self.assertEqual(str(cm.exception), "directory path not valid for non-directory dependency: Path('a/b/')")
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.depend.NonRegularFileInput().validate('a/b/', None)
+            dlb.ex.depend.NonRegularFileInput().validate('a/b/')
         self.assertEqual(str(cm.exception), "directory path not valid for non-directory dependency: Path('a/b/')")
 
 
@@ -236,49 +224,37 @@ class DirectoryInputValidationTest(unittest.TestCase):
     def test_fails_for_file(self):
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.depend.DirectoryInput().validate('a/b', None)
+            dlb.ex.depend.DirectoryInput().validate('a/b')
         self.assertEqual(str(cm.exception), "non-directory path not valid for directory dependency: Path('a/b')")
 
 
-class EnvVarInputValidationTest(tools_for_test.TemporaryDirectoryTestCase):
+class EnvVarInputValidationTest(unittest.TestCase):
+
+    def test_fails_if_name_not_str(self):
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.depend.EnvVarInput(name=1, restriction=r'[0-9]+', example='42')
+        self.assertEqual(str(cm.exception), "'name' must be a str")
+
+    def test_fails_if_name_empty(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.ex.depend.EnvVarInput(name='', restriction=r'[0-9]+', example='42')
+        self.assertEqual(str(cm.exception), "'name' must not be empty")
 
     def test_fails_with_nonmatching_example(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.depend.EnvVarInput(restriction=r'[0-9]+', example='42s')
+            dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+', example='42s')
         self.assertEqual(str(cm.exception), "'example' is invalid with respect to 'restriction': '42s'")
 
-    def test_fails_without_context(self):
-        with self.assertRaises(TypeError) as cm:
-            dlb.ex.depend.EnvVarInput(restriction=r'[0-9]+[a-z]+', example='42s').validate('UV', None)
-        self.assertEqual(str(cm.exception), "needs context")
+    def test_invalid_if_value_does_not_match_all_the_value(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+[a-z]+', example='42s').validate('123mm2')
+        msg = "value is invalid with respect to restriction: '123mm2'"
+        self.assertEqual(str(cm.exception), msg)
 
-    def test_restriction_matches_all(self):
-        os.mkdir('.dlbroot')
-
-        try:
-            del os.environ['UV']
-        except KeyError:
-            pass
-
-        with dlb.ex.Context() as c:
-            c.env.import_from_outer('UV', r'.*', '')
-            c.env['UV'] = '123mm2'
-
-            with self.assertRaises(ValueError) as cm:
-                dlb.ex.depend.EnvVarInput(restriction=r'[0-9]+[a-z]+', example='42s').validate('UV', c)
-            msg = "value of environment variable 'UV' is invalid with respect to restriction: '123mm2'"
-            self.assertEqual(str(cm.exception), msg)
-
-    def test_fail_on_undefined(self):
-        os.mkdir('.dlbroot')
-        with dlb.ex.Context() as c:
-            with self.assertRaises(ValueError) as cm:
-                dlb.ex.depend.EnvVarInput(restriction=r'[0-9]+[a-z]+', example='42s').validate('UV', c)
-            msg = (
-                "not a defined environment variable in the context: 'UV'\n"
-                "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
-            )
-            self.assertEqual(str(cm.exception), msg)
+    def test_fails_with_multiplicity(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.ex.depend.EnvVarInput[1](name='number', restriction=r'[0-9]+', example='42')
+        self.assertEqual(str(cm.exception), "must not have a multiplicity")
 
 
 class SingleOutputValidationTest(unittest.TestCase):
@@ -287,23 +263,23 @@ class SingleOutputValidationTest(unittest.TestCase):
         msg = "'value' must not be None"
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.depend.RegularFileOutput().validate(None, None)
+            dlb.ex.depend.RegularFileOutput().validate(None)
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.depend.RegularFileOutput(required=False).validate(None, None)
+            dlb.ex.depend.RegularFileOutput(required=False).validate(None)
         self.assertEqual(msg, str(cm.exception))
 
     def test_regular_file_returns_path(self):
-        v = dlb.ex.depend.RegularFileOutput(cls=dlb.fs.NoSpacePath).validate('a/b', None)
+        v = dlb.ex.depend.RegularFileOutput(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_nonregular_file_returns_path(self):
-        v = dlb.ex.depend.NonRegularFileOutput(cls=dlb.fs.NoSpacePath).validate('a/b', None)
+        v = dlb.ex.depend.NonRegularFileOutput(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_directory_returns_path(self):
-        v = dlb.ex.depend.DirectoryOutput(cls=dlb.fs.NoSpacePath).validate('a/b/', None)
+        v = dlb.ex.depend.DirectoryOutput(cls=dlb.fs.NoSpacePath).validate('a/b/')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
 
@@ -315,11 +291,11 @@ class TupleFromValueTest(unittest.TestCase):
 
         self.assertEqual((), D.tuple_from_value(None))
 
-        self.assertEqual((dlb.fs.Path('a/b'),), D.tuple_from_value(D.validate('a/b', None)))
+        self.assertEqual((dlb.fs.Path('a/b'),), D.tuple_from_value(D.validate('a/b')))
 
         D = dlb.ex.depend.RegularFileInput[:]()
-        self.assertEqual((dlb.fs.Path('a/b'),), D.tuple_from_value(D.validate(['a/b'], None)))
-        self.assertEqual((dlb.fs.Path('a/b'), dlb.fs.Path('c'),), D.tuple_from_value(D.validate(['a/b', 'c'], None)))
+        self.assertEqual((dlb.fs.Path('a/b'),), D.tuple_from_value(D.validate(['a/b'])))
+        self.assertEqual((dlb.fs.Path('a/b'), dlb.fs.Path('c'),), D.tuple_from_value(D.validate(['a/b', 'c'])))
 
 
 # noinspection PyPep8Naming

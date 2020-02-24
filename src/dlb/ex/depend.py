@@ -9,7 +9,6 @@ import re
 from typing import Pattern, TypeVar, Type, Optional, Iterable, Dict, Hashable, Union, Tuple
 from .. import fs
 from . import mult
-from . import context as context_
 
 
 V = TypeVar('V', bound=Hashable)
@@ -61,13 +60,13 @@ class Dependency(mult.MultiplicityHolder):
         return True
 
     # overwrite in base classes
-    def validate_single(self, value: Optional[Hashable], context: Optional[context_.Context]) -> Hashable:
+    def validate_single(self, value: Optional[Hashable]) -> Hashable:
         if value is None:
             raise TypeError("'value' must not be None")
         return value
 
     # final
-    def validate(self, value, context) -> Optional[Union[V, Tuple[V, ...]]]:
+    def validate(self, value) -> Optional[Union[V, Tuple[V, ...]]]:
         if not isinstance(self, ConcreteDependency):
             msg = (
                 f"{self.__class__!r} is abstract\n"
@@ -78,7 +77,7 @@ class Dependency(mult.MultiplicityHolder):
         m = self.multiplicity
 
         if m is None:
-            return self.validate_single(value, context)
+            return self.validate_single(value)
 
         if value is None:
             raise TypeError("'value' must not be None")
@@ -90,7 +89,7 @@ class Dependency(mult.MultiplicityHolder):
 
         # noinspection PyTypeChecker
         for v in value:
-            v = self.validate_single(v, context)
+            v = self.validate_single(v)
             if self.unique and v in values:
                 raise ValueError(f'sequence of dependencies must be duplicate-free, but contains {v!r} more than once')
             values.append(v)
@@ -149,22 +148,22 @@ class _FilesystemObjectMixin(FilesystemObject):
 
         return issubclass(self.cls, other.cls)
 
-    def validate_single(self, value, context: Optional[context_.Context]) -> fs.Path:
-        value = super().validate_single(value, context)
+    def validate_single(self, value) -> fs.Path:
+        value = super().validate_single(value)
         return self._path_cls(value)
 
 
 class _NonDirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: Optional[context_.Context]) -> fs.Path:
-        value = super().validate_single(value, context)
+    def validate_single(self, value) -> fs.Path:
+        value = super().validate_single(value)
         if value.is_dir():
             raise ValueError(f'directory path not valid for non-directory dependency: {value!r}')
         return value
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
-    def validate_single(self, value, context: Optional[context_.Context]) -> fs.Path:
-        value = super().validate_single(value, context)
+    def validate_single(self, value) -> fs.Path:
+        value = super().validate_single(value)
         if not value.is_dir():
             raise ValueError(f'non-directory path not valid for directory dependency: {value!r}')
         return value
@@ -196,8 +195,13 @@ class DirectoryOutput(_DirectoryMixin, ConcreteDependency, Output):
 
 class EnvVarInput(ConcreteDependency, Input):
 
-    def __init__(self, *, restriction: Union[str, Pattern], example: str, **kwargs):
+    def __init__(self, *, name: str, restriction: Union[str, Pattern], example: str, **kwargs):
         super().__init__(**kwargs)
+
+        if not isinstance(name, str):
+            raise TypeError("'name' must be a str")
+        if not name:
+            raise ValueError("'name' must not be empty")
 
         if isinstance(restriction, str):
             restriction = re.compile(restriction)
@@ -209,53 +213,50 @@ class EnvVarInput(ConcreteDependency, Input):
         if not restriction.fullmatch(example):
             raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
 
+        if self.multiplicity is not None:
+            raise ValueError("must not have a multiplicity")
+
+        self._name = name
         self._restriction: Pattern = restriction
         self._example = example
 
     @property
-    def restriction(self):
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def restriction(self) -> Pattern:
         return self._restriction
 
     @property
-    def example(self):
+    def example(self) -> str:
         return self._example
 
     def compatible_and_no_less_restrictive(self, other) -> bool:
         if not super().compatible_and_no_less_restrictive(other):
             return False
 
-        return self.restriction == other.restriction  # ignore example
+        return self.name == other.name and self.restriction == other.restriction  # ignore example
 
-    def validate_single(self, value, context: Optional[context_.Context]) \
-            -> Union[str, Dict[str, str]]:
-        # value is the name of an environment variable
-
-        value = str(super().validate_single(value, None))
+    def validate_single(self, value) -> Union[str, Dict[str, str]]:
+        # value is used to defined the content of a (future) environment variable
+        value = str(super().validate_single(value))
 
         if not isinstance(value, str):
             raise TypeError("'value' must be a str")
         if not value:
             raise ValueError("'value' must not be empty")
 
-        if not isinstance(context, context_.Context):
-            raise TypeError("needs context")
-
-        try:
-            envvar_value = context.env[value]
-        except KeyError as e:
-            raise ValueError(*e.args)
-
-        m = self._restriction.fullmatch(envvar_value)
+        m = self._restriction.fullmatch(value)
         if not m:
-            msg = f"value of environment variable {value!r} is invalid with respect to restriction: {envvar_value!r}"
-            raise ValueError(msg)
+            raise ValueError(f"value is invalid with respect to restriction: {value!r}")
 
         # return only validates/possibly modify value
         groups = m.groupdict()
         if groups:
             return groups
 
-        return envvar_value
+        return value
 
 
 def _inject_into(owner, owner_name, owner_module):

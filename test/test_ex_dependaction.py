@@ -81,22 +81,29 @@ class RegularFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
 class EnvVarFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
 
     def test_is_equal_for_different_instances_with_same_arguments(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar[:](restriction='x.', example='xy')
+        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
         plii1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
 
+    def test_is_different_for_different_names(self):
+        d1 = dlb.ex.Tool.Input.EnvVar(name='d1', restriction='x.', example='xy')
+        d2 = dlb.ex.Tool.Input.EnvVar(name='d2', restriction='x.', example='xy')
+        plii1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
+        plii2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
+        self.assertNotEqual(plii1, plii2)
+
     def test_is_equal_for_different_restriction(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar[:](restriction='.y', example='xy')
+        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='.y', example='xy')
         plii1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
 
     def test_is_equal_for_different_example(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar[:](restriction='x.', example='xz')
+        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xz')
         plii1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
@@ -127,63 +134,89 @@ class RegularFileInputPermanentLocalValueIdTest(unittest.TestCase):
         d1 = dlb.ex.Tool.Input.RegularFile()
         d2 = dlb.ex.Tool.Input.RegularFile()
         plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(
-            d1.tuple_from_value(d1.validate('x', None)))
+            d1.tuple_from_value(d1.validate('x')))
         plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(
-            d2.tuple_from_value(d2.validate('x/y', None)))
+            d2.tuple_from_value(d2.validate('x/y')))
         self.assertNotEqual(plvi1, plvi2)
 
         d1 = dlb.ex.Tool.Input.RegularFile[:]()
         d2 = dlb.ex.Tool.Input.RegularFile[:]()
         plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(
-            d1.tuple_from_value(d1.validate(['x', 'y'], None)))
+            d1.tuple_from_value(d1.validate(['x', 'y'])))
         plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(
-            d2.tuple_from_value(d2.validate(['a'], None)))
+            d2.tuple_from_value(d2.validate(['a'])))
         self.assertNotEqual(plvi1, plvi2)
 
     def test_is_equal_for_different_cls(self):
         d1 = dlb.ex.Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath)
         d2 = dlb.ex.Tool.Input.RegularFile()
         plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(
-            d1.tuple_from_value(d1.validate('x/y', None)))
+            d1.tuple_from_value(d1.validate('x/y')))
         plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(
-            d2.tuple_from_value(d2.validate('x/y', None)))
+            d2.tuple_from_value(d2.validate('x/y')))
         self.assertEqual(plvi1, plvi2)
 
 
-class EnvVarInputPermanentLocalValueIdTest(tools_for_test.TemporaryDirectoryTestCase):
+class EnvVarInputPermanentLocalValueIdTest(unittest.TestCase):
 
     def test_is_different_for_different_value(self):
-        os.mkdir('.dlbroot')
-
-        with dlb.ex.Context() as c:
-            c.env.import_from_outer('UV', r'.*', '')
-            c.env.import_from_outer('AB', r'.*', '')
-            c.env['UV'] = 'xy'
-            c.env['AB'] = 'xz'
-
-            d1 = dlb.ex.Tool.Input.EnvVar(restriction='x.', example='xy')
-            d2 = dlb.ex.Tool.Input.EnvVar(restriction='x.', example='xy')
-            plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate('UV', c))
-            plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate('AB', c))
-            self.assertNotEqual(plvi1, plvi2)
-
-            d1 = dlb.ex.Tool.Input.EnvVar[:](restriction='x.', example='xy')
-            d2 = dlb.ex.Tool.Input.EnvVar[:](restriction='x.', example='xy')
-            plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate(['AB', 'UV'], c))
-            plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate(['UV', 'AB'], c))
-            self.assertNotEqual(plvi1, plvi2)
+        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate('xy'))
+        plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate('x_'))
+        self.assertNotEqual(plvi1, plvi2)
 
     def test_is_equal_for_different_restriction(self):
+        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='.y', example='xy')
+        plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate('xy'))
+        plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate('xy'))
+        self.assertEqual(plvi1, plvi2)
+
+
+class EnvVarInitialResultTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_returns_none_if_nonrequired_not_defined(self):
+        d = dlb.ex.Tool.Input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False, required=False)
+        a = dlb.ex.dependaction.get_action(d, 'd')
+
+        try:
+            del os.environ['AB']
+        except KeyError:
+            pass
+
         os.mkdir('.dlbroot')
-
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('UV', r'.*', '')
+            self.assertIsNone(a.get_initial_result_for_nonexplicit(c))
             c.env.import_from_outer('AB', r'.*', '')
-            c.env['UV'] = 'xy'
-            c.env['AB'] = 'xy'
 
-            d1 = dlb.ex.Tool.Input.EnvVar(restriction='x.', example='xy')
-            d2 = dlb.ex.Tool.Input.EnvVar(restriction='.y', example='xy')
-            plvi1 = dlb.ex.dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate('UV', c))
-            plvi2 = dlb.ex.dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate('UV', c))
-            self.assertEqual(plvi1, plvi2)
+            self.assertIsNone(a.get_initial_result_for_nonexplicit(c))
+            c.env['AB'] = 'xy'
+            self.assertEqual('xy', a.get_initial_result_for_nonexplicit(c))
+            c.env['AB'] = 'x_'
+            self.assertEqual('x_', a.get_initial_result_for_nonexplicit(c))
+
+    def test_fails_if_required_not_defined(self):
+        d = dlb.ex.Tool.Input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False)
+        a = dlb.ex.dependaction.get_action(d, 'd')
+
+        try:
+            del os.environ['AB']
+        except KeyError:
+            pass
+
+        msg = (
+            "not a defined environment variable in the context: 'AB'\n"
+            "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
+        )
+
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context() as c:
+            with self.assertRaises(ValueError) as cm:
+                a.get_initial_result_for_nonexplicit(c)
+            self.assertEqual(msg, str(cm.exception))
+
+            c.env.import_from_outer('AB', r'.*', '')
+            with self.assertRaises(ValueError) as cm:
+                a.get_initial_result_for_nonexplicit(c)
+            self.assertEqual(msg, str(cm.exception))

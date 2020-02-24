@@ -246,6 +246,77 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertIsNone(result.included_files)
 
 
+class EnvVarRedoResultTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_explicit_envvar_are_assigned_on_tool_instance(self):
+
+        pathlib.Path('.dlbroot').mkdir()
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            language = dlb.ex.Tool.Input.EnvVar(name='LANG',
+                                                restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                                example='sv_SE')
+            cflags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction='.+', example='-O2', required=False)
+
+            def redo(self, result, context):
+                pass
+
+        t = BTool(object_file='a.o', language='de_CH')
+        self.assertEqual({'language': 'de', 'territory': 'CH'}, t.language)
+        self.assertIsNone(t.cflags)
+
+        t = BTool(object_file='a.o', language='de_CH', cflags='-Wall')
+        self.assertEqual('-Wall', t.cflags)
+
+    def test_nonexplicit_envvar_are_assigned_on_result(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        try:
+            del os.environ['LANG']
+        except KeyError:
+            pass
+
+        try:
+            del os.environ['CFLAGS']
+        except KeyError:
+            pass
+
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            language = dlb.ex.Tool.Input.EnvVar(name='LANG',
+                                                restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                                example='sv_SE',
+                                                explicit=False)
+            cflags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction='.+', example='-O2',
+                                              required=False, explicit=False)
+
+            def redo(self, result, context):
+                pass
+
+        t = BTool(object_file='a.o')
+        self.assertIs(NotImplemented, t.language)
+        self.assertIs(NotImplemented, t.cflags)
+
+        with dlb.ex.Context() as c:
+            c.env.import_from_outer('LANG', '[a-z]{2}_[A-Z]{2}', 'sv_SE')
+            c.env['LANG'] = 'de_CH'
+            result = t.run()
+
+        self.assertEqual({'language': 'de', 'territory': 'CH'}, result.language)
+        self.assertIsNone(result.cflags)
+
+        with dlb.ex.Context() as c:
+            c.env.import_from_outer('LANG', '[a-z]{2}_[A-Z]{2}', 'sv_SE')
+            with self.assertRaises(dlb.ex.RedoError) as cm:
+                t.run()
+        msg = (
+            "not a defined environment variable in the context: 'LANG'\n"
+            "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
+        )
+        self.assertEqual(msg, str(cm.exception))
+
+
 class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_redo_if_source_has_changed(self):
