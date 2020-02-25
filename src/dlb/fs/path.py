@@ -14,6 +14,7 @@ __all__ = (
 import sys
 import re
 import os
+import collections.abc
 import functools
 import pathlib  # since Python 3.4
 from typing import Pattern, Optional, Tuple
@@ -173,14 +174,25 @@ class Path(metaclass=_PathMeta):
             self._components = (anchor,) + nonanchor_components
             self._is_dir = path.endswith('/') or path.endswith('/.')
 
-        else:  # TODO from tuple of str
+        elif isinstance(path, collections.abc.Sequence):
+
+            components = tuple(str(c) for c in path)
+            if not components or components[0] not in ('', '/', '//'):
+                raise ValueError("if 'path' is a tuple, its first element must be one of '', '/', '//'")
+            nonroot_components = tuple(c for c in components[1:] if c and c != '.')
+            if any('/' in c for c in nonroot_components):
+                raise ValueError("if 'path' is a tuple, none except its first element must contain '/'")
+            self._components = (components[0],) + nonroot_components
+            self._is_dir = False
+
+        else:
 
             # convert
             if isinstance(path, _Native):
                 path = path.raw
 
             if not isinstance(path, pathlib.PurePath):
-                raise TypeError("'path' must be a str, dlb.fs.Path or pathlib.PurePath object")
+                raise TypeError("'path' must be a str, dlb.fs.Path or pathlib.PurePath object or an sequence")
 
             anchor = path.anchor
 
@@ -245,10 +257,8 @@ class Path(metaclass=_PathMeta):
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
         n = len(other._components)
         if len(self._components) < n or self._components[:n] != other._components:
-            raise ValueError(f"{self.as_string()} does not start with {other.as_string()}")
-        components = ('',) + self._components[n:]
-        s = _path_string_from_parts_for_posix(self._components[n:])
-        return self.__class__(s, is_dir=self._is_dir)  # TODO replace str
+            raise ValueError(f"{self.as_string()!r} does not start with {other.as_string()!r}")
+        return self.__class__(('',) + self._components[n:], is_dir=self._is_dir)
 
     def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
         if not self.is_dir():
@@ -370,7 +380,7 @@ class Path(metaclass=_PathMeta):
         if o[0]:
             raise ValueError(f'cannot append absolute path: {other!r}')
         if len(o) > 1:
-            return self.__class__(self._as_string() + '/' + other._as_string(), is_dir=other._is_dir)  # TODO without str
+            return self.__class__(self._components + o[1:], is_dir=other._is_dir)
         return self
 
     def __rtruediv__(self, other):
@@ -402,25 +412,22 @@ class Path(metaclass=_PathMeta):
 
         n = len(self.parts)
         start, stop, step = item.indices(n)
-        assert 0 <= start <= n
-        assert -1 <= stop <= n
         if step < 0:
             raise ValueError('slice step must be positive')
 
         if start == 0 and stop >= n and step == 1:
             return self
+
+        parts = self.parts[start:stop:step]
+        if start == 0 and self.is_absolute() and not parts:
+            raise ValueError("slice of absolute path starting at 0 must not be empty")
+        if not parts:
+            components = ('',)
+        elif parts[0][:1] == '/':
+            components = parts
         else:
-            c = self.parts[start:stop:step]
-            if start == 0 and self.is_absolute() and not c:
-                raise ValueError("slice of absolute path starting at 0 must not be empty")
-            if not c:
-                return self.__class__('.')
-            d = stop < n or self._is_dir
-            if len(c) <= 1:
-                return self.__class__(c[0], is_dir=d)
-            # one string is much faster than several components (its also safer)
-            p = pathlib.PurePosixPath(_path_string_from_parts_for_posix(c))  # TODO without str
-            return self.__class__(p, is_dir=d)
+            components = ('',) + parts
+        return self.__class__(components, is_dir=stop < n or self._is_dir)
 
 
 class RelativePath(Path):

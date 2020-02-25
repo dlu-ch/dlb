@@ -109,6 +109,28 @@ class ConstructionTest(unittest.TestCase):
             dlb.fs.Path(pathlib.PureWindowsPath('\\\\name'))
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
+    def test_from_tuple(self):
+        self.assertEqual(dlb.fs.Path('a\\b/c'), dlb.fs.Path(('', 'a\\b', 'c')))
+        self.assertEqual(dlb.fs.Path('/a/b'), dlb.fs.Path(('/', 'a', '.', 'b', '', '', '.')))
+        self.assertEqual(dlb.fs.Path('//a/b'), dlb.fs.Path(('//', 'a', 'b')))
+        self.assertEqual(dlb.fs.Path('///a/b'), dlb.fs.Path(('/', 'a', 'b')))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path(())
+        self.assertEqual("if 'path' is a tuple, its first element must be one of '', '/', '//'", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path(('x',))
+        self.assertEqual("if 'path' is a tuple, its first element must be one of '', '/', '//'", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path(('///',))
+        self.assertEqual("if 'path' is a tuple, its first element must be one of '', '/', '//'", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path(('', 'a/b'))
+        self.assertEqual("if 'path' is a tuple, none except its first element must contain '/'", str(cm.exception))
+
     def test_from_none(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(None)
@@ -117,7 +139,8 @@ class ConstructionTest(unittest.TestCase):
     def test_from_int(self):
         with self.assertRaises(TypeError) as cm:
             dlb.fs.Path(1)
-        self.assertEqual("'path' must be a str, dlb.fs.Path or pathlib.PurePath object", str(cm.exception))
+        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or an sequence"
+        self.assertEqual(msg, str(cm.exception))
 
 
 class StringRepresentationTest(unittest.TestCase):
@@ -158,7 +181,7 @@ class ConversionFromAnToPurePathTest(unittest.TestCase):
         pw = pathlib.PureWindowsPath('\\\\name\\r')
         self.assertEqual(dlb.fs.Path(pw).pure_windows, pw)
 
-    def test_incomplete_windowspath_are_inhibited(self):
+    def test_incomplete_windowspath_is_not_permitted(self):
         self.assertEqual(pathlib.PureWindowsPath(r'C:\\'), dlb.fs.Path('/c:').pure_windows)  # add root
 
         with self.assertRaises(ValueError) as cm:
@@ -168,6 +191,11 @@ class ConversionFromAnToPurePathTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('//name').pure_windows
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
+
+    def test_reserved_is_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('com2').pure_windows
+        self.assertEqual("path is reserved", str(cm.exception))
 
 
 class IsDirConstructionTest(unittest.TestCase):
@@ -245,12 +273,15 @@ class TransformationTest(unittest.TestCase):
         p = '/u/v/../' / dlb.fs.Path('a/b/c/d')
         self.assertEqual(p, dlb.fs.Path('/u/v/../a/b/c/d'))
 
-    def test_appending_relative_to_nondir_is_inhibited(self):
+        p = '/u/v/' / dlb.fs.Path('.')
+        self.assertEqual(p, dlb.fs.Path('/u/v/'))
+
+    def test_appending_relative_to_nondir_is_not_permitted(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('../x') / dlb.fs.Path('a/b/c/d')
         self.assertEqual("cannot append to non-directory path: Path('../x')", str(cm.exception))
 
-    def test_appending_absolute_to_dir_is_inhibited(self):
+    def test_appending_absolute_to_dir_is_not_permitted(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('..') / dlb.fs.Path('/a/b/c/d')
         self.assertEqual("cannot append absolute path: Path('/a/b/c/d')", str(cm.exception))
@@ -272,6 +303,11 @@ class TransformationTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('a').relative_to(dlb.fs.Path('b'))
         self.assertEqual("since Path('b') is not a directory, a path cannot be relative to it", str(cm.exception))
+
+    def test_relative_fails_for_nonprefix(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('a').relative_to(dlb.fs.Path('b/'))
+        self.assertEqual("'a' does not start with 'b/'", str(cm.exception))
 
     def test_parts_of_relative_and_absolute_are_different(self):
         p = dlb.fs.Path('u/v/w')
