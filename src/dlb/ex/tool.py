@@ -144,7 +144,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
             pass
         if not did_not_exist_before_last_redo:
             if not needs_redo:
-                msg = f"redo necessary because of inexisting filesystem object: {path.as_string()!r}"
+                msg = f"redo necessary because of nonexistent filesystem object: {path.as_string()!r}"
                 di.inform(msg, level=logging.INFO)
                 needs_redo = True
     except OSError:  # TODO test

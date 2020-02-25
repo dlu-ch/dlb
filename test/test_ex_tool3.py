@@ -52,7 +52,7 @@ class RunWithoutRedoTest(tools_for_test.TemporaryDirectoryTestCase):
 
 class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
 
-    def test_fails_for_inexisting_inputfile(self):
+    def test_fails_for_nonexistent_inputfile(self):
         pathlib.Path('.dlbroot').mkdir()
 
         regex = (
