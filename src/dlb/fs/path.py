@@ -122,8 +122,10 @@ class Path(metaclass=_PathMeta):
                     if anchor[:1] != '/':
                         anchor = '/' + anchor
                     components = (anchor,) + components[1:]
-                # beware: ignores components before the last component that begins with '/'
-                self._path = pathlib.PurePosixPath(*components)
+                if len(components) > 1 and components[0][-1:] == '/':
+                    components = (components[0] + components[1],) + components[2:]
+                # one string is much faster than several components (its also safer):
+                self._path = pathlib.PurePosixPath('/'.join(components))
                 self._is_dir = not components
             elif isinstance(path, pathlib.PurePath):
                 raise TypeError("unknown subclass of 'pathlib.PurePath'")
@@ -277,8 +279,10 @@ class Path(metaclass=_PathMeta):
         if any(':' in c for c in to_check):
             raise ValueError("must not contain reserved characters: ':'")
 
-        # beware: ignores components before the last component that begins with '\\' or ends with ':'
-        p = pathlib.PureWindowsPath(*components)
+        if len(components) > 1 and components[0][-1:] == '\\':
+            components = (components[0] + components[1],) + components[2:]
+        # one string is much faster than several components (its also safer)
+        p = pathlib.PureWindowsPath('\\'.join(components))
 
         if p.is_reserved():
             # not actually reserved for directory path, but information whether directory is lost after conversion
@@ -355,9 +359,14 @@ class Path(metaclass=_PathMeta):
             c = self.parts[start:stop:step]
             if start == 0 and self.is_absolute() and not c:
                 raise ValueError("slice of absolute path starting at 0 must not be empty")
-            # beware: ignores components before the last component that begins with '/'
-            p = pathlib.PurePosixPath(*c)
+            if not c:
+                return self.__class__('.')
             d = stop < n or self._is_dir
+            if len(c) <= 1:
+                return self.__class__(c[0], d)
+            if c[0][-1:] == '/':
+                c = (c[0] + c[1],) + c[2:]
+            p = pathlib.PurePosixPath('/'.join(c))  # one string is much faster than several components (its also safer)
             return self.__class__(p, d)
 
 
