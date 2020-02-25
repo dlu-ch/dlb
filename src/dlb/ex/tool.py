@@ -96,9 +96,10 @@ def _get_memo_for_fs_input_dependency(name: Optional[str], path: fs.Path,
         encoded_path = rundb.encode_path(path)
         memo = memo_by_encoded_path.get(encoded_path)
         if memo is None:
-            memo = manip.read_filesystem_object_memo(context.root_path / path)  # may raise OSError
+            # may raise OSError or ValueError:
+            memo = manip.read_filesystem_object_memo(context.native_abs_path_string_of(path))
         assert memo.stat is not None
-    except FileNotFoundError:
+    except (ValueError, FileNotFoundError):
         msg = f"{path_role} a path of an non-existing filesystem object: {path.as_string()!r}"
         raise DependencyCheckError(msg) from None
     except OSError as e:
@@ -130,27 +131,26 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
         return memo, needs_redo
 
     try:
-
+        # do _not_ check if in managed tree: does no harm if _not_ in managed tree
+        # may raise OSError or ValueError (if 'path' not representable on native system)
+        memo = manip.read_filesystem_object_memo(context.native_abs_path_string_of(path))
+    except (ValueError, FileNotFoundError):
+        # ignore if did not exist according to valid 'encoded_memo'
+        did_not_exist_before_last_redo = False
         try:
-            path = context.managed_tree_path_of(path, existing=True, collapsable=False)
-            memo = manip.read_filesystem_object_memo(context.root_path / path)
-        except FileNotFoundError:
-            # ignore if did not exist according to valid 'encoded_memo'
-            did_not_exist_before_last_redo = False
-            try:
-                did_not_exist_before_last_redo = \
-                    last_encoded_memo is None or rundb.decode_encoded_fsobject_memo(last_encoded_memo).stat is None
-            except ValueError:
-                pass
-            if not did_not_exist_before_last_redo:
-                raise
-
-    except (ValueError, OSError):
+            did_not_exist_before_last_redo = \
+                last_encoded_memo is None or rundb.decode_encoded_fsobject_memo(last_encoded_memo).stat is None
+        except ValueError:
+            pass
+        if not did_not_exist_before_last_redo:
+            if not needs_redo:
+                msg = f"redo necessary because of inexisting filesystem object: {path.as_string()!r}"
+                di.inform(msg, level=logging.INFO)
+                needs_redo = True
+    except OSError:  # TODO test
+        # comparision not possible -> redo
         if not needs_redo:
-            msg = (
-                f"redo necessary because of inexisting or inaccessible "
-                f"filesystem object: {path.as_string()!r}"  # also if not in managed tree
-            )
+            msg = f"redo necessary because of inaccessible filesystem object: {path.as_string()!r}"
             di.inform(msg, level=logging.INFO)
             needs_redo = True  # comparision not possible -> redo
 
@@ -293,7 +293,8 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                     )
                     raise DependencyCheckError(msg)
                 try:
-                    memo = manip.read_filesystem_object_memo(context.root_path / p)
+                    # may raise OSError or ValueError (if 'path' not representable on native system)
+                    memo = manip.read_filesystem_object_memo(context.native_abs_path_string_of(p))
                     action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
                 except (ValueError, OSError) as e:
                     if not needs_redo:
@@ -322,7 +323,7 @@ def _remove_explicit_output_dependencies(tool, dependency_actions: Tuple[dependa
             for p in validated_value_tuple:  # p is a (valid) managed tree path as a dlb.fs.Path
                 if tmp_dir is None:
                     tmp_dir = context.create_temporary(is_dir=True)  # may raise OSError
-                manip.remove_filesystem_object(context.root_path / p,
+                manip.remove_filesystem_object(context.native_abs_path_string_of(p),
                                                abs_empty_dir_path=tmp_dir,
                                                ignore_non_existing=True)  # may raise OSError
                 encoded_path = rundb.encode_path(p)

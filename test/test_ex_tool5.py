@@ -82,7 +82,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             self.assertIsNotNone(t.run())  # because of new dependency
             regex = (
                 r"(?m)\b"
-                r"redo necessary because of inexisting or inaccessible filesystem object: 'a.h'\n"
+                r"redo necessary because of inexisting filesystem object: 'a.h'\n"
             )
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
@@ -135,18 +135,6 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             self.assertIsNone(t.run())
 
         with dlb.ex.Context():
-            # add dependency with invalid path (not in managed tree)
-            rundb = dlb.ex.context._get_rundb()
-            rundb.update_fsobject_input(1, dlb.ex.rundb.encode_path(dlb.fs.Path('.dlbroot/o')), False, None)
-
-            output = io.StringIO()
-            dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
-            regex = r"\b()redo necessary because of inexisting or inaccessible filesystem object: '\.dlbroot/o'\n"
-            self.assertRegex(output.getvalue(), regex)
-            self.assertIsNone(t.run())
-
-        with dlb.ex.Context():
             # add non-existing dependency with invalid memo
             rundb = dlb.ex.context._get_rundb()
             rundb.update_fsobject_input(1, 'd.h/', False, marshal.dumps(42))
@@ -154,7 +142,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
-            regex = r"\b()redo necessary because of inexisting or inaccessible filesystem object: 'd\.h'\n"
+            regex = r"\b()redo necessary because of inexisting filesystem object: 'd\.h'\n"
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 

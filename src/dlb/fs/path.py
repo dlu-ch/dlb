@@ -237,7 +237,7 @@ class Path(metaclass=_PathMeta):
         return sorted(self.iterdir_r(name_filter, recurse_name_filter, follow_symlinks, cls))
 
     @property
-    def _cparts(self):
+    def _cparts(self) -> Tuple[str, ...]:
         return self.parts if self.is_absolute() else ('',) + self.parts
 
     @property
@@ -250,6 +250,7 @@ class Path(metaclass=_PathMeta):
 
     @property
     def pure_windows(self) -> pathlib.PureWindowsPath:
+        # TODO raise exception if path contains '\\'
         s = self.as_string()
         if s.startswith('/') and not s.startswith('//'):
             s = s[1:]
@@ -259,7 +260,7 @@ class Path(metaclass=_PathMeta):
         self._check_windows_path_anchor(p)
 
         if p.is_reserved():
-            # not actually reserved for directory path, but this information is last after conversion
+            # not actually reserved for directory path, but information whether directory is lost after conversion
             raise ValueError(f'file path is reserved: {str(p)!r}')
 
         return p

@@ -154,6 +154,8 @@ def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) 
     if isinstance(abs_path, path_.Path):
         abs_path = abs_path.native.raw
 
+    abs_path = os.fspath(abs_path)
+
     if not os.path.isabs(abs_path):  # does not raise OSError
         raise ValueError(f"not an absolute path: {str(abs_path)!r}")
 
@@ -171,13 +173,17 @@ def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) 
 
 
 def _normalize_dotdot(path: PP, ref_dir_path: Union[None, str, os.PathLike]) -> PP:
-    path_components = path.native.raw.parts if isinstance(path, path_.Path) else path.parts
-
-    root = ()
-    nonroot_components = path_components
     if path.is_absolute():
-        root = nonroot_components[:1]
-        nonroot_components = nonroot_components[1:]
+        # PureWindowsPath(r'\\unc\root\d').parts -> (r'\\unc\root\', 'd')
+        # PureWindowsPath(r'C:\d').parts -> (r'C:\', 'd')
+        # PureWindowsPath(r'C:d').parts -> ('C:', 'd')
+        path_components = path.native.raw.parts if isinstance(path, path_.Path) else path.parts
+        root = path_components[:1]
+        nonroot_components = path_components[1:]
+    else:
+        path_components = path.parts  # avoid path.native.raw
+        root = ()
+        nonroot_components = path_components
 
     while True:
         try:
@@ -190,6 +196,7 @@ def _normalize_dotdot(path: PP, ref_dir_path: Union[None, str, os.PathLike]) -> 
             raise PathNormalizationError(f"is an upwards path: {path!r}")
 
         if ref_dir_path is not None:
+            # TODO if os.path.sep in components?
             p = os.path.join(ref_dir_path, *root, *nonroot_components[:i])
             sr = os.lstat(p)
             if stat.S_ISLNK(sr.st_mode):
@@ -204,6 +211,7 @@ def _normalize_dotdot(path: PP, ref_dir_path: Union[None, str, os.PathLike]) -> 
         return path
 
     if isinstance(path, path_.Path):
+        # TODO is PurePosixPath correct on Windows for absolute path?
         return path.__class__(pathlib.PurePosixPath(*components), is_dir=path.is_dir())
 
     return path.__class__(*components)

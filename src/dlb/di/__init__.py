@@ -293,16 +293,17 @@ class Cluster:
 def inform(message, *, level: int = logging.INFO, with_time: bool = False) -> bool:
     level = _checked_level(level)
 
-    indented_message = _indent_message(format_message(message, level=level), len(_clusters))
-    if with_time:
-        suffix = _get_relative_time_suffix(time.monotonic_ns())
-        indented_message = _append_to_title_of_formatted(indented_message, suffix)
+    formatted_message = format_message(message, level=level)
 
     if not is_unsuppressed_level(level):
         return False
 
+    if with_time:
+        suffix = _get_relative_time_suffix(time.monotonic_ns())
+        formatted_message = _append_to_title_of_formatted(formatted_message, suffix)
+
     if _clusters:
         _clusters[-1].inform_title()
 
-    _output_file.write(indented_message + '\n')
+    _output_file.write(_indent_message(formatted_message, len(_clusters)) + '\n')
     return True
