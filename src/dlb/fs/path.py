@@ -20,11 +20,68 @@ from typing import Pattern, Optional, Tuple
 assert sys.version_info >= (3, 7)
 
 
+def _path_string_from_parts_for_posix(parts: Tuple[str, ...]) -> str:
+    if len(parts) > 1 and parts[0][-1:] == '/':
+        parts = (parts[0] + parts[1],) + parts[2:]
+    # one string is much faster than several components (its also safer):
+    return '/'.join(parts)
+
+
+def _path_string_from_parts_for_windows(parts: Tuple[str, ...]) -> str:
+    if any('\\' in c for c in parts):
+        raise ValueError("must not contain reserved characters: '\\\\'")
+
+    # ('/', 'c:', 'temp') -> ('c:\\', 'temp')
+    # ('//', 'u', 'r')    -> ('//, 'u', 'r')
+    if parts[:1] == ('/',):
+        parts = parts[1:]
+        if not parts:
+            raise ValueError('neither absolute nor relative: root is missing')
+        anchor = parts[0]
+        if not (anchor[-1:] == ':' and anchor[:-1]):
+            raise ValueError('neither absolute nor relative: drive is missing')
+        parts = (anchor + '\\',) + parts[1:]
+        to_check = (anchor[:-1],) + parts[1:]
+    elif parts[:1] == ('//',):
+        if len(parts) <= 2:
+            raise ValueError('neither absolute nor relative: drive is missing')
+        parts = ('\\\\' + parts[1] + '\\' + parts[2],) + parts[3:]
+        to_check = parts
+    else:
+        to_check = parts
+
+    if any(':' in c for c in to_check):
+        raise ValueError("must not contain reserved characters: ':'")
+
+    if len(parts) > 1 and parts[0][-1:] == '\\':
+        parts = (parts[0] + parts[1],) + parts[2:]
+
+    return '\\'.join(parts)
+
+
+if isinstance(pathlib.Path(), pathlib.PosixPath):
+    _path_string_from_parts = _path_string_from_parts_for_posix
+elif isinstance(pathlib.Path(), pathlib.WindowsPath):
+    _path_string_from_parts = _path_string_from_parts_for_windows
+else:
+    raise TypeError("unknown 'Native' class")
+
+
 # cannot derive easily from pathlib.Path without defining non-API members
 class _Native:
 
     def __init__(self, path):
         self._raw = pathlib.Path(path)
+        self.path_string_from_parts(self._raw.parts)
+        # the meta-class checks self._raw after construction
+
+    # TODO document an test
+    @staticmethod
+    def path_string_from_parts(parts: Tuple[str, ...]) -> str:
+        # The return value *s* is safe as an argument of pathlib.Path().
+        # If the path described by *parts* is absolute, *s* is also safe as a suffix of an absolute path.
+        # Raises ValueError if the meaning of pathlib.Path(s) would differ from the meaning of *parts*.
+        return _path_string_from_parts(parts)
 
     @property
     def raw(self) -> pathlib.Path:
@@ -68,7 +125,7 @@ class _Meta(type):
 class _NativeMeta(_Meta):
     def __call__(mcl, value):
         obj = _Native(value)
-        mcl._cls(obj._raw)
+        mcl._cls(obj._raw)  # check restrictions
         return obj
 
     def __instancecheck__(mcl, instance) -> bool:
@@ -122,10 +179,8 @@ class Path(metaclass=_PathMeta):
                     if anchor[:1] != '/':
                         anchor = '/' + anchor
                     components = (anchor,) + components[1:]
-                if len(components) > 1 and components[0][-1:] == '/':
-                    components = (components[0] + components[1],) + components[2:]
                 # one string is much faster than several components (its also safer):
-                self._path = pathlib.PurePosixPath('/'.join(components))
+                self._path = pathlib.PurePosixPath(_path_string_from_parts_for_posix(components))
                 self._is_dir = not components
             elif isinstance(path, pathlib.PurePath):
                 raise TypeError("unknown subclass of 'pathlib.PurePath'")
@@ -252,58 +307,19 @@ class Path(metaclass=_PathMeta):
     @property
     def pure_windows(self) -> pathlib.PureWindowsPath:
         # must be fast
-        components = self._path.parts
 
-        if any('\\' in c for c in components):
-            raise ValueError("must not contain reserved characters: '\\\\'")
-
-        # ('/', 'c:', 'temp') -> ('c:\\', 'temp')
-        # ('//', 'u', 'r')    -> ('//, 'u', 'r')
-        if components[:1] == ('/',):
-            components = components[1:]
-            if not components:
-                raise ValueError('neither absolute nor relative: root is missing')
-            anchor = components[0]
-            if not (anchor[-1:] == ':' and anchor[:-1]):
-                raise ValueError('neither absolute nor relative: drive is missing')
-            components = (anchor +'\\',) + components[1:]
-            to_check = (anchor[:-1],) + components[1:]
-        elif components[:1] == ('//',):
-            if len(components) <= 2:
-                raise ValueError('neither absolute nor relative: drive is missing')
-            components = ('\\\\' + components[1] + '\\' + components[2],) + components[3:]
-            to_check = components
-        else:
-            to_check = components
-
-        if any(':' in c for c in to_check):
-            raise ValueError("must not contain reserved characters: ':'")
-
-        if len(components) > 1 and components[0][-1:] == '\\':
-            components = (components[0] + components[1],) + components[2:]
-        # one string is much faster than several components (its also safer)
-        p = pathlib.PureWindowsPath('\\'.join(components))
-
+        # construction from one string is much faster than several components (its also safer)
+        p = pathlib.PureWindowsPath(_path_string_from_parts_for_windows(self._path.parts))
         if p.is_reserved():
             # not actually reserved for directory path, but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
 
         return p
 
-    if isinstance(pathlib.Path(), pathlib.PosixPath):
-
-        @property
-        def native(self):
-            return _Native(self.pure_posix)
-
-    elif isinstance(pathlib.Path(), pathlib.WindowsPath):
-
-        @property
-        def native(self):
-            return _Native(self.pure_windows)
-
-    else:
-        raise TypeError("unknown 'Native' class")
+    @property
+    def native(self):
+        # TODO circumvent meta-class to avoid checking again - must be fast
+        return _Native(_Native.path_string_from_parts(self.parts))
 
     def as_string(self) -> str:
         s = str(self._path)
@@ -364,9 +380,8 @@ class Path(metaclass=_PathMeta):
             d = stop < n or self._is_dir
             if len(c) <= 1:
                 return self.__class__(c[0], d)
-            if c[0][-1:] == '/':
-                c = (c[0] + c[1],) + c[2:]
-            p = pathlib.PurePosixPath('/'.join(c))  # one string is much faster than several components (its also safer)
+            # one string is much faster than several components (its also safer)
+            p = pathlib.PurePosixPath(_path_string_from_parts_for_posix(c))
             return self.__class__(p, d)
 
 
@@ -444,9 +459,15 @@ class WindowsPath(Path):
     RESERVED_CHARACTERS = frozenset('\\"|?*<>:')  # besides: '/'
 
     def check_restriction_to_base(self):
-        p = self.pure_windows
+        # TODO remove construction of PureWindowsPath
+        p = pathlib.PureWindowsPath(_path_string_from_parts_for_windows(self._path.parts))
+        if p.is_reserved():
+            # not actually reserved for directory path, but information whether directory is lost after conversion
+            raise ValueError(f'path is reserved')
 
-        reserved = self.RESERVED_CHARACTERS - frozenset('\\:')  # already checked
+        # without already checked in _path_string_from_parts_for_windows()
+        reserved = self.RESERVED_CHARACTERS - frozenset('\\:')
+
         for c in p.parts:
             invalid_characters = set(c) & reserved
             if invalid_characters:

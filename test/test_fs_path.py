@@ -480,7 +480,7 @@ class NativeTest(unittest.TestCase):
         self.assertEqual(CheckCountingPath.n, 1)
 
         CheckCountingPath.Native('x')
-        self.assertEqual(CheckCountingPath.n, 2)
+        self.assertEqual(CheckCountingPath.n, 2)  # TODO do not check again
 
     def test_isinstance_checks_restrictions(self):
 
@@ -495,6 +495,17 @@ class NativeTest(unittest.TestCase):
         self.assertFalse(issubclass(dlb.fs.Path.Native, dlb.fs.Path))
         self.assertTrue(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.Path.Native))
         self.assertFalse(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.PortableWindowsPath.Native))
+
+
+@unittest.skipIf(pathlib.Path is not pathlib.WindowsPath, 'Windows only')
+class NativeTest(unittest.TestCase):
+
+    def test_constructor_fails_for_invalid_path(self):
+        with self.assertRaises(ValueError):
+            dlb.fs.Path.Native('a:b')
+
+        with self.assertRaises(ValueError):
+            dlb.fs.Path.Native(pathlib.Path('a') / "*" / ":")
 
 
 class RelativeRestrictionsTest(unittest.TestCase):
