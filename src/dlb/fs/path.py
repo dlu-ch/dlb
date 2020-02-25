@@ -32,7 +32,7 @@ def _path_string_from_parts_for_windows(parts: Tuple[str, ...]) -> str:
         raise ValueError("must not contain reserved characters: '\\\\'")
 
     # ('/', 'c:', 'temp') -> ('c:\\', 'temp')
-    # ('//', 'u', 'r')    -> ('//, 'u', 'r')
+    # ('//', 'u', 'r')    -> ('\\u\\r',)
     if parts[:1] == ('/',):
         parts = parts[1:]
         if not parts:
@@ -73,9 +73,8 @@ class _Native:
     def __init__(self, path):
         self._raw = pathlib.Path(path)
         self.path_string_from_parts(self._raw.parts)
-        # the meta-class checks self._raw after construction
+        # the metaclass checks self._raw after construction
 
-    # TODO document an test
     @staticmethod
     def path_string_from_parts(parts: Tuple[str, ...]) -> str:
         # The return value *s* is safe as an argument of pathlib.Path().
@@ -151,48 +150,67 @@ class Path(metaclass=_PathMeta):
         if path is None:
             raise ValueError('invalid path: None')
 
-        if isinstance(path, _Native):
-            path = path.raw
-
         if isinstance(path, Path):
+
             # copy
-            self._path = path._path
+            self._components = path._components
             self._is_dir = path._is_dir
-        else:
+
+        elif isinstance(path, str):
+
+            if not path:
+                raise ValueError("invalid path: ''")
+
+            anchor = ''
+            if path[:3] == '///':
+                anchor = '/'
+            elif path[:2] == '//':
+                anchor = '//'
+            elif path[:1] == '/':
+                anchor = '/'
+            nonanchor_components = tuple(c for c in path.strip('/').split('/') if c and c != '.')
+
+            self._components = (anchor,) + nonanchor_components
+            self._is_dir = path.endswith('/') or path.endswith('/.')
+
+        else:  # TODO from tuple of str
+
             # convert
+            if isinstance(path, _Native):
+                path = path.raw
+
+            if not isinstance(path, pathlib.PurePath):
+                raise TypeError("'path' must be a str, dlb.fs.Path or pathlib.PurePath object")
+
+            anchor = path.anchor
+
             if isinstance(path, pathlib.PurePosixPath):  # this should be very efficient
-                self._path = path
+                self._components = (anchor,) + (path.parts[1:] if anchor else path.parts)
                 self._is_dir = False
-            elif isinstance(path, str):
-                if not path:
-                    raise ValueError("invalid path: ''")
-                self._path = pathlib.PurePosixPath(path)  # '' -> pathlib.PurePosixPath('.')
-                self._is_dir = path.endswith('/') or path.endswith('/.')
             elif isinstance(path, pathlib.PureWindowsPath):
-                components = path.parts
-                if path.anchor:
+                parts = path.parts
+                if anchor:
+                    anchor = anchor.replace('\\', '/').rstrip('/')
                     if not path.root:
                         raise ValueError('neither absolute nor relative: root is missing')
-                    if not path.drive:
+                    if not path.drive or not anchor:
                         raise ValueError('neither absolute nor relative: drive is missing')
-                    anchor = components[0].replace('\\', '/')
-                    if anchor[:1] != '/':
-                        anchor = '/' + anchor
-                    components = (anchor,) + components[1:]
-                # one string is much faster than several components (its also safer):
-                self._path = pathlib.PurePosixPath(_path_string_from_parts_for_posix(components))
-                self._is_dir = not components
-            elif isinstance(path, pathlib.PurePath):
-                raise TypeError("unknown subclass of 'pathlib.PurePath'")
+                    nanchor = anchor.lstrip('/')
+                    nanchor = '//' if len(anchor) - len(nanchor) > 1 else '/'
+                    self._components = (nanchor,) + tuple(c for c in anchor.split('/') if c and c != '.') + parts[1:]
+                    self._is_dir = not parts[1:]
+                else:
+                    self._components = ('',) + path.parts
+                    self._is_dir = False
             else:
-                raise TypeError(f'argument should be a path or str object, not {path.__class__!r}')  # like pathlib
+                raise TypeError("unknown subclass of 'pathlib.PurePath'")
 
-            self._is_dir = self._is_dir or not self._path.parts or self._path.parts[-1:] == ('..',)
-
-        if is_dir is not None:
+        if is_dir is None:
+            self._is_dir = self._is_dir or len(self._components) <= 1 or self._components[-1:] == ('..',)
+        else:
             is_dir = bool(is_dir)
-            if not is_dir and (not self._path.parts or self._path.parts[-1:] == ('..',)):
-                raise ValueError(f'cannot be the path of a non-directory: {str(self._path)!r}')
+            if not is_dir and (self._components == ('',) or self._components[-1:] == ('..',)):
+                raise ValueError(f'cannot be the path of a non-directory: {self._as_string()!r}')
             self._is_dir = is_dir
 
         try:
@@ -202,7 +220,7 @@ class Path(metaclass=_PathMeta):
                     c.check_restriction_to_base(self)
         except ValueError as e:
             reason = str(e)
-            msg = f'invalid path for {self.__class__.__qualname__!r}: {str(self._path)!r}'
+            msg = f'invalid path for {self.__class__.__qualname__!r}: {str(self.as_string())!r}'
             if reason:
                 msg = f'{msg} ({reason})'
             raise ValueError(msg) from None
@@ -216,16 +234,21 @@ class Path(metaclass=_PathMeta):
         return self._is_dir
 
     def is_absolute(self) -> bool:
-        return self._path.is_absolute()
+        return bool(self._components[0])
 
     def is_normalized(self) -> bool:
-        return '..' not in self.parts
+        return '..' not in self._components
 
     def relative_to(self, other):
         other = self._cast(other)
         if not other.is_dir():
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
-        return self.__class__(self._path.relative_to(other._path), is_dir=self._is_dir)
+        n = len(other._components)
+        if len(self._components) < n or self._components[:n] != other._components:
+            raise ValueError(f"{self.as_string()} does not start with {other.as_string()}")
+        components = ('',) + self._components[n:]
+        s = _path_string_from_parts_for_posix(self._components[n:])
+        return self.__class__(s, is_dir=self._is_dir)  # TODO replace str
 
     def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
         if not self.is_dir():
@@ -293,23 +316,28 @@ class Path(metaclass=_PathMeta):
         return sorted(self.iterdir_r(name_filter, recurse_name_filter, follow_symlinks, cls))
 
     @property
-    def _cparts(self) -> Tuple[str, ...]:
-        return self._path.parts if self._path.anchor else ('',) + self._path.parts
+    def components(self) -> Tuple[str, ...]:
+        # first element is '/' or '//' if absolute and '' otherwise
+        return self._components
 
     @property
     def parts(self) -> Tuple[str, ...]:
-        return self._path.parts
+        # first element: '/' or '//' if absolute, does not start with '/' otherwise
+        c = self._components
+        if not c[0]:
+            return c[1:]  # relative path
+        return c
 
     @property
     def pure_posix(self) -> pathlib.PurePosixPath:
-        return self._path
+        return pathlib.PurePosixPath(self._as_string())
 
     @property
     def pure_windows(self) -> pathlib.PureWindowsPath:
         # must be fast
 
         # construction from one string is much faster than several components (its also safer)
-        p = pathlib.PureWindowsPath(_path_string_from_parts_for_windows(self._path.parts))
+        p = pathlib.PureWindowsPath(_path_string_from_parts_for_windows(self.parts))
         if p.is_reserved():
             # not actually reserved for directory path, but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
@@ -318,22 +346,32 @@ class Path(metaclass=_PathMeta):
 
     @property
     def native(self):
-        # TODO circumvent meta-class to avoid checking again - must be fast
-        return _Native(_Native.path_string_from_parts(self.parts))
+        return _Native(_Native.path_string_from_parts(self.parts))  # does _not_ check restrictions again
+
+    def _as_string(self) -> str:
+        c = self._components
+        if not c[0]:
+            c = c[1:]  # relative
+        elif len(c) > 1:
+            c = (c[0] + c[1],) + c[2:]
+        return '/'.join(c) if c else '.'
 
     def as_string(self) -> str:
-        s = str(self._path)
-        if self.is_dir() and not s.endswith('/'):
-            s += '/'
-        return s
+        s = self._as_string()
+        if not self.is_dir() or s[-1] == '/':
+            return s
+        return s + '/'
 
     def __truediv__(self, other):
         if not self.is_dir():
             raise ValueError(f'cannot append to non-directory path: {self!r}')
         other = self._cast(other)
-        if other.is_absolute():
+        o = other._components
+        if o[0]:
             raise ValueError(f'cannot append absolute path: {other!r}')
-        return self.__class__(self._path / other._path, is_dir=other._is_dir)
+        if len(o) > 1:
+            return self.__class__(self._as_string() + '/' + other._as_string(), is_dir=other._is_dir)  # TODO without str
+        return self
 
     def __rtruediv__(self, other):
         return self.__class__(other) / self
@@ -341,14 +379,14 @@ class Path(metaclass=_PathMeta):
     def __eq__(self, other) -> bool:
         # on all platform, comparison is case sensitive
         other = self._cast(other)
-        return (self._cparts, self._is_dir) == (other._cparts, other._is_dir)
+        return (self._components, self._is_dir) == (other._components, other._is_dir)
 
     def __lt__(self, other) -> bool:
         other = self._cast(other)
-        return (self._cparts, self._is_dir) < (other._cparts, other._is_dir)
+        return (self._components, self._is_dir) < (other._components, other._is_dir)
 
     def __hash__(self) -> int:
-        return hash((self._path, self._is_dir))
+        return hash((self._components, self._is_dir))
 
     def __repr__(self) -> str:
         return f'{self.__class__.__qualname__}({self.as_string()!r})'
@@ -381,7 +419,7 @@ class Path(metaclass=_PathMeta):
             if len(c) <= 1:
                 return self.__class__(c[0], is_dir=d)
             # one string is much faster than several components (its also safer)
-            p = pathlib.PurePosixPath(_path_string_from_parts_for_posix(c))
+            p = pathlib.PurePosixPath(_path_string_from_parts_for_posix(c))  # TODO without str
             return self.__class__(p, is_dir=d)
 
 
@@ -405,13 +443,13 @@ class NormalizedPath(Path):
 
 class NoSpacePath(Path):
     def check_restriction_to_base(self):
-        if any(' ' in c for c in self._path.parts):
+        if any(' ' in c for c in self.parts):
             raise ValueError('must not contain space')
 
 
 class PosixPath(Path):
     def check_restriction_to_base(self):
-        if any('\0' in c for c in self._path.parts):
+        if any('\0' in c for c in self.parts):
             raise ValueError('must not contain NUL')
 
 
@@ -428,27 +466,26 @@ class PortablePosixPath(PosixPath):
         #   leading <slash> characters may be interpreted in an implementation-defined manner, although more
         #   than two leading <slash> characters shall be treated as a single <slash> character.
 
-        if self._path.anchor == '//':
+        components = self.components
+        if components[0] == '//':
             raise ValueError("non-standardized component starting with '//' not allowed")
 
-        components = self.parts
-        for c in components:
-            if c != '/':
-                if len(c) > self.MAX_COMPONENT_LENGTH:
-                    raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
+        for c in components[1:]:
+            if len(c) > self.MAX_COMPONENT_LENGTH:
+                raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
 
-                # IEEE Std 1003.1-2008, section 4.7 Filename Portability
-                if c.startswith('-'):
-                    raise ValueError("component must not start with '-'")
+            # IEEE Std 1003.1-2008, section 4.7 Filename Portability
+            if c.startswith('-'):
+                raise ValueError("component must not start with '-'")
 
-                # IEEE Std 1003.1-2008, section 3.278 Portable Filename Character Set
-                invalid_characters = set(c) - self.CHARACTERS
-                if invalid_characters:
-                    raise ValueError("must not contain these characters: {0}".format(
-                        ','.join(repr(c) for c in sorted(invalid_characters))))
+            # IEEE Std 1003.1-2008, section 3.278 Portable Filename Character Set
+            invalid_characters = set(c) - self.CHARACTERS
+            if invalid_characters:
+                raise ValueError("must not contain these characters: {0}".format(
+                    ','.join(repr(c) for c in sorted(invalid_characters))))
 
-        n = sum(len(c) for c in components) + max(0, len(components) - 1)
-        if self.is_dir():
+        n = sum(len(c) for c in components) + max(0, len(components) - 2)
+        if self.is_dir() and (len(components) > 1 or components[0]):
             n += 1
         if n > self.MAX_PATH_LENGTH:
             raise ValueError(f'must not contain more than {self.MAX_PATH_LENGTH} characters')
@@ -460,7 +497,7 @@ class WindowsPath(Path):
 
     def check_restriction_to_base(self):
         # TODO remove construction of PureWindowsPath
-        p = pathlib.PureWindowsPath(_path_string_from_parts_for_windows(self._path.parts))
+        p = pathlib.PureWindowsPath(_path_string_from_parts_for_windows(self.parts))
         if p.is_reserved():
             # not actually reserved for directory path, but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
@@ -492,19 +529,18 @@ class PortableWindowsPath(WindowsPath):
     def check_restriction_to_base(self):
         p = self.pure_windows
 
-        components = p.parts
-
-        nonroot_components = components[1:] if p.anchor else components  # except anchor
-        for c in nonroot_components:
+        components = self.components
+        for c in components[1:]:
             if len(c) > self.MAX_COMPONENT_LENGTH:
                 raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
             if c != '..' and c[-1] in ' .':
                 # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
                 raise ValueError("component must not end with ' ' or '.'")
 
-        n = sum(len(c) for c in components) + max(0, len(components) - 1)
-        if self.is_dir():
+        n = sum(len(c) for c in components) + max(0, len(components) - 2)
+        if self.is_dir() and (len(components) > 1 or components[0]):
             n += 1
+
         if n > self.MAX_PATH_LENGTH:
             raise ValueError(f'must not contain more than {self.MAX_PATH_LENGTH} characters')
 

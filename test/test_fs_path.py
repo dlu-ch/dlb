@@ -67,7 +67,7 @@ class ConstructionTest(unittest.TestCase):
             dlb.fs.Path('a/..', is_dir=False)
         self.assertEqual("cannot be the path of a non-directory: 'a/..'", str(cm.exception))
 
-    def test_backslash_is_normal_charactor(self):
+    def test_backslash_is_normal_character(self):
         p = dlb.fs.Path('a\\b')
         self.assertEqual(repr(p), "Path('a\\\\b')")
         self.assertEqual(len(p.parts), 1)
@@ -117,7 +117,7 @@ class ConstructionTest(unittest.TestCase):
     def test_from_int(self):
         with self.assertRaises(TypeError) as cm:
             dlb.fs.Path(1)
-        self.assertEqual("argument should be a path or str object, not <class 'int'>", str(cm.exception))
+        self.assertEqual("'path' must be a str, dlb.fs.Path or pathlib.PurePath object", str(cm.exception))
 
 
 class StringRepresentationTest(unittest.TestCase):
@@ -474,13 +474,13 @@ class NativeTest(unittest.TestCase):
                 self.__class__.n += 1
 
         p = CheckCountingPath('x')
-        self.assertEqual(CheckCountingPath.n, 1)
+        self.assertEqual(1, CheckCountingPath.n)
 
         p.native
-        self.assertEqual(CheckCountingPath.n, 1)
+        self.assertEqual(1, CheckCountingPath.n)
 
         CheckCountingPath.Native('x')
-        self.assertEqual(CheckCountingPath.n, 2)  # TODO do not check again
+        self.assertEqual(2, CheckCountingPath.n)
 
     def test_isinstance_checks_restrictions(self):
 
@@ -498,7 +498,7 @@ class NativeTest(unittest.TestCase):
 
 
 @unittest.skipIf(pathlib.Path is not pathlib.WindowsPath, 'Windows only')
-class NativeTest(unittest.TestCase):
+class NativeWindowsTest(unittest.TestCase):
 
     def test_constructor_fails_for_invalid_path(self):
         with self.assertRaises(ValueError):
@@ -696,7 +696,7 @@ class WindowsRestrictionsTest(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a/coM9/')
-        self.assertEqual("invalid path for 'WindowsPath': 'a/coM9' (path is reserved)", str(cm.exception))
+        self.assertEqual("invalid path for 'WindowsPath': 'a/coM9/' (path is reserved)", str(cm.exception))
 
     def test_space_or_dot_at_end_of_component_permitted(self):
         dlb.fs.WindowsPath('a/b./c ')
