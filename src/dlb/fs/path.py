@@ -381,7 +381,8 @@ class PortablePosixPath(PosixPath):
         if self._path.anchor == '//':
             raise ValueError("non-standardized component starting with '//' not allowed")
 
-        for c in self.parts:
+        components = self.parts
+        for c in components:
             if c != '/':
                 if len(c) > self.MAX_COMPONENT_LENGTH:
                     raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
@@ -396,7 +397,7 @@ class PortablePosixPath(PosixPath):
                     raise ValueError("must not contain these characters: {0}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
-        n = len(str(self._path))
+        n = sum(len(c) for c in components) + max(0, len(components) - 1)
         if self.is_dir():
             n += 1
         if n > self.MAX_PATH_LENGTH:
@@ -439,14 +440,18 @@ class PortableWindowsPath(WindowsPath):
 
     def check_restriction_to_base(self):
         p = self.pure_windows
-        for c in p.parts[1:]:  # except anchor
+
+        components = p.parts
+        if p.is_absolute():
+            components = components[1:]  # except anchor
+        for c in components:
             if len(c) > self.MAX_COMPONENT_LENGTH:
                 raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
             if c != '..' and c[-1] in ' .':
                 # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
                 raise ValueError("component must not end with ' ' or '.'")
 
-        n = len(str(p))
+        n = sum(len(c) for c in components) + max(0, len(components) - 1)
         if self.is_dir():
             n += 1
         if n > self.MAX_PATH_LENGTH:

@@ -266,6 +266,11 @@ class TransformationTest(unittest.TestCase):
         p = dlb.fs.Path('/u/v/w').relative_to('/')
         self.assertEqual(p, dlb.fs.Path('u/v/w'))
 
+    def test_relative_fails_for_nondirectory(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('a').relative_to(dlb.fs.Path('b'))
+        self.assertEqual("since Path('b') is not a directory, a path cannot be relative to it", str(cm.exception))
+
     def test_parts_of_relative_and_absolute_are_different(self):
         p = dlb.fs.Path('u/v/w')
         self.assertEqual(p.parts, ('u', 'v', 'w'))
@@ -308,6 +313,10 @@ class TransformationTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             p[:-4]
         self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            p[0]
+        self.assertEqual("slice of component indices expected (use 'parts' for single components)", str(cm.exception))
 
 
 class DirectoryListingTest(unittest.TestCase):
@@ -440,6 +449,10 @@ class NativeTest(unittest.TestCase):
         self.assertEqual(str(dlb.fs.Path('.').native), '.')
         self.assertEqual(str(dlb.fs.Path('..').native), '..')
 
+    def test_repr(self):
+        p = dlb.fs.Path('x').native
+        self.assertEqual("Path.Native('./x')", repr(p))
+
     def test_is_pathlike(self):
         import os
         p = dlb.fs.Path.Native('x')
@@ -464,6 +477,19 @@ class NativeTest(unittest.TestCase):
 
         CheckCountingPath.Native('x')
         self.assertEqual(CheckCountingPath.n, 2)
+
+    def test_isinstance_checks_restrictions(self):
+
+        self.assertIsInstance(dlb.fs.Path('a').native, dlb.fs.Path.Native)
+        self.assertIsInstance(dlb.fs.NoSpacePath('a').native, dlb.fs.Path.Native)
+        self.assertNotIsInstance(dlb.fs.Path('a ').native, dlb.fs.NoSpacePath)
+        self.assertNotIsInstance(dlb.fs.Path('a ').native, dlb.fs.NoSpacePath.Native)
+
+    def test_issubclass(self):
+
+        self.assertFalse(issubclass(dlb.fs.Path.Native, dlb.fs.Path))
+        self.assertTrue(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.Path.Native))
+        self.assertFalse(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.PortableWindowsPath.Native))
 
 
 class RelativeRestrictionsTest(unittest.TestCase):
@@ -517,6 +543,51 @@ class PosixRestrictionsTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PosixPath('a\x00b')
         self.assertEqual("invalid path for 'PosixPath': 'a\\x00b' (must not contain NUL)", str(cm.exception))
+
+
+class PortablePosixRestrictionsTest(unittest.TestCase):
+
+    def test_slashslash_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortablePosixPath('//unc/root/d')
+        msg = (
+            "invalid path for 'PortablePosixPath': '//unc/root/d' "
+            "(non-standardized component starting with '//' not allowed)"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_leadingdash_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortablePosixPath('/a/-b')
+        msg = "invalid path for 'PortablePosixPath': '/a/-b' (component must not start with '-')"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_backslash_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortablePosixPath('a\\b')
+        msg = r"invalid path for 'PortablePosixPath': 'a\\b' (must not contain these characters: '\\')"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_too_long_component_not_permitted(self):
+        dlb.fs.PortablePosixPath('a' * dlb.fs.PortablePosixPath.MAX_COMPONENT_LENGTH)
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortablePosixPath('a' * (dlb.fs.PortablePosixPath.MAX_COMPONENT_LENGTH + 1))
+        msg = (
+            "invalid path for 'PortablePosixPath': 'aaaaaaaaaaaaaaa' "
+            "(component must not contain more than 14 characters)"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_too_long_not_permitted(self):
+        dlb.fs.PortablePosixPath('a/' * (dlb.fs.PortablePosixPath.MAX_PATH_LENGTH // 2) + 'b')
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortablePosixPath('a/' * (dlb.fs.PortablePosixPath.MAX_PATH_LENGTH // 2) + 'bc')
+        self.assertTrue(str(cm.exception).endswith(" (must not contain more than 255 characters)"))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortablePosixPath('a/' * (dlb.fs.PortablePosixPath.MAX_PATH_LENGTH // 2) + 'b/')
+        self.assertTrue(str(cm.exception).endswith(" (must not contain more than 255 characters)"))
 
 
 class WindowsRestrictionsTest(unittest.TestCase):
@@ -585,3 +656,20 @@ class PortableWindowsRestrictionsTest(unittest.TestCase):
         self.assertEqual("invalid path for 'PortableWindowsPath': 'a/b./c' (component must not end with ' ' or '.')",
                          str(cm.exception))
         dlb.fs.PortablePath('a/../c')
+
+    def test_too_long_component_not_permitted(self):
+        dlb.fs.PortableWindowsPath('a' * dlb.fs.PortableWindowsPath.MAX_COMPONENT_LENGTH)
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortableWindowsPath('a' * (dlb.fs.PortableWindowsPath.MAX_COMPONENT_LENGTH + 1))
+        self.assertTrue(str(cm.exception).endswith(" (component must not contain more than 255 characters)"))
+
+    def test_too_long_not_permitted(self):
+        dlb.fs.PortableWindowsPath('a/' * (dlb.fs.PortableWindowsPath.MAX_PATH_LENGTH // 2) + 'b')
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortableWindowsPath('a/' * (dlb.fs.PortableWindowsPath.MAX_PATH_LENGTH // 2) + 'bc')
+        self.assertTrue(str(cm.exception).endswith(" (must not contain more than 259 characters)"))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortableWindowsPath('a/' * (dlb.fs.PortableWindowsPath.MAX_PATH_LENGTH // 2) + 'b/')
+        self.assertTrue(str(cm.exception).endswith(" (must not contain more than 259 characters)"))

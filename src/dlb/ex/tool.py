@@ -147,7 +147,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
                 msg = f"redo necessary because of nonexistent filesystem object: {path.as_string()!r}"
                 di.inform(msg, level=logging.INFO)
                 needs_redo = True
-    except OSError:  # TODO test
+    except OSError:
         # comparision not possible -> redo
         if not needs_redo:
             msg = f"redo necessary because of inaccessible filesystem object: {path.as_string()!r}"
@@ -249,7 +249,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
             try:
                 encoded_path, memo = _get_memo_for_fs_input_dependency(
                     None, fs.Path(p), memo_by_encoded_path, context)
-                definition_file_count += 1  # TODO test
+                definition_file_count += 1
                 memo_by_encoded_path[encoded_path] = memo
                 assert memo.stat is not None
             except (ValueError, DependencyCheckError):

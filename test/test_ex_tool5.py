@@ -146,6 +146,24 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 
+        pathlib.Path('t').mkdir()
+        pathlib.Path('t').chmod(0o000)
+
+        try:
+            with dlb.ex.Context():
+                # add inaccessible dependency
+                rundb = dlb.ex.context._get_rundb()
+                rundb.update_fsobject_input(1, 't/d.h/', False, None)
+
+                output = io.StringIO()
+                dlb.di.set_output_file(output)
+                self.assertIsNotNone(t.run())
+                regex = r"\b()redo necessary because of inaccessible filesystem object: 't/d\.h'\n"
+                self.assertRegex(output.getvalue(), regex)
+                self.assertIsNone(t.run())
+        finally:
+            pathlib.Path('t').chmod(0o700)
+
 
 class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
 
