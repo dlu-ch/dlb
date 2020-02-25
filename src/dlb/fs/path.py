@@ -147,7 +147,7 @@ class _PathMeta(type):
 
 @functools.total_ordering
 class Path(metaclass=_PathMeta):
-    def __init__(self, path, is_dir: Optional[bool] = None):
+    def __init__(self, path, *, is_dir: Optional[bool] = None):
         if path is None:
             raise ValueError('invalid path: None')
 
@@ -269,7 +269,7 @@ class Path(metaclass=_PathMeta):
 
                     p = None
                     if does_name_match or do_recurse:
-                        p = dir_path / Path(n, d)
+                        p = dir_path / Path(n, is_dir=d)
 
                     if does_name_match:
                         paths.append(p)
@@ -379,10 +379,10 @@ class Path(metaclass=_PathMeta):
                 return self.__class__('.')
             d = stop < n or self._is_dir
             if len(c) <= 1:
-                return self.__class__(c[0], d)
+                return self.__class__(c[0], is_dir=d)
             # one string is much faster than several components (its also safer)
             p = pathlib.PurePosixPath(_path_string_from_parts_for_posix(c))
-            return self.__class__(p, d)
+            return self.__class__(p, is_dir=d)
 
 
 class RelativePath(Path):
