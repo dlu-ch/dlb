@@ -159,9 +159,11 @@ class ConversionFromAnToPurePathTest(unittest.TestCase):
         self.assertEqual(dlb.fs.Path(pw).pure_windows, pw)
 
     def test_incomplete_windowspath_are_inhibited(self):
+        self.assertEqual(pathlib.PureWindowsPath(r'C:\\'), dlb.fs.Path('/c:').pure_windows)  # add root
+
         with self.assertRaises(ValueError) as cm:
-            dlb.fs.Path('/c:').pure_windows
-        self.assertEqual("neither absolute nor relative: root is missing", str(cm.exception))
+            dlb.fs.Path('/c:a').pure_windows
+        self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('//name').pure_windows
@@ -301,8 +303,13 @@ class TransformationTest(unittest.TestCase):
         self.assertEqual(p[:-3], dlb.fs.Path('/'))
 
         with self.assertRaises(ValueError) as cm:
+            p[-1:0:-1]
+        self.assertEqual("slice step must be positive", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
             p[:-4]
-        self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
+        self.assertEqual("slice of absolute path starting at 0 must not be empty", str(cm.exception))
+        self.assertEqual(dlb.fs.Path('.'), p[1:-4])
 
         p = dlb.fs.Path('//u/v/w')
         self.assertEqual(p[:], p)
@@ -310,9 +317,6 @@ class TransformationTest(unittest.TestCase):
         self.assertEqual(p[:-1], dlb.fs.Path('//u/v/'))
         self.assertEqual(p[:-2], dlb.fs.Path('//u/'))
         self.assertEqual(p[:-3], dlb.fs.Path('//'))
-        with self.assertRaises(ValueError) as cm:
-            p[:-4]
-        self.assertEqual("slice of absolute path must not be empty", str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             p[0]
@@ -484,6 +488,7 @@ class NativeTest(unittest.TestCase):
         self.assertIsInstance(dlb.fs.NoSpacePath('a').native, dlb.fs.Path.Native)
         self.assertNotIsInstance(dlb.fs.Path('a ').native, dlb.fs.NoSpacePath)
         self.assertNotIsInstance(dlb.fs.Path('a ').native, dlb.fs.NoSpacePath.Native)
+        self.assertNotIsInstance(dlb.fs.Path('a '), dlb.fs.NoSpacePath.Native)
 
     def test_issubclass(self):
 
@@ -622,10 +627,54 @@ class WindowsRestrictionsTest(unittest.TestCase):
             "(must not contain characters with codepoint higher than U+FFFF: U+10000)",
             str(cm.exception))
 
-    def test_colon_not_permitted(self):
+    def test_colon_not_permitted_except_in_drive(self):
+        dlb.fs.WindowsPath('/a:/b/c')
+
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a/b:/c')
         self.assertEqual("invalid path for 'WindowsPath': 'a/b:/c' (must not contain reserved characters: ':')",
+                         str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('a:/b/c')
+        self.assertEqual("invalid path for 'WindowsPath': 'a:/b/c' (must not contain reserved characters: ':')",
+                         str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('//a:/b/c')
+        self.assertEqual("invalid path for 'WindowsPath': '//a:/b/c' (must not contain reserved characters: ':')",
+                         str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('/:a/b/c')
+        self.assertEqual("invalid path for 'WindowsPath': '/:a/b/c' (neither absolute nor relative: drive is missing)",
+                         str(cm.exception))
+
+    def test_start_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('/*:')
+        self.assertEqual("invalid path for 'WindowsPath': '/*:' (must not contain reserved characters: '*')",
+                         str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('//u*/r/d')
+        self.assertEqual("invalid path for 'WindowsPath': '//u*/r/d' (must not contain reserved characters: '*')",
+                         str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('r/*d')
+        self.assertEqual("invalid path for 'WindowsPath': 'r/*d' (must not contain reserved characters: '*')",
+                         str(cm.exception))
+
+    def test_nonrelative_without_root_not_permitted(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('/')
+        self.assertEqual("invalid path for 'WindowsPath': '/' (neither absolute nor relative: root is missing)",
+                         str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.WindowsPath('/a:b')
+        self.assertEqual("invalid path for 'WindowsPath': '/a:b' (neither absolute nor relative: drive is missing)",
                          str(cm.exception))
 
     def test_reserved_file_not_permitted(self):
@@ -633,10 +682,10 @@ class WindowsRestrictionsTest(unittest.TestCase):
             dlb.fs.WindowsPath('a/coM9')
         self.assertEqual("invalid path for 'WindowsPath': 'a/coM9' (path is reserved)", str(cm.exception))
         dlb.fs.WindowsPath('a/coM10')
-        p = dlb.fs.WindowsPath('a/coM9/')
+
         with self.assertRaises(ValueError) as cm:
-            p.pure_windows
-        self.assertEqual("file path is reserved: 'a\\\\coM9'", str(cm.exception))
+            dlb.fs.WindowsPath('a/coM9/')
+        self.assertEqual("invalid path for 'WindowsPath': 'a/coM9' (path is reserved)", str(cm.exception))
 
     def test_space_or_dot_at_end_of_component_permitted(self):
         dlb.fs.WindowsPath('a/b./c ')
@@ -659,8 +708,10 @@ class PortableWindowsRestrictionsTest(unittest.TestCase):
 
     def test_too_long_component_not_permitted(self):
         dlb.fs.PortableWindowsPath('a' * dlb.fs.PortableWindowsPath.MAX_COMPONENT_LENGTH)
+
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortableWindowsPath('a' * (dlb.fs.PortableWindowsPath.MAX_COMPONENT_LENGTH + 1))
+
         self.assertTrue(str(cm.exception).endswith(" (component must not contain more than 255 characters)"))
 
     def test_too_long_not_permitted(self):
@@ -672,4 +723,8 @@ class PortableWindowsRestrictionsTest(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortableWindowsPath('a/' * (dlb.fs.PortableWindowsPath.MAX_PATH_LENGTH // 2) + 'b/')
+        self.assertTrue(str(cm.exception).endswith(" (must not contain more than 259 characters)"))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.PortableWindowsPath('/C:/' + 'a/' * (dlb.fs.PortableWindowsPath.MAX_PATH_LENGTH // 2) + 'b/')
         self.assertTrue(str(cm.exception).endswith(" (must not contain more than 259 characters)"))

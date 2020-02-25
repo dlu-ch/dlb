@@ -112,12 +112,19 @@ class Path(metaclass=_PathMeta):
                 self._path = pathlib.PurePosixPath(path)  # '' -> pathlib.PurePosixPath('.')
                 self._is_dir = path.endswith('/') or path.endswith('/.')
             elif isinstance(path, pathlib.PureWindowsPath):
-                self._check_windows_path_anchor(path)
-                p = str(path).replace('\\', '/')
-                if path.anchor and path.anchor[0] not in '/\\':
-                    p = '/' + p
-                self._path = pathlib.PurePosixPath(p)  # '' -> pathlib.PurePosixPath('.')
-                self._is_dir = p.endswith('/')
+                components = path.parts
+                if path.anchor:
+                    if not path.root:
+                        raise ValueError('neither absolute nor relative: root is missing')
+                    if not path.drive:
+                        raise ValueError('neither absolute nor relative: drive is missing')
+                    anchor = components[0].replace('\\', '/')
+                    if anchor[:1] != '/':
+                        anchor = '/' + anchor
+                    components = (anchor,) + components[1:]
+                # beware: ignores components before the last component that begins with '/'
+                self._path = pathlib.PurePosixPath(*components)
+                self._is_dir = not components
             elif isinstance(path, pathlib.PurePath):
                 raise TypeError("unknown subclass of 'pathlib.PurePath'")
             else:
@@ -142,14 +149,6 @@ class Path(metaclass=_PathMeta):
             if reason:
                 msg = f'{msg} ({reason})'
             raise ValueError(msg) from None
-
-    @classmethod
-    def _check_windows_path_anchor(cls, path):
-        if path.anchor:
-            if not path.root:
-                raise ValueError('neither absolute nor relative: root is missing')
-            if not path.drive:
-                raise ValueError('neither absolute nor relative: drive is missing')
 
     def _cast(self, other):
         if other.__class__ is self.__class__:
@@ -238,7 +237,7 @@ class Path(metaclass=_PathMeta):
 
     @property
     def _cparts(self) -> Tuple[str, ...]:
-        return self.parts if self.is_absolute() else ('',) + self.parts
+        return self._path.parts if self._path.anchor else ('',) + self._path.parts
 
     @property
     def parts(self) -> Tuple[str, ...]:
@@ -250,18 +249,40 @@ class Path(metaclass=_PathMeta):
 
     @property
     def pure_windows(self) -> pathlib.PureWindowsPath:
-        # TODO raise exception if path contains '\\'
-        s = self.as_string()
-        if s.startswith('/') and not s.startswith('//'):
-            s = s[1:]
+        # must be fast
+        components = self._path.parts
 
-        # accepted: 'c:x', 'c:/x', '//unc/root/x/y'
-        p = pathlib.PureWindowsPath(s)
-        self._check_windows_path_anchor(p)
+        if any('\\' in c for c in components):
+            raise ValueError("must not contain reserved characters: '\\\\'")
+
+        # ('/', 'c:', 'temp') -> ('c:\\', 'temp')
+        # ('//', 'u', 'r')    -> ('//, 'u', 'r')
+        if components[:1] == ('/',):
+            components = components[1:]
+            if not components:
+                raise ValueError('neither absolute nor relative: root is missing')
+            anchor = components[0]
+            if not (anchor[-1:] == ':' and anchor[:-1]):
+                raise ValueError('neither absolute nor relative: drive is missing')
+            components = (anchor +'\\',) + components[1:]
+            to_check = (anchor[:-1],) + components[1:]
+        elif components[:1] == ('//',):
+            if len(components) <= 2:
+                raise ValueError('neither absolute nor relative: drive is missing')
+            components = ('\\\\' + components[1] + '\\' + components[2],) + components[3:]
+            to_check = components
+        else:
+            to_check = components
+
+        if any(':' in c for c in to_check):
+            raise ValueError("must not contain reserved characters: ':'")
+
+        # beware: ignores components before the last component that begins with '\\' or ends with ':'
+        p = pathlib.PureWindowsPath(*components)
 
         if p.is_reserved():
             # not actually reserved for directory path, but information whether directory is lost after conversion
-            raise ValueError(f'file path is reserved: {str(p)!r}')
+            raise ValueError(f'path is reserved')
 
         return p
 
@@ -320,16 +341,21 @@ class Path(metaclass=_PathMeta):
     def __getitem__(self, item):
         if not isinstance(item, slice):
             raise TypeError("slice of component indices expected (use 'parts' for single components)")
+
         n = len(self.parts)
         start, stop, step = item.indices(n)
         assert 0 <= start <= n
         assert -1 <= stop <= n
+        if step < 0:
+            raise ValueError('slice step must be positive')
+
         if start == 0 and stop >= n and step == 1:
             return self
         else:
             c = self.parts[start:stop:step]
-            if self.is_absolute() and not c:
-                raise ValueError("slice of absolute path must not be empty")
+            if start == 0 and self.is_absolute() and not c:
+                raise ValueError("slice of absolute path starting at 0 must not be empty")
+            # beware: ignores components before the last component that begins with '/'
             p = pathlib.PurePosixPath(*c)
             d = stop < n or self._is_dir
             return self.__class__(p, d)
@@ -355,13 +381,13 @@ class NormalizedPath(Path):
 
 class NoSpacePath(Path):
     def check_restriction_to_base(self):
-        if ' ' in str(self._path):
+        if any(' ' in c for c in self._path.parts):
             raise ValueError('must not contain space')
 
 
 class PosixPath(Path):
     def check_restriction_to_base(self):
-        if '\0' in str(self._path):
+        if any('\0' in c for c in self._path.parts):
             raise ValueError('must not contain NUL')
 
 
@@ -409,28 +435,23 @@ class WindowsPath(Path):
     RESERVED_CHARACTERS = frozenset('\\"|?*<>:')  # besides: '/'
 
     def check_restriction_to_base(self):
-        for c in self._path.parts:
-            invalid_characters = set(c) & self.RESERVED_CHARACTERS
+        p = self.pure_windows
+
+        reserved = self.RESERVED_CHARACTERS - frozenset('\\:')  # already checked
+        for c in p.parts:
+            invalid_characters = set(c) & reserved
             if invalid_characters:
                 raise ValueError("must not contain reserved characters: {0}".format(
                     ','.join(repr(c) for c in sorted(invalid_characters))))
 
-        s = self.as_string()
+            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+            min_codepoint = ord(min(c))
+            if min_codepoint < 0x20:
+                raise ValueError(f'must not contain characters with codepoint lower than U+0020: U+{min_codepoint:04X}')
 
-        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
-        min_codepoint = ord(min(s))
-        if min_codepoint < 0x20:
-            raise ValueError(f'must not contain characters with codepoint lower than U+0020: U+{min_codepoint:04X}')
-
-        max_codepoint = ord(max(s))
-        if max_codepoint > 0xFFFF:
-            raise ValueError(f'must not contain characters with codepoint higher than U+FFFF: U+{max_codepoint:04X}')
-
-        p = pathlib.PureWindowsPath(self._path)
-        self._check_windows_path_anchor(p)
-
-        if not self.is_dir() and p.is_reserved():
-            raise ValueError('path is reserved')
+            max_codepoint = ord(max(c))
+            if max_codepoint > 0xFFFF:
+                raise ValueError(f'must not contain characters with codepoint higher than U+FFFF: U+{max_codepoint:04X}')
 
 
 class PortableWindowsPath(WindowsPath):
@@ -442,9 +463,9 @@ class PortableWindowsPath(WindowsPath):
         p = self.pure_windows
 
         components = p.parts
-        if p.is_absolute():
-            components = components[1:]  # except anchor
-        for c in components:
+
+        nonroot_components = components[1:] if p.anchor else components  # except anchor
+        for c in nonroot_components:
             if len(c) > self.MAX_COMPONENT_LENGTH:
                 raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
             if c != '..' and c[-1] in ' .':

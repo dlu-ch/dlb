@@ -213,6 +213,8 @@ Path objects
       The resulting path is a non-directory path iff it contains the last component and if
       this path is a non-directory path.
 
+      The slice step must be positive.
+
       Examples::
 
           >>> dlb.fs.Path('src/comp/lib/Core.cpp')[:-2]
