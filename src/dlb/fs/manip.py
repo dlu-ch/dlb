@@ -10,15 +10,8 @@ import stat
 import pathlib
 import shutil
 import dataclasses
-from typing import TypeVar, Optional, Union
+from typing import Optional, Union, Tuple
 from . import path as path_
-
-
-# path
-P = TypeVar('P', bound=Union[path_.Path, pathlib.Path])
-
-# pure path
-PP = TypeVar('PP', bound=Union[path_.Path, pathlib.PurePath])
 
 
 class PathNormalizationError(ValueError):
@@ -86,14 +79,14 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
         raise TypeError("'abs_empty_dir_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes")
 
     if isinstance(abs_path, path_.Path):
-        abs_path = abs_path.native.raw
+        abs_path = str(abs_path.native)
 
     if not os.path.isabs(abs_path):  # does not raise OSError
         raise ValueError(f"not an absolute path: {str(abs_path)!r}")
 
     if abs_empty_dir_path is not None:
         if isinstance(abs_empty_dir_path, path_.Path):
-            abs_empty_dir_path = abs_empty_dir_path.native.raw
+            abs_empty_dir_path = str(abs_empty_dir_path.native)
 
         if not os.path.isabs(abs_empty_dir_path):  # does not raise OSError
             raise ValueError(f"not an absolute path: {str(abs_empty_dir_path)!r}")
@@ -152,7 +145,7 @@ def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) 
         raise TypeError("'abs_path' must be a str or path, not bytes")  # prevent special treatment by byte paths
 
     if isinstance(abs_path, path_.Path):
-        abs_path = abs_path.native.raw
+        abs_path = str(abs_path.native)
 
     abs_path = os.fspath(abs_path)
 
@@ -172,98 +165,54 @@ def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) 
     return memo
 
 
-def _normalize_dotdot(path: PP, ref_dir_path: Union[None, str, os.PathLike]) -> PP:
-    if path.is_absolute():
-        # PureWindowsPath(r'\\unc\root\d').parts -> (r'\\unc\root\', 'd')
-        # PureWindowsPath(r'C:\d').parts -> (r'C:\', 'd')
-        # PureWindowsPath(r'C:d').parts -> ('C:', 'd')
-        path_components = path.native.raw.parts if isinstance(path, path_.Path) else path.parts
-        root = path_components[:1]
-        nonroot_components = path_components[1:]
-    else:
-        path_components = path.parts  # avoid path.native.raw
-        root = ()
-        nonroot_components = path_components
+def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_path: Optional[str] = None) \
+        -> Tuple[str, ...]:
+    # Return the components a path equivalent to the relative path with components *components* with all
+    # :file:`..` components replaced, if it is collapsable.
+    #
+    # *components* must consist only of elements of p.native.components[1:] for a dlb.fs.Path object *p*.
+    #
+    # If *ref_dir_path* is not ``None``, it must be an absolute path as a str.
+    # It is then used as the reference directory for a relative *path*.
+    #
+    # The return value contains no :file:`..` components.
+    #
+    # Does not access the filesystem unless *components* contains a :file:`..` componen and *ref_dir_path* is
+    # not ``None``.
+    #
+    # Does not raise :exc:`OSError`. If an filesystem access fails, a :exc:`PathNormalizationError` is raised with
+    # the attribute `oserror` set to a :exc:`OSError` instance.
+    #
+    # :raise PathNormalizationError: if *path* is an upwards path or not collapsable or a filesystem access failed
+    # :raise ValueError: if the resulting path is not representable with the type of *path*
 
-    while True:
-        try:
-            i = nonroot_components.index('..')
-        except ValueError:
-            break
-
-        if i == 0:
-            path = path.as_string() if isinstance(path, path_.Path) else str(path)
-            raise PathNormalizationError(f"is an upwards path: {path!r}")
-
-        if ref_dir_path is not None:
-            # TODO if os.path.sep in components?
-            p = os.path.join(ref_dir_path, *root, *nonroot_components[:i])
-            sr = os.lstat(p)
-            if stat.S_ISLNK(sr.st_mode):
-                msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
-                raise PathNormalizationError(msg) from None
-
-        nonroot_components = nonroot_components[:i - 1] + nonroot_components[i + 1:]
-
-    components = root + nonroot_components
-
-    if components == path_components:
-        return path
-
-    if isinstance(path, path_.Path):
-        # TODO is PurePosixPath correct on Windows for absolute path?
-        return path.__class__(pathlib.PurePosixPath(*components), is_dir=path.is_dir())
-
-    return path.__class__(*components)
-
-
-def normalize_dotdot_collapsable(path: PP) -> PP:
-    """
-    Return an equivalent normal *path* with all :file:`..` components replaced, *assuming* that *path* is collapsable.
-    The return value is of the same type as *path* and contains no :file:`..` components.
-
-    Does not access the filesystem and does not raise :exc:`OSError`.
-
-    :raise PathNormalizationError: if *path* is an upwards path
-    :raise ValueError: if the resulting path is not representable with the type of *path*
-    """
-    if not isinstance(path, (path_.Path, pathlib.PurePath)):
-        raise TypeError(f"'path' must be a dlb.fs.Path or pathlib.PurePath object")
-
-    return _normalize_dotdot(path, None)
-
-
-def normalize_dotdot(path: P, ref_dir_path: Union[str, os.PathLike, path_.Path] = None) -> P:
-    """
-    Return an equivalent normal *path* with all :file:`..` components replaced, if it is collapsable.
-
-    *ref_dir_path* must be an absolute path as a :class:`pathlib.Path` or :class:`dlb.fs.Path`.
-    It is then used as the reference directory for a relative *path*.
-
-    The return value is of the same type as *path* and contains no :file:`..` components.
-
-    Does not access the filesystem unless *path* contains a :file:`..` component.
-
-    Does not raise :exc:`OSError`. If an filesystem access fails, a :exc:`PathNormalizationError` is raised with
-    the attribute `oserror` set to a :exc:`OSError` instance.
-
-    :raise PathNormalizationError: if *path* is an upwards path or not collapsable or a filesystem access failed
-    :raise ValueError: if the resulting path is not representable with the type of *path*
-    """
-    if not isinstance(path, (path_.Path, pathlib.Path)):
-        raise TypeError(f"'path' must be a dlb.fs.Path or pathlib.Path object")
-
-    if isinstance(ref_dir_path, path_.Path):
-        ref_dir_path = ref_dir_path.native.raw
-    if isinstance(ref_dir_path, os.PathLike):  # note: str is not os.PathLike
-        ref_dir_path = os.fspath(ref_dir_path)
-    if not isinstance(ref_dir_path, str):
-        raise TypeError(f"'ref_dir_path' must be a str or a dlb.fs.Path or os.PathLike object returning str")
-
-    if not os.path.isabs(ref_dir_path):
-        raise ValueError("'ref_dir_path' must be absolute")
+    normalized_components = tuple(str(c) for c in components)
+    if ref_dir_path is not None:
+        if not isinstance(ref_dir_path, str):
+            raise TypeError("'ref_dir_path' must be a str")
+        if not os.path.isabs(ref_dir_path):
+            raise ValueError("'ref_dir_path' must be None or absolute")
 
     try:
-        return _normalize_dotdot(path, ref_dir_path)
+        while True:
+            try:
+                i = normalized_components.index('..')
+            except ValueError:
+                break
+
+            if i == 0:
+                path = path_.Path(('',) + components)
+                raise PathNormalizationError(f"is an upwards path: {path.as_string()!r}")
+
+            if ref_dir_path is not None:
+                p = os.path.sep.join((ref_dir_path,) + normalized_components[:i])
+                sr = os.lstat(p)
+                if stat.S_ISLNK(sr.st_mode):
+                    msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
+                    raise PathNormalizationError(msg) from None
+
+            normalized_components = normalized_components[:i - 1] + normalized_components[i + 1:]
     except OSError as e:
         raise PathNormalizationError(oserror=e) from None
+
+    return normalized_components

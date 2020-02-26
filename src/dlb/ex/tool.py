@@ -97,7 +97,7 @@ def _get_memo_for_fs_input_dependency(name: Optional[str], path: fs.Path,
         memo = memo_by_encoded_path.get(encoded_path)
         if memo is None:
             # may raise OSError or ValueError:
-            memo = manip.read_filesystem_object_memo(context.native_abs_path_string_of(path))
+            memo = manip.read_filesystem_object_memo(context.root_path / path)
         assert memo.stat is not None
     except (ValueError, FileNotFoundError):
         msg = f"{path_role} a path of an non-existing filesystem object: {path.as_string()!r}"
@@ -133,7 +133,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
     try:
         # do _not_ check if in managed tree: does no harm if _not_ in managed tree
         # may raise OSError or ValueError (if 'path' not representable on native system)
-        memo = manip.read_filesystem_object_memo(context.native_abs_path_string_of(path))
+        memo = manip.read_filesystem_object_memo(context.root_path / path)
     except (ValueError, FileNotFoundError):
         # ignore if did not exist according to valid 'encoded_memo'
         did_not_exist_before_last_redo = False
@@ -294,7 +294,7 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                     raise DependencyCheckError(msg)
                 try:
                     # may raise OSError or ValueError (if 'path' not representable on native system)
-                    memo = manip.read_filesystem_object_memo(context.native_abs_path_string_of(p))
+                    memo = manip.read_filesystem_object_memo(context.root_path / p)
                     action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
                 except (ValueError, OSError) as e:
                     if not needs_redo:
@@ -323,7 +323,7 @@ def _remove_explicit_output_dependencies(tool, dependency_actions: Tuple[dependa
             for p in validated_value_tuple:  # p is a (valid) managed tree path as a dlb.fs.Path
                 if tmp_dir is None:
                     tmp_dir = context.create_temporary(is_dir=True)  # may raise OSError
-                manip.remove_filesystem_object(context.native_abs_path_string_of(p),
+                manip.remove_filesystem_object(context.root_path / p,
                                                abs_empty_dir_path=tmp_dir,
                                                ignore_non_existing=True)  # may raise OSError
                 encoded_path = rundb.encode_path(p)

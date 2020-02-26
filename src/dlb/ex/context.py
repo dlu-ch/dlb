@@ -60,7 +60,7 @@ class WorkingTreeTimeError(Exception):
     pass
 
 
-class NonActiveContextAccessError(Exception):  # TODO find better name
+class NonActiveContextAccessError(Exception):
     pass
 
 
@@ -263,7 +263,7 @@ class _RootSpecifics:
             )
             raise ValueError(msg) from None
 
-        self._working_tree_path_native_str = str(self._working_tree_path.native.raw)  # ???
+        self._working_tree_path_native_str = str(self._working_tree_path.native.raw)  # TODO remove
         self._is_working_tree_case_sensitive = True
         self._mtime_probe = None
         self._rundb = None
@@ -400,77 +400,55 @@ class _RootSpecifics:
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
-    def _strip_working_tree_root_from(self, path: pathlib.Path) -> Optional[pathlib.Path]:
-        components = path.parts
-        root_path_components = self._working_tree_path.native.raw.parts
-        if components[:len(root_path_components)] == root_path_components:
-            return pathlib.Path(*components[len(root_path_components):])
-
     def managed_tree_path_of(self, path: Union[fs.Path, pathlib.PurePath], *,
                              existing: bool = False, collapsable: bool = False) -> Union[fs.Path]:
-        # this must be very fast for relative path with existing = True
+        # TODO add parameter path_cls to override self.path_cls
+        # this must be very fast for relative dlb.fs.Path with existing = True
 
-        if isinstance(path, str):
+        if not isinstance(path, fs.Path):
             path = fs.Path(path)
-        if not isinstance(path, (pathlib.Path, fs.Path)):
-            raise TypeError(f"'path' must be a str or a dlb.fs.Path or pathlib.Path object")
 
         if path.is_absolute():
-            if isinstance(path, fs.Path):
-                path = path.native.raw
+            # note: do _not_ used path.resolve() or os.path.realpath(), since it would resolve the entire path
+            native_components = path.native.components
 
             # may raise PathNormalizationError
-            rel_path = self._strip_working_tree_root_from(path) or \
-                       self._strip_working_tree_root_from(
-                           manip.normalize_dotdot(path, self._working_tree_path_native_str))
-            # note: do _not_ used path.resolve() or os.path.realpath(), since it would resolve the
-            # entire path
+            normalized_native_components = \
+                (native_components[0],) + \
+                manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
 
-            if rel_path is None:
-                msg = "does not start with the working tree's root path"
-                raise manip.PathNormalizationError(msg)
+            root_path_components = self.root_path.components
+            n = len(root_path_components)
+            if len(normalized_native_components) < n or normalized_native_components[:n] != root_path_components:
+                raise manip.PathNormalizationError("does not start with the working tree's root path")
+
+            rel_components = ('',) + normalized_native_components[n:]
+        else:
+            # 'collapsable' means only the part relative to the working tree's root
+            ref_dir_path = None if collapsable else  self._working_tree_path_native_str
+            rel_components = ('',) + manip.normalize_dotdot_native_components(
+                path.components[1:], ref_dir_path=ref_dir_path)
+            # TODO avoid double checking
+            # TODO test symlink circle
+
+        if len(rel_components) >= 2 and rel_components[1] in ('..', _MANAGEMENTTREE_DIR_NAME):
+            raise ValueError(f'path not in managed tree: {path.as_string()!r}') from None
+
+        if path.components != rel_components or path.__class__ is not self._path_cls:
+            rel_path = self._path_cls(rel_components)  # may raise ValueError
         else:
             rel_path = path
 
-        # 'collapsable' means only the part relative to the working tree's root
-        if collapsable:
-            rel_path = manip.normalize_dotdot_collapsable(rel_path)
-        else:
-            # TODO test symlink circle
-            rel_path = manip.normalize_dotdot(rel_path, self._working_tree_path_native_str)
-
-        is_dir = None
         if not existing:
             try:
-                sr = os.lstat(self.native_abs_path_string_of(rel_path))  #??? type of rel_path
+                sr = os.lstat((self.root_path / rel_path).native)
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
-
-        if rel_path.parts[:1] in (('..',), (_MANAGEMENTTREE_DIR_NAME,)):
-            path = path.as_string() if isinstance(path, fs.Path) else str(path)
-            raise ValueError(f'path not in managed tree: {path!r}') from None
-
-        if (rel_path.__class__ is not self._path_cls) or (is_dir is not None and rel_path.is_dir() != is_dir):
-            rel_path = self._path_cls(rel_path, is_dir=is_dir)  # may raise ValueError
+            if is_dir != rel_path.is_dir():
+                rel_path = self._path_cls(rel_components, is_dir=is_dir)
 
         return rel_path
-
-    def native_abs_path_string_of(self, managed_tree_path: Union[pathlib.Path, fs.Path]) -> str:
-        if not isinstance(managed_tree_path, (pathlib.Path, fs.Path)):
-            raise TypeError(f"'managed_tree_path' must be a str or a dlb.fs.Path or pathlib.Path object")
-        if managed_tree_path.is_absolute():
-            raise ValueError("'managed_tree_path' must be a relative path")
-
-        # Fast alternative to self.root_path / managed_tree_path:
-        #  - os.path.join(root_path_str, *p.parts) is much faster than Context.root_path / p
-        #  - Path.is_absolute() much faster than os.path.isabs()
-        parts = managed_tree_path.parts
-        if isinstance(managed_tree_path, fs.Path):  # TODO move to dlb.fs.Path
-            for c in parts:
-                if os.path.sep in c or (os.path.altsep is not None and os.path.altsep in c):
-                    raise ValueError(f"not representable as native path: {managed_tree_path.as_string()!r}")
-        return os.path.join(self._working_tree_path_native_str, *parts)
 
     def _cleanup(self):
         self._rundb.cleanup()

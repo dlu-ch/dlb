@@ -43,7 +43,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.remove_filesystem_object(dlb.fs.Path('x'))
-        self.assertEqual("not an absolute path: 'x'", str(cm.exception))
+        self.assertEqual("not an absolute path: './x'", str(cm.exception))
 
         self.assertTrue(os.path.isfile('x'))  # still exists
 
@@ -167,7 +167,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.read_filesystem_object_memo(dlb.fs.Path('x'))
-        self.assertEqual("not an absolute path: 'x'", str(cm.exception))
+        self.assertEqual("not an absolute path: './x'", str(cm.exception))
 
     def test_fails_for_bytes_path(self):
         with open('x', 'wb'):
@@ -240,101 +240,46 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             os.chmod('d', 0x777)
 
 
-class NormalizeDotDotCollapsableTest(unittest.TestCase):
+class NormalizeDotDotWithoutReference(unittest.TestCase):
 
-    def test_relative_is_correct(self):
+    def test_is_correct(self):
         for P in (dlb.fs.PortablePath, pathlib.Path, pathlib.PureWindowsPath):
-            p = dlb.fs.manip.normalize_dotdot_collapsable(P('a/b/c'))
-            self.assertEqual(P('a/b/c'), p, repr(P))
+            c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', 'c'))
+            self.assertEqual(('a', 'b', 'c'), c)
 
-            p = dlb.fs.manip.normalize_dotdot_collapsable(P('a/b/c/'))
-            self.assertEqual(P('a/b/c/'), p, repr(P))
+            c = dlb.fs.manip.normalize_dotdot_native_components(('a', '..', 'b', 'c', '..'))
+            self.assertEqual(('b',), c)
 
-            p = dlb.fs.manip.normalize_dotdot_collapsable(P('a/../b/c/..'))
-            self.assertEqual(P('b/'), p, repr(P))
+            c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', '..', '..'))
+            self.assertEqual((), c)
 
-            p = dlb.fs.manip.normalize_dotdot_collapsable(P('a/b/../../'))
-            self.assertEqual(P('.'), p, repr(P))
-
-            p = dlb.fs.manip.normalize_dotdot_collapsable(P('a/b/../../a'))
-            self.assertEqual(P('a'), p, repr(P))
-
-    def test_same_instance_if_unchanged(self):
-        p = dlb.fs.PortablePath('a/b/c')
-        self.assertIs(p, dlb.fs.manip.normalize_dotdot_collapsable(p))
-
-        p = pathlib.PureWindowsPath('a/b/c')
-        self.assertIs(p, dlb.fs.manip.normalize_dotdot_collapsable(p))
-
-    def test_absolute_is_correct(self):
-        # noinspection PyPep8Naming
-        P = pathlib.PurePosixPath
-
-        p = dlb.fs.manip.normalize_dotdot_collapsable(P('/tmp/../x'))
-        self.assertEqual(P('/x'), p)
-
-        p = dlb.fs.manip.normalize_dotdot_collapsable(P('/tmp/../x/..'))
-        self.assertEqual(P('/'), p)
-
-        # noinspection PyPep8Naming
-        P = pathlib.PureWindowsPath
-
-        p = dlb.fs.manip.normalize_dotdot_collapsable(P(r'C:\\Windows\\Temp\\..'))
-        self.assertEqual(P('C:\\Windows\\'), p)
-
-        p = dlb.fs.manip.normalize_dotdot_collapsable(P(r'C:\\Windows\\..\\Temp\\..'))
-        self.assertEqual(P('C:\\'), p)
-
-    def test_return_same_type(self):
-        isinstance(dlb.fs.manip.normalize_dotdot_collapsable(pathlib.PurePosixPath('a/b')),
-                   pathlib.PurePosixPath)
-        isinstance(dlb.fs.manip.normalize_dotdot_collapsable(pathlib.PureWindowsPath('a/b')),
-                   pathlib.PureWindowsPath)
-        isinstance(dlb.fs.manip.normalize_dotdot_collapsable(dlb.fs.Path('a/b')),
-                   dlb.fs.Path)
-        isinstance(dlb.fs.manip.normalize_dotdot_collapsable(dlb.fs.NoSpacePath('a/b')),
-                   dlb.fs.NoSpacePath)
-
-    def test_fails_for_str(self):
-        with self.assertRaises(TypeError) as cm:
-            # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot_collapsable(b'a/b')
-        msg = "'path' must be a dlb.fs.Path or pathlib.PurePath object"
-        self.assertEqual(msg, str(cm.exception))
-
-    def test_fails_for_bytes(self):
-        with self.assertRaises(TypeError) as cm:
-            # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot_collapsable(b'a/b')
-        msg = "'path' must be a dlb.fs.Path or pathlib.PurePath object"
-        self.assertEqual(msg, str(cm.exception))
+            c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', '..', '..', 'a'))
+            self.assertEqual(('a',), c)
 
     def test_fails_for_upwards_path(self):
-        with self.assertRaises(dlb.fs.manip.PathNormalizationError):
-            dlb.fs.manip.normalize_dotdot_collapsable(dlb.fs.Path('..'))
-        with self.assertRaises(dlb.fs.manip.PathNormalizationError):
-            dlb.fs.manip.normalize_dotdot_collapsable(dlb.fs.Path('a/../../b/a/b'))
-        with self.assertRaises(dlb.fs.manip.PathNormalizationError):
-            dlb.fs.manip.normalize_dotdot_collapsable(pathlib.PurePosixPath(r'/tmp/../..'))
         with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
-            dlb.fs.manip.normalize_dotdot_collapsable(pathlib.PureWindowsPath(r'C:\\Windows\\..\\Temp\\..\\..'))
-        msg = r"is an upwards path: 'C:\\Windows\\..\\Temp\\..\\..'"
-        self.assertEqual(msg, str(cm.exception))
+            dlb.fs.manip.normalize_dotdot_native_components(('..',))
+        self.assertEqual("is an upwards path: '../'", str(cm.exception))
+
+        with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            dlb.fs.manip.normalize_dotdot_native_components(('a', '..', '..', 'b', 'a', 'b'))
+        self.assertEqual("is an upwards path: 'a/../../b/a/b'", str(cm.exception))
+
+        with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            dlb.fs.manip.normalize_dotdot_native_components(('tmp', '..', '..'))
+        self.assertEqual("is an upwards path: 'tmp/../../'", str(cm.exception))
 
 
-class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
+class NormalizeDotDotWithReference(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_without_symlink_is_correct(self):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd', 'e'))
-        p = dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
-        self.assertEqual(dlb.fs.Path('c/d/'), p)
+        c = dlb.fs.manip.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
+        self.assertEqual(('c', 'd'), c)
 
-        p = dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), '/tmp')
-        self.assertEqual(pathlib.Path('a/b'), p)
-
-        p = dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), dlb.fs.Path('/tmp'))
-        self.assertEqual(pathlib.Path('a/b'), p)
+        c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='/tmp')
+        self.assertEqual(('a', 'b'), c)
 
     def test_with_nonparent_symlink_is_correct(self):
         os.makedirs('a')
@@ -346,35 +291,26 @@ class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
-        p = dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
-        self.assertEqual(dlb.fs.Path('c/d/'), p)
-
-    def test_fails_for_bytes(self):
-        with self.assertRaises(TypeError) as cm:
-            # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), b'/tmp')
-        msg = "'ref_dir_path' must be a str or a dlb.fs.Path or os.PathLike object returning str"
-        self.assertEqual(msg, str(cm.exception))
-
-    def test_fails_for_purepath(self):
-        with self.assertRaises(TypeError) as cm:
-            # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot(pathlib.PureWindowsPath('C:/a/b'), '/tmp')
-        msg = "'path' must be a dlb.fs.Path or pathlib.Path object"
-        self.assertEqual(msg, str(cm.exception))
+        c = dlb.fs.manip.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
+        self.assertEqual(('c', 'd'), c)
 
     def test_fails_for_relative_ref_dir(self):
         with self.assertRaises(ValueError) as cm:
             # noinspection PyTypeChecker
-            dlb.fs.manip.normalize_dotdot(pathlib.Path('a/b'), pathlib.Path('tmp'))
-        msg = "'ref_dir_path' must be absolute"
-        self.assertEqual(msg, str(cm.exception))
+            dlb.fs.manip.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='.')
+        self.assertEqual("'ref_dir_path' must be None or absolute", str(cm.exception))
+
+    def test_fails_for_bytes(self):
+        with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
+            dlb.fs.manip.normalize_dotdot_native_components(('a', 'b'), ref_dir_path=b'/tmp')
+        self.assertEqual("'ref_dir_path' must be a str", str(cm.exception))
 
     def test_fails_for_nonexisting_symlink(self):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd'))
         with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
-            dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
+            dlb.fs.manip.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
         self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_for_parent_symlink(self):
@@ -389,4 +325,4 @@ class NormalizeDotDotFsTest(tools_for_test.TemporaryDirectoryTestCase):
 
         regex = r"\A()not a collapsable path, since this is a symbolic link: '.+'\Z"
         with self.assertRaisesRegex(dlb.fs.manip.PathNormalizationError, regex):
-            dlb.fs.manip.normalize_dotdot(dlb.fs.Path('a/../c/d/e/..'), ref_dir_path=pathlib.Path.cwd())
+            dlb.fs.manip.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())

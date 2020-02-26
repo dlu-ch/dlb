@@ -302,9 +302,6 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
         with self.assertRaises(dlb.ex.context.NotRunningError):
             c.root_path
 
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.native_abs_path_string_of(dlb.fs.Path('a'))
-
     def test_root_is_correct(self):
         pathlib.Path('.dlbroot').mkdir()
 
@@ -313,46 +310,6 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(str(pathlib.Path.cwd().absolute()), str(c.root_path.native))
             cl = dlb.ex.Context.root_path
             self.assertEqual(c.root_path, cl)
-
-    def test_native_root_fails_is_correct(self):
-        pathlib.Path('.dlbroot').mkdir()
-
-        with dlb.ex.Context():
-            p = dlb.ex.Context.native_abs_path_string_of(dlb.fs.Path('a/b/'))
-            self.assertIsInstance(p, str)
-            self.assertEqual(str(pathlib.Path.cwd() / 'a' / 'b'), p)
-
-        with dlb.ex.Context():
-            p = dlb.ex.Context.native_abs_path_string_of(pathlib.Path('a/b'))
-            self.assertEqual(str(pathlib.Path.cwd() / 'a' / 'b'), p)
-
-    @unittest.skipIf(os.path.sep == '/' and os.path.altsep is None, 'os.path.join() uses same separator as dlb.fs.Path')
-    def test_native_root_fails_for_altsep_in_component(self):
-        pathlib.Path('.dlbroot').mkdir()
-
-        if os.path.sep != '/':
-            p = dlb.fs.Path('a' + os.path.sep + 'b')
-            self.assertEqual(1, len(p.parts))
-            with dlb.ex.Context():
-                with self.assertRaises(ValueError):
-                    dlb.ex.Context.native_abs_path_string_of(p)
-
-        if os.path.altsep is not None:
-            p = dlb.fs.Path('a' + os.path.altsep + 'b')
-            self.assertEqual(1, len(p.parts))
-            with dlb.ex.Context():
-                with self.assertRaises(ValueError):
-                    dlb.ex.Context.native_abs_path_string_of(p)
-
-    def test_native_root_fails_for_str(self):
-        pathlib.Path('.dlbroot').mkdir()
-
-        with dlb.ex.Context():
-            with self.assertRaises(TypeError):
-                dlb.ex.Context.native_abs_path_string_of('a')
-            with self.assertRaises(ValueError):
-                dlb.ex.Context.native_abs_path_string_of(dlb.fs.Path('/a'))
-
 
     def test_path_class_is_correct(self):
         pathlib.Path('.dlbroot').mkdir()
@@ -723,7 +680,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.Context():
             with self.assertRaises(TypeError) as cm:
                 dlb.ex.Context.managed_tree_path_of(3)
-            msg = "'path' must be a str or a dlb.fs.Path or pathlib.Path object"
+            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
             self.assertEqual(msg, str(cm.exception))
 
 
