@@ -69,7 +69,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual("'abs_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes", str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            dlb.fs.manip.remove_filesystem_object('x', abs_empty_dir_path=b'x')
+            dlb.fs.manip.remove_filesystem_object('/tmp/x', abs_empty_dir_path=b'x')
         msg = "'abs_empty_dir_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes"
         self.assertEqual(msg, str(cm.exception))
 

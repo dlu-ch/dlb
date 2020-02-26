@@ -70,23 +70,26 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
         if an existing *abs_path* was not removed
     """
 
-    if isinstance(abs_path, bytes):
-        # prevent special treatment by byte paths
-        raise TypeError("'abs_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes")
-
-    if isinstance(abs_empty_dir_path, bytes):
-        # prevent special treatment by byte paths
-        raise TypeError("'abs_empty_dir_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes")
-
     if isinstance(abs_path, path_.Path):
         abs_path = str(abs_path.native)
+    else:
+        if isinstance(abs_path, bytes):
+            # prevent special treatment by byte paths
+            raise TypeError("'abs_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes")
+        abs_path = os.fspath(abs_path)
 
     if not os.path.isabs(abs_path):  # does not raise OSError
         raise ValueError(f"not an absolute path: {str(abs_path)!r}")
 
     if abs_empty_dir_path is not None:
+        if isinstance(abs_empty_dir_path, bytes):
+            # prevent special treatment by byte paths
+            raise TypeError("'abs_empty_dir_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes")
+
         if isinstance(abs_empty_dir_path, path_.Path):
             abs_empty_dir_path = str(abs_empty_dir_path.native)
+        else:
+            abs_empty_dir_path = os.fspath(abs_empty_dir_path)
 
         if not os.path.isabs(abs_empty_dir_path):  # does not raise OSError
             raise ValueError(f"not an absolute path: {str(abs_empty_dir_path)!r}")
@@ -116,7 +119,7 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
             if lke.first_exception is not None:
                 raise lke.first_exception
         else:
-            abs_temp_dir_path = os.path.join(abs_empty_dir_path, 't')  # non-existing directory
+            abs_temp_dir_path = os.path.sep.join((abs_empty_dir_path, 't'))  # non-existing directory
             os.rename(abs_path, abs_temp_dir_path)  # POSIX: atomic on same filesystem
             shutil.rmtree(abs_temp_dir_path, ignore_errors=True)  # remove as much as possible
     except FileNotFoundError:
@@ -146,8 +149,8 @@ def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) 
 
     if isinstance(abs_path, path_.Path):
         abs_path = str(abs_path.native)
-
-    abs_path = os.fspath(abs_path)
+    else:
+        abs_path = os.fspath(abs_path)
 
     if not os.path.isabs(abs_path):  # does not raise OSError
         raise ValueError(f"not an absolute path: {str(abs_path)!r}")
