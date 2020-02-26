@@ -37,6 +37,7 @@ class ATool(dlb.ex.Tool):
 
 class RunWithoutRedoTest(tools_for_test.TemporaryDirectoryTestCase):
 
+    # noinspection PyAbstractClass
     def test_fails_without_redo(self):
 
         class BTool(dlb.ex.Tool):

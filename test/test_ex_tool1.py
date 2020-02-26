@@ -47,7 +47,7 @@ class InheritanceTest(unittest.TestCase):
 class AttributeDefineTest(unittest.TestCase):
 
     def test_can_define_execution_parameter(self):
-        # noinspection PyUnusedLocal
+        # noinspection PyUnusedLocal,PyAbstractClass
         class ATool(Tool):
             """Hohoho"""
             X = 2
@@ -56,19 +56,19 @@ class AttributeDefineTest(unittest.TestCase):
         del ATool
 
     def test_can_define_dependency(self):
-        # noinspection PyUnusedLocal
+        # noinspection PyUnusedLocal,PyAbstractClass
         class ATool(Tool):
             source_file = Tool.Input.RegularFile()
             object_file = Tool.Output.RegularFile()
         del ATool
 
     def test_can_define_classmethod(self):
-        # noinspection PyUnusedLocal
+        # noinspection PyUnusedLocal,PyAbstractClass
         class ATool(Tool):
             pass
         del ATool
 
-    # noinspection PyUnusedLocal,PyRedeclaration
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
     def test_cannot_define_other(self):
         tmpl = (
             "invalid class attribute name: {} (every class attribute of a 'dlb.ex.Tool' must be named "
@@ -104,7 +104,7 @@ class AttributeDefineTest(unittest.TestCase):
                 x_ = None
         self.assertEqual(str(cm.exception), tmpl.format(repr('x_')))
 
-    # noinspection PyUnusedLocal,PyRedeclaration
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
     def test_lowercase_attribute_must_be_concrete_dependency(self):
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
@@ -122,7 +122,7 @@ class AttributeDefineTest(unittest.TestCase):
             class ATool(Tool):
                 x_y_z = Tool.Dependency[:]()
 
-    # noinspection PyUnusedLocal,PyRedeclaration
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
     def test_some_methods_cannot_be_overridden(self):
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
@@ -149,6 +149,7 @@ class AttributeDefineTest(unittest.TestCase):
                     pass
         self.assertEqual("must not be overridden in a 'dlb.ex.Tool': '__delattr__'", str(cm.exception))
 
+    # noinspection PyAbstractClass
     def test_can_inherit_invalid_from_nontool(self):
         class ATool(Tool):
             pass
@@ -165,7 +166,7 @@ class AttributeDefineTest(unittest.TestCase):
 
 class ExecutionParameterOverridingTest(unittest.TestCase):
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_only_be_overridden_with_same_type(self):
         class ATool(Tool):
             X = 1
@@ -185,7 +186,7 @@ class ExecutionParameterOverridingTest(unittest.TestCase):
 
 class DependencyRuleOverridingTest(unittest.TestCase):
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_override_with_same(self):
         class ATool(Tool):
             source_file = Tool.Input.RegularFile()
@@ -193,7 +194,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
         class BTool(ATool):
             source_file = Tool.Input.RegularFile()
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyAbstractClass
     def test_cannot_override_input_with_output(self):
         class ATool(Tool):
             source_file = Tool.Input.RegularFile()
@@ -206,7 +207,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
             str(cm.exception))
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyAbstractClass
     def test_cannot_override_file_with_director(self):
         class ATool(Tool):
             source_file = Tool.Input.RegularFile()
@@ -219,7 +220,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
             str(cm.exception))
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_only_override_path_with_more_restrictive_path(self):
         import dlb.fs
 
@@ -237,7 +238,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
             str(cm.exception))
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_only_override_nonrequired_with_required(self):
         class ATool(Tool):
             source_file = Tool.Input.RegularFile(required=False)
@@ -253,7 +254,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
             r"<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive$",
             str(cm.exception))
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_only_override_with_similar_multiplicity(self):
         class ATool(Tool):
             source_files = Tool.Input.RegularFile[1:]()
@@ -278,6 +279,7 @@ class DependencyRuleOverridingTest(unittest.TestCase):
 
 class WriteProtectionTest(unittest.TestCase):
 
+    # noinspection PyAbstractClass
     def test_class_attributes_are_not_writable(self):
         class ATool(Tool):
             A = 1

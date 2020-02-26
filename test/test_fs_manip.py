@@ -243,18 +243,17 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 class NormalizeDotDotWithoutReference(unittest.TestCase):
 
     def test_is_correct(self):
-        for P in (dlb.fs.PortablePath, pathlib.Path, pathlib.PureWindowsPath):
-            c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', 'c'))
-            self.assertEqual(('a', 'b', 'c'), c)
+        c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', 'c'))
+        self.assertEqual(('a', 'b', 'c'), c)
 
-            c = dlb.fs.manip.normalize_dotdot_native_components(('a', '..', 'b', 'c', '..'))
-            self.assertEqual(('b',), c)
+        c = dlb.fs.manip.normalize_dotdot_native_components(('a', '..', 'b', 'c', '..'))
+        self.assertEqual(('b',), c)
 
-            c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', '..', '..'))
-            self.assertEqual((), c)
+        c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', '..', '..'))
+        self.assertEqual((), c)
 
-            c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', '..', '..', 'a'))
-            self.assertEqual(('a',), c)
+        c = dlb.fs.manip.normalize_dotdot_native_components(('a', 'b', '..', '..', 'a'))
+        self.assertEqual(('a',), c)
 
     def test_fails_for_upwards_path(self):
         with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:

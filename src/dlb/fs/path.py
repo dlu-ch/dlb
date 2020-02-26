@@ -32,14 +32,14 @@ class _NativeComponents:  # TODO find better name
         self._sep = sep
 
     @property
-    def components(self):
+    def components(self) -> Tuple[str, ...]:
         return self._components
 
     @property
-    def sep(self):
+    def sep(self) -> str:
         return self._sep
 
-    def __str__(self):
+    def __str__(self) -> str:
         # must be fast and safe
         # each relative path starts with '.' or '..'
 
@@ -60,12 +60,12 @@ class _NativeComponents:  # TODO find better name
         return s + self._sep.join(c[1:])
 
 
-def _native_components_for_posix(components: Tuple[str, ...]) -> Tuple[str, ...]:
+def _native_components_for_posix(components: Tuple[str, ...]) -> _NativeComponents:
     # first element of components is '', '/', or '//'
     return _NativeComponents(components, '/')
 
 
-def _native_components_for_windows(components: Tuple[str, ...]) -> Tuple[str, ...]:
+def _native_components_for_windows(components: Tuple[str, ...]) -> _NativeComponents:
     # first element of components is '', '/', or '//'
     if any('\\' in c for c in components):
         raise ValueError("must not contain reserved characters: '\\\\'")
@@ -125,7 +125,7 @@ class _Native:
         # note: metaclass _NativeMeta checks self.components after construction
 
     @property
-    def components(self) -> _NativeComponents:
+    def components(self) -> Tuple[str, ...]:
         return self._native_components.components
 
     @property
@@ -196,7 +196,7 @@ class Path(metaclass=_PathMeta):
 
             self._components = path._components
             self._is_dir = path._is_dir
-            check = self.__class__  is not path.__class__
+            check = self.__class__ is not path.__class__
 
         elif isinstance(path, str):  # must be very fast
 
@@ -581,7 +581,8 @@ class WindowsPath(Path):
 
             max_codepoint = ord(max(c))
             if max_codepoint > 0xFFFF:
-                raise ValueError(f'must not contain characters with codepoint higher than U+FFFF: U+{max_codepoint:04X}')
+                raise ValueError(f'must not contain characters with codepoint '
+                                 f'higher than U+FFFF: U+{max_codepoint:04X}')
 
 
 class PortableWindowsPath(WindowsPath):
@@ -590,7 +591,8 @@ class PortableWindowsPath(WindowsPath):
     MAX_PATH_LENGTH = 259  # MAX_PATH - 1
 
     def check_restriction_to_base(self):
-        p = self.pure_windows  # TODO avoid
+        # noinspection PyStatementEffect
+        self.pure_windows  # TODO avoid
 
         components = self.components
         for c in components[1:]:

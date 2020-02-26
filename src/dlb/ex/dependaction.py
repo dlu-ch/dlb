@@ -13,7 +13,7 @@ __all__ = (
 
 import stat
 import marshal  # TODO replace - marshal.dump(d) does not only depend on d (does reuse short ASCII-only strings)
-from typing import Type, Set, Optional, Union, Sequence, Hashable
+from typing import Type, Set, Optional, Sequence, Hashable
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -52,7 +52,7 @@ class Action:
         # Two instances of the same dependency class, whose properties differ, must return different
         # permanent local value ids if the meaning of this validated values `validated_values` of a concrete dependency
         # for a running tool instance depends on the difference.
-        return marshal.dumps(ut.make_fundamental(validated_values, True)) # TODO avoid string
+        return marshal.dumps(ut.make_fundamental(validated_values, True))  # TODO avoid string
 
     # overwrite and prepend super().get_permanent_local_instance_id() to return value
     def get_permanent_local_instance_id(self) -> bytes:

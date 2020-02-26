@@ -425,7 +425,7 @@ class _RootSpecifics:
             rel_components = ('',) + normalized_native_components[n:]
         else:
             # 'collapsable' means only the part relative to the working tree's root
-            ref_dir_path = None if collapsable else  self._working_tree_path_native_str
+            ref_dir_path = None if collapsable else self._working_tree_path_native_str
             rel_components = ('',) + manip.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
 

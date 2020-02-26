@@ -21,17 +21,21 @@ import tools_for_test
 
 class ConstructionTest(unittest.TestCase):
 
+    # noinspection PyAbstractClass
     class ATool(Tool):
         source_file = Tool.Input.RegularFile()
         object_file = Tool.Output.RegularFile()
 
+    # noinspection PyAbstractClass
     class BTool(ATool):
         map_file = Tool.Output.RegularFile(required=False)
         log_file = Tool.Output.RegularFile(required=True, explicit=False)
 
+    # noinspection PyAbstractClass
     class CTool(Tool):
         envvar = Tool.Input.EnvVar(name='n', restriction='.*', example='', required=False)
 
+    # noinspection PyAbstractClass
     class DTool(BTool):
         include_directories = Tool.Input.Directory[:](required=False)
 
@@ -97,13 +101,16 @@ class ConstructionTest(unittest.TestCase):
 
 class ReprTest(unittest.TestCase):
 
+    # noinspection PyAbstractClass
     class ATool(Tool):
         source_file = Tool.Input.RegularFile()
         object_file = Tool.Output.RegularFile()
 
+    # noinspection PyAbstractClass
     class BTool(ATool):
         map_file = Tool.Output.RegularFile(required=False)
 
+    # noinspection PyAbstractClass
     class CTool(Tool):
         source_file = Tool.Input.RegularFile()
 
@@ -111,6 +118,7 @@ class ReprTest(unittest.TestCase):
         _X_y_Z = None
         a_b_c = 1
 
+    # noinspection PyAbstractClass
     class DTool(CTool, X):
         object_file = Tool.Output.RegularFile()
 
@@ -132,6 +140,7 @@ class ReprTest(unittest.TestCase):
         self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.ex.Tool.Output.RegularFile'>")
         self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.ex.Tool.Intermediate'>")
 
+    # noinspection PyAbstractClass
     def test_shows_name_and_dependency_rules(self):
         self.assertEqual(repr(Tool()), 'Tool()')
 
@@ -151,8 +160,9 @@ class ReprTest(unittest.TestCase):
 
 class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
+    # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 155  # of this line
+        lineno = 165  # of this line
 
         class A(Tool):
             pass
@@ -221,6 +231,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
+    # noinspection PyAbstractClass
     def test_definition_location_is_readonly(self):
         class A(Tool):
             pass
@@ -235,6 +246,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     # noinspection PyUnusedLocal,PyPep8Naming
     def test_definition_fails_for_two_different_dynamic_definitions(self):
         def f(s):
+            # noinspection PyAbstractClass
             class A(Tool):
                 X = 1 if s else 2
             return A
@@ -251,7 +263,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
             C = f(True)
 
     def test_definition_fails_for_two_equal_dynamic_definitions(self):
-        # noinspection PyUnusedLocal
+        # noinspection PyUnusedLocal,PyAbstractClass
         def f(s):
             class A(Tool):
                 pass
@@ -289,6 +301,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
 class DependencyActionRegistrationTest(unittest.TestCase):
 
+    # noinspection PyAbstractClass
     def test_fails_for_unregistered_dependency_class(self):
         class D(dlb.ex.Tool.Input.RegularFile):
             pass
@@ -303,6 +316,7 @@ class DependencyActionRegistrationTest(unittest.TestCase):
 
 class ToolInstanceFingerprintTest(unittest.TestCase):
 
+    # noinspection PyAbstractClass
     class ATool(Tool):
         source_file = Tool.Input.RegularFile[:]()
         object_file = Tool.Output.RegularFile(required=False)
@@ -350,6 +364,7 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
             with self.assertRaises(TypeError):
                 dlb.ex.tool.get_and_register_tool_info(A)
 
+    # noinspection PyAbstractClass
     def test_path_for_tool_is_absolute(self):
         class A(dlb.ex.Tool):
             pass

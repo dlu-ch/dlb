@@ -250,6 +250,7 @@ class EnvVarInputValidationTest(unittest.TestCase):
 
     def test_fails_if_name_not_str(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex.depend.EnvVarInput(name=1, restriction=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "'name' must be a str")
 
@@ -260,11 +261,13 @@ class EnvVarInputValidationTest(unittest.TestCase):
 
     def test_fails_if_restriction_is_bytes(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex.depend.EnvVarInput(name='number', restriction=b'42', example='42')
         self.assertEqual(str(cm.exception), "'restriction' must be regular expression (compiled or str)")
 
     def test_fails_if_example_is_none(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex.depend.EnvVarInput(name='number', restriction='42', example=None)
         self.assertEqual(str(cm.exception), "'example' must be a str")
 
