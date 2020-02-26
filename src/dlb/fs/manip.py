@@ -48,27 +48,17 @@ class _KeepFirstRmTreeException:
 def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
                              abs_empty_dir_path: Union[None, str, pathlib.Path, path_.Path] = None,
                              ignore_non_existing: bool = False):
-    """
-    Remove the filesystem objects with absolute path *abs_path*.
-
-    If *abs_path* refers to an existing symbolic link to an existing target, the symbolic link is removed,
-    not the target.
-
-    If *abs_path* refers to an existing directory (empty or not empty) and *abs_temp_path* is not ``None``,
-    the directory is first moved to *abs_empty_dir_path*.
-    Then the moved directory with its content is removed; errors are silently ignored.
-    
-    *abs_temp_path* is not ``None``, is must denote an empty and writable directory on the same filesystem
-    as *abs_path*. Use a temporary directory, if possible.    
-
-    :raise ValueError:
-        if *abs_path* is ``None`` or is not an absolute path,
-        or if *abs_empty_dir_path* is ``None`` and is not an absolute path
-    :raise FileNotFoundError:
-        if *abs_path* does not exists and *ignore_non_existing* is ``True``
-    :raise OSError:
-        if an existing *abs_path* was not removed
-    """
+    # Removes the filesystem objects with absolute path *abs_path*.
+    #
+    # If *abs_path* refers to an existing symbolic link to an existing target, the symbolic link is removed,
+    # not the target.
+    #
+    # If *abs_path* refers to an existing directory (empty or not empty) and *abs_temp_path* is not ``None``,
+    # the directory is first moved to *abs_empty_dir_path*.
+    # Then the moved directory with its content is removed; errors are silently ignored.
+    #
+    # *abs_temp_path* is not ``None``, is must denote an empty and writable directory on the same filesystem
+    # as *abs_path*. Use a temporary directory, if possible.
 
     if isinstance(abs_path, path_.Path):
         abs_path = str(abs_path.native)
@@ -128,22 +118,21 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
 
 
 def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) -> FilesystemObjectMemo:
-    """
-    Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
-    as a ``FilesystemObjectMemo`` object.
+    # Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
+    # as a ``FilesystemObjectMemo`` object.
+    #
+    # If ``memo.stat`` contains the following members from ``stat_result`` (with ``st_`` removed from their names,
+    # all integers):
+    #
+    #   - ``mode``
+    #   - ``size``
+    #   - ``mtime_ns``
+    #   - ``uid``
+    #   - ``gid``
+    #
+    # If  *memo.stat.mode* indicates a symbolic link, *memo.symlink_target* is the path of its target as a string.
+    # Otherwise, *memo.symlink_target* is None.
 
-    If ``memo.stat`` contains the following members from ``stat_result`` (with ``st_`` removed from their names,
-    all integers):
-
-      - ``mode``
-      - ``size``
-      - ``mtime_ns``
-      - ``uid``
-      - ``gid``
-
-    If  *memo.stat.mode* indicates a symbolic link, *memo.symlink_target* is the path of its target as a string.
-    Otherwise, *memo.symlink_target* is None.
-    """
     if isinstance(abs_path, bytes):
         raise TypeError("'abs_path' must be a str or path, not bytes")  # prevent special treatment by byte paths
 

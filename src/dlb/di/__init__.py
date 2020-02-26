@@ -3,8 +3,7 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 """Write formatted and indented lines to represent hierarchic diagnostic information to a file.
-This module uses levels of the 'logging' module.
-"""
+This module uses levels of the 'logging' module."""
 
 __all__ = ()
 

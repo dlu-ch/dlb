@@ -80,9 +80,7 @@ def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
 
 
 def encode_fsobject_memo(memo: manip.FilesystemObjectMemo) -> bytes:
-    """
-    Returns a representation of *memo* as marshal-encoded tuple.
-    """
+    # Return a representation of *memo* as marshal-encoded tuple.
 
     if not isinstance(memo, manip.FilesystemObjectMemo):
         raise TypeError
@@ -160,14 +158,12 @@ class _CursorWithExceptionMapping:
 class Database:
 
     def __init__(self, rundb_path: Union[str, os.PathLike, pathlib.Path], suggestion_if_database_error: str = ''):
-        """
-        Open or create the database with path *rundb_path*.
-
-        *suggestion_if_database_error* should be a non-empty line suggesting a recovery solution for database errors.
-
-        Until :meth:`close()' is called on this object, no other process must construct an object with the same
-        *rundb_path*.
-        """
+        # Open or create the database with path *rundb_path*.
+        #
+        # *suggestion_if_database_error* should be a non-empty line suggesting a recovery solution for database errors.
+        #
+        # Until :meth:`close()' is called on this object, no other process must construct an object with the same
+        # *rundb_path*.
 
         self._suggestion_if_database_error = str(suggestion_if_database_error)
 
@@ -227,13 +223,12 @@ class Database:
 
     def get_and_register_tool_instance_dbid(self, permanent_local_tool_id: bytes,
                                             permanent_local_tool_instance_fingerprint: bytes) -> int:
-        """
-        Return a tool instance dbid *tool_instance_dbid* for a tool instance identified by
-        *permanent_local_tool_id* and *permanent_local_tool_instance_fingerprint* on the current platform.
-
-        *tool_instance_dbid* is unique in the run-database until the next :meth:`cleanup()` on this object.
-
-        When called more than one before the next cleanup() on this object, this always returns the same value."""
+        # Return a tool instance dbid *tool_instance_dbid* for a tool instance identified by
+        # *permanent_local_tool_id* and *permanent_local_tool_instance_fingerprint* on the current platform.
+        #
+        # *tool_instance_dbid* is unique in the run-database until the next :meth:`cleanup()` on this object.
+        #
+        # When called more than one before the next cleanup() on this object, this always returns the same value.
 
         t = (platform.PERMANENT_PLATFORM_ID, permanent_local_tool_id, permanent_local_tool_instance_fingerprint)
         with self._cursor_with_exception_mapping() as cursor:
@@ -246,9 +241,7 @@ class Database:
         return tool_instance_dbid
 
     def get_tool_instance_dbid_count(self) -> int:
-        """
-        Return the number of (different) registered *tool_instance_dbid* for the current platform.
-        """
+        # Returns the number of (different) registered *tool_instance_dbid* for the current platform.
 
         with self._cursor_with_exception_mapping() as cursor:
             n = cursor.execute(
@@ -260,15 +253,13 @@ class Database:
 
     def update_fsobject_input(self, tool_instance_dbid: int, encoded_path: str, is_explicit: bool,
                               encoded_memo_before: Optional[bytes]):
-        """
-        Add or replace the description of a filesystem object in the managed tree that is an input dependency
-        of the tool instance *tool_instance_dbid* by ``(is_explicit, encoded_memo_before``).
-
-        *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
-        not before the last :meth:`cleanup()` (if any).
-
-        *encoded_path* must be the return value of :func:`encode_path()`.
-        """
+        # Add or replace the description of a filesystem object in the managed tree that is an input dependency
+        # of the tool instance *tool_instance_dbid* by ``(is_explicit, encoded_memo_before``).
+        #
+        # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
+        # not before the last :meth:`cleanup()` (if any).
+        #
+        # *encoded_path* must be the return value of :func:`encode_path()`.
 
         if not is_encoded_path(encoded_path):
             raise ValueError(f"not a valid 'encoded_path': {encoded_path!r}")
@@ -282,13 +273,12 @@ class Database:
 
     def replace_fsobject_inputs(self, tool_instance_dbid: int,
                                 info_by_by_fsobject_dbid: Dict[str, Tuple[bool, bytes]]):
-        """
-        Replace all information on input dependencies for a tool instance *tool_instance_dbid* by
-        *info_by_by_fsobject_dbid*.
+        # Replace all information on input dependencies for a tool instance *tool_instance_dbid* by
+        # *info_by_by_fsobject_dbid*.
+        #
+        # Includes a :meth:`commit()` at the start.
+        # In case of an exception, the information on input dependencies in the run-database remains unchanged.
 
-        Includes a :meth:`commit()` at the start.
-        In case of an exception, the information on input dependencies in the run-database remains unchanged.
-        """
         with self._cursor_with_exception_mapping() as cursor:
             try:
                 self._connection.commit()
@@ -303,16 +293,14 @@ class Database:
 
     def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: Optional[bool] = None) \
             -> Dict[str, Tuple[bool, Optional[bytes]]]:
-        """
-        Return the *encoded_path* and the optional encoded memo of all filesystem objects in the managed tree that are
-        input dependencies of the tool instance *tool_instance_dbid*.
-
-        If *is_explicit_filter* is not ``None``, only the dependencies with *is_explicit* = *is_explicit_filter* are
-        returned.
-
-        *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
-        the last :meth:`cleanup()` (if any).
-        """
+        # Return the *encoded_path* and the optional encoded memo of all filesystem objects in the managed tree that are
+        # input dependencies of the tool instance *tool_instance_dbid*.
+        #
+        # If *is_explicit_filter* is not ``None``, only the dependencies with *is_explicit* = *is_explicit_filter* are
+        # returned.
+        #
+        # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
+        # the last :meth:`cleanup()` (if any).
 
         with self._cursor_with_exception_mapping() as cursor:
 
@@ -332,18 +320,17 @@ class Database:
         }
 
     def declare_fsobject_input_as_modified(self, modified_encoded_path: str):
-        """
-        Declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
-        modified if
+        # Declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
+        # modified if
+        #
+        #   - their *encoded_path* = *modified_encoded_path* or
+        #   - their managed tree path is a prefix of the path of the filesystem object identified
+        #     by *modified_encoded_path*
+        #
+        # In case of an exception, the information on input dependencies in the run-database remains unchanged.
+        #
+        # Note: call :meth:`commit()` before the filesystem object is actually modified.
 
-          - their *encoded_path* = *modified_encoded_path* or
-          - their managed tree path is a prefix of the path of the filesystem object identified
-            by *modified_encoded_path*
-
-        In case of an exception, the information on input dependencies in the run-database remains unchanged.
-
-        Note: call :meth:`commit()` before the filesystem object is actually modified.
-        """
         if not is_encoded_path(modified_encoded_path):
             raise ValueError(f"not a valid 'encoded_path': {modified_encoded_path!r}")
 
