@@ -11,9 +11,8 @@ import sys
 import math
 import re
 import time
-import textwrap
 import logging
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple, Sequence
 from .. import ut
 
 
@@ -22,6 +21,8 @@ _RESERVED_TITLESTART_CHARACTERS = "'|" + _RESERVED_TITLEEND_CHARACTERS
 
 _CONTINUATION_LINE_PREFIX = '  | '
 _CONTINUATION_INDENTATION = ' ' * len(_CONTINUATION_LINE_PREFIX)
+
+_FIELD_SEPARATOR_REGEX = re.compile(r'([\t\b])')
 
 _output_file = sys.stderr
 
@@ -55,113 +56,133 @@ _level_indicator_by_level = {
 }
 
 
-def _first_control_character_in(s: str, keep: str = '') -> Optional[str]:
-    for c in s:
-        if ord(c) < 0x20 and c not in keep:
-            return c
+def _normalize_message_lines(message, *, name: str) -> Tuple[List[str], bool]:
+    # Return the normalized lines of *message*.
+    # Use *name* as the argument name for exception messages.
+    #
+    # Properties of normalized_lines:
+    #
+    #   - at least 1 line
+    #   - first line is not empty
+    #   - last line is not empty
+    #   - 2 successive lines are not empty
+    #   - no line ends with a space character
+    #   - first line does not start with character in _RESERVED_LINESTART_CHARACTERS
+    #   - every non-empty line except the first starts with 2 space character followed by a non-space character
 
+    normalized_lines = []
+    first_indentation = None  # leading white-space of first non-empty line
+    has_field_separator = False
 
-def _format_messages(*, _prefix='', **messages: str) -> List[str]:
-    formatted_messages = []
+    for lineno0, line in enumerate(message.splitlines()):
+        line = line.rstrip()
 
-    for message_name, message in messages.items():
-        if not isinstance(message, str):
-            raise TypeError(f"{message_name!r} must be a str")
+        for c in line:
+            if c < ' ':
+                if c not in '\t\b':
+                    msg = (
+                        f"{name!r} must not contain ASCII control characters except '\\t' and '\\b', "
+                        f"unlike {c!r} in line {lineno0 + 1}"
+                    )
+                    raise ValueError(msg)
+                has_field_separator = True
 
-        lines = str(textwrap.dedent(message)).splitlines()
+        if line:
+            if not normalized_lines:
+                # is first non-empty line
+                stripped_line = line.lstrip()
+                first_indentation = line[:len(line) - len(stripped_line)]
 
-        normalized_lines = []
-        for lineno0, line in enumerate(lines):
-            c = _first_control_character_in(line, '\t\b')
-            if c is not None:
-                msg = (
-                    f"{message_name!r} must not contain ASCII control characters except '\\t' and '\\b', "
-                    f"unlike {c!r} in line {lineno0 + 1}"
-                )
-                raise ValueError(msg)
-            line = line.rstrip()
-            if line:
-                if not normalized_lines:
-                    # is first non empty line
-                    if line[0] in _RESERVED_TITLESTART_CHARACTERS:
-                        msg = (
-                            f"first non-empty line in {message_name!r} must not start with "
-                            f"reserved character {line[0]!r}"
-                        )
-                        raise ValueError(msg)
-                    if line[-1] in _RESERVED_TITLEEND_CHARACTERS:
-                        msg = f"first non-empty line in {message_name!r} must not end with {line[-1]!r}"
-                        raise ValueError(msg)
-                    line = _prefix + line
-                elif line:
-                    if not line.startswith(_CONTINUATION_INDENTATION):
-                        msg = (
-                            f"each continuation line in {message_name!r} must be indented at "
-                            f"least {len(_CONTINUATION_LINE_PREFIX)} spaces more than the first non-empty line, "
-                            f"unlike line {lineno0 + 1}"
-                        )
-                        raise ValueError(msg)
-                if line or (normalized_lines and normalized_lines[-1] != ''):
-                    normalized_lines.append(line)
-
-        if not normalized_lines:
-            raise ValueError(f"{message_name!r} must contain at least one non-empty line")
-
-        # properties of normalized_lines:
-        # - at least 1 line
-        # - first line is not empty
-        # - last line is not empty
-        # - 2 successive lines are not empty
-        # - no line ends with a space character
-        # - first line does not start with character in _RESERVED_LINESTART_CHARACTERS
-        # - every non-empty line except the first starts with 2 space character followed by a non-space character
-
-        fields_per_line: List[List[str]] = []
-        len_by_field_index: Dict[int, int] = dict()
-
-        for line in normalized_lines:
-            r = re.split(r'([\t\b])', line)  # length of list is uneven
-            if len(r) > 1:
-                fields = [r[i] + r[i + 1] for i in range(0, len(r) - 1, 2)] + [r[-1]]
+                line = stripped_line
+                if line[0] in _RESERVED_TITLESTART_CHARACTERS:
+                    msg = (
+                        f"first non-empty line in {name!r} must not start with "
+                        f"reserved character {line[0]!r}"
+                    )
+                    raise ValueError(msg)
+                if line[-1] in _RESERVED_TITLEEND_CHARACTERS:
+                    msg = f"first non-empty line in {name!r} must not end with {line[-1]!r}"
+                    raise ValueError(msg)
             else:
-                fields = [r[0]]
+                line = line[len(first_indentation):] if line[:len(first_indentation)] == first_indentation else ''
+                if not line.startswith(_CONTINUATION_INDENTATION):
+                    msg = (
+                        f"each continuation line in {name!r} must be indented at "
+                        f"least {len(_CONTINUATION_LINE_PREFIX)} spaces more than the first non-empty line, "
+                        f"unlike line {lineno0 + 1}"
+                    )
+                    raise ValueError(msg)
+            if line or (normalized_lines and not normalized_lines[-1]):
+                normalized_lines.append(line)
 
-            assert line == ''.join(fields)
-            fields_per_line.append(fields)
-            for i, field in enumerate(fields):
-                if field and field[-1] in '\t\b':
-                    len_by_field_index[i] = max(len(field) - 1, len_by_field_index.get(i, 0))
+    if not normalized_lines:
+        raise ValueError(f"{name!r} must contain at least one non-empty line")
 
-        # len_by_field_index[i] is the length after justification of field[i] that ends in '\t' or '\b'
+    return normalized_lines, has_field_separator
 
-        formatted_lines = []
-        for line_index, fields in enumerate(fields_per_line):
-            line = ''
 
-            # '\t' -> left align, '\b' -> right align
-            for field_index, field in enumerate(fields):
-                if field and field[-1] in '\t\b':
-                    justifier = str.rjust if field[-1] == '\b' else str.ljust
-                    field = justifier(field[:-1], len_by_field_index[field_index])
-                line = line + field
+def _expand_fields_and_continuations(normalized_lines: Sequence[str]) -> List[str]:
 
-            if formatted_lines:
-                line = _CONTINUATION_LINE_PREFIX + line[len(_CONTINUATION_LINE_PREFIX):]
-            if line_index + 1 < len(normalized_lines):
-                line = line + ' '  # not last line
+    fields_per_line: List[List[str]] = []
+    len_by_field_index: Dict[int, int] = dict()
 
-            formatted_lines.append(line)
+    for line in normalized_lines:
+        r = _FIELD_SEPARATOR_REGEX.split(line)  # length of list is uneven
+        if len(r) > 1:
+            fields = [r[i] + r[i + 1] for i in range(0, len(r) - 1, 2)] + [r[-1]]
+        else:
+            fields = [r[0]]
 
-        # - each line consists only of characters >= U+0020
-        # - no line ends with 2 space characters
-        # - last line does not end with a space character
-        # - each line except the last one ends with 1 space character
-        # - successive lines are separated by '\n'
-        # - the "positions" of the (removed) '\t', '\b' are aligned over all lines
+        fields_per_line.append(fields)
+        for i, field in enumerate(fields):
+            if field and field[-1] in '\t\b':
+                len_by_field_index[i] = max(len(field) - 1, len_by_field_index.get(i, 0))
 
-        formatted_messages.append('\n'.join(formatted_lines))
+    # len_by_field_index[i] is the length after justification of field[i] that ends in '\t' or '\b'
 
-    return formatted_messages
+    formatted_lines = []
+    for line_index, fields in enumerate(fields_per_line):
+        line = ''
+
+        # '\t' -> left align, '\b' -> right align
+        for field_index, field in enumerate(fields):
+            if field and field[-1] in '\t\b':
+                justifier = str.rjust if field[-1] == '\b' else str.ljust
+                field = justifier(field[:-1], len_by_field_index[field_index])
+            line = line + field
+
+        if formatted_lines:
+            line = _CONTINUATION_LINE_PREFIX + line[len(_CONTINUATION_LINE_PREFIX):]
+        if line_index + 1 < len(normalized_lines):
+            line = line + ' '  # not last line
+
+        formatted_lines.append(line)
+
+    return formatted_lines
+
+
+def _format_message(message, name: str, prefix='') -> str:
+    # must be fast for single line
+
+    if not isinstance(message, str):
+        raise TypeError(f"{name!r} must be a str")
+
+    normalized_lines, has_field_separator = _normalize_message_lines(message, name=name)
+    normalized_lines[0] = prefix + normalized_lines[0]
+
+    if not has_field_separator and len(normalized_lines) == 1:
+        return normalized_lines[0]
+
+    formatted_lines = _expand_fields_and_continuations(normalized_lines)
+
+    # - each line consists only of characters >= U+0020
+    # - no line ends with 2 space characters
+    # - last line does not end with a space character
+    # - each line except the last one ends with 1 space character
+    # - successive lines are separated by '\n'
+    # - the "positions" of the (removed) '\t', '\b' are aligned over all lines
+
+    return '\n'.join(formatted_lines)
 
 
 def _checked_level(level):
@@ -201,7 +222,7 @@ def set_output_file(file):
 
 
 def format_message(message: str, level: int) -> str:  # idempotent only for single lines
-    return _format_messages(_prefix=get_level_indicator(level) + ' ', message=message)[0]
+    return _format_message(message, name='message', prefix=get_level_indicator(level) + ' ')
 
 
 def _indent_message(message: str, nesting: int):
@@ -233,8 +254,9 @@ def _get_relative_time_suffix(monotonic_ns: Optional[int]):
 class Cluster:
     def __init__(self, message: str, *, level: int = logging.INFO, is_progress: bool = False,
                  with_time: bool = False):
+        # must be fast
         self._level: int = _checked_level(level)
-        self._formatted_title = _format_messages(_prefix=get_level_indicator(level) + ' ', title=message)[0]
+        self._pre_formatted_title = _format_message(message, name='message', prefix='_ ')  # use '_' for level indicator
         self._is_progress = bool(is_progress)
         self._with_time: bool = bool(with_time)
         self._monotonic_ns: Optional[int] = None
@@ -248,7 +270,7 @@ class Cluster:
                     break
                 c.inform_title()  # is parent of self
 
-            title = self._formatted_title
+            title = get_level_indicator(self._level) + self._pre_formatted_title[1:]
             suffix = '...' if self._is_progress else ''
             suffix += _get_relative_time_suffix(self._monotonic_ns)
             if suffix:

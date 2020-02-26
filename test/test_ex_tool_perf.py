@@ -66,9 +66,12 @@ class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)
-        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, 'scenario1'))
+        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '1'))
 
-    def test_path1(self):
+
+class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_read_filesystem_object_memo_from_path(self):
         import dlb.fs.manip
 
         pathlib.Path('.dlbroot').mkdir()
@@ -105,7 +108,7 @@ class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)
-        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, 'path1'))
+        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '1'))
 
     def test_decode_encoded_path(self):
         profile = cProfile.Profile()
@@ -128,4 +131,25 @@ class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)
-        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, 'decodeencodedpath1'))
+        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '2'))
+
+    def test_inform(self):
+        profile = cProfile.Profile()
+
+        dlb.di.set_threshold_level(logging.WARNING)
+        message = 'abc' * 20  # typical for dlb.di.Cluster(): one line, no control characters
+
+        profile.enable()
+
+        for i in range(10000):
+            with dlb.di.Cluster(message):
+                pass
+
+        profile.disable()
+
+        stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
+        stats.print_stats()
+
+        # e.g. for https://jiffyclub.github.io/snakeviz/
+        assert os.path.isabs(__file__)
+        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '3'))

@@ -126,7 +126,6 @@ class FormatMessageTest(unittest.TestCase):
                     x
                y 
                 """)
-        msg = "first non-empty line in 'message' must not start with reserved character ' '"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_reserved_start(self):

@@ -164,12 +164,13 @@ Module content
 
    Returns a formatted message with aligned fields, assuming nesting level 0.
 
-   First, *message* is dedented with :func:`python:textwrap.dedent()`, empty lines are removed from the beginning and
-   the end of the result and trailing white space characters is removed from each line.
-
+   First, empty lines are removed from the beginning and the end of *message* and trailing white space characters is
+   removed from each line.
    After that, the first line must not start with ``'␣'``, ``"'"``,  ``"|"``, ``'.'`` or ``"]"``.
    If must not end with ``"."`` or ``"]"``.
-   Each non-empty line after the first line must start with at least 4 space characters.
+   Each non-empty line after the first line must start with at least 4 space characters after than the indentation of
+   the first line. Example: If the first line is indented by 8 space characters, each following non-empty line must
+   start with at least 12 space characters.
 
    *message* can contain fields. A field is declared by appending ``'\t'`` or ``'\b'``.
    A field whose declaration ends with ``'\t'`` is left aligned, one whose declaration ends with ``'\t'`` is right
