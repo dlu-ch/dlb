@@ -428,8 +428,6 @@ class _RootSpecifics:
             ref_dir_path = None if collapsable else  self._working_tree_path_native_str
             rel_components = ('',) + manip.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
-            # TODO avoid double checking
-            # TODO test symlink circle
 
         if len(rel_components) >= 2 and rel_components[1] in ('..', _MANAGEMENTTREE_DIR_NAME):
             raise ValueError(f'path not in managed tree: {path.as_string()!r}') from None

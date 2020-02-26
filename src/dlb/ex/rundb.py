@@ -68,15 +68,19 @@ def encode_path(path: fs.Path) -> str:
     return encoded_path
 
 
-def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
-    if not is_encoded_path(encoded_path):
-        raise ValueError
+def decode_encoded_path_as_str(encoded_path: str) -> str:
     if not encoded_path:
-        return fs.Path('.')
-    path = fs.Path(encoded_path[:-1], is_dir=is_dir)
-    if path.is_absolute() or not path.is_normalized():
+        return '.'
+    p = '/' + encoded_path
+    if encoded_path[-1] != '/' or any(s in p for s in ('//', '/../', '/./')):
         raise ValueError
-    return path
+    return encoded_path
+
+
+def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
+    # must be fast
+    s = decode_encoded_path_as_str(encoded_path)
+    return fs.Path(s, is_dir=is_dir or s == '.')  # path from string is faster than from components
 
 
 def encode_fsobject_memo(memo: manip.FilesystemObjectMemo) -> bytes:

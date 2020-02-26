@@ -133,20 +133,23 @@ def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) 
     # If  *memo.stat.mode* indicates a symbolic link, *memo.symlink_target* is the path of its target as a string.
     # Otherwise, *memo.symlink_target* is None.
 
-    if isinstance(abs_path, bytes):
-        raise TypeError("'abs_path' must be a str or path, not bytes")  # prevent special treatment by byte paths
+    # must be fast
 
     if isinstance(abs_path, path_.Path):
+        is_abs = abs_path.is_absolute()
         abs_path = str(abs_path.native)
     else:
+        if isinstance(abs_path, bytes):
+            raise TypeError("'abs_path' must be a str or path, not bytes")  # prevent special treatment by byte paths
         abs_path = os.fspath(abs_path)
+        is_abs = os.path.isabs(abs_path)  # does not raise OSError
 
-    if not os.path.isabs(abs_path):  # does not raise OSError
+    if not is_abs:
         raise ValueError(f"not an absolute path: {str(abs_path)!r}")
 
-    memo = FilesystemObjectMemo()
-
     sr = os.lstat(abs_path)
+
+    memo = FilesystemObjectMemo()
     memo.stat = FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
                                       uid=sr.st_uid, gid=sr.st_gid)
 
@@ -177,6 +180,8 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
     #
     # :raise PathNormalizationError: if *path* is an upwards path or not collapsable or a filesystem access failed
     # :raise ValueError: if the resulting path is not representable with the type of *path*
+
+    # must be fast
 
     normalized_components = tuple(str(c) for c in components)
     if ref_dir_path is not None:

@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb.ex.rundb
 import pathlib
 import logging
 import unittest
@@ -43,7 +44,6 @@ class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
                 pass
 
         profile = cProfile.Profile()
-        profile.enable()
 
         with dlb.ex.Context():
 
@@ -53,14 +53,79 @@ class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
             assert t.run() is not None
             assert t.run() is not None
 
+            profile.enable()
+
             for i in range(1000):
                 t = ATool(source_file='a.cpp', object_file='a.o')
                 assert t.run() is None
 
-        profile.disable()
+            profile.disable()
+
         stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
         stats.print_stats()
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)
         stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, 'scenario1'))
+
+    def test_path1(self):
+        import dlb.fs.manip
+
+        pathlib.Path('.dlbroot').mkdir()
+        (pathlib.Path('a') / 'b').mkdir(parents=True)
+        with (pathlib.Path('a') / 'b' / 'c').open('xb'):
+            pass
+
+        dlb.di.set_threshold_level(logging.WARNING)
+        p = dlb.fs.Path('a/b/c')
+
+        profile = cProfile.Profile()
+
+        with dlb.ex.Context() as c:
+            profile.enable()
+
+            # findings:
+            #  - Path.is_absolute() much faster than os.path.isabs()
+            #  - os.path.join(root_path_str, *p.parts) is much faster than c.root_path / p
+            #  - pathlib is very slow
+
+            # times for comparison:
+            #   337 ms (originally)
+            #   216 ms (with optimized managed_tree_path_of)
+            #   90 ms (current - without pathlib)
+
+            for i in range(10000):
+                dlb.fs.manip.read_filesystem_object_memo(
+                    c.root_path / c.managed_tree_path_of(p, existing=True, collapsable=False))
+
+            profile.disable()
+
+        stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
+        stats.print_stats()
+
+        # e.g. for https://jiffyclub.github.io/snakeviz/
+        assert os.path.isabs(__file__)
+        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, 'path1'))
+
+    def test_decode_encoded_path(self):
+        profile = cProfile.Profile()
+        profile.enable()
+
+        # findings:
+        #
+        #  - decode_encoded_path() is dominated by constructor of dlb.fs.Path
+        #  - construction of dlb.fs.Path is faster by str than by components
+
+        # times for comparison: 405 ms
+
+        for i in range(100000):
+            dlb.ex.rundb.decode_encoded_path('a/b2/c33/d42/')
+
+        profile.disable()
+
+        stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
+        stats.print_stats()
+
+        # e.g. for https://jiffyclub.github.io/snakeviz/
+        assert os.path.isabs(__file__)
+        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, 'decodeencodedpath1'))

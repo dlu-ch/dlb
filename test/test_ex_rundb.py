@@ -157,9 +157,12 @@ class DecodeEncodedPathTest(unittest.TestCase):
             dlb.ex.rundb.decode_encoded_path('/')
 
     def test_isdir_is_correct(self):
-        self.assertFalse(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('a/b')), is_dir=False).is_dir())
-        self.assertTrue(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('a/b')), is_dir=True).is_dir())
-        self.assertTrue(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(dlb.fs.Path('.')), is_dir=False).is_dir())
+        self.assertFalse(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(
+            dlb.fs.Path('a/b')), is_dir=False).is_dir())
+        self.assertTrue(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(
+            dlb.fs.Path('a/b')), is_dir=True).is_dir())
+        self.assertTrue(dlb.ex.rundb.decode_encoded_path(dlb.ex.rundb.encode_path(
+            dlb.fs.Path('.')), is_dir=False).is_dir())
 
 
 class EncodeFsobjectMemoTest(unittest.TestCase):

@@ -130,9 +130,9 @@ class ConstructionTest(unittest.TestCase):
         self.assertEqual("if 'path' is a parts tuple, none except its first element must contain '/'", str(cm.exception))
 
     def test_from_none(self):
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(TypeError) as cm:
             dlb.fs.Path(None)
-        self.assertEqual("invalid path: None", str(cm.exception))
+        self.assertEqual("'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence", str(cm.exception))
 
     def test_from_int(self):
         with self.assertRaises(TypeError) as cm:

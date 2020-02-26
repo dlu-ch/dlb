@@ -190,34 +190,25 @@ class _PathMeta(type):
 @functools.total_ordering
 class Path(metaclass=_PathMeta):
     def __init__(self, path, *, is_dir: Optional[bool] = None):
-        if path is None:
-            raise ValueError('invalid path: None')
-
         check = True
 
-        if isinstance(path, Path):
+        if isinstance(path, Path):  # P(P()) must be very fast for every subclass of Path
 
-            # P(P()) must be very fast for every subclass of Path
             self._components = path._components
             self._is_dir = path._is_dir
             check = self.__class__  is not path.__class__
 
-        elif isinstance(path, str):
+        elif isinstance(path, str):  # must be very fast
 
             if not path:
                 raise ValueError("invalid path: ''")
 
             anchor = ''
-            if path[:3] == '///':
-                anchor = '/'
-            elif path[:2] == '//':
-                anchor = '//'
-            elif path[:1] == '/':
-                anchor = '/'
-            nonanchor_components = tuple(c for c in path.strip('/').split('/') if c and c != '.')
+            if path[0] == '/':
+                anchor = '//' if path[:2] == '//' and path[:3] != '///' else '/'
 
-            self._components = (anchor,) + nonanchor_components
-            self._is_dir = path.endswith('/') or path.endswith('/.')
+            self._components = (anchor,) + tuple(c for c in path.split('/') if c and c != '.')
+            self._is_dir = path[-1] == '/' or path[-2:] == '/.'
 
         elif isinstance(path, collections.abc.Sequence):
 
@@ -275,7 +266,8 @@ class Path(metaclass=_PathMeta):
         if check:
             if is_dir is None:
                 self._sanitize_is_dir()
-            self._check_constrains()
+            if self.__class__.__bases__ != (object,):  # dlb.fs.Path() must be fast
+                self._check_constrains()
 
     def _cast(self, other):
         if other.__class__ is self.__class__:
