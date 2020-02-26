@@ -110,26 +110,24 @@ class ConstructionTest(unittest.TestCase):
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
     def test_from_tuple(self):
+        self.assertEqual(dlb.fs.Path('.'), dlb.fs.Path(()))
+        self.assertEqual(dlb.fs.Path('.'), dlb.fs.Path(('',)))
+        self.assertEqual(dlb.fs.Path('a\\b/c'), dlb.fs.Path(('a\\b', 'c')))
         self.assertEqual(dlb.fs.Path('a\\b/c'), dlb.fs.Path(('', 'a\\b', 'c')))
         self.assertEqual(dlb.fs.Path('/a/b'), dlb.fs.Path(('/', 'a', '.', 'b', '', '', '.')))
         self.assertEqual(dlb.fs.Path('//a/b'), dlb.fs.Path(('//', 'a', 'b')))
-        self.assertEqual(dlb.fs.Path('///a/b'), dlb.fs.Path(('/', 'a', 'b')))
-
-        with self.assertRaises(ValueError) as cm:
-            dlb.fs.Path(())
-        self.assertEqual("if 'path' is a tuple, its first element must be one of '', '/', '//'", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            dlb.fs.Path(('x',))
-        self.assertEqual("if 'path' is a tuple, its first element must be one of '', '/', '//'", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('///',))
-        self.assertEqual("if 'path' is a tuple, its first element must be one of '', '/', '//'", str(cm.exception))
+        self.assertEqual("if 'path' is a parts tuple, its first element must be one of '', '/', '//'", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('', 'a/b'))
-        self.assertEqual("if 'path' is a tuple, none except its first element must contain '/'", str(cm.exception))
+        self.assertEqual("if 'path' is a parts tuple, none except its first element must contain '/'", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path(('', '/a'))
+        self.assertEqual("if 'path' is a parts tuple, none except its first element must contain '/'", str(cm.exception))
 
     def test_from_none(self):
         with self.assertRaises(ValueError) as cm:

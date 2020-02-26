@@ -177,11 +177,13 @@ class Path(metaclass=_PathMeta):
         elif isinstance(path, collections.abc.Sequence):
 
             components = tuple(str(c) for c in path)
-            if not components or components[0] not in ('', '/', '//'):
-                raise ValueError("if 'path' is a tuple, its first element must be one of '', '/', '//'")
+            if not components or components[0][:1] != '/':
+                components = ('',) + components
+            if components[0] not in ('', '/', '//'):
+                raise ValueError("if 'path' is a parts tuple, its first element must be one of '', '/', '//'")
             nonroot_components = tuple(c for c in components[1:] if c and c != '.')
             if any('/' in c for c in nonroot_components):
-                raise ValueError("if 'path' is a tuple, none except its first element must contain '/'")
+                raise ValueError("if 'path' is a parts tuple, none except its first element must contain '/'")
             self._components = (components[0],) + nonroot_components
             self._is_dir = False
 
