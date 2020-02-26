@@ -12,7 +12,7 @@ __all__ = (
 )
 
 import stat
-import marshal
+import marshal  # TODO replace - marshal.dump(d) does not only depend on d (does reuse short ASCII-only strings)
 from typing import Type, Set, Optional, Union, Sequence, Hashable
 from .. import ut
 from .. import fs
@@ -52,7 +52,7 @@ class Action:
         # Two instances of the same dependency class, whose properties differ, must return different
         # permanent local value ids if the meaning of this validated values `validated_values` of a concrete dependency
         # for a running tool instance depends on the difference.
-        return marshal.dumps(ut.make_fundamental(validated_values, True))
+        return marshal.dumps(ut.make_fundamental(validated_values, True)) # TODO avoid string
 
     # overwrite and prepend super().get_permanent_local_instance_id() to return value
     def get_permanent_local_instance_id(self) -> bytes:
@@ -86,7 +86,7 @@ class Action:
 class _FilesystemObjectMixin(Action):
     def get_permanent_local_value_id(self, validated_values: Optional[Sequence[fs.Path]]) -> bytes:
         if validated_values is not None:
-            validated_values = tuple(v.as_string() for v in validated_values)
+            validated_values = tuple(v.as_string().encode() for v in validated_values)  # avoid strings
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
         return marshal.dumps(validated_values)
 
@@ -134,7 +134,7 @@ class EnvVarInputAction(Action):
     def get_permanent_local_instance_id(self) -> bytes:
         # does _not_ depend on 'restriction'
         d = self.dependency
-        return super().get_permanent_local_instance_id() + marshal.dumps((d.name,))
+        return super().get_permanent_local_instance_id() + marshal.dumps((d.name.encode(),))  # avoid strings
 
     def get_initial_result_for_nonexplicit(self, context: context_.Context):
         d = self.dependency
