@@ -40,14 +40,24 @@ class _NativeComponents:  # TODO find better name
         return self._sep
 
     def __str__(self):
-        if self._components == ('',):
-            return '.'
-        if len(self._components) <= 1:
-            return self._components[0]  # absolute path
-        s = self._components[0]
-        if s and s[-1] != self._sep:
-            s += self._sep  # absolute path
-        return s + self._sep.join(self._components[1:])
+        # must be fast and safe
+        # each relative path starts with '.' or '..'
+
+        c = self._components
+        if len(c) <= 1:
+            return c[0] if c[0] else '.'
+
+        s = c[0]
+        if s:
+            # absolute path
+            if s[-1] != self._sep:
+                s += self._sep  
+        else:
+            # relative path
+            if len(c) > 1 and c[1] != '..': 
+                s = '.' + self._sep
+
+        return s + self._sep.join(c[1:])
 
 
 def _native_components_for_posix(components: Tuple[str, ...]) -> Tuple[str, ...]:
@@ -127,13 +137,8 @@ class _Native:
     def __fspath__(self) -> str:  # make this class a safer os.PathLike
         return str(self)
 
-    def __str__(self) -> str:  # TODO without raw
-        r = self.raw
-        s = str(r)
-        if not r.anchor:  # with anchor: 'c:x', 'c:/x', '//unc/root/x'
-            if s != '.' and r.parts[:1] != ('..',):
-                # noinspection PyUnresolvedReferences
-                s = str('_.' / r)[1:]
+    def __str__(self) -> str:
+        s = str(self._native_components)
         return s
 
     def __repr__(self) -> str:
@@ -195,7 +200,7 @@ class Path(metaclass=_PathMeta):
             # P(P()) must be very fast for every subclass of Path
             self._components = path._components
             self._is_dir = path._is_dir
-            check = path.__class__ is not self.__class__
+            check = self.__class__  is not path.__class__
 
         elif isinstance(path, str):
 
@@ -263,6 +268,8 @@ class Path(metaclass=_PathMeta):
             is_dir = bool(is_dir)
             if not is_dir and (self._components == ('',) or self._components[-1:] == ('..',)):
                 raise ValueError(f'cannot be the path of a non-directory: {self._as_string()!r}')
+            if self._is_dir != is_dir:
+                check = True
             self._is_dir = is_dir
 
         if check:
