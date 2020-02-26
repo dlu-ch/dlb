@@ -137,7 +137,7 @@ class ConstructionTest(unittest.TestCase):
     def test_from_int(self):
         with self.assertRaises(TypeError) as cm:
             dlb.fs.Path(1)
-        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or an sequence"
+        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
         self.assertEqual(msg, str(cm.exception))
 
 
@@ -479,6 +479,36 @@ class DirectoryListingTest(unittest.TestCase):
         self.assertEqual("'cls' must be None or a subclass of 'dlb.fs.Path'", str(cm.exception))
 
 
+class NativeComponentsTest(unittest.TestCase):
+
+    def test_has_properties(self):
+        nc = dlb.fs.path._NativeComponents(('', 'a', 'b'), '/')
+        self.assertEqual(('', 'a', 'b'), nc.components)
+        self.assertEqual('/', nc.sep)
+
+    def test_str_is_correct_for_posix(self):
+        self.assertEqual('.', str(dlb.fs.path._NativeComponents(('',), '/')))
+        self.assertEqual('a\\b/c', str(dlb.fs.path._NativeComponents(('', 'a\\b', 'c'), '/')))
+
+        self.assertEqual('/', str(dlb.fs.path._NativeComponents(('/',), '/')))
+        self.assertEqual('//', str(dlb.fs.path._NativeComponents(('//',), '/')))
+        self.assertEqual('/a\\b/c', str(dlb.fs.path._NativeComponents(('/', 'a\\b', 'c'), '/')))
+        self.assertEqual('//a\\b/c', str(dlb.fs.path._NativeComponents(('//', 'a\\b', 'c'), '/')))
+
+    def test_str_is_correct_for_windows(self):
+        self.assertEqual('.', str(dlb.fs.path._NativeComponents(('',), '\\')))
+        self.assertEqual('a\\b', str(dlb.fs.path._NativeComponents(('', 'a', 'b'), '\\')))
+
+        self.assertEqual('C:\\', str(dlb.fs.path._NativeComponents(('C:\\',), '\\')))
+        self.assertEqual('C:\\Windows', str(dlb.fs.path._NativeComponents(('C:\\', 'Windows'), '\\')))
+        self.assertEqual('\\\\u\\r', str(dlb.fs.path._NativeComponents(('\\\\u\\r',), '\\')))
+        self.assertEqual('\\\\u\\r\\t', str(dlb.fs.path._NativeComponents(('\\\\u\\r', 't'), '\\')))
+
+        # note: the components in the following lines must be avoided by the caller (unsafe)
+        self.assertEqual('a:b\\c', str(dlb.fs.path._NativeComponents(('', 'a:b', 'c'), '\\')))
+        self.assertEqual('C:', str(dlb.fs.path._NativeComponents(('C:',), '\\')))
+
+
 class NativeTest(unittest.TestCase):
 
     def test_str_prefixes_relative_with_dot(self):
@@ -496,6 +526,11 @@ class NativeTest(unittest.TestCase):
         p = dlb.fs.Path.Native('x')
         self.assertTrue(isinstance(p, os.PathLike))
 
+    def test_has_same_components_if_relative(self):
+        p = dlb.fs.Path('a/b/c')
+        n = p.native
+        self.assertEqual(p.components, n.components)
+
     def test_restrictions_are_checked_exactly_once_when_converted_to_native(self):
 
         class CheckCountingPath(dlb.fs.Path):
@@ -510,11 +545,17 @@ class NativeTest(unittest.TestCase):
         p = CheckCountingPath('x')
         self.assertEqual(1, CheckCountingPath.n)
 
-        p.native
+        p = CheckCountingPath(p)
         self.assertEqual(1, CheckCountingPath.n)
 
-        CheckCountingPath.Native('x')
+        p = CheckCountingPath(dlb.fs.Path(p))
         self.assertEqual(2, CheckCountingPath.n)
+
+        p.native
+        self.assertEqual(2, CheckCountingPath.n)
+
+        CheckCountingPath.Native('x')
+        self.assertEqual(3, CheckCountingPath.n)
 
     def test_isinstance_checks_restrictions(self):
 
@@ -535,8 +576,10 @@ class NativeTest(unittest.TestCase):
 class NativeWindowsTest(unittest.TestCase):
 
     def test_constructor_fails_for_invalid_path(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             dlb.fs.Path.Native('a:b')
+        msg = "'path' is neither relative nor absolute"
+        self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(ValueError):
             dlb.fs.Path.Native(pathlib.Path('a') / "*" / ":")
