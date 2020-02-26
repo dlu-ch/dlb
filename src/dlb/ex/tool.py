@@ -220,42 +220,39 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
 
     memo_by_encoded_path = {}
 
-    with di.Cluster('from dependency roles', is_progress=True):
-        for action in dependency_actions:
-            # read memo of each filesystem object of a explicit input dependency in a reproducible order
-            if action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
-                    isinstance(action.dependency, depend.FilesystemObject):
-                with di.Cluster(f"dependency role {action.name!r}", is_progress=True):
-                    validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
-                    for p in validated_value_tuple:  # p is a dlb.fs.Path
-                        try:
-                            encoded_path, memo = _get_memo_for_fs_input_dependency(
-                                action.name, p, memo_by_encoded_path, context)
-                            action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
-                            memo_by_encoded_path[encoded_path] = memo
-                            assert memo.stat is not None
-                        except ValueError as e:
-                            msg = (
-                                f"invalid value of dependency {action.name!r}: {p.as_string()!r}\n"
-                                f"  | reason: {ut.exception_to_line(e)}"
-                            )
-                            raise DependencyCheckError(msg) from None
+    for action in dependency_actions:
+        # read memo of each filesystem object of a explicit input dependency in a reproducible order
+        if action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
+                isinstance(action.dependency, depend.FilesystemObject):
+            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
+            for p in validated_value_tuple:  # p is a dlb.fs.Path
+                try:
+                    encoded_path, memo = _get_memo_for_fs_input_dependency(
+                        action.name, p, memo_by_encoded_path, context)
+                    action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
+                    memo_by_encoded_path[encoded_path] = memo
+                    assert memo.stat is not None
+                except ValueError as e:
+                    msg = (
+                        f"invalid value of dependency {action.name!r}: {p.as_string()!r}\n"
+                        f"  | reason: {ut.exception_to_line(e)}"
+                    )
+                    raise DependencyCheckError(msg) from None
 
-    with di.Cluster(f"from tool definition files", is_progress=True):
-        # treat all files used for definition of self.__class__ like explicit input dependencies if they
-        # have a managed tree path.
-        definition_file_count = 0
-        for p in get_and_register_tool_info(tool.__class__).definition_paths:
-            try:
-                encoded_path, memo = _get_memo_for_fs_input_dependency(
-                    None, fs.Path(p), memo_by_encoded_path, context)
-                definition_file_count += 1
-                memo_by_encoded_path[encoded_path] = memo
-                assert memo.stat is not None
-            except (ValueError, DependencyCheckError):
-                # silently ignore all definition files not in managed tree
-                pass
-        di.inform(f"added {definition_file_count} files as input dependencies")
+    # treat all files used for definition of self.__class__ like explicit input dependencies if they
+    # have a managed tree path.
+    definition_file_count = 0
+    for p in get_and_register_tool_info(tool.__class__).definition_paths:
+        try:
+            encoded_path, memo = _get_memo_for_fs_input_dependency(
+                None, fs.Path(p), memo_by_encoded_path, context)
+            definition_file_count += 1
+            memo_by_encoded_path[encoded_path] = memo
+            assert memo.stat is not None
+        except (ValueError, DependencyCheckError):
+            # silently ignore all definition files not in managed tree
+            pass
+    di.inform(f"added {definition_file_count} tool definition files as input dependency")
 
     return memo_by_encoded_path
 
@@ -479,10 +476,9 @@ class _ToolBase:
                 self.fingerprint)
             di.inform(f"tool instance dbid is {tool_instance_dbid!r}")
 
-            with di.Cluster('prepare'):
+            with di.Cluster('check redo necessity', with_time=True, is_progress=True):
 
-                with di.Cluster('filesystem objects that are explicit input dependencies',
-                                with_time=True, is_progress=True):
+                with di.Cluster('explicit input dependencies', with_time=True, is_progress=True):
                     memo_by_encoded_path = _check_and_memorize_explicit_input_dependencies(
                         self, dependency_actions, context)
 
@@ -490,14 +486,12 @@ class _ToolBase:
                 # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
                 # last successful redo of the same tool instance according to the run-database
 
-                with di.Cluster('filesystem objects that are explicit output dependencies',
-                                with_time=True, is_progress=True):
+                with di.Cluster('explicit output dependencies', with_time=True, is_progress=True):
                     encoded_paths_of_explicit_input_dependencies = set(memo_by_encoded_path.keys())
                     needs_redo = _check_explicit_output_dependencies(
                         self, dependency_actions, encoded_paths_of_explicit_input_dependencies, False, context)
 
-                with di.Cluster('filesystem objects that were input dependencies of the last redo',
-                                with_time=True, is_progress=True):
+                with di.Cluster('input dependencies of the last redo', with_time=True, is_progress=True):
                     db = context_._get_rundb()
                     inputs_from_last_redo = db.get_fsobject_inputs(tool_instance_dbid)
                     for encoded_path, (is_explicit, last_encoded_memo) in inputs_from_last_redo.items():

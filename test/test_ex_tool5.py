@@ -356,7 +356,7 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
-            regex = r"\b()added 1 files as input dependencies\n"
+            regex = r"\b()added 1 tool definition files as input dependency\n"
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 
