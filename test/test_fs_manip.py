@@ -43,7 +43,8 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.remove_filesystem_object(dlb.fs.Path('x'))
-        self.assertEqual("not an absolute path: './x'", str(cm.exception))
+        escaped_sep = '\\\\' if os.path.sep == '\\' else '/'
+        self.assertEqual("not an absolute path: '.{}x'".format(escaped_sep), str(cm.exception))
 
         self.assertTrue(os.path.isfile('x'))  # still exists
 
@@ -125,7 +126,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         with tempfile.TemporaryDirectory(dir='.') as abs_temp_dir_path:
             dlb.fs.manip.remove_filesystem_object(
                 os.path.join(os.getcwd(), 'a'),
-                abs_empty_dir_path=dlb.fs.Path(pathlib.Path(os.path.abspath(abs_temp_dir_path)).as_posix()))
+                abs_empty_dir_path=os.path.abspath(abs_temp_dir_path))
         self.assertFalse(os.path.exists('a'))
 
     def test_removes_most_of_nonempty_directory_in_place_if_permission_denied_in_subdirectory(self):
@@ -167,7 +168,8 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.read_filesystem_object_memo(dlb.fs.Path('x'))
-        self.assertEqual("not an absolute path: './x'", str(cm.exception))
+        escaped_sep = '\\\\' if os.path.sep == '\\' else '/'
+        self.assertEqual("not an absolute path: '.{}x'".format(escaped_sep), str(cm.exception))
 
     def test_fails_for_bytes_path(self):
         with open('x', 'wb'):

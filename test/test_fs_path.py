@@ -519,7 +519,9 @@ class NativeTest(unittest.TestCase):
 
     def test_repr(self):
         p = dlb.fs.Path('x').native
-        self.assertEqual("Path.Native('./x')", repr(p))
+        self.assertIn(os.path.sep, '\\/')
+        escaped_sep = '\\\\' if os.path.sep == '\\' else '/'
+        self.assertEqual("Path.Native('.{}x')".format(escaped_sep), repr(p))
 
     def test_is_pathlike(self):
         import os
@@ -572,7 +574,7 @@ class NativeTest(unittest.TestCase):
         self.assertFalse(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.PortableWindowsPath.Native))
 
 
-@unittest.skipIf(pathlib.Path is not pathlib.WindowsPath, 'Windows only')
+@unittest.skipIf(not isinstance(pathlib.Path(), pathlib.WindowsPath), 'Windows only')
 class NativeWindowsTest(unittest.TestCase):
 
     def test_constructor_fails_for_invalid_path(self):
@@ -581,8 +583,8 @@ class NativeWindowsTest(unittest.TestCase):
         msg = "'path' is neither relative nor absolute"
         self.assertEqual(msg, str(cm.exception))
 
-        with self.assertRaises(ValueError):
-            dlb.fs.Path.Native(pathlib.Path('a') / "*" / ":")
+        p = pathlib.Path('a') / "*" / ":"
+        self.assertEqual(('a', '*', ':'), dlb.fs.Path.Native(p).parts)
 
 
 class RelativeRestrictionsTest(unittest.TestCase):
