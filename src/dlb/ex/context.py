@@ -242,18 +242,6 @@ class _RootSpecifics:
         # TODO check if canonical-case path
 
         try:
-            real_working_tree_path = working_tree_path.resolve(strict=True)  # FileNotFoundError, RuntimeError
-            if not real_working_tree_path.samefile(working_tree_path):
-                raise ValueError
-        except (ValueError, OSError, RuntimeError):
-            msg = (
-                f"supposedly equivalent forms of current directory's path point to different filesystem objects\n"
-                f'  | reason: dlb bug, Python bug or a moved directory\n'
-                f'  | try again?'
-            )
-            raise ValueError(msg) from None
-
-        try:
             self._working_tree_path = path_cls(path_cls.Native(working_tree_path), is_dir=True)
         except (ValueError, OSError) as e:
             msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
@@ -263,7 +251,24 @@ class _RootSpecifics:
             )
             raise ValueError(msg) from None
 
-        self._working_tree_path_native_str = str(self._working_tree_path.native.raw)  # TODO remove
+        self._working_tree_path_native = self._working_tree_path.native
+
+        # from pathlib.py of Python 3.7.3:
+        # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
+
+        try:
+            # may raise FileNotFoundError, RuntimeError
+            real_working_tree_path = self._working_tree_path_native.raw.resolve(strict=True)
+            if not real_working_tree_path.samefile(working_tree_path):
+                raise ValueError
+        except (ValueError, OSError, RuntimeError):
+            msg = (
+                f"supposedly equivalent forms of current directory's path point to different filesystem objects\n"
+                f'  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n'
+                f'  | try again?'
+            )
+            raise ValueError(msg) from None
+
         self._is_working_tree_case_sensitive = True
         self._mtime_probe = None
         self._rundb = None
@@ -282,16 +287,6 @@ class _RootSpecifics:
             raise NoWorkingTreeError(msg) from None
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
             raise NoWorkingTreeError(msg) from None
-
-        # from pathlib.py of Python 3.7.3:
-        # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
-
-        if not (real_working_tree_path == self._working_tree_path.native.raw):
-            msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
-                f'path of current directory contains unresolved symbolic links\n'
-                f'  | move the working tree'
-            )
-            raise ValueError(msg) from None
 
         # TODO make sure the "calling" source file is in the managed tree
 
@@ -417,15 +412,15 @@ class _RootSpecifics:
                 (native_components[0],) + \
                 manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
 
-            native_root_path_components = self.root_path.native.components
+            native_root_path_components = self._working_tree_path_native.components
             n = len(native_root_path_components)
-            if len(normalized_native_components) < n or normalized_native_components[:n] != native_root_path_components:
+            if normalized_native_components[:n] != native_root_path_components:
                 raise manip.PathNormalizationError("does not start with the working tree's root path")
 
             rel_components = ('',) + normalized_native_components[n:]
         else:
             # 'collapsable' means only the part relative to the working tree's root
-            ref_dir_path = None if collapsable else self._working_tree_path_native_str
+            ref_dir_path = None if collapsable else str(self._working_tree_path_native)
             rel_components = ('',) + manip.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
 
@@ -439,7 +434,7 @@ class _RootSpecifics:
 
         if not existing:
             try:
-                sr = os.lstat((self.root_path / rel_path).native)
+                sr = os.lstat(os.path.sep.join([str(self.root_path.native), str(rel_path.native)]))
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
