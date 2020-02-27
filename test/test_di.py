@@ -325,7 +325,7 @@ class ClusterTest(unittest.TestCase):
                 self.assertEqual('', output.getvalue())
 
                 with dlb.di.Cluster('C', level=logging.WARNING):
-                    self.assertEqual('I A [+0.000000s]\n  I B\n    W C\n', output.getvalue())
+                    self.assertRegex(output.getvalue(), r'\A()I A \[\+0\.0+s\]\n  I B\n    W C\n\Z')
 
     def test_timing_information_is_correct_for_progress(self):
         output = io.StringIO()
@@ -337,7 +337,7 @@ class ClusterTest(unittest.TestCase):
             s = output.getvalue()
             m = regex.match(s)
             t0 = m.group('time')
-            self.assertEqual('0.000000', t0)
+            self.assertRegex(t0, r'\A()0\.0{1,9}\Z')
             time.sleep(0.1)
 
         s = output.getvalue()
@@ -388,7 +388,7 @@ class InformTest(unittest.TestCase):
         output = io.StringIO()
         dlb.di.set_output_file(output)
         self.assertTrue(dlb.di.inform('M\n    m', with_time=True))
-        self.assertEqual('I M [+0.000000s] \n  | m\n', output.getvalue())
+        self.assertRegex(output.getvalue(), r'\A()I M \[\+0\.0{1,9}s\] \n  \| m\n\Z')
 
 
 class UsageExampleTest(unittest.TestCase):
