@@ -150,6 +150,16 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(dlb.ex.Context.active.env['A_B_C'], 'XYZ')
             del dlb.ex.Context.active.env['A_B_C']
 
+    def test_assigned_of_nonstr_to_imported_fails(self):
+        os.mkdir('.dlbroot')
+
+        os.environ['ABC'] = 'XYZ'
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('ABC', r'.*', example='')
+            with self.assertRaises(TypeError) as cm:
+                dlb.ex.Context.active.env['ABC'] = 1
+            self.assertEqual("'value' must be a str", str(cm.exception))
+
     def test_import_fails_on_inactive_context(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context() as c0:

@@ -130,8 +130,6 @@ class _EnvVarDict:
 
     def _is_valid(self, name, value):
         self._check_non_empty_str(name=name)
-        if not isinstance(value, str):
-            raise TypeError("'value' must be a str")
         restriction = self._restriction_by_name.get(name)
         if restriction is not None and not restriction.fullmatch(value):
             return False
@@ -348,12 +346,12 @@ class _RootSpecifics:
                 self._close_and_unlock_if_open()
                 raise
         except rundb.DatabaseError as e:
+            # rundb.DatabaseError on error may have multi-line message
             raise ManagementTreeError(str(e)) from None
         except OSError as e:
-            # rundb.DatabaseError on error may have multi-line message
             msg = (
                 f'failed to setup management tree for {str(working_tree_path)!r}\n'
-                f'  | reason: {ut.exception_to_line(e)}'
+                f'  | reason: {ut.exception_to_line(e)}'  # only first line
             )
             raise ManagementTreeError(msg) from None
 
@@ -527,7 +525,7 @@ class Context(metaclass=_ContextMeta):
 
     def __init__(self, *, path_cls: Type[fs.Path] = fs.Path):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
-            raise TypeError("'path_cls' is not a subclass of 'dlb.fs.Path'")
+            raise TypeError("'path_cls' must be a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls
         self._root_specifics: Optional[_RootSpecifics] = None
         self._env: Optional[_EnvVarDict] = None

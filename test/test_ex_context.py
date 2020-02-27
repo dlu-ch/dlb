@@ -251,6 +251,17 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertTrue((wdr / 'o').is_file())
             self.assertFalse((wdr / 'O').exists())
 
+    def test_rundb_dir_is_removed(self):
+        wdr = pathlib.Path('.dlbroot')
+        wdr.mkdir()
+        rundb = wdr / 'runs.sqlite'
+        rundb.mkdir()
+
+        with dlb.ex.Context():
+            pass
+
+        self.assertTrue(rundb.is_file())
+
 
 class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
@@ -322,6 +333,11 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
                 self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.Path)  # refers to active context
                 self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
 
+    def test_fails_for_invalid_path_class(self):
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.Context(path_cls=int)
+        self.assertEqual("'path_cls' must be a subclass of 'dlb.fs.Path'", str(cm.exception))
+
     def test_entering_fails_if_path_not_representable(self):
         pathlib.Path('x y').mkdir()
 
@@ -391,11 +407,24 @@ class RunDatabaseTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.Context():
             self.assertIsInstance(dlb.ex.context._get_rundb(), dlb.ex.rundb.Database)
 
-    def test_access_not_possible_in_nobvious_way(self):
+    def test_access_not_possible_in_obvious_way(self):
         pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context():
             with self.assertRaises(AttributeError):
                 dlb.ex.Context.run_db_()
+
+    def test_meaningful_exception_on_corrupt(self):
+        pathlib.Path('.dlbroot').mkdir()
+        with (pathlib.Path('.dlbroot') / 'runs.sqlite').open('xb') as f:
+            f.write(b'123')
+
+        with self.assertRaises(dlb.ex.ManagementTreeError) as cm:
+            with dlb.ex.Context():
+                pass
+
+        self.assertRegex(str(cm.exception), r'\A()could not setup run-database\n')
+        self.assertRegex(str(cm.exception), r'\b()sqlite3.DatabaseError\b')
+        self.assertRegex(str(cm.exception), r'\b()database corruption\b')
 
     def test_access_fails_if_not_running(self):
         with self.assertRaises(dlb.ex.context.NotRunningError):
@@ -419,6 +448,12 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
             with dlb.ex.Context():
                 pass
 
+    def test_succeeds_if_lock_file_exists(self):
+        pathlib.Path('.dlbroot').mkdir()
+        (pathlib.Path('.dlbroot') / 'lock').touch()
+        with dlb.ex.Context():
+            pass
+
 
 class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
@@ -437,6 +472,21 @@ class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmo
         with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
             with dlb.ex.Context():
                 pass
+
+        wdr.chmod(0o777)
+
+    def test_meaningful_exception_if_unlock_fails(self):
+        wdr = pathlib.Path('.dlbroot')
+        wdr.mkdir()
+
+        regex = (
+            r"(?m)\A"
+            r"failed to cleanup management tree for '.+'\n"
+            r"  \| reason: .+\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.ManagementTreeError, regex):
+            with dlb.ex.Context():
+                wdr.chmod(0o000)
 
         wdr.chmod(0o777)
 
@@ -518,6 +568,15 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
             with self.assertRaises(ValueError):
                 dlb.ex.Context.create_temporary(is_dir=True, prefix='x' + os.path.sep + '..' + os.path.sep)
 
+    def test_fails_for_path_separator_in_suffix(self):
+        pathlib.Path('.dlbroot').mkdir()
+
+        with dlb.ex.Context():
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(suffix='x' + os.path.sep)
+            with self.assertRaises(ValueError):
+                dlb.ex.Context.create_temporary(is_dir=True, suffix='x' + os.path.sep + '..' + os.path.sep)
+
     def test_fails_if_path_not_representable(self):
         pathlib.Path('.dlbroot').mkdir()
 
@@ -578,7 +637,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             p = dlb.ex.Context.managed_tree_path_of(pathlib.Path.cwd() / 'a' / 'b' / 'c' / '..')
             self.assertEqual(dlb.fs.Path('a/b/'), p)
 
-    def test_fail_for_absolute_path_outside_working_tree(self):
+    def test_fails_for_absolute_path_outside_working_tree(self):
         (pathlib.Path('a') / 'b' / 'c').mkdir(parents=True)
         (pathlib.Path('a') / 'b2' / 'c2').mkdir(parents=True)
 

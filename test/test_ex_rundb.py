@@ -320,7 +320,7 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
                 encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
                 rundb.update_fsobject_input(12, encoded_path, True, b'')
             msg = (
-                "reason: run-database access failed\n"
+                "run-database access failed\n"
                 "  | sqlite3.IntegrityError: FOREIGN KEY constraint failed\n"
                 "  | don't panic"
             )

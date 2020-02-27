@@ -151,12 +151,13 @@ class _CursorWithExceptionMapping:
             lines = []
 
             if self._summary_message_line:
-                lines.append(f"reason: {self._summary_message_line}")
+                lines.append(f"{self._summary_message_line}")
             lines.append(ut.exception_to_line(exc_val, True))
             if self._solution_message_line:
                 lines.append(self._solution_message_line)
 
-            raise DatabaseError('\n  | '.join(lines)) from None
+            msg = '\n  | '.join(lines)
+            raise DatabaseError(msg) from None
 
 
 class Database:
