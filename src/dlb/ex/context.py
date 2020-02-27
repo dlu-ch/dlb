@@ -417,9 +417,9 @@ class _RootSpecifics:
                 (native_components[0],) + \
                 manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
 
-            root_path_components = self.root_path.components
-            n = len(root_path_components)
-            if len(normalized_native_components) < n or normalized_native_components[:n] != root_path_components:
+            native_root_path_components = self.root_path.native.components
+            n = len(native_root_path_components)
+            if len(normalized_native_components) < n or normalized_native_components[:n] != native_root_path_components:
                 raise manip.PathNormalizationError("does not start with the working tree's root path")
 
             rel_components = ('',) + normalized_native_components[n:]
