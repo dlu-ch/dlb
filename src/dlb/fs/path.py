@@ -21,7 +21,7 @@ from typing import Pattern, Optional, Tuple
 assert sys.version_info >= (3, 7)
 
 
-class _NativeComponents:  # TODO find better name
+class _NativeComponents:
 
     def __init__(self, components: Tuple[str, ...], sep: str):
         # - *components* has at least one element
@@ -102,6 +102,12 @@ else:
     raise TypeError("unknown 'Native' class")
 
 
+def _parts_from_components(components: Tuple[str, ...]) -> Tuple[str, ...]:
+    if not components[0]:
+        return components[1:]  # relative path
+    return components  # absolute path
+
+
 # cannot derive easily from pathlib.Path without defining non-API members
 class _Native:
 
@@ -129,6 +135,10 @@ class _Native:
         return self._native_components.components
 
     @property
+    def parts(self) -> Tuple[str, ...]:
+        return _parts_from_components(self._native_components.components)
+
+    @property
     def raw(self) -> pathlib.Path:
         if self._raw is None:
             self._raw = pathlib.Path(str(self._native_components))
@@ -137,7 +147,7 @@ class _Native:
     def __fspath__(self) -> str:  # make this class a safer os.PathLike
         return str(self)
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # TODO cache?
         s = str(self._native_components)
         return s
 
@@ -390,10 +400,7 @@ class Path(metaclass=_PathMeta):
     @property
     def parts(self) -> Tuple[str, ...]:
         # first element: '/' or '//' if absolute, does not start with '/' otherwise
-        c = self._components
-        if not c[0]:
-            return c[1:]  # relative path
-        return c
+        return _parts_from_components(self._components)
 
     @property
     def pure_posix(self) -> pathlib.PurePosixPath:

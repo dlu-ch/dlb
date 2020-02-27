@@ -533,6 +533,11 @@ class NativeTest(unittest.TestCase):
         n = p.native
         self.assertEqual(p.components, n.components)
 
+    def test_has_same_parts_if_relative(self):
+        p = dlb.fs.Path('a/b/c')
+        n = p.native
+        self.assertEqual(p.parts, n.parts)
+
     def test_restrictions_are_checked_exactly_once_when_converted_to_native(self):
 
         class CheckCountingPath(dlb.fs.Path):
