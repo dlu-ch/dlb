@@ -18,7 +18,7 @@ test_dir=test
     fi
 
     if [ -n "${coverage}" ]; then
-        "${coverage:?}" run --source dlb -m unittest && "${coverage:?}" report --show-missing
+        "${coverage:?}" run --source ../src -m unittest && "${coverage:?}" report --show-missing
     else
         "${PYTHON3:?}" -m unittest
     fi
