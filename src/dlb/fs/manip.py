@@ -7,7 +7,6 @@ This is an implementation detail - do not import it unless you know what you are
 
 import os
 import stat
-import pathlib
 import shutil
 import dataclasses
 from typing import Optional, Union, Tuple
@@ -45,8 +44,8 @@ class _KeepFirstRmTreeException:
             self.first_exception = value
 
 
-def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
-                             abs_empty_dir_path: Union[None, str, pathlib.Path, path_.Path] = None,
+def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
+                             abs_empty_dir_path: Union[None, str, path_.Path] = None,
                              ignore_non_existing: bool = False):
     # Removes the filesystem objects with absolute path *abs_path*.
     #
@@ -65,7 +64,7 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
     else:
         if isinstance(abs_path, bytes):
             # prevent special treatment by byte paths
-            raise TypeError("'abs_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes")
+            raise TypeError("'abs_path' must be a str or dlb.fs.Path object, not bytes")
         abs_path = os.fspath(abs_path)
 
     if not os.path.isabs(abs_path):  # does not raise OSError
@@ -74,7 +73,7 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
     if abs_empty_dir_path is not None:
         if isinstance(abs_empty_dir_path, bytes):
             # prevent special treatment by byte paths
-            raise TypeError("'abs_empty_dir_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes")
+            raise TypeError("'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes")
 
         if isinstance(abs_empty_dir_path, path_.Path):
             abs_empty_dir_path = str(abs_empty_dir_path.native)
@@ -117,7 +116,7 @@ def remove_filesystem_object(abs_path: Union[str, pathlib.Path, path_.Path], *,
             raise
 
 
-def read_filesystem_object_memo(abs_path: Union[str, pathlib.Path, path_.Path]) -> FilesystemObjectMemo:
+def read_filesystem_object_memo(abs_path: Union[str, path_.Path]) -> FilesystemObjectMemo:
     # Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
     # as a ``FilesystemObjectMemo`` object.
     #

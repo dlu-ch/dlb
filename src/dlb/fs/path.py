@@ -358,7 +358,7 @@ class Path(metaclass=_PathMeta):
         while dir_paths_to_recurse:
 
             dir_path = dir_paths_to_recurse.pop(0)
-            with os.scandir(dir_path.native.raw) as it:  # since Python 3.6
+            with os.scandir(dir_path.native) as it:  # since Python 3.6
 
                 paths = []
                 for de in it:

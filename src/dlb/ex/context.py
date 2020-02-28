@@ -18,7 +18,6 @@ import sys
 import re
 import os
 import os.path
-import pathlib
 import stat
 import time
 import tempfile
@@ -236,7 +235,7 @@ class _RootSpecifics:
 
         # cwd must be a working tree`s root
 
-        working_tree_path = pathlib.Path.cwd()
+        working_tree_path = os.getcwd()
         # TODO check if canonical-case path
 
         try:
@@ -254,10 +253,12 @@ class _RootSpecifics:
         # from pathlib.py of Python 3.7.3:
         # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
 
+        working_tree_path = str(self._working_tree_path_native)
+
         try:
             # may raise FileNotFoundError, RuntimeError
             real_working_tree_path = self._working_tree_path_native.raw.resolve(strict=True)
-            if not real_working_tree_path.samefile(working_tree_path):
+            if not os.path.samefile(str(real_working_tree_path), working_tree_path):
                 raise ValueError
         except (ValueError, OSError, RuntimeError):
             msg = (
@@ -271,7 +272,7 @@ class _RootSpecifics:
         self._mtime_probe = None
         self._rundb = None
 
-        management_tree_path = working_tree_path / _MANAGEMENTTREE_DIR_NAME
+        management_tree_path = os.path.join(working_tree_path, _MANAGEMENTTREE_DIR_NAME)
 
         # 1. is this a working tree?
 
@@ -280,7 +281,7 @@ class _RootSpecifics:
             f'  | reason: does not contain a directory {_MANAGEMENTTREE_DIR_NAME!r} (that is not a symbolic link)'
         )
         try:
-            mode = management_tree_path.lstat().st_mode
+            mode = os.lstat(management_tree_path).st_mode
         except Exception:
             raise NoWorkingTreeError(msg) from None
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
@@ -290,21 +291,21 @@ class _RootSpecifics:
 
         # 2. if yes: lock it
 
-        lock_dir_path = management_tree_path / _LOCK_DIRNAME
+        lock_dir_path = os.path.join(management_tree_path, _LOCK_DIRNAME)
         try:
             try:
-                mode = lock_dir_path.lstat().st_mode
+                mode = os.lstat(lock_dir_path).st_mode
                 if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
                     manip.remove_filesystem_object(lock_dir_path)
             except FileNotFoundError:
                 pass
-            lock_dir_path.mkdir()
+            os.mkdir(lock_dir_path)
         except OSError as e:
             msg = (
-                f'cannot acquire lock for exclusive access to working tree {str(working_tree_path)!r}\n'
+                f'cannot acquire lock for exclusive access to working tree {working_tree_path!r}\n'
                 f'  | reason: {ut.exception_to_line(e)}\n'
                 f'  | to break the lock (if you are sure no other dlb process is running): '
-                f'remove {str(lock_dir_path)!r}'
+                f'remove {lock_dir_path!r}'
             )
             raise ManagementTreeError(msg)
 
@@ -313,34 +314,34 @@ class _RootSpecifics:
         try:  # OSError in this block -> ManagementTreeError
             try:
                 # prepare o for mtime probing
-                mtime_probe_path = management_tree_path / _MTIME_PROBE_FILE_NAME
-                mtime_probeu_path = management_tree_path / _MTIME_PROBE_FILE_NAME.upper()
+                mtime_probe_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME)
+                mtime_probeu_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME.upper())
                 manip.remove_filesystem_object(mtime_probe_path, ignore_non_existing=True)
                 manip.remove_filesystem_object(mtime_probeu_path, ignore_non_existing=True)
 
-                self._mtime_probe = mtime_probe_path.open('xb')  # always a fresh file (no link to an existing one)
-                probe_stat = mtime_probe_path.lstat()
+                self._mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
+                probe_stat = os.lstat(mtime_probe_path)
                 try:
-                    probeu_stat = mtime_probeu_path.lstat()
+                    probeu_stat = os.lstat(mtime_probeu_path)
                 except FileNotFoundError:
                     pass
                 else:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
-                temporary_path = management_tree_path / _MTIME_TEMPORARY_DIR_NAME
+                temporary_path = os.path.join(management_tree_path, _MTIME_TEMPORARY_DIR_NAME)
                 manip.remove_filesystem_object(temporary_path, ignore_non_existing=True)
-                temporary_path.mkdir()
+                os.mkdir(temporary_path)
 
-                rundb_path = management_tree_path / _RUNDB_FILE_NAME
+                rundb_path = os.path.join(management_tree_path, _RUNDB_FILE_NAME)
                 try:
-                    mode = rundb_path.lstat().st_mode
+                    mode = os.lstat(rundb_path).st_mode
                     if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
                         manip.remove_filesystem_object(rundb_path)
                 except FileNotFoundError:
                     pass
 
                 suggestion_if_database_error = \
-                    f"if you suspect database corruption, remove the run-database file(s): {str(rundb_path)!r}"
+                    f"if you suspect database corruption, remove the run-database file(s): {rundb_path!r}"
                 self._rundb = rundb.Database(rundb_path, suggestion_if_database_error)
             except Exception:
                 self._close_and_unlock_if_open()
@@ -350,7 +351,7 @@ class _RootSpecifics:
             raise ManagementTreeError(str(e)) from None
         except OSError as e:
             msg = (
-                f'failed to setup management tree for {str(working_tree_path)!r}\n'
+                f'failed to setup management tree for {working_tree_path!r}\n'
                 f'  | reason: {ut.exception_to_line(e)}'  # only first line
             )
             raise ManagementTreeError(msg) from None
@@ -369,7 +370,7 @@ class _RootSpecifics:
         if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
             raise ValueError("'prefix' must not contain a path separator")
 
-        t = self._working_tree_path.native.raw / _MANAGEMENTTREE_DIR_NAME / _MTIME_TEMPORARY_DIR_NAME
+        t = os.path.join(str(self._working_tree_path_native), _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
         is_dir = bool(is_dir)
         if is_dir:
             p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
@@ -377,7 +378,7 @@ class _RootSpecifics:
             fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
             os.close(fd)
         try:
-            p = self._path_cls(pathlib.Path(p_str), is_dir=is_dir)
+            p = self._path_cls(fs.Path.Native(p_str), is_dir=is_dir)
         except ValueError as e:
             msg = (
                 f'path violates imposed path restrictions\n'
@@ -393,8 +394,7 @@ class _RootSpecifics:
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
-    def managed_tree_path_of(self, path: Union[fs.Path, pathlib.PurePath], *,
-                             existing: bool = False, collapsable: bool = False) -> Union[fs.Path]:
+    def managed_tree_path_of(self, path: fs.Path, *, existing: bool = False, collapsable: bool = False) -> fs.Path:
         # TODO add parameter path_cls to override self.path_cls
         # this must be very fast for relative dlb.fs.Path with existing = True
 
@@ -432,7 +432,7 @@ class _RootSpecifics:
 
         if not existing:
             try:
-                sr = os.lstat(os.path.sep.join([str(self.root_path.native), str(rel_path.native)]))
+                sr = os.lstat(os.path.sep.join([str(self._working_tree_path_native), str(rel_path.native)]))
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
@@ -444,7 +444,8 @@ class _RootSpecifics:
     def _cleanup(self):
         self._rundb.cleanup()
         self._rundb.commit()
-        temporary_path = self._working_tree_path.native.raw / _MANAGEMENTTREE_DIR_NAME / _MTIME_TEMPORARY_DIR_NAME
+        temporary_path = os.path.join(str(self._working_tree_path_native),
+                                      _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
         manip.remove_filesystem_object(temporary_path, ignore_non_existing=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
@@ -474,9 +475,9 @@ class _RootSpecifics:
                 most_serious_exception = e
             self._mtime_probe = None
 
-        lock_dir_path = self._working_tree_path / (_MANAGEMENTTREE_DIR_NAME + '/' + _LOCK_DIRNAME + '/')
+        lock_dir_path = os.path.join(str(self._working_tree_path_native), _MANAGEMENTTREE_DIR_NAME, _LOCK_DIRNAME)
         try:
-            os.rmdir(lock_dir_path.native)  # unlock
+            os.rmdir(lock_dir_path)  # unlock
         except Exception as e:
             most_serious_exception = e
 

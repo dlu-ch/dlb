@@ -197,7 +197,7 @@ Context objects
       Same on class and instance.
 
       :param path: a path of a filesystem object in the managed tree
-      :type path: :class:`dlb.fs.Path` | :class:`python:pathlib.Path`
+      :type path: :class:`dlb.fs.Path`
       :param existing: assume that all involved filesystem objects exist?
       :type existing: bool
       :param collapsable: assume that any relative to the working tree root is :term:`collapsable <collapsable path>`?

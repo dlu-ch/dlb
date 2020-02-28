@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import dlb.fs.manip
-import pathlib
 import tempfile
 import collections
 import unittest
@@ -38,10 +37,6 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual("not an absolute path: 'x'", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.fs.manip.remove_filesystem_object(pathlib.Path('x'))
-        self.assertEqual("not an absolute path: 'x'", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.remove_filesystem_object(dlb.fs.Path('x'))
         escaped_sep = '\\\\' if os.path.sep == '\\' else '/'
         self.assertEqual("not an absolute path: '.{}x'".format(escaped_sep), str(cm.exception))
@@ -51,10 +46,6 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.remove_filesystem_object('')
         self.assertEqual("not an absolute path: ''", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            dlb.fs.manip.remove_filesystem_object(pathlib.Path(''))
-        self.assertEqual("not an absolute path: '.'", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.remove_filesystem_object(dlb.fs.Path('.'))
@@ -67,11 +58,11 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with self.assertRaises(TypeError) as cm:
             dlb.fs.manip.remove_filesystem_object(b'x')
-        self.assertEqual("'abs_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes", str(cm.exception))
+        self.assertEqual("'abs_path' must be a str or dlb.fs.Path object, not bytes", str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             dlb.fs.manip.remove_filesystem_object('/tmp/x', abs_empty_dir_path=b'x')
-        msg = "'abs_empty_dir_path' must be a str, pathlib.Path or dlb.fs.Path object, not bytes"
+        msg = "'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes"
         self.assertEqual(msg, str(cm.exception))
 
     def test_removes_existing_regular_file(self):
@@ -163,10 +154,6 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual("not an absolute path: 'x'", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.fs.manip.read_filesystem_object_memo(pathlib.Path('x'))
-        self.assertEqual("not an absolute path: 'x'", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
             dlb.fs.manip.read_filesystem_object_memo(dlb.fs.Path('x'))
         escaped_sep = '\\\\' if os.path.sep == '\\' else '/'
         self.assertEqual("not an absolute path: '.{}x'".format(escaped_sep), str(cm.exception))
@@ -220,7 +207,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
         finally:
             os.chmod('d', 0x777)
 
-    def test_return_stat_and_target_for_existing_directory_for_pathlib(self):
+    def test_return_stat_and_target_for_existing_directory_for_path(self):
         os.mkdir('d')
         os.chmod('d', 0x000)
         try:
@@ -232,7 +219,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
                 raise unittest.SkipTest from None
 
             sr0 = os.lstat('s')
-            m = dlb.fs.manip.read_filesystem_object_memo(pathlib.Path(os.path.join(os.getcwd()) / pathlib.Path('s')))
+            m = dlb.fs.manip.read_filesystem_object_memo(dlb.fs.Path(os.path.join(os.getcwd(), 's')))
             self.assertIsInstance(m, dlb.fs.manip.FilesystemObjectMemo)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)

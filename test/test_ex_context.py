@@ -317,10 +317,14 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
         pathlib.Path('.dlbroot').mkdir()
 
         with dlb.ex.Context() as c:
-            self.assertIsInstance(c.root_path, dlb.fs.Path)
-            self.assertEqual(str(pathlib.Path.cwd().absolute()), str(c.root_path.native))
+            p = c.root_path
+            self.assertIsInstance(p, dlb.fs.Path)
+            self.assertTrue(p.is_absolute())
+            self.assertTrue(p.is_dir())
+            self.assertEqual(str(os.getcwd()), str(p.native))
+
             cl = dlb.ex.Context.root_path
-            self.assertEqual(c.root_path, cl)
+            self.assertEqual(p, cl)
 
     def test_path_class_is_correct(self):
         pathlib.Path('.dlbroot').mkdir()
@@ -335,6 +339,7 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fails_for_invalid_path_class(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex.Context(path_cls=int)
         self.assertEqual("'path_cls' must be a subclass of 'dlb.fs.Path'", str(cm.exception))
 
@@ -615,12 +620,12 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertTrue(p.is_normalized())
             self.assertEqual(p, C('.', is_dir=True))
 
-            p = dlb.ex.Context.managed_tree_path_of(dlb.ex.Context.root_path.native.raw / 'a' / 'b')
+            p = dlb.ex.Context.managed_tree_path_of(dlb.ex.Context.root_path / dlb.fs.Path('a/b'))
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
             self.assertEqual(p, C('a/b', is_dir=True))
 
-            p = dlb.ex.Context.managed_tree_path_of(dlb.ex.Context.root_path.native.raw / 'a' / 'b' / 'c')
+            p = dlb.ex.Context.managed_tree_path_of((dlb.ex.Context.root_path / dlb.fs.Path('a/b/c')).native.raw)
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
             self.assertEqual(p, C('a/b/c', is_dir=False))
@@ -631,7 +636,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.Context():
             (pathlib.Path('a') / 'b' / 'c').mkdir(parents=True)
 
-            p = dlb.ex.Context.managed_tree_path_of(pathlib.Path.cwd())
+            p = dlb.ex.Context.managed_tree_path_of(os.getcwd())
             self.assertEqual(dlb.fs.Path('.'), p)
 
             p = dlb.ex.Context.managed_tree_path_of(pathlib.Path.cwd() / 'a' / 'b' / 'c' / '..')
