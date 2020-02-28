@@ -387,7 +387,7 @@ class WorkingTreeTimeTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_exit_does_delay_to_next_change(self):
         pathlib.Path('.dlbroot').mkdir()
 
-        for i in range(10):  # might also pass by chance (transition of working tree time too close at exit context)
+        for i in range(10):  # might also pass by chance (transition of working tree time too close to context exit)
             with dlb.ex.Context():
                 enter_time = dlb.ex.Context.working_tree_time_ns
             with dlb.ex.Context():

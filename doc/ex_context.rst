@@ -23,7 +23,7 @@ It also controls how diagnostic messages of :term:`tool instances <tool instance
 abstraction (e.g. :term:`working tree time`, case sensitivity of names in the :term:`working tree`).
 
 A context is represented as an instance of :class:`dlb.ex.Context <dlb.ex.context.Context>` used as a context manager.
-The context is entered with the call of :meth:`_enter__` and exit with the return of :meth:`__exit__`.
+The context is entered with the call of :meth:`_enter__` and exited with the return of :meth:`__exit__`.
 
 Contexts can be nested::
 
@@ -159,7 +159,7 @@ Context objects
       .. note::
          The number of file name candidates tried for a given combination of *prefix* and *suffix* is limited by an
          OS-dependent number. A best practise is therefore to remove the created regular file or directory manually
-         after use, although they are removed automatically when the :term:`root context` is exit.
+         after use, although they are removed automatically when the :term:`root context` is exited.
 
       :param suffix: suffix of the file name of the path
       :type suffix: str

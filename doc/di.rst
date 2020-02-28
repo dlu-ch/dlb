@@ -218,6 +218,6 @@ Module content
    :meth:`inform` would be with the same parameters.
 
    With *is_progress* set to ``True``, a :token:`progress_suffix` ``'...'`` is included in the message when the context
-   is entered. In addition, a message ``'done.`` or ``'failed with E.'`` is output when the context is exit without or
+   is entered. In addition, a message ``'done.`` or ``'failed with E.'`` is output when the context is exited without or
    with an exception, respectively.
    See :ref:`diagmessage_example`.
