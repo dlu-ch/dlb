@@ -16,8 +16,9 @@ from .tool import *
 #
 #     platform       ->
 #     rundb          ->         platform
-#     context        ->                   rundb
+#     aseq           ->
+#     context        ->                   rundb  aseq
 #
 #     depend         ->   mult
-#     dependaction   ->                          context   depend
-#     tool           ->                          context   depend   dependaction
+#     dependaction   ->                                context   depend
+#     tool           ->                                context   depend   dependaction

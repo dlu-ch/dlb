@@ -26,7 +26,7 @@ class ATool(dlb.ex.Tool):
     object_file = dlb.ex.Tool.Output.RegularFile()
     included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
-    def redo(self, result, context):
+    async def redo(self, result, context):
         dlb.di.inform("redoing right now")
 
         with (context.root_path / self.object_file).native.raw.open('xb'):
@@ -174,7 +174,7 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
-            def redo(self, result, context):
+            async def redo(self, result, context):
                 pass
 
         t = BTool(object_file='a.o')
@@ -194,7 +194,7 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
 
-            def redo(self, result, context):
+            async def redo(self, result, context):
                 pass
 
         t = BTool(object_file='a.o')
@@ -209,7 +209,7 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
-            def redo(self, result, context):
+            async def redo(self, result, context):
                 result.included_files = ['a/../b']
 
         t = BTool(object_file='a.o')
@@ -226,7 +226,7 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
-            def redo(self, result, context):
+            async def redo(self, result, context):
                 result.included_files = None
 
         t = BTool(object_file='a.o')
@@ -243,7 +243,7 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
 
-            def redo(self, result, context):
+            async def redo(self, result, context):
                 result.included_files = None
 
         t = BTool(object_file='a.o')
@@ -265,7 +265,7 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryDirectoryTestCase):
                                                 example='sv_SE')
             cflags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction='.+', example='-O2', required=False)
 
-            def redo(self, result, context):
+            async def redo(self, result, context):
                 pass
 
         t = BTool(object_file='a.o', language='de_CH')
@@ -297,7 +297,7 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryDirectoryTestCase):
             cflags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction='.+', example='-O2',
                                               required=False, explicit=False)
 
-            def redo(self, result, context):
+            async def redo(self, result, context):
                 pass
 
         t = BTool(object_file='a.o')
@@ -334,7 +334,7 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
                 f.write(
                     'import dlb.ex\n'
                     'class A(dlb.ex.Tool):\n'
-                    '    def redo(self, result, context):\n'
+                    '    async def redo(self, result, context):\n'
                     '       pass'
                 )
 

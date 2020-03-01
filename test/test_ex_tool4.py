@@ -19,7 +19,7 @@ class ATool(dlb.ex.Tool):
     object_file = dlb.ex.Tool.Output.RegularFile()
     included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
-    def redo(self, result, context):
+    async def redo(self, result, context):
         dlb.di.inform("redoing right now")
 
         with (context.root_path / self.object_file).native.raw.open('xb'):

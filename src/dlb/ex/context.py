@@ -21,11 +21,13 @@ import os.path
 import stat
 import time
 import tempfile
+import asyncio
 from typing import Pattern, Type, Optional, Dict, Union
 from .. import ut
 from .. import fs
 from ..fs import manip
 from . import rundb
+from . import aseq
 assert sys.version_info >= (3, 7)
 
 
@@ -517,6 +519,7 @@ class Context(metaclass=_ContextMeta):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' must be a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls
+        self._redo_sequencer = aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
         self._root_specifics: Optional[_RootSpecifics] = None
         self._env: Optional[_EnvVarDict] = None
 
@@ -535,6 +538,10 @@ class Context(metaclass=_ContextMeta):
         # noinspection PyStatementEffect
         self.active
         return self._env
+
+    @property
+    def redo_sequencer(self) -> aseq.LimitingCoroutineSequencer:
+        return self._redo_sequencer
 
     def __getattr__(self, name):
         try:
@@ -569,6 +576,7 @@ class Context(metaclass=_ContextMeta):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._redo_sequencer.cancel(timeout=None)
         if not (_contexts and _contexts[-1] == self):
             raise ContextNestingError
         _contexts.pop()

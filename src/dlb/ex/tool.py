@@ -10,6 +10,7 @@ import sys
 import re
 import os
 import stat
+import asyncio
 import collections
 import hashlib
 import logging
@@ -541,59 +542,80 @@ class _ToolBase:
                     except ValueError as e:
                         raise RedoError(*e.args)
 
-            with di.Cluster('redo', with_time=True, is_progress=True):
-                # note: no db.commit() necessary as long as root context does commit on exception
-                self.redo(result, context)
-
-                # collect non-explicit input dependencies of this redo
-                encoded_paths_of_nonexplicit_input_dependencies = set()
-                for action in dependency_actions:
-                    if not action.dependency.explicit and isinstance(action.dependency, depend.Input):
-                        validated_value = getattr(result, action.name)
-                        if validated_value is NotImplemented:
-                            if action.dependency.required:
-                                msg = (
-                                    f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
-                                    f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
-                                )
-                                raise RedoError(msg)
-                            validated_value = None
-                            setattr(result, action.name, validated_value)
-                        if isinstance(action.dependency, depend.FilesystemObject):
-                            paths = action.dependency.tuple_from_value(validated_value)
-                            for p in paths:
-                                try:
-                                    p = context.managed_tree_path_of(p, existing=True, collapsable=False)
-                                except ValueError:
-                                    msg = (
-                                        f"non-explicit input dependency {action.name!r} contains a path that is not a "
-                                        f"managed tree path: {p.as_string()!r}"
-                                    )
-                                    raise RedoError(msg) from None
-                                encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
-
-            encoded_paths_of_input_dependencies = \
-                encoded_paths_of_explicit_input_dependencies | encoded_paths_of_nonexplicit_input_dependencies
-
-            with di.Cluster('store state before redo in run-database'):
-                # redo was successful, so save the state before the redo to the run-database
-                info_by_by_fsobject_dbid = {
-                    encoded_path: (
-                        encoded_path in encoded_paths_of_explicit_input_dependencies,
-                        rundb.encode_fsobject_memo(memo))
-                    for encoded_path, memo in memo_by_encoded_path.items()
-                    if encoded_path in encoded_paths_of_input_dependencies  # drop obsolete non-explicit dependencies
-                }
-                info_by_by_fsobject_dbid.update({  # add new non-explicit dependencies
-                    encoded_path: (False, None)
-                    for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_by_fsobject_dbid)
-                })
-                db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
-                # note: no db.commit() necessary as long as root context does commit on exception
+            # note: no db.commit() necessary as long as root context does commit on exception
+            context.redo_sequencer.wait_then_start(
+                1, None,
+                self._redo_with_aftermath,
+                result, context,
+                dependency_actions, memo_by_encoded_path, encoded_paths_of_explicit_input_dependencies,
+                db, tool_instance_dbid)
+            results, optional_exceptions = context.redo_sequencer.complete(timeout=None)
+            assert len(results) + len(optional_exceptions) == 1
+            if optional_exceptions:
+                _, e = optional_exceptions[0]
+                if e is not None:
+                    raise e
+                raise asyncio.CancelledError
 
             return result
 
-    def redo(self, result: _RedoResult, context: context_.Context):
+    async def _redo_with_aftermath(self, result, context,
+                                   dependency_actions, memo_by_encoded_path,
+                                   encoded_paths_of_explicit_input_dependencies,
+                                   db, tool_instance_dbid):
+        # note: no db.commit() necessary as long as root context does commit on exception
+        di.inform('start redo', with_time=True)
+        await self.redo(result, context)
+
+        # collect non-explicit input dependencies of this redo
+        encoded_paths_of_nonexplicit_input_dependencies = set()
+        for action in dependency_actions:
+            if not action.dependency.explicit and isinstance(action.dependency, depend.Input):
+                validated_value = getattr(result, action.name)
+                if validated_value is NotImplemented:
+                    if action.dependency.required:
+                        msg = (
+                            f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
+                            f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
+                        )
+                        raise RedoError(msg)
+                    validated_value = None
+                    setattr(result, action.name, validated_value)
+                if isinstance(action.dependency, depend.FilesystemObject):
+                    paths = action.dependency.tuple_from_value(validated_value)
+                    for p in paths:
+                        try:
+                            p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                        except ValueError:
+                            msg = (
+                                f"non-explicit input dependency {action.name!r} contains a path that is not a "
+                                f"managed tree path: {p.as_string()!r}"
+                            )
+                            raise RedoError(msg) from None
+                        encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
+
+        encoded_paths_of_input_dependencies = \
+            encoded_paths_of_explicit_input_dependencies | encoded_paths_of_nonexplicit_input_dependencies
+
+        with di.Cluster('store state before redo in run-database'):
+            # redo was successful, so save the state before the redo to the run-database
+            info_by_by_fsobject_dbid = {
+                encoded_path: (
+                    encoded_path in encoded_paths_of_explicit_input_dependencies,
+                    rundb.encode_fsobject_memo(memo))
+                for encoded_path, memo in memo_by_encoded_path.items()
+                if encoded_path in encoded_paths_of_input_dependencies  # drop obsolete non-explicit dependencies
+            }
+            info_by_by_fsobject_dbid.update({  # add new non-explicit dependencies
+                encoded_path: (False, None)
+                for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_by_fsobject_dbid)
+            })
+            db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
+            # note: no db.commit() necessary as long as root context does commit on exception
+
+        return result
+
+    async def redo(self, result: _RedoResult, context: context_.Context):
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):
