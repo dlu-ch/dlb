@@ -177,7 +177,7 @@ Context objects
       :raises FileExistsError: if all tried candidates already existed
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: managed_tree_path_of(path, *, existing=False, collapsable=False)
+   .. method:: managed_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False)
 
       Returns the :term:`managed tree path` of the *path* of a filesystem object in the :term:`managed tree`.
 
@@ -197,18 +197,18 @@ Context objects
       Same on class and instance.
 
       :param path: a path of a filesystem object in the managed tree
-      :type path: :class:`dlb.fs.Path`
+      :type path: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :param is_dir: ``True`` if this is a directory path, ``False`` if not and ``None`` for derivation from *path*
+      :type is_dir: NoneType | bool
       :param existing: assume that all involved filesystem objects exist?
       :type existing: bool
       :param collapsable: assume that any relative to the working tree root is :term:`collapsable <collapsable path>`?
       :type collapsable: bool
-      :return:
-         an instance *p* of :attr:`Context.path_cls` with ``p.is_absolute() == False`` and
-         ``p.is_normalized() == True``
-      :rtype: :class:`.dlb.fs.Path`
+      :return: a :class:`dlb.fs.Path` *p* with ``p.is_absolute() == False`` and ``p.is_normalized() == True``
+      :rtype: same class as *path* if *path* is a :class:`dlb.fs.Path` and :class:`dlb.fs.Path` otherwise
 
       :raises dlb.fs.PathNormalizationError: if *path* does not exist in the  :term:`managed tree`
-      :raises ValueError: if the resulting path is not representable as a :attr:`Context.path_cls`
+      :raises ValueError: if the resulting path is not representable
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: env

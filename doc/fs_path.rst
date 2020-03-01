@@ -69,9 +69,11 @@ Path objects
 
       Constructs a path from another path or a string.
 
-      If *path* is interpreted as a string representation of a path in Posix style with ``/`` as a component
-      separator.
-      It must not by empty and must be either absolute or relative.
+      If *path* is a string, it is interpreted as the string representation of a path in Posix style with ``/`` as a
+      component separator. It must not by empty.
+      If *path* is a :class:`pathlib.Path`, it must be either absolute or relative.
+      If *path* is a sequence, all its members are converted to str and are interpreted as path components;
+      its first component must be ``''`` for a relative path.
 
       If *is_dir* is ``None``, the ending of *path* determines whether is considered a directory path or not;
       it is if it ends with ``'/'`` or a ``'.'`` or ``'..'`` component.
@@ -90,7 +92,7 @@ Path objects
       :raises ValueError: if *path* is an empty string
       :raises ValueError: if *path* is a :class:`pathlib.PurePath` which is neither absolute nor relative
 
-      Example::
+      Examples::
 
           >>> p = Path('a/b/').is_dir()
           True

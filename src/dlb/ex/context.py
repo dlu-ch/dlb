@@ -394,12 +394,12 @@ class _RootSpecifics:
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
-    def managed_tree_path_of(self, path: fs.Path, *, existing: bool = False, collapsable: bool = False) -> fs.Path:
-        # TODO add parameter path_cls to override self.path_cls
+    def managed_tree_path_of(self, path, *, is_dir: Optional[bool] = None,
+                             existing: bool = False, collapsable: bool = False) -> fs.Path:
         # this must be very fast for relative dlb.fs.Path with existing = True
 
-        if not isinstance(path, fs.Path):
-            path = fs.Path(path)
+        if not isinstance(path, fs.Path) or is_dir is not None and is_dir != path.is_dir():
+            path = fs.Path(path, is_dir=is_dir)
 
         if path.is_absolute():
             # note: do _not_ used path.resolve() or os.path.realpath(), since it would resolve the entire path
@@ -425,10 +425,8 @@ class _RootSpecifics:
         if len(rel_components) >= 2 and rel_components[1] in ('..', _MANAGEMENTTREE_DIR_NAME):
             raise ValueError(f'path not in managed tree: {path.as_string()!r}') from None
 
-        if path.components != rel_components or path.__class__ is not self._path_cls:
-            rel_path = self._path_cls(rel_components)  # may raise ValueError
-        else:
-            rel_path = path
+        # may raise ValueError
+        rel_path = path.__class__(rel_components, is_dir=path.is_dir()) if path.components != rel_components else path
 
         if not existing:
             try:
@@ -437,7 +435,7 @@ class _RootSpecifics:
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
             if is_dir != rel_path.is_dir():
-                rel_path = self._path_cls(rel_components, is_dir=is_dir)
+                rel_path = path.__class__(rel_components, is_dir=is_dir)
 
         return rel_path
 
