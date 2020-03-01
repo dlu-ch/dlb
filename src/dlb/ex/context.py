@@ -377,16 +377,7 @@ class _RootSpecifics:
         else:
             fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
             os.close(fd)
-        try:
-            p = self._path_cls(fs.Path.Native(p_str), is_dir=is_dir)
-        except ValueError as e:
-            msg = (
-                f'path violates imposed path restrictions\n'
-                f'  | reason: {ut.exception_to_line(e)}\n'
-                f"  | check specified 'prefix' and 'suffix'"
-            )
-            raise ValueError(msg) from None
-        return p
+        return fs.Path(fs.Path.Native(p_str), is_dir=is_dir)
 
     @property
     def working_tree_time_ns(self) -> int:

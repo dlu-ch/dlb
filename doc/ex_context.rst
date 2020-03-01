@@ -169,11 +169,10 @@ Context objects
 
       :type is_dir: bool
 
-      :return: an instance *p* of :attr:`Context.path_cls` with ``p.is_dir() = is_dir``
-      :rtype: :class:`.dlb.fs.Path`
+      :return: an :class:`dlb.fs.Path` *p* with ``p.is_dir() = is_dir``
+      :rtype: :class:`dlb.fs.Path`
 
-      :raises ValueError:
-          if *prefix* is empty or the resulting path is not representable as a :attr:`Context.path_cls`
+      :raises ValueError: if *prefix* is empty or the resulting path is not representable as a :class:`dlb.fs.Path`
       :raises FileExistsError: if all tried candidates already existed
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
