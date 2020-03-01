@@ -576,7 +576,7 @@ class Context(metaclass=_ContextMeta):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._redo_sequencer.cancel(timeout=None)
+        self._redo_sequencer.cancel_all(timeout=None)
         if not (_contexts and _contexts[-1] == self):
             raise ContextNestingError
         _contexts.pop()

@@ -10,7 +10,6 @@ import sys
 import re
 import os
 import stat
-import asyncio
 import collections
 import hashlib
 import logging
@@ -543,19 +542,13 @@ class _ToolBase:
                         raise RedoError(*e.args)
 
             # note: no db.commit() necessary as long as root context does commit on exception
-            context.redo_sequencer.wait_then_start(
+            tid = context.redo_sequencer.wait_then_start(
                 1, None,
                 self._redo_with_aftermath,
                 result, context,
                 dependency_actions, memo_by_encoded_path, encoded_paths_of_explicit_input_dependencies,
                 db, tool_instance_dbid)
-            results, optional_exceptions = context.redo_sequencer.complete(timeout=None)
-            assert len(results) + len(optional_exceptions) == 1
-            if optional_exceptions:
-                _, e = optional_exceptions[0]
-                if e is not None:
-                    raise e
-                raise asyncio.CancelledError
+            result = context.redo_sequencer.complete(tid)
 
             return result
 
