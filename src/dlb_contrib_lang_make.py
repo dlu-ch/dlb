@@ -8,7 +8,7 @@ __all__ = ('sources_from_rules',)
 
 import sys
 import string
-from typing import List, Tuple, Iterable
+from typing import List, Iterable
 assert sys.version_info >= (3, 7)
 
 
@@ -26,20 +26,21 @@ def _first_position_of(s: str, characters_to_find: str, start: int = 0) -> int:
 
 def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
     # Extract source paths from Make rules in *lines* and return a list of source path for each rule in *lines*.
+    # Line separators at the end of the lines in *lines* are removed.
     #
     # Escape the following characters with a preceding '\\':
     # '#', ':', ';', '*', '?', '[', ']', whitespace (except line separators)
     # Escape the following characters with a preceding '$': '$'.
     # Lines can be continued with a singled trailing '\\'.
     #
+    # This parser is meant for Makefiles as understood by GNU Make 4.0. Since escaping and quoting of characters
+    # is severely underspecified for Makefiles, portability issues are to be expected with other implementations of
+    # Make if paths contain "special characters".
+    #
     # Limitations of possible paths by Make:
     #
     #   - path must not contain a line separators
     #   - path nost not contain '\\' followed by a escapable character
-    #
-    # Limitations of possible paths by common compilers:
-    #
-    #   - path must not contain ':' or ';'
     #
     # All lines in *lines* must be of one of the following types:
     #
@@ -54,8 +55,9 @@ def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
     #   - pattern rules (e.g. '%.o: %.c')
     #   - double-colon rules (e.g. 'a.o:: a.c')
 
-    # note: gcc 8.3.0 erroneously does not quote ':' and ';' in filename with -MM
     # see eval() in read.c of https://ftp.gnu.org/gnu/make/make-4.0.tar.gz
+
+    # note: gcc 8.3.0 erroneously does not quote ':' and ';' in filename with -M
 
     rule_sources = []
 
@@ -65,7 +67,7 @@ def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
     continued_ended_with_comment = False  # is a line expected to follow that is a comment?
 
     for lineno0, unprocessed_line in enumerate(lines):
-        # build line
+        unprocessed_line = unprocessed_line.rstrip('\n\r')
 
         if unprocessed_line[-2:] == '\\\\':
             # Make handles multiple backslashes at the end of the line in an efficient but strange way that makes

@@ -50,10 +50,6 @@ class ParseRuleTest(unittest.TestCase):
         r = make.sources_from_rules(['a.o: \\\\.c'])  # '\\' cannot be quoted with '\\
         self.assertEqual([['\\\\.c']], r)
 
-    def test_ignores_command(self):
-        r = make.sources_from_rules(['a.o: a.c a\\b.h', '\techo a', '\t$(CC) -c -o $@ $< $(CFLAGS)'])
-        self.assertEqual([['a.c', 'a\\b.h']], r)
-
     def test_combines_continuation_line(self):
         # note: '\\' must be last character on line; it is an error to place a comment after '\\' on the same line
         r = make.sources_from_rules(['a.o: a.c a\\', '.h'])
@@ -133,6 +129,9 @@ class ParseRuleTest(unittest.TestCase):
 
         r = make.sources_from_rules(['a.o: a.c; echo', '\tb.o: b.c'])
         self.assertEqual([['a.c']], r)
+
+        r = make.sources_from_rules(['a.o: a.c a\\b.h', '\techo a', '\t$(CC) -c -o $@ $< $(CFLAGS)'])
+        self.assertEqual([['a.c', 'a\\b.h']], r)
 
     def test_empty_(self):
         r = make.sources_from_rules(['a.o: ;'])
