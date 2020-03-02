@@ -21,4 +21,4 @@ from .tool import *
 #
 #     depend         ->   mult
 #     dependaction   ->                                context   depend
-#     tool           ->                                context   depend   dependaction
+#     tool           ->                          aseq  context   depend   dependaction

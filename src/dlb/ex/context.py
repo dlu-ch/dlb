@@ -519,7 +519,7 @@ class Context(metaclass=_ContextMeta):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' must be a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls
-        self._redo_sequencer = aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
+        self._redo_sequencer = aseq.LimitingResultSequencer(asyncio.get_event_loop())
         self._root_specifics: Optional[_RootSpecifics] = None
         self._env: Optional[_EnvVarDict] = None
 
@@ -538,10 +538,6 @@ class Context(metaclass=_ContextMeta):
         # noinspection PyStatementEffect
         self.active
         return self._env
-
-    @property
-    def redo_sequencer(self) -> aseq.LimitingCoroutineSequencer:
-        return self._redo_sequencer
 
     def __getattr__(self, name):
         try:
@@ -576,15 +572,27 @@ class Context(metaclass=_ContextMeta):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._redo_sequencer.cancel_all(timeout=None)
+        # complete all pending redos (before context is changed in any way)
+        redo_finisher = self._redo_sequencer.complete_all if exc_val is None else self._redo_sequencer.cancel_all
+        redo_finisher(timeout=None)
+
         if not (_contexts and _contexts[-1] == self):
             raise ContextNestingError
         _contexts.pop()
         self._env = None
+
         if self._root_specifics:
             # noinspection PyProtectedMember
             self._root_specifics._cleanup_and_close()
             self._root_specifics = None
+
+        if exc_val is None:
+            redo_results, redo_exceptions = self._redo_sequencer.consume_all()
+            redo_exceptions = [(tid, e) for tid, e in redo_exceptions.items()]
+            if redo_exceptions:
+                redo_exceptions.sort()
+                _, e = redo_exceptions[0]
+                raise e
 
 
 def _get_rundb() -> rundb.Database:

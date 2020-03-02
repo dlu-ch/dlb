@@ -13,7 +13,7 @@ import random
 import unittest
 
 
-class GetLevelMarkerTest(unittest.TestCase):
+class LimitingCoroutineSequencerTest(unittest.TestCase):
 
     def test_complete_all(self):
 
@@ -33,7 +33,8 @@ class GetLevelMarkerTest(unittest.TestCase):
         for i in range(n):
             sequencer.wait_then_start(3, None, sleep_randomly, 7 * i, b=5 + i)
 
-        results, exceptions = sequencer.complete_all(timeout=None)
+        sequencer.complete_all(timeout=None)
+        results, exceptions = sequencer.consume_all()
 
         self.assertEqual(n, len(results) + len(exceptions))
         self.assertEqual(n, len(results))
@@ -41,6 +42,10 @@ class GetLevelMarkerTest(unittest.TestCase):
 
         r = {tid: 7 * tid + 5 + tid for tid in range(n)}
         self.assertEqual(r, results)
+
+        results, exceptions = sequencer.consume_all()
+        self.assertEqual({}, results)
+        self.assertEqual({}, exceptions)
 
     def test_cancel_all(self):
 
@@ -54,14 +59,17 @@ class GetLevelMarkerTest(unittest.TestCase):
         for i in range(n):
             sequencer.wait_then_start(n, None, sleep_long)
 
-        results, exceptions = sequencer.cancel_all(timeout=None)
+        sequencer.cancel_all(timeout=None)
+        results, exceptions = sequencer.consume_all()
 
         self.assertEqual(n, len(results) + len(exceptions))
         self.assertEqual(0, len(results))
         self.assertEqual(n, len(exceptions))
+        self.assertTrue(all(isinstance(e, asyncio.CancelledError) for e in exceptions.values()))
 
-        e = {tid: None for tid in range(n)}
-        self.assertEqual(e, exceptions)
+        results, exceptions = sequencer.consume_all()
+        self.assertEqual({}, results)
+        self.assertEqual({}, exceptions)
 
     def test_timeout(self):
 
@@ -82,11 +90,13 @@ class GetLevelMarkerTest(unittest.TestCase):
         with self.assertRaises(TimeoutError):
             sequencer.complete_all(timeout=1.0)
 
-        results, exceptions = sequencer.cancel_all(timeout=None)
+        sequencer.cancel_all(timeout=None)
+        results, exceptions = sequencer.consume_all()
         self.assertEqual(3, len(results) + len(exceptions))
         self.assertEqual(1, len(results))
         self.assertEqual({0: 0.5}, results)
-        self.assertEqual({1: None, 2: None}, exceptions)
+        self.assertTrue([1, 2], sorted(exceptions))
+        self.assertTrue(all(isinstance(e, asyncio.CancelledError) for e in exceptions.values()))
 
     def test_exception(self):
 
@@ -100,7 +110,8 @@ class GetLevelMarkerTest(unittest.TestCase):
         sequencer.wait_then_start(3, None, sleep_or_raise, 0.0)  # raise AssertionError
         sequencer.wait_then_start(3, None, sleep_or_raise, 1.0)
 
-        results, exceptions = sequencer.complete_all(timeout=None)
+        sequencer.complete_all(timeout=None)
+        results, exceptions = sequencer.consume_all()
         self.assertEqual(3, len(results) + len(exceptions))
         self.assertEqual(1, len(exceptions))
         self.assertIsInstance(exceptions[1], AssertionError)
@@ -117,16 +128,151 @@ class GetLevelMarkerTest(unittest.TestCase):
         tid = sequencer.wait_then_start(3, None, sleep_or_raise, 0.5)
         sequencer.wait_then_start(3, None, sleep_or_raise, 1.0)
 
-        self.assertEqual(0.5, sequencer.complete(tid))
+        sequencer.complete(tid, timeout=None)
+        self.assertEqual(0.5, sequencer.consume(tid))
+        sequencer.complete(tid, timeout=None)
         with self.assertRaises(ValueError):
-            sequencer.complete(tid)
+            sequencer.consume(tid)
 
         tid = sequencer.wait_then_start(3, None, sleep_or_raise, 0.0)
 
+        sequencer.complete(tid, timeout=None)
         with self.assertRaises(AssertionError):
-            sequencer.complete(tid)
+            sequencer.consume(tid)
 
-        results, exceptions = sequencer.complete_all(timeout=None)
+        sequencer.complete_all(timeout=None)
+        results, exceptions = sequencer.consume_all()
         self.assertEqual(1, len(results) + len(exceptions))
         self.assertEqual(1, len(results))
         self.assertEqual({1: 1.0}, results)
+
+
+class LimitingResultSequencerTest(unittest.TestCase):
+
+    class Result:
+        def __init__(self, value):
+            self.value = value
+
+    async def sleep_or_raise(t):
+        assert t > 0.0
+        await asyncio.sleep(t)
+        return LimitingResultSequencerTest.Result(t)
+
+    def test_result_attributes_are_readonly(self):
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
+
+        proxy = sequencer.create_result_proxy(tid, uid=1)
+        with self.assertRaises(AttributeError):
+            proxy.value = 27
+
+        sequencer.cancel_all(timeout=None)
+
+    def test_fails_for_nonunique_uid(self):
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid1 = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
+        tid2 = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.75)
+
+        proxy = sequencer.create_result_proxy(tid1, uid=1)
+        self.assertFalse(proxy)  # not complete
+
+        with self.assertRaises(dlb.ex.aseq.IdError) as cm:
+            sequencer.create_result_proxy(tid1, uid=2)
+        self.assertEqual("tid is not unique", str(cm.exception))
+
+        with self.assertRaises(dlb.ex.aseq.IdError) as cm:
+            sequencer.create_result_proxy(tid2, uid=1)
+        self.assertEqual("id(uid) is not unique", str(cm.exception))
+
+        with proxy:
+            pass
+
+        with self.assertRaises(dlb.ex.aseq.IdError) as cm:
+            sequencer.create_result_proxy(tid1, uid=1)
+        self.assertEqual("nothing to consume for tid", str(cm.exception))
+
+        sequencer.create_result_proxy(tid2, uid=1)  # can resue uid
+
+        sequencer.cancel_all(timeout=None)
+
+    def test_attribute_access_completes(self):
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
+
+        uid = 1
+        proxy = sequencer.create_result_proxy(tid, uid)
+        self.assertFalse(proxy)  # not complete
+
+        p = sequencer.get_result_proxy(uid)
+        self.assertIs(proxy, p)
+        self.assertFalse(proxy)  # not complete
+
+        self.assertEqual(0.5, proxy.value)  # waits for completion
+        self.assertTrue(proxy)  # complete
+
+        self.assertIsNone(sequencer.get_result_proxy(uid))
+
+    def test_context_manager_completes(self):
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
+
+        uid = 1
+        proxy = sequencer.create_result_proxy(tid, uid)
+        self.assertFalse(proxy)  # not complete
+
+        with proxy:
+            pass
+
+        self.assertTrue(proxy)  # complete
+        self.assertEqual(0.5, proxy.value)
+
+    def test_consume_all_completes(self):
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
+
+        proxy = sequencer.create_result_proxy(tid, uid=1)
+
+        self.assertFalse(proxy)  # not complete
+        sequencer.cancel_all(timeout=None)
+        self.assertFalse(proxy)  # not complete
+
+        sequencer.consume_all()
+        self.assertTrue(proxy)  # complete
+
+    def test_attribute_before_completion_access_raises_exception(self):
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.0)
+
+        proxy = sequencer.create_result_proxy(tid, uid=1)
+
+        self.assertFalse(proxy)  # not complete
+        with self.assertRaises(AssertionError):
+            proxy.value
+
+        with self.assertRaises(AssertionError):
+            proxy.value  # and again
+
+    def test_attribute_after_completion_access_raises_exception(self):
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.0)
+
+        proxy = sequencer.create_result_proxy(tid, uid=1)
+
+        self.assertFalse(proxy)  # not complete
+        sequencer.complete_all(timeout=None)
+        self.assertFalse(proxy)  # not complete
+
+        sequencer.consume_all()
+        self.assertTrue(proxy)  # complete
+
+        with self.assertRaises(AssertionError):
+            proxy.value
+
+        with self.assertRaises(AssertionError):
+            proxy.value  # and again

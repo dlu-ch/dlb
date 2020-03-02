@@ -45,9 +45,9 @@ class RunWithoutRedoTest(tools_for_test.TemporaryDirectoryTestCase):
 
         pathlib.Path('.dlbroot').mkdir()
 
-        with dlb.ex.Context():
-            t = BTool(object_file='a.o')
-            with self.assertRaises(NotImplementedError):
+        with self.assertRaises(NotImplementedError):
+            with dlb.ex.Context():
+                t = BTool(object_file='a.o')
                 t.run()
 
 
@@ -378,6 +378,8 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with dlb.ex.Context():
             self.assertIsNotNone(t2.run())
+
+        with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
@@ -404,8 +406,9 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
-            regex = r"\b()redo necessary because of filesystem object that is an output dependency: 'a\.o'"
-            self.assertRegex(output.getvalue(), regex)
+
+        regex = r"\b()redo necessary because of filesystem object that is an output dependency: 'a\.o'"
+        self.assertRegex(output.getvalue(), regex)
 
     def test_redo_if_not_output_is_directory(self):
         pathlib.Path('.dlbroot').mkdir()

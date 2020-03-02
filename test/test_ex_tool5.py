@@ -127,7 +127,11 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            r = t.run()
+            self.assertIsNotNone(r)
+            with r:
+                pass
+
             regex = r"\b()redo necessary because of invalid encoded path: 'a/\.\./'\n"
             self.assertRegex(output.getvalue(), regex)
             self.assertNotIn('a/../', rundb.get_fsobject_inputs(1, is_explicit_filter=False))
@@ -178,8 +182,8 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
                 pass
 
         t = BTool(object_file='a.o')
-        with dlb.ex.Context():
-            with self.assertRaises(dlb.ex.RedoError) as cm:
+        with self.assertRaises(dlb.ex.RedoError) as cm:
+            with dlb.ex.Context():
                 t.run()
         msg = (
             "non-explicit input dependency not assigned during redo: 'included_files'\n"
@@ -213,8 +217,8 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
                 result.included_files = ['a/../b']
 
         t = BTool(object_file='a.o')
-        with dlb.ex.Context():
-            with self.assertRaises(dlb.ex.RedoError) as cm:
+        with self.assertRaises(dlb.ex.RedoError) as cm:
+            with dlb.ex.Context():
                 t.run()
         msg = "non-explicit input dependency 'included_files' contains a path that is not a managed tree path: 'a/../b'"
         self.assertEqual(msg, str(cm.exception))
@@ -230,8 +234,8 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
                 result.included_files = None
 
         t = BTool(object_file='a.o')
-        with dlb.ex.Context():
-            with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(ValueError) as cm:
+            with dlb.ex.Context():
                 t.run()
         msg = "value for required dependency must not be None"
         self.assertEqual(msg, str(cm.exception))

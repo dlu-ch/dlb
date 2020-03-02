@@ -461,20 +461,27 @@ class _ToolBase:
     # final
     def run(self):
         with di.Cluster('run tool instance', with_time=True, is_progress=True):
+            # noinspection PyTypeChecker
+            context: context_.Context = context_.Context.active
 
             dependency_actions = tuple(
                 dependaction.get_action(getattr(self.__class__, n), n)
                 for n in self.__class__._dependency_names
             )
 
-            # noinspection PyTypeChecker
-            context: context_.Context = context_.Context.active
             db = context_._get_rundb()
 
             tool_instance_dbid = db.get_and_register_tool_instance_dbid(
                 get_and_register_tool_info(self.__class__).permanent_local_tool_id,
                 self.fingerprint)
             di.inform(f"tool instance dbid is {tool_instance_dbid!r}")
+
+            result_proxy_of_last_run = context._redo_sequencer.get_result_proxy(tool_instance_dbid)
+            if result_proxy_of_last_run is not None:
+                with di.Cluster('wait for last redo to complete',
+                                with_time=True, is_progress=True):
+                    with result_proxy_of_last_run:
+                        pass
 
             with di.Cluster('check redo necessity', with_time=True, is_progress=True):
 
@@ -542,15 +549,13 @@ class _ToolBase:
                         raise RedoError(*e.args)
 
             # note: no db.commit() necessary as long as root context does commit on exception
-            tid = context.redo_sequencer.wait_then_start(
-                1, None,
-                self._redo_with_aftermath,
+            tid = context._redo_sequencer.wait_then_start(
+                1, None, self._redo_with_aftermath,
                 result, context,
                 dependency_actions, memo_by_encoded_path, encoded_paths_of_explicit_input_dependencies,
                 db, tool_instance_dbid)
-            result = context.redo_sequencer.complete(tid)
 
-            return result
+            return context._redo_sequencer.create_result_proxy(tid, tool_instance_dbid)
 
     async def _redo_with_aftermath(self, result, context,
                                    dependency_actions, memo_by_encoded_path,

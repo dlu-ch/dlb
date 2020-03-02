@@ -7,9 +7,13 @@
 import sys
 import time
 import asyncio
-from typing import Optional, Any, List, Tuple, Dict, Callable, Coroutine, Set
+from typing import Optional, Any, Dict, Set, Hashable, Callable, Coroutine
 
 assert sys.version_info >= (3, 7)
+
+
+class IdError(ValueError):
+    pass
 
 
 class LimitingCoroutineSequencer:
@@ -23,8 +27,8 @@ class LimitingCoroutineSequencer:
         self._tid_by_pending_task: Dict[asyncio.Task, int] = dict()
         self._pending_task_by_tid: Dict[int, asyncio.Task] = dict()
         self._next_tid = 0
-        self._results: List[Tuple[int, Any]] = []
-        self._optional_exceptions: List[Tuple[int, Optional[Exception]]] = []
+        self._result_by_tid: Dict[int, Any] = dict()
+        self._exception_by_tid: Dict[int, Exception] = dict()
 
     def wait_then_start(self, _max_count: int, _timeout: Optional[float],
                         coro: Callable[[Any], Coroutine], *args, **kwargs) -> int:
@@ -36,29 +40,21 @@ class LimitingCoroutineSequencer:
         #
         # Does not wait until *coro* is done. Use 'complete()' to get the return value of *coro*.
 
-        results, exceptions = self._wait_for_pending_sync(max_count=int(_max_count) - 1, timeout=_timeout)
-        self._results.extend(results)
-        self._optional_exceptions.extend(exceptions)
+        self._wait_for_pending_sync(max_count=int(_max_count) - 1, timeout=_timeout)
+
         # noinspection PyCallingNonCallable
         tid, self._next_tid = self._next_tid, self._next_tid + 1  # reserve task id unique for self
         task: asyncio.Task = self._asyncio_loop.create_task(coro(*args, **kwargs))  # is also a Future
         self._tid_by_pending_task[task] = tid
         self._pending_task_by_tid[tid] = task
+
         return tid
 
-    def complete(self, tid: int):
-        # Wait until the task with task ID *tid* is completed and return its result.
-
-        task = self._pending_task_by_tid.get(tid)
-        if task is None:
-            raise ValueError("not a tid of a pending task")
-        try:
-            result = self._asyncio_loop.run_until_complete(task)
-        finally:
-            del self._tid_by_pending_task[task]
-            del self._pending_task_by_tid[tid]
-
-        return result
+    def complete(self, tid: int, *, timeout: Optional[float]):
+        # Wait until there is no pending task with task ID *tid*.
+        # Use consume(tid) to consume the result.
+        if tid in self._pending_task_by_tid:
+            self._wait_for_pending_sync(max_count=0, tid_filter={tid}, timeout=timeout)
 
     def complete_all(self, *, timeout: Optional[float]):
         # Wait until all pending coroutines are done or cancelled.
@@ -66,30 +62,52 @@ class LimitingCoroutineSequencer:
         # Returns a tuple '(results, optional_exceptions)'.
         # *results* is a dictionary with the task ID of all completed couroutines as key and their result as value.
         # *optional_exceptions* is a dictionary with the task ID of all completed couroutines as key and their
-        # raised exception or None (if cancelled) as value.
+        # raised exception as value.
 
-        results, optional_exceptions = self._wait_for_pending_sync(max_count=0, timeout=timeout)
-
-        results = {tid: r for tid, r in self._results + results}
-        optional_exceptions = {tid: e for tid, e in self._optional_exceptions + optional_exceptions}
-
-        self._results = []
-        self._optional_exceptions = []
-        return results, optional_exceptions
+        self._wait_for_pending_sync(max_count=0, timeout=timeout)
 
     def cancel_all(self, *, timeout: Optional[float]):
         for t in self._tid_by_pending_task:
             t.cancel()
-        return self.complete_all(timeout=timeout)
+        self.complete_all(timeout=timeout)
 
-    async def _wait_until_number_of_pending(self, *, max_count: int, timeout_ns: int):
+    def consume(self, tid: int):
+        # Wait until the task with task ID *tid* is completed and return its result.
+
+        result = self._result_by_tid.get(tid)
+        if result is not None:
+            del self._result_by_tid[tid]
+            return result
+
+        exception = self._exception_by_tid.get(tid)
+        if exception is not None:
+            del self._exception_by_tid[tid]
+            raise exception
+
+        raise IdError('nothing to consume for tid')
+
+    def consume_all(self):
+        results = self._result_by_tid
+        exceptions = self._exception_by_tid
+
+        self._result_by_tid = dict()
+        self._exception_by_tid = dict()
+
+        return results, exceptions
+
+    async def _wait_until_number_of_pending(self, *, max_count: int, tid_filter: Optional[Set[int]],
+                                            timeout_ns: int):
         max_count = max(0, max_count)
 
-        previous_result_count = len(self._results)
-        previous_optional_exception_count = len(self._optional_exceptions)
-
         t0 = time.monotonic_ns()
-        while len(self._tid_by_pending_task) > max_count:
+        while True:
+            if tid_filter is None:
+                tasks_to_wait_for = self._tid_by_pending_task.keys()
+            else:
+                tasks_to_wait_for = [t for t, tid in self._tid_by_pending_task.items() if tid in tid_filter]
+            if len(tasks_to_wait_for) <= max_count:
+                break
+
             if timeout_ns is None:
                 timeout = None
             else:
@@ -98,7 +116,7 @@ class LimitingCoroutineSequencer:
                     raise TimeoutError
 
             done_tasks: Set[asyncio.Task]
-            done_tasks, pending = await asyncio.wait(self._tid_by_pending_task, return_when=asyncio.FIRST_COMPLETED,
+            done_tasks, pending = await asyncio.wait(tasks_to_wait_for, return_when=asyncio.FIRST_COMPLETED,
                                                      timeout=timeout)  # does _not_ raise TimeoutError
 
             for task in done_tasks:  # "consume" all futures that are done
@@ -114,26 +132,124 @@ class LimitingCoroutineSequencer:
                     del self._tid_by_pending_task[task]
                     del self._pending_task_by_tid[tid]
 
-                if task.cancelled():
-                    self._optional_exceptions.append((tid, None))  # None instead of asyncio.CancelledError
-                else:
-                    try:
-                        self._results.append((tid, task.result()))
-                    except Exception as e:  # asyncio.CancelledError possible (in theory)
-                        self._optional_exceptions.append((tid, e))
+                try:
+                    self._result_by_tid[tid] = task.result()
+                except Exception as e:  # asyncio.CancelledError if task.cancelled()
+                    self._exception_by_tid[tid] = e
 
-        results = self._results[previous_result_count:]
-        optional_exceptions = self._optional_exceptions[previous_optional_exception_count:]
-
-        del self._results[previous_result_count:]
-        del self._optional_exceptions[previous_optional_exception_count:]
-
-        return results, optional_exceptions
-
-    def _wait_for_pending_sync(self, *, max_count: int, timeout: Optional[float]):
+    def _wait_for_pending_sync(self, *, max_count: int, timeout: Optional[float], tid_filter: Optional[Set[int]] = None):
         timeout_ns = None if timeout is None else max(0, int(timeout * 1e9))
         task = self._asyncio_loop.create_task(self._wait_until_number_of_pending(
-            max_count=max_count, timeout_ns=timeout_ns))
+            max_count=max_count, tid_filter=tid_filter, timeout_ns=timeout_ns))
         self._asyncio_loop.run_until_complete(task)
-        results, optional_exceptions = task.result()
-        return results, optional_exceptions
+        task.result()
+
+
+class _ResultProxy:
+
+    def __init__(self, sequencer: 'LimitingResultSequencer', tid: int, timeout: Optional[float] = None):
+        # Construct a ResultProxy for the result of a task of *sequencer* with task ID *tid*.
+        # Each read access to an attribute not in this class waits for the task to complete and forwards the attribute
+        # look-up to its return value.
+        # Each "normal" write access to an attribute raises AttributeError.
+        #
+        # Instances should only be created by 'sequencer.create_result_proxy()'.
+
+        object.__setattr__(self, '_sequencer', sequencer)
+        object.__setattr__(self, '_tid', tid)
+        object.__setattr__(self, '_timeout', timeout)
+        object.__setattr__(self, '_result', None)
+        object.__setattr__(self, '_exception', None)
+
+    def __bool__(self):  # True if and only if redo complete
+        return self._result is not None or self._exception is not None
+
+    def __setattr__(self, key, value):
+        raise AttributeError
+
+    def __getattr__(self, item):
+        return getattr(self._get_or_wair_for_result(), item)
+
+    def __enter__(self):
+        return self._get_or_wair_for_result()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def _get_or_wair_for_result(self):
+        if self._result is None:
+            if self._exception is not None:
+                raise self._exception
+            self._sequencer.complete(self._tid, timeout=self._timeout)
+            try:
+                object.__setattr__(self, '_result', self._sequencer.consume(self._tid))
+            except Exception as e:
+                object.__setattr__(self, '_exception', e)
+                raise e from None
+        return self._result
+
+
+class LimitingResultSequencer(LimitingCoroutineSequencer):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._proxy_by_uid: Dict[int, _ResultProxy] = dict()
+        self._proxy_uid_by_tid: Dict[int, int] = dict()
+
+    def get_result_proxy(self, uid: Hashable) -> Optional[_ResultProxy]:
+        return self._proxy_by_uid.get(uid, None)
+
+    def consume(self, tid: int):
+        uid = self._proxy_uid_by_tid.pop(tid, None)
+        proxy = None if uid is None else self._proxy_by_uid.pop(uid, None)
+
+        try:
+            result = super().consume(tid)
+            if proxy is not None:
+                object.__setattr__(proxy, '_result', result)
+        except Exception as e:
+            if proxy is not None:
+                object.__setattr__(proxy, '_exception', e)
+            raise
+
+        return result
+
+    def consume_all(self):
+        results, exceptions = super().consume_all()
+
+        for tid, r in results.items():
+            uid = self._proxy_uid_by_tid.pop(tid, None)
+            proxy = None if uid is None else self._proxy_by_uid.pop(uid, None)
+            if proxy is not None:
+                object.__setattr__(proxy, '_result', r)
+
+        for tid, e in exceptions.items():
+            uid = self._proxy_uid_by_tid.pop(tid, None)
+            proxy = None if uid is None else self._proxy_by_uid.pop(uid, None)
+            if proxy is not None:
+                object.__setattr__(proxy, '_exception', e)
+
+        return results, exceptions
+
+    def create_result_proxy(self, tid: int, uid: Hashable) -> _ResultProxy:
+        # Create a result proxy for the result of a task of this sequencer with task ID *tid* and assigned it
+        # a unique *uid*.
+        # Raises IdError if *tid* is not the task ID of a pending task are a task with unconsumed result, or it there
+        # already is a result proxy with the same *tid* or 'id(uid)'.
+
+        if not (tid in self._pending_task_by_tid or tid in self._result_by_tid or
+                tid in self._exception_by_tid):
+            raise IdError('nothing to consume for tid')
+
+        if tid in self._proxy_uid_by_tid:
+            raise IdError('tid is not unique')
+
+        existing_proxy = self._proxy_by_uid.get(uid)
+        if existing_proxy is not None:
+            raise IdError('id(uid) is not unique')
+
+        proxy = _ResultProxy(self, tid)
+        self._proxy_by_uid[uid] = proxy
+        self._proxy_uid_by_tid[tid] = uid
+
+        return proxy

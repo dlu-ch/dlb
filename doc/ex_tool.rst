@@ -82,8 +82,17 @@ Tool objects
 
       Run the tool instance in the :term:`active context`.
 
-      Returns a result object if a :term:`redo` was necessary and ``None`` otherwise.
-      The result object contains an attribute for every dependency role of the tool which contains the concrete
+      Returns a result proxy object if a :term:`redo` was necessary and ``None`` otherwise.
+
+      If a redo was necessary, this method returns before the (asynchronous) redo is complete.
+      After each of the following actions the redo is guaranteed to be completed (either successfully or
+      by raising an exception):
+
+        - read of an attribute of the result proxy object
+        - exit of the context :meth:`run()` was called in
+        - call of :meth:`run()` of the same tool instance
+
+      The result proxy object contains an attribute for every dependency role of the tool which contains the concrete
       dependencies (not only the explicit dependencies as on the :term:`tool instance`, but also the non-explicit ones).
 
    .. attribute:: definition_location
