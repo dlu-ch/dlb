@@ -515,10 +515,11 @@ class Context(metaclass=_ContextMeta):
 
     EnvVarDict = NotImplemented  # only Context should construct an _EnvVarDict
 
-    def __init__(self, *, path_cls: Type[fs.Path] = fs.Path):
+    def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' must be a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls
+        self._max_pending_redo = max(1, int(max_parallel_redo_count))
         self._redo_sequencer = aseq.LimitingResultSequencer(asyncio.get_event_loop())
         self._root_specifics: Optional[_RootSpecifics] = None
         self._env: Optional[_EnvVarDict] = None
@@ -532,6 +533,10 @@ class Context(metaclass=_ContextMeta):
     @property
     def path_cls(self) -> Type[fs.Path]:
         return self._path_cls
+
+    @property
+    def max_parallel_redo_count(self) -> int:
+        return self._max_pending_redo
 
     @property
     def env(self) -> _EnvVarDict:

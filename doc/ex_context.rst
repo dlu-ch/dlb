@@ -47,7 +47,7 @@ Contexts can be nested::
 Context objects
 ---------------
 
-.. class:: Context(path_cls=dlb.fs.Path)
+.. class:: Context(path_cls=dlb.fs.Path, max_parallel_redo_count=1)
 
    An instance does nothing unless used as a :term:`python:context manager`.
 
@@ -65,6 +65,8 @@ Context objects
 
    :param path_cls: the subclass of :class:`dlb.fs.Path` to be used to represent the :term:`working tree`'s root
    :type path_cls: dlb.fs.Path
+   :param max_parallel_redo_count: maximum number of redos started in this context than can be pending at the same time
+   :type max_parallel_redo_count: int
    :raises TypeError: if *path_cls* is not a subclass of :class:`dlb.fs.Path`
 
    Entering or exiting a context may raise the following exceptions:
@@ -106,6 +108,15 @@ Context objects
    .. attribute:: path_cls
 
       The subclass of :class:`.dlb.fs.Path` defined in the constructor.
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: max_parallel_redo_count
+
+      The maximum number of redos started in this context than can be pending at the same time, as defined in the
+      constructor.
 
       When called on class, it refers to the :term:`active context`.
 
