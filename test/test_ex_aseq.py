@@ -276,3 +276,42 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
         with self.assertRaises(AssertionError):
             proxy.value  # and again
+
+
+class ResultProxyReprTest(unittest.TestCase):
+
+    def test_repr_is_meaningful_without_expected_class(self):
+
+        async def return_int():
+            return 42
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, return_int)
+
+        proxy = sequencer.create_result_proxy(tid, uid=1)
+        s = repr(proxy)
+        self.assertEqual('<proxy object for future result>', s)
+
+        with proxy:
+            pass
+
+        s = repr(proxy)
+        self.assertEqual('<proxy object for 42 result>', s)
+
+    def test_repr_is_meaningful_with_expected_class(self):
+
+        async def return_int():
+            return 42
+
+        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        tid = sequencer.wait_then_start(3, None, return_int)
+
+        proxy = sequencer.create_result_proxy(tid, uid=1, expected_class=int)
+        s = repr(proxy)
+        self.assertEqual("<proxy object for future <class 'int'> result>", s)
+
+        with proxy:
+            pass
+
+        s = repr(proxy)
+        self.assertEqual('<proxy object for 42 result>', s)

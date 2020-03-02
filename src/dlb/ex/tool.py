@@ -380,6 +380,10 @@ class _RedoResult:
         return NotImplemented
 
 
+_RedoResult.__name__ = 'RedoResult'
+_RedoResult.__qualname__ = 'Tool.{}'.format(_RedoResult.__name__)
+
+
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class _ToolBase:
 
@@ -555,7 +559,7 @@ class _ToolBase:
                 dependency_actions, memo_by_encoded_path, encoded_paths_of_explicit_input_dependencies,
                 db, tool_instance_dbid)
 
-            return context._redo_sequencer.create_result_proxy(tid, tool_instance_dbid)
+            return context._redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_RedoResult)
 
     async def _redo_with_aftermath(self, result, context,
                                    dependency_actions, memo_by_encoded_path,
@@ -826,3 +830,4 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
 # noinspection PyCallByClass
 type.__setattr__(Tool, '__module__', '.'.join(_ToolBase.__module__.split('.')[:-1]))
 ut.set_module_name_to_parent_by_name(vars(), [n for n in __all__ if not 'Tool'])
+ut.set_module_name_to_parent(_RedoResult)

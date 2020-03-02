@@ -148,7 +148,8 @@ class LimitingCoroutineSequencer:
 
 class _ResultProxy:
 
-    def __init__(self, sequencer: 'LimitingResultSequencer', tid: int, timeout: Optional[float] = None):
+    def __init__(self, sequencer: 'LimitingResultSequencer', tid: int,
+                 expected_class: type, timeout: Optional[float] = None):
         # Construct a ResultProxy for the result of a task of *sequencer* with task ID *tid*.
         # Each read access to an attribute not in this class waits for the task to complete and forwards the attribute
         # look-up to its return value.
@@ -158,6 +159,7 @@ class _ResultProxy:
 
         object.__setattr__(self, '_sequencer', sequencer)
         object.__setattr__(self, '_tid', tid)
+        object.__setattr__(self, '_expected_class', expected_class)
         object.__setattr__(self, '_timeout', timeout)
         object.__setattr__(self, '_result', None)
         object.__setattr__(self, '_exception', None)
@@ -176,6 +178,14 @@ class _ResultProxy:
 
     def __exit__(self, exc_type, exc_value, traceback):
         pass
+
+    def __repr__(self):
+        if self:
+            return f"<proxy object for {self._result!r} result>"
+        cls = self._expected_class
+        if cls is None:
+            return f"<proxy object for future result>"
+        return f"<proxy object for future {cls!r} result>"
 
     def _get_or_wair_for_result(self):
         if self._result is None:
@@ -232,7 +242,7 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
 
         return results, exceptions
 
-    def create_result_proxy(self, tid: int, uid: Hashable) -> _ResultProxy:
+    def create_result_proxy(self, tid: int, uid: Hashable, expected_class: Optional[type] = None) -> _ResultProxy:
         # Create a result proxy for the result of a task of this sequencer with task ID *tid* and assigned it
         # a unique *uid*.
         # Raises IdError if *tid* is not the task ID of a pending task are a task with unconsumed result, or it there
@@ -249,7 +259,7 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
         if existing_proxy is not None:
             raise IdError('id(uid) is not unique')
 
-        proxy = _ResultProxy(self, tid)
+        proxy = _ResultProxy(self, tid=tid, expected_class=expected_class)
         self._proxy_by_uid[uid] = proxy
         self._proxy_uid_by_tid[tid] = uid
 

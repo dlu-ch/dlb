@@ -373,3 +373,26 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertIsNotNone(t.run())
             regex = r"\b()redo necessary because of filesystem object: 'abc.zip' \n"
             self.assertRegex(output.getvalue(), regex)
+
+
+class ReprOfResultTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_result_repr_is_meaningful(self):
+
+        pathlib.Path('.dlbroot').mkdir()
+        t = ATool(source_file='a.cpp', object_file='a.o')
+
+        with pathlib.Path('a.cpp').open('xb'):
+            pass
+
+        with dlb.ex.Context():
+            r = t.run()
+            self.assertIsNotNone(r)
+            self.assertFalse(r)
+            imcomplete_repr = repr(r)
+        complete_repr = repr(r)
+
+        self.assertEqual("<proxy object for future <class 'dlb.ex.Tool.RedoResult'> result>", imcomplete_repr)
+        self.assertRegex(
+            complete_repr,
+            r"<proxy object for <dlb\.ex\.Tool\.RedoResult object at 0x[0-9a-f]+> result>")
