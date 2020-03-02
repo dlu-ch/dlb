@@ -818,6 +818,8 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
 
     # noinspection PyUnresolvedReferences
     definition_path, in_archive_path, lineno = tool.definition_location
+
+    # TODO replace marshal - marshal.dump(d) does not only depend on d (does reuse short ASCII-only strings)
     permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
     if definition_path is not None:
         definition_paths.add(definition_path)

@@ -139,7 +139,8 @@ class LimitingCoroutineSequencer:
                     # Python 3.8: asyncio.CancelledError is _not_ a subclass of Exception
                     self._exception_by_tid[tid] = e
 
-    def _wait_for_pending_sync(self, *, max_count: int, timeout: Optional[float], tid_filter: Optional[Set[int]] = None):
+    def _wait_for_pending_sync(self, *, max_count: int, timeout: Optional[float],
+                               tid_filter: Optional[Set[int]] = None):
         timeout_ns = None if timeout is None else max(0, int(timeout * 1e9))
         task = self._asyncio_loop.create_task(self._wait_until_number_of_pending(
             max_count=max_count, tid_filter=tid_filter, timeout_ns=timeout_ns))
@@ -204,8 +205,8 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._proxy_by_uid: Dict[int, _ResultProxy] = dict()
-        self._proxy_uid_by_tid: Dict[int, int] = dict()
+        self._proxy_by_uid: Dict[Hashable, _ResultProxy] = dict()
+        self._proxy_uid_by_tid: Dict[int, Hashable] = dict()
 
     def get_result_proxy(self, uid: Hashable) -> Optional[_ResultProxy]:
         return self._proxy_by_uid.get(uid, None)

@@ -153,6 +153,7 @@ class LimitingResultSequencerTest(unittest.TestCase):
         def __init__(self, value):
             self.value = value
 
+    @staticmethod
     async def sleep_or_raise(t):
         assert t > 0.0
         await asyncio.sleep(t)

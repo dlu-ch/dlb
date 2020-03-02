@@ -13,6 +13,7 @@ from .. import version
 assert sys.version_info >= (3, 7)
 
 # changes whenever the platform, the Python version or the dlb version changes
+# TODO replace marshal - marshal.dump(d) does not only depend on d (does reuse short ASCII-only strings)
 PERMANENT_PLATFORM_ID = marshal.dumps((
     platform.platform(),
     sys.hexversion,
