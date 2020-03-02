@@ -117,7 +117,7 @@ class LimitingCoroutineSequencer:
 
             done_tasks: Set[asyncio.Task]
             done_tasks, pending = await asyncio.wait(tasks_to_wait_for, return_when=asyncio.FIRST_COMPLETED,
-                                                     timeout=timeout)  # does _not_ raise TimeoutError
+                                                     timeout=timeout)  # does _not_ raise TimeoutError or CancelledError
 
             for task in done_tasks:  # "consume" all futures that are done
                 tid = self._tid_by_pending_task.get(task)
@@ -134,7 +134,9 @@ class LimitingCoroutineSequencer:
 
                 try:
                     self._result_by_tid[tid] = task.result()
-                except Exception as e:  # asyncio.CancelledError if task.cancelled()
+                except (asyncio.CancelledError, Exception) as e:  # asyncio.CancelledError if task.cancelled()
+                    # Python 3.7: asyncio.CancelledError is a subclass of Exception
+                    # Python 3.8: asyncio.CancelledError is _not_ a subclass of Exception
                     self._exception_by_tid[tid] = e
 
     def _wait_for_pending_sync(self, *, max_count: int, timeout: Optional[float], tid_filter: Optional[Set[int]] = None):
@@ -142,7 +144,6 @@ class LimitingCoroutineSequencer:
         task = self._asyncio_loop.create_task(self._wait_until_number_of_pending(
             max_count=max_count, tid_filter=tid_filter, timeout_ns=timeout_ns))
         self._asyncio_loop.run_until_complete(task)
-        task.result()
 
 
 class _ResultProxy:
