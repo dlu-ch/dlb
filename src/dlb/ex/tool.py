@@ -27,15 +27,15 @@ from . import dependaction
 assert sys.version_info >= (3, 7)
 
 
-EXECUTION_PARAMETER_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
-assert EXECUTION_PARAMETER_NAME_REGEX.match('A')
-assert EXECUTION_PARAMETER_NAME_REGEX.match('A2_B')
-assert not EXECUTION_PARAMETER_NAME_REGEX.match('_A')
+UPPERCASE_WORD_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
+assert UPPERCASE_WORD_NAME_REGEX.match('A')
+assert UPPERCASE_WORD_NAME_REGEX.match('A2_B')
+assert not UPPERCASE_WORD_NAME_REGEX.match('_A')
 
-DEPENDENCY_NAME_REGEX = re.compile('^[a-z][a-z0-9]*(_[a-z][a-z0-9]*)*$')
-assert DEPENDENCY_NAME_REGEX.match('object_file')
-assert not DEPENDENCY_NAME_REGEX.match('_object_file_')
-assert not DEPENDENCY_NAME_REGEX.match('Object_file_')
+LOWERCASE_WORD_NAME_REGEX = re.compile('^[a-z][a-z0-9]*(_[a-z][a-z0-9]*)*$')
+assert LOWERCASE_WORD_NAME_REGEX.match('object_file')
+assert not LOWERCASE_WORD_NAME_REGEX.match('_object_file_')
+assert not LOWERCASE_WORD_NAME_REGEX.match('Object_file_')
 
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
@@ -725,9 +725,7 @@ class _ToolMeta(type):
 
     def check_own_attributes(cls):
         for name, value in cls.__dict__.items():
-            if name in _ToolMeta.OVERRIDEABLE_ATTRIBUTES:
-                pass
-            elif EXECUTION_PARAMETER_NAME_REGEX.match(name):
+            if UPPERCASE_WORD_NAME_REGEX.match(name):
                 # if overridden: must be instance of type of overridden attribute
                 for base_class in cls.__bases__:
                     base_value = base_class.__dict__.get(name, None)
@@ -737,33 +735,62 @@ class _ToolMeta(type):
                             f"which is a {type(base_value)!r}"
                         )
                         raise TypeError(msg)
-            elif DEPENDENCY_NAME_REGEX.match(name):
-                # noinspection PyUnresolvedReferences
-                if not (isinstance(value, _ToolBase.Dependency) and isinstance(value, depend.ConcreteDependency)):
-                    msg = (
-                        f"the value of {name!r} must be an instance of a concrete subclass of "
-                        f"'dlb.ex.Tool.Dependency'"
-                    )
-                    raise TypeError(msg)
-                for base_class in cls.__bases__:
-                    value: depend.Dependency
-                    base_value = base_class.__dict__.get(name, None)
-                    if base_value is not None and not value.compatible_and_no_less_restrictive(base_value):
+            elif LOWERCASE_WORD_NAME_REGEX.match(name):
+                if callable(value):
+                    isasync, sig = inspect.iscoroutinefunction(value), inspect.signature(value)
+                    for base_class in cls.__bases__:
+                        base_value = base_class.__dict__.get(name, None)
+                        if base_value is not None:
+                            if not callable(base_value):
+                                msg = (
+                                    f"the value of {name!r} must not be callable since it is "
+                                    f"not callable in {base_value!r}"
+                                )
+                                raise TypeError(msg)
+                            base_isasync = inspect.iscoroutinefunction(base_value)
+                            base_sig = inspect.signature(base_value)
+                            if base_isasync != isasync:
+                                if base_isasync:
+                                    msg = (
+                                        f"the value of {name!r} must be an coroutine function "
+                                        f"(defined with 'async def')"
+                                    )
+                                else:
+                                    msg = f"the value of {name!r} must be an callable that is not a coroutine function"
+                                raise TypeError(msg)
+                            if base_sig != sig:
+                                msg = f"the value of {name!r} must be an callable with this signature: {base_sig!r}"
+                                raise TypeError(msg)
+                else:
+                    # noinspection PyUnresolvedReferences
+                    if not (isinstance(value, _ToolBase.Dependency) and isinstance(value, depend.ConcreteDependency)):
                         msg = (
-                            f"attribute {name!r} of base class may only be overridden by "
-                            f"a {type(base_value)!r} at least as restrictive"
+                            f"the value of {name!r} must be callable or an instance of a concrete subclass of "
+                            f"'dlb.ex.Tool.Dependency'"
                         )
                         raise TypeError(msg)
-            else:
+                    for base_class in cls.__bases__:
+                        value: depend.Dependency
+                        base_value = base_class.__dict__.get(name, None)
+                        if callable(base_value):
+                            msg = f"the value of {name!r} must be callable since it is callable in {base_value!r}"
+                            raise TypeError(msg)
+                        if base_value is not None and not value.compatible_and_no_less_restrictive(base_value):
+                            msg = (
+                                f"attribute {name!r} of base class may only be overridden by "
+                                f"a {type(base_value)!r} at least as restrictive"
+                            )
+                            raise TypeError(msg)
+            elif name not in _ToolMeta.OVERRIDEABLE_ATTRIBUTES:
                 msg = (
-                    f"invalid class attribute name: {name!r} "
-                    f"(every class attribute of a 'dlb.ex.Tool' must be named "
-                    f"like 'UPPER_CASE_WORD' or 'lower_case_word)"
+                    f"invalid class attribute name: {name!r}\n"
+                    f"  | every class attribute of a 'dlb.ex.Tool' must be named "
+                    f"like 'UPPER_CASE_WORD' or 'lower_case_word"
                 )
                 raise AttributeError(msg)
 
     def _get_dependency_names(cls) -> Tuple[str, ...]:
-        dependencies = {n: getattr(cls, n) for n in dir(cls) if DEPENDENCY_NAME_REGEX.match(n)}
+        dependencies = {n: getattr(cls, n) for n in dir(cls) if LOWERCASE_WORD_NAME_REGEX.match(n)}
 
         def rank_of(d):
             if isinstance(d, depend.Input):

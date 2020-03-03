@@ -71,8 +71,8 @@ class AttributeDefineTest(unittest.TestCase):
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
     def test_cannot_define_other(self):
         tmpl = (
-            "invalid class attribute name: {} (every class attribute of a 'dlb.ex.Tool' must be named "
-            "like 'UPPER_CASE_WORD' or 'lower_case_word)"
+            "invalid class attribute name: {}\n"
+            "  | every class attribute of a 'dlb.ex.Tool' must be named like 'UPPER_CASE_WORD' or 'lower_case_word"
         )
         with self.assertRaises(AttributeError) as cm:
             class ATool(Tool):
@@ -105,22 +105,80 @@ class AttributeDefineTest(unittest.TestCase):
         self.assertEqual(str(cm.exception), tmpl.format(repr('x_')))
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
-    def test_lowercase_attribute_must_be_concrete_dependency(self):
+    def test_lowercase_noncallable_attribute_must_be_concrete_dependency(self):
+        msg = "the value of 'x_y_z' must be callable or an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
+
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = None
-        msg = "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = Tool.Dependency()
-        msg = "the value of 'x_y_z' must be an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             class ATool(Tool):
                 x_y_z = Tool.Dependency[:]()
+        self.assertEqual(msg, str(cm.exception))
+
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
+    def test_lowercase_callable_attribute_must_not_have_different_signature(self):
+        class ATool(Tool):
+            # noinspection PyUnusedLocal
+            def x_y_z(self, s: str) -> int:  # ok, not in a base class
+                return 0
+
+            async def u_v(self):  # ok, not in a base class
+                return 0
+
+            a = Tool.Input.RegularFile()
+
+        class BTool(ATool):
+            def x_y_z(self, s: str) -> int:  # ok, same signature in base class
+                return 1
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                # noinspection PyMethodOverriding
+                def x_y_z(self) -> int:  # not ok, different signature in base class
+                    return 1
+        msg = "the value of 'x_y_z' must be an callable with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class DTool(ATool):
+                async def x_y_z(self, s: str) -> int:  # not ok, not a coroutine function in base class
+                    return 1
+        msg = "the value of 'x_y_z' must be an callable that is not a coroutine function"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                def u_v(self):  # not ok, coroutine function in base class
+                    return 0
+        msg = "the value of 'u_v' must be an coroutine function (defined with 'async def')"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class FTool(ATool):
+                u_v = Tool.Input.RegularFile()
+        regex = r"\A()the value of 'u_v' must be callable since it is callable in <.*>\Z"
+        self.assertRegex(str(cm.exception), regex)
+
+        with self.assertRaises(TypeError) as cm:
+            class GTool(ATool):
+                def a(self):
+                    pass
+        regex = r"\A()the value of 'a' must not be callable since it is not callable in <.*>\Z"
+        self.assertRegex(str(cm.exception), regex)
+
+        with self.assertRaises(TypeError) as cm:
+            class HTool(ATool):
+                u_v = 27
+        msg = "the value of 'u_v' must be callable or an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
+        self.assertEqual(msg, str(cm.exception))
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
     def test_some_methods_cannot_be_overridden(self):
