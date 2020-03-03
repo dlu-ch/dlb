@@ -359,78 +359,10 @@ class _RootSpecifics:
             raise ManagementTreeError(msg) from None
 
     @property
-    def root_path(self) -> fs.Path:
-        return self._working_tree_path
-
-    def create_temporary(self, suffix='', prefix='t', is_dir=False) -> fs.Path:
-        if not isinstance(suffix, str) or not isinstance(prefix, str):
-            raise TypeError("'prefix' and 'suffix' must be str")
-        if not prefix:
-            raise ValueError("'prefix' must not be empty")
-        if os.path.sep in prefix or (os.path.altsep and os.path.altsep in prefix):
-            raise ValueError("'prefix' must not contain a path separator")
-        if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
-            raise ValueError("'prefix' must not contain a path separator")
-
-        t = os.path.join(str(self._working_tree_path_native), _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
-        is_dir = bool(is_dir)
-        if is_dir:
-            p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
-        else:
-            fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
-            os.close(fd)
-        return fs.Path(fs.Path.Native(p_str), is_dir=is_dir)
-
-    @property
     def working_tree_time_ns(self) -> int:
         self._mtime_probe.seek(0)
         self._mtime_probe.write(b'0')  # updates mtime
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
-
-    def managed_tree_path_of(self, path, *, is_dir: Optional[bool] = None,
-                             existing: bool = False, collapsable: bool = False) -> fs.Path:
-        # this must be very fast for relative dlb.fs.Path with existing = True
-
-        if not isinstance(path, fs.Path) or is_dir is not None and is_dir != path.is_dir():
-            path = fs.Path(path, is_dir=is_dir)
-
-        if path.is_absolute():
-            # note: do _not_ used path.resolve() or os.path.realpath(), since it would resolve the entire path
-            native_components = path.native.components
-
-            # may raise PathNormalizationError
-            normalized_native_components = \
-                (native_components[0],) + \
-                manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
-
-            native_root_path_components = self._working_tree_path_native.components
-            n = len(native_root_path_components)
-            if normalized_native_components[:n] != native_root_path_components:
-                raise manip.PathNormalizationError("does not start with the working tree's root path")
-
-            rel_components = ('',) + normalized_native_components[n:]
-        else:
-            # 'collapsable' means only the part relative to the working tree's root
-            ref_dir_path = None if collapsable else str(self._working_tree_path_native)
-            rel_components = ('',) + manip.normalize_dotdot_native_components(
-                path.components[1:], ref_dir_path=ref_dir_path)
-
-        if len(rel_components) >= 2 and rel_components[1] in ('..', _MANAGEMENTTREE_DIR_NAME):
-            raise ValueError(f'path not in managed tree: {path.as_string()!r}') from None
-
-        # may raise ValueError
-        rel_path = path.__class__(rel_components, is_dir=path.is_dir()) if path.components != rel_components else path
-
-        if not existing:
-            try:
-                sr = os.lstat(os.path.sep.join([str(self._working_tree_path_native), str(rel_path.native)]))
-                is_dir = stat.S_ISDIR(sr.st_mode)
-            except OSError as e:
-                raise manip.PathNormalizationError(oserror=e) from None
-            if is_dir != rel_path.is_dir():
-                rel_path = path.__class__(rel_components, is_dir=is_dir)
-
-        return rel_path
 
     def _cleanup(self):
         self._rundb.cleanup()
@@ -539,18 +471,88 @@ class Context(metaclass=_ContextMeta):
         return self._max_pending_redo
 
     @property
+    def root_path(self) -> fs.Path:
+        return _get_root_specifics()._working_tree_path
+
+    @property
     def env(self) -> _EnvVarDict:
         # noinspection PyStatementEffect
         self.active
         return self._env
 
-    def __getattr__(self, name):
-        try:
-            if name.startswith('_'):
-                raise AttributeError
-            return getattr(_get_root_specifics(), name)  # delegate to _RootSpecifics
-        except AttributeError:
-            raise AttributeError(f'{self.__class__.__qualname__!r} object has no attribute {name!r}') from None
+    @property
+    def working_tree_time_ns(self) -> int:
+        return _get_root_specifics().working_tree_time_ns
+
+    @staticmethod
+    def managed_tree_path_of(path, *, is_dir: Optional[bool] = None,
+                             existing: bool = False, collapsable: bool = False) -> fs.Path:
+        # this must be very fast for relative dlb.fs.Path with existing = True
+
+        self = _get_root_specifics()
+
+        if not isinstance(path, fs.Path) or is_dir is not None and is_dir != path.is_dir():
+            path = fs.Path(path, is_dir=is_dir)
+
+        if path.is_absolute():
+            # note: do _not_ used path.resolve() or os.path.realpath(), since it would resolve the entire path
+            native_components = path.native.components
+
+            # may raise PathNormalizationError
+            normalized_native_components = \
+                (native_components[0],) + \
+                manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
+
+            native_root_path_components = self._working_tree_path_native.components
+            n = len(native_root_path_components)
+            if normalized_native_components[:n] != native_root_path_components:
+                raise manip.PathNormalizationError("does not start with the working tree's root path")
+
+            rel_components = ('',) + normalized_native_components[n:]
+        else:
+            # 'collapsable' means only the part relative to the working tree's root
+            ref_dir_path = None if collapsable else str(self._working_tree_path_native)
+            rel_components = ('',) + manip.normalize_dotdot_native_components(
+                path.components[1:], ref_dir_path=ref_dir_path)
+
+        if len(rel_components) >= 2 and rel_components[1] in ('..', _MANAGEMENTTREE_DIR_NAME):
+            raise ValueError(f'path not in managed tree: {path.as_string()!r}') from None
+
+        # may raise ValueError
+        rel_path = path.__class__(rel_components, is_dir=path.is_dir()) if path.components != rel_components else path
+
+        if not existing:
+            try:
+                sr = os.lstat(os.path.sep.join([str(self._working_tree_path_native), str(rel_path.native)]))
+                is_dir = stat.S_ISDIR(sr.st_mode)
+            except OSError as e:
+                raise manip.PathNormalizationError(oserror=e) from None
+            if is_dir != rel_path.is_dir():
+                rel_path = path.__class__(rel_components, is_dir=is_dir)
+
+        return rel_path
+
+    @staticmethod
+    def create_temporary(*, suffix='', prefix='t', is_dir=False) -> fs.Path:
+        self = _get_root_specifics()
+
+        if not isinstance(suffix, str) or not isinstance(prefix, str):
+            raise TypeError("'prefix' and 'suffix' must be str")
+        if not prefix:
+            raise ValueError("'prefix' must not be empty")
+        if os.path.sep in prefix or (os.path.altsep and os.path.altsep in prefix):
+            raise ValueError("'prefix' must not contain a path separator")
+        if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
+            raise ValueError("'prefix' must not contain a path separator")
+
+        t = os.path.join(str(self._working_tree_path_native), _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+        is_dir = bool(is_dir)
+        if is_dir:
+            p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
+        else:
+            fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
+            os.close(fd)
+        return fs.Path(fs.Path.Native(p_str), is_dir=is_dir)
 
     def __setattr__(self, key, value):
         if not key.startswith('_'):
