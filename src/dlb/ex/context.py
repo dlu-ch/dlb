@@ -22,7 +22,7 @@ import stat
 import time
 import tempfile
 import asyncio
-from typing import Pattern, Type, Optional, Dict, Union
+from typing import Pattern, Type, Optional, Union, Tuple, Dict
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -34,7 +34,7 @@ assert sys.version_info >= (3, 7)
 _contexts = []
 
 
-def _get_root_specifics():
+def _get_root_specifics() -> '_RootSpecifics':
     if not _contexts:
         raise NotRunningError
     # noinspection PyProtectedMember
@@ -311,6 +311,19 @@ class _RootSpecifics:
             )
             raise ManagementTreeError(msg)
 
+        # path of all existing directories in os.get_exec_path(), that can be representat as dlb.fs.Path
+        binary_search_paths = []
+        for p in os.get_exec_path():
+            try:
+                pn = fs.Path.Native(p)
+                if os.path.isdir(pn):
+                    p = fs.Path(p, is_dir=True)
+                    if p not in binary_search_paths:
+                        binary_search_paths.append(p)
+            except (OSError, ValueError):
+                pass
+        self._binary_search_paths = tuple(binary_search_paths)
+
         # 3. then prepare it
 
         try:  # OSError in this block -> ManagementTreeError
@@ -480,6 +493,11 @@ class Context(metaclass=_ContextMeta):
         # noinspection PyStatementEffect
         self.active
         return self._env
+
+    @property
+    def binary_search_paths(self) -> Tuple[fs.Path, ...]:
+        # noinspection PyProtectedMember
+        return _get_root_specifics()._binary_search_paths
 
     @property
     def working_tree_time_ns(self) -> int:

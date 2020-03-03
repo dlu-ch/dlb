@@ -134,6 +134,17 @@ Context objects
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
+   .. attribute:: binary_search_paths
+
+      A duplicate-free tuple of absolute directory paths where this process should look for binaries according to
+      the operating system.
+
+      It is compiled from :func:`python:os.get_exec_path() when the root context is entered.
+
+      Same on class and instance.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
    .. attribute:: working_tree_time_ns
 
       The current :term:`working tree time` in nanoseconds as an integer.
