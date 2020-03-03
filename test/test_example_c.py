@@ -101,7 +101,7 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.Context():
             result = GccCompiler(source_file='a.c', object_file='a.o').run()
 
-        print(result.included_files)
+        self.assertEqual((dlb.fs.Path('a.h'),), result.included_files)
         self.assertTrue(os.path.isfile(result.object_file.native))
         self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 

@@ -472,6 +472,7 @@ class Context(metaclass=_ContextMeta):
 
     @property
     def root_path(self) -> fs.Path:
+        # noinspection PyProtectedMember
         return _get_root_specifics()._working_tree_path
 
     @property

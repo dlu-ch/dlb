@@ -17,13 +17,17 @@ class LimitingCoroutineSequencerTest(unittest.TestCase):
 
     def test_complete_all(self):
 
+        do_print = False
+
         async def sleep_randomly(a, b):
             dt = random.random()
-            print(a, dt)
+            if do_print:
+                print(a, dt)
             await asyncio.sleep(0.2 + 0.5 * dt)
-            r = a + b
-            print(r)
-            return r
+            s = a + b
+            if do_print:
+                print(s)
+            return s
 
         random.seed(0)
 
@@ -73,10 +77,14 @@ class LimitingCoroutineSequencerTest(unittest.TestCase):
 
     def test_timeout(self):
 
+        do_print = False
+
         async def sleep(t):
-            print('s', t)
+            if do_print:
+                print('s', t)
             await asyncio.sleep(t)
-            print('p', t)
+            if do_print:
+                print('p', t)
             return t
 
         sequencer = dlb.ex.aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())

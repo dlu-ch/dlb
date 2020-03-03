@@ -311,6 +311,8 @@ def _remove_explicit_output_dependencies(tool, dependency_actions: Tuple[dependa
     # Remove all filesystem objects that are explicit output dependencies of *tool*.
 
     tmp_dir = None
+
+    # noinspection PyProtectedMember
     db = context_._get_rundb()
 
     for action in dependency_actions:

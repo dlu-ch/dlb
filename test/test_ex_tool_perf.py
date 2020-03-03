@@ -62,7 +62,7 @@ class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
             profile.disable()
 
         stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats()
+        stats.print_stats(5)
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)
@@ -104,7 +104,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryDirectoryTestCa
             profile.disable()
 
         stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats()
+        stats.print_stats(5)
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)
@@ -127,7 +127,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryDirectoryTestCa
         profile.disable()
 
         stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats()
+        stats.print_stats(5)
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)
@@ -148,7 +148,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryDirectoryTestCa
         profile.disable()
 
         stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats()
+        stats.print_stats(5)
 
         # e.g. for https://jiffyclub.github.io/snakeviz/
         assert os.path.isabs(__file__)

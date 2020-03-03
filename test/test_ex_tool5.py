@@ -198,6 +198,7 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
 
+            # noinspection PyShadowingNames
             async def redo(self, result, context):
                 pass
 
@@ -247,6 +248,7 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
 
+            # noinspection PyShadowingNames
             async def redo(self, result, context):
                 result.included_files = None
 
@@ -301,6 +303,7 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryDirectoryTestCase):
             cflags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction='.+', example='-O2',
                                               required=False, explicit=False)
 
+            # noinspection PyShadowingNames
             async def redo(self, result, context):
                 pass
 
