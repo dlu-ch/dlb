@@ -22,7 +22,7 @@ import stat
 import time
 import tempfile
 import asyncio
-from typing import Pattern, Type, Optional, Union, Tuple, Dict, Iterable
+from typing import Pattern, Type, Optional, Union, Any, Tuple, List, Dict, Iterable
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -31,7 +31,7 @@ from . import aseq
 assert sys.version_info >= (3, 7)
 
 
-_contexts = []
+_contexts: List['Context'] = []
 
 
 def _get_root_specifics() -> '_RootSpecifics':
@@ -79,17 +79,17 @@ _RUNDB_FILE_NAME = 'runs.sqlite'
 
 class _EnvVarDict:
 
-    def __init__(self, parent=None, top_value_by_name: Optional[Dict[str, str]] = None):
-        if not (parent is None or isinstance(parent, _EnvVarDict)):
-            raise TypeError
-
-        self._parent = parent
+    def __init__(self, context: 'Context', top_value_by_name: Optional[Dict[str, str]] = None):
+        parent_context = context.parent
+        parent = None if parent_context is None else parent_context.env
         if parent is None:
             self._top_value_by_name = {str(k): str(v) for k, v, in top_value_by_name.items()}
             self._value_by_name = dict()
         else:
             self._top_value_by_name = dict()
             self._value_by_name = dict(parent._value_by_name)
+        self._context = context
+        self._parent = parent
         self._restriction_by_name: Dict[str, Pattern] = dict()
 
     def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):
@@ -208,6 +208,92 @@ class _EnvVarDict:
         return self._value_by_name.__contains__(name)
 
 
+_EnvVarDict.__name__ = 'EnvVarDict'
+_EnvVarDict.__qualname__ = 'Context.EnvVarDict'
+ut.set_module_name_to_parent(_EnvVarDict)
+
+
+class _HelperDict:
+
+    def __init__(self, context: 'Context', implicit_abs_path_by_helper_path: Optional[Dict[fs.Path, fs.Path]]):
+        # a 'self.get(helper_path)' or 'self[help_path]' tries these steps in order until the result is not None
+        #
+        #     1. self._explicit_abs_path_by_helper_path.get(helper_path)
+        #     2  self._implicit_abs_path_by_helper_path.get(helper_path) if implicit_abs_path_by_helper_path is not None
+        #     3. context.find_in_path(helper_path) if implicit_abs_path_by_helper_path is not None
+        #
+        # When the absolute path 'abs_path' for a helper path is found in step 3, its it added to
+        # self._implicit_abs_path_by_helper_path:
+        #
+        #     self._implicit_abs_path_by_helper_path[helper_path] = [abs_path
+
+        self._context = context
+        self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = dict()
+        self._implicit_abs_path_by_helper_path = implicit_abs_path_by_helper_path
+
+    def get(self, helper_path):
+        if not isinstance(helper_path, fs.Path):
+            helper_path = fs.Path(helper_path)
+        p = self._explicit_abs_path_by_helper_path.get(helper_path)
+        if p is not None:
+            return p
+        if self._implicit_abs_path_by_helper_path is None:
+            return None
+        p = self._implicit_abs_path_by_helper_path.get(helper_path)
+        if p is not None:
+            return p
+        p = self._context.find_path_in(helper_path)
+        if p is not None:
+            self._implicit_abs_path_by_helper_path[helper_path] = p
+            return p
+
+    def __getitem__(self, helper_path) -> fs.Path:
+        p = self.get(helper_path)
+        if p is None:
+            raise KeyError(fs.Path(helper_path))
+        return p
+
+    def __setitem__(self, helper_path, abs_path):
+        if not isinstance(helper_path, fs.Path):
+            helper_path = fs.Path(helper_path)
+        if helper_path.is_absolute():
+            raise ValueError("'helper_path' must not be absolute")
+        if not isinstance(abs_path, fs.Path):
+            abs_path = fs.Path(abs_path)
+        if not abs_path.is_absolute():
+            abs_path = self._context.root_path / abs_path
+        if abs_path.is_dir() != helper_path.is_dir():
+            t = 'directory' if helper_path.is_dir() else 'non-directory'
+            msg = f"when 'helper_path' is a {t}, 'abs_path' must also be a {t}"
+            raise ValueError(msg)
+        self._explicit_abs_path_by_helper_path[helper_path] = abs_path
+
+    def __delitem__(self, helper_path):
+        if not isinstance(helper_path, fs.Path):
+            helper_path = fs.Path(helper_path)
+        try:
+            del self._explicit_abs_path_by_helper_path[helper_path]
+        except KeyError:
+            # do _not_ remove an item from self._implicit_abs_path_by_helper_path, since this would change the state
+            # of an outer context
+            msg = f"not a relative helper path with an explictly assigned absolute path: {helper_path.as_string()!r}"
+            raise KeyError(msg) from None
+
+    def __contains__(self, helper_path):
+        if not isinstance(helper_path, fs.Path):
+            helper_path = fs.Path(helper_path)
+        if helper_path in self._explicit_abs_path_by_helper_path:
+            return True
+        if self._implicit_abs_path_by_helper_path is None:
+            return False
+        return helper_path in self._implicit_abs_path_by_helper_path
+
+
+_HelperDict.__name__ = 'HelperDict'
+_HelperDict.__qualname__ = 'Context.HelperDict'
+ut.set_module_name_to_parent(_HelperDict)
+
+
 class _ContextMeta(type):
     def __getattribute__(self, name):
         refer = not name.startswith('_')
@@ -233,6 +319,7 @@ class _ContextMeta(type):
 
 class _RootSpecifics:
     def __init__(self, path_cls: Type[fs.Path]):
+        self._implicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = dict()
         self._path_cls = path_cls
 
         # cwd must be a working tree`s root
@@ -451,29 +538,32 @@ class _RootSpecifics:
                 raise first_exception
 
 
-_EnvVarDict.__name__ = 'EnvVarDict'
-_EnvVarDict.__qualname__ = 'Context.EnvVarDict'
-ut.set_module_name_to_parent(_EnvVarDict)
-
-
 class Context(metaclass=_ContextMeta):
 
     EnvVarDict = NotImplemented  # only Context should construct an _EnvVarDict
 
-    def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1):
+    def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1,
+                 find_helpers: bool = False):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' must be a subclass of 'dlb.fs.Path'")
+        self._parent: Optional[Context] = None
         self._path_cls = path_cls
         self._max_pending_redo = max(1, int(max_parallel_redo_count))
+        self._find_helpers = bool(find_helpers)
         self._redo_sequencer = aseq.LimitingResultSequencer(asyncio.get_event_loop())
         self._root_specifics: Optional[_RootSpecifics] = None
         self._env: Optional[_EnvVarDict] = None
+        self._helper: Optional[_HelperDict] = None
 
     @property
-    def active(self):
+    def active(self) -> 'Context':
         if not _contexts:
             raise NotRunningError
         return _contexts[-1]
+
+    @property
+    def parent(self) -> Optional['Context']:
+        return self._parent
 
     @property
     def path_cls(self) -> Type[fs.Path]:
@@ -482,6 +572,10 @@ class Context(metaclass=_ContextMeta):
     @property
     def max_parallel_redo_count(self) -> int:
         return self._max_pending_redo
+
+    @property
+    def find_helpers(self) -> bool:
+        return self._find_helpers
 
     @property
     def root_path(self) -> fs.Path:
@@ -495,11 +589,20 @@ class Context(metaclass=_ContextMeta):
         return self._env
 
     @property
+    def helper(self) -> _HelperDict:
+        # noinspection PyStatementEffect
+        self.active
+        return self._helper
+
+    @property
     def binary_search_paths(self) -> Tuple[fs.Path, ...]:
         # noinspection PyProtectedMember
         return _get_root_specifics()._binary_search_paths
 
-    def find_path_in(self, path: fs.Path, search_prefixes: Optional[Iterable[fs.Path]] = None) -> Optional[fs.Path]:
+    @staticmethod
+    def find_path_in(path, search_prefixes: Optional[Iterable[Any]] = None) -> Optional[fs.Path]:
+        self = Context.active
+
         if not isinstance(path, fs.Path):
             path = fs.Path(path)
         if path.is_absolute():
@@ -609,6 +712,8 @@ class Context(metaclass=_ContextMeta):
 
     def __enter__(self):
         if _contexts:
+            if self._find_helpers and not _contexts[0]._find_helpers:
+                raise ValueError("'find_helpers' must be False if 'find_helpers' of root context is False")
             try:
                 # noinspection PyCallingNonCallable
                 self._path_cls(self.root_path)
@@ -619,11 +724,16 @@ class Context(metaclass=_ContextMeta):
                     f'  | move the working directory or choose a less restrictive path class for the root context'
                 )
                 raise ValueError(msg) from None
-            self._env = _EnvVarDict(_contexts[-1].env, None)
+            self._parent = _contexts[-1]
+            self._env = _EnvVarDict(self, None)
         else:
             self._root_specifics = _RootSpecifics(self._path_cls)
-            self._env = _EnvVarDict(None, os.environ)
+            self._env = _EnvVarDict(self, os.environ)
         _contexts.append(self)
+        # noinspection PyProtectedMember
+        implicit_abs_path_by_helper_path = \
+            _contexts[0]._root_specifics._implicit_abs_path_by_helper_path if self._find_helpers else None
+        self._helper = _HelperDict(self, implicit_abs_path_by_helper_path)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -634,6 +744,8 @@ class Context(metaclass=_ContextMeta):
         if not (_contexts and _contexts[-1] == self):
             raise ContextNestingError
         _contexts.pop()
+
+        self._parent = None
         self._env = None
 
         if self._root_specifics:

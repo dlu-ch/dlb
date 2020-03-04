@@ -61,7 +61,7 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                 result.source_file
             ]
 
-            commandline_tokens = [str(context.find_path_in(self.BINARY).native)] + [
+            commandline_tokens = [str(context.helper[self.BINARY].native)] + [
                 str(n.native) if isinstance(n, dlb.fs.Path) else str(n)
                 for n in commandline_arguments
             ]

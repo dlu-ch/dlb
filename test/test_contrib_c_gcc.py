@@ -60,14 +60,14 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
         dlb.di.set_output_file(sys.stderr)
 
         t = CCompiler(source_file='a.c', object_file='a.o', include_search_directories=['i/'])
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=True):
             result = t.run()
 
         self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
         self.assertTrue(os.path.isfile(result.object_file.native))
         self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=True):
             t.run()
             self.assertIsNone(t.run())
 
@@ -78,7 +78,7 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
 
         t = CCompiler(source_file='a:c', object_file='a.o')
         with self.assertRaises(Exception) as cm:
-            with dlb.ex.Context():
+            with dlb.ex.Context(find_helpers=True):
                 t.run()
         self.assertEqual("limitation of 'gcc -MMD' does not allow this file name: 'a:c'", str(cm.exception))
 
@@ -93,7 +93,7 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
 
         t = C(source_file='a.c', object_file='a.o')
         with self.assertRaises(Exception):
-            with dlb.ex.Context():
+            with dlb.ex.Context(find_helpers=True):
                 t.run()
 
     def test_fails_for_invalid_warning(self):
@@ -106,6 +106,6 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
 
         t = C(source_file='a.c', object_file='a.o')
         with self.assertRaises(Exception) as cm:
-            with dlb.ex.Context():
+            with dlb.ex.Context(find_helpers=True):
                 t.run()
         self.assertEqual("not a warning name: 'no-all'", str(cm.exception))

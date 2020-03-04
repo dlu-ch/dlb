@@ -41,6 +41,8 @@ Terms
       An external filesystem object in the :term:`managed tree` or outside the :term:`working tree` with a path
       to be determined at run-time.
 
+      A dynamic helper is identified by a relative path (non-directory or directory).
+
       Typical example: globally installed binary (e.g. compiler) with an absolute path determined by a search for
       the first match in the environment variable :envvar:`PATH`.
 

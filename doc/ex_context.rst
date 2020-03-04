@@ -47,7 +47,7 @@ Contexts can be nested::
 Context objects
 ---------------
 
-.. class:: Context(path_cls=dlb.fs.Path, max_parallel_redo_count=1)
+.. class:: Context(path_cls=dlb.fs.Path, max_parallel_redo_count=1, find_helpers=False)
 
    An instance does nothing unless used as a :term:`python:context manager`.
 
@@ -67,6 +67,9 @@ Context objects
    :type path_cls: dlb.fs.Path
    :param max_parallel_redo_count: maximum number of redos started in this context than can be pending at the same time
    :type max_parallel_redo_count: int
+   :param find_helpers:
+      if this is ``True``, dynamic helpers not defined explictly are searched for in :attr:`binary_search_paths`
+   :param find_helpers: bool
    :raises TypeError: if *path_cls* is not a subclass of :class:`dlb.fs.Path`
 
    Entering or exiting a context may raise the following exceptions:
@@ -117,6 +120,15 @@ Context objects
 
       The maximum number of redos started in this context than can be pending at the same time, as defined in the
       constructor.
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: find_helpers
+
+      Find dynamic helpers not defined explictly are in :attr:`binary_search_paths`?
+      This is defined defined in the constructor.
 
       When called on class, it refers to the :term:`active context`.
 
@@ -177,8 +189,8 @@ Context objects
 
    .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False)
 
-      Creates a temporary regular file (for *is_dir* = ``False``) or a temporary directory (for *is_dir* = ``True``)
-      in the :term:`management tree` and returns is absolute path.
+      Create a temporary regular file (for *is_dir* = ``False``) or a temporary directory (for *is_dir* = ``True``)
+      in the :term:`management tree` and return is absolute path.
 
       The file name will end with *suffix* (without an added dot) and begin with *prefix*.
 
@@ -222,7 +234,7 @@ Context objects
 
    .. method:: managed_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False)
 
-      Returns the :term:`managed tree path` of the *path* of a filesystem object in the :term:`managed tree`.
+      Return the :term:`managed tree path` of the *path* of a filesystem object in the :term:`managed tree`.
 
       For *path* to be considered as the path of a filesystem object in the :term:`managed tree`, *path* must either
       be a relative path or it must have :attr:`root_path` as a prefix.
@@ -256,8 +268,37 @@ Context objects
 
    .. attribute:: env
 
-      Returns an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` with
+      The :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` with
       this context as its associated :term:`context`.
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: helper
+
+      The dynamic helper dictionary object with this context as its associated :term:`context`.
+
+      The dynamic helper dictionary object maps :term:`dynamic helpers <dynamic helper>` to absolute paths, either
+      explicitly or implicitly with the help of :meth:`find_path_in()`.
+
+      If the :term:`active context` and the :term:`root context` both have :attr:`find_helpers` = ``False``
+      and no paths was explicitly assigned to the dynamic helper *p* in the active contect, a look-up with
+      ``dlb.ex.Context.helper[p]`` performs a search with ``dlb.ex.Context.find_path_in(p)``. (Each such search is
+      performed only once for a given path; the result is stored.)
+
+      Examples::
+
+         >>> dlb.ex.Context.helper['gcc']
+         Path('/usr/bin/gcc')
+
+         >>> dlb.ex.Context.helper['gcc'] = '/usr/local/bin/my-very-own-very-special-gcc'  # set the path explictly
+         >>> dlb.ex.Context.helper['gcc']
+         Path('/usr/local/bin/my-very-own-very-special-gcc')
+
+         >>> dlb.ex.Context.helper['tmp/'] = 'out/t/'  # relative path: relative to the working tree's root path
+         >>> dlb.ex.Context.helper['tmp/']
+         Path('/home/schmutzli/projects/esel/out/t')   # with '/home/schmutzli/projects/esel' as the working tree's root
 
       When called on class, it refers to the :term:`active context`.
 
