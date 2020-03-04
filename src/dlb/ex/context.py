@@ -145,7 +145,7 @@ class _EnvVarDict:
                 raise ValueError(f"{k!r} must not be empty")
 
     def _check_if_env_of_active_context(self):
-        if not (_contexts and _contexts[-1].env is self):
+        if not (_contexts and _contexts[-1] is self._context):
             msg = (
                 "'env' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
@@ -282,11 +282,13 @@ class _HelperDict:
             t = 'directory' if helper_path.is_dir() else 'non-directory'
             msg = f"when 'helper_path' is a {t}, 'abs_path' must also be a {t}"
             raise ValueError(msg)
+        self._check_if_env_of_active_context()
         self._explicit_abs_path_by_helper_path[helper_path] = abs_path
 
     def __delitem__(self, helper_path):
         if not isinstance(helper_path, fs.Path):
             helper_path = fs.Path(helper_path)
+        self._check_if_env_of_active_context()
         try:
             del self._explicit_abs_path_by_helper_path[helper_path]
         except KeyError:
@@ -294,6 +296,14 @@ class _HelperDict:
             # of an outer context
             msg = f"not a relative helper path with an explictly assigned absolute path: {helper_path.as_string()!r}"
             raise KeyError(msg) from None
+
+    def _check_if_env_of_active_context(self):
+        if not (_contexts and _contexts[-1] is self._context):
+            msg = (
+                "'helper' of an inactive context must not be modified\n"
+                "  | use 'dlb.ex.Context.active.helper' to get 'helper' of the active context"
+            )
+            raise NonActiveContextAccessError(msg)
 
     def __iter__(self):
         return (k for k in self.keys())

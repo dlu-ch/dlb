@@ -206,6 +206,33 @@ class ExplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
             s = repr(dlb.ex.Context.helper)
             self.assertEqual("HelperDict({'gcc': '/gcc', 'ls': '/ls'})", s)
 
+    def test_assignment_fails_on_inactive_context(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context() as c0:
+            helper0 = c0.helper
+            with dlb.ex.Context():
+                regex = (
+                    r"(?m)\A"
+                    r"'helper' of an inactive context must not be modified\n"
+                    r"  \| use 'dlb\.ex\.Context\.active\.helper' to get 'helper' of the active context\Z"
+                )
+                with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    helper0['a'] = '/a'
+
+    def test_deletion_fails_on_inactive_context(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context() as c0:
+            helper0 = c0.helper
+            helper0['a'] = '/a'
+            with dlb.ex.Context():
+                regex = (
+                    r"(?m)\A"
+                    r"'helper' of an inactive context must not be modified\n"
+                    r"  \| use 'dlb\.ex\.Context\.active\.helper' to get 'helper' of the active context\Z"
+                )
+                with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    del helper0['a']
+
 
 @unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
 class ImplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
