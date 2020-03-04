@@ -322,3 +322,13 @@ class UsageTest(tools_for_test.TemporaryDirectoryTestCase):
             del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
             self.assertNotIn('LANG', dlb.ex.Context.active.env)
             dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
+
+    def test_has_repr(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            dlb.ex.Context.env.import_from_outer('LANG', r'.*', example='')
+            dlb.ex.Context.env.import_from_outer('ABC', r'.*', example='')
+            dlb.ex.Context.env['LANG'] = 'fr_FR'
+            dlb.ex.Context.env['ABC'] = ''
+            s = repr(dlb.ex.Context.env)
+            self.assertEqual("EnvVarDict({'ABC': '', 'LANG': 'fr_FR'})", s)

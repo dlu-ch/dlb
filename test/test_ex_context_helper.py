@@ -184,6 +184,28 @@ class ExplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertNotIn('a', dlb.ex.Context.helper)
             self.assertIn('b', dlb.ex.Context.helper)
 
+    def test_is_dictionarylike(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            dlb.ex.Context.helper['ls'] = '/ls'
+            dlb.ex.Context.helper['gcc'] = '/gcc'
+            items = [i for i in dlb.ex.Context.helper.items()]
+            self.assertEqual([
+                (dlb.fs.Path('gcc'), dlb.fs.Path('/gcc')),
+                (dlb.fs.Path('ls'), dlb.ex.Context.helper['ls'])
+            ], sorted(items))
+            self.assertEqual(2, len(dlb.ex.Context.helper))
+            keys = [k for k in dlb.ex.Context.helper]
+            self.assertEqual([dlb.fs.Path('gcc'), dlb.fs.Path('ls')], sorted(keys))
+
+    def test_has_repr(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            dlb.ex.Context.helper['ls'] = '/ls'
+            dlb.ex.Context.helper['gcc'] = '/gcc'
+            s = repr(dlb.ex.Context.helper)
+            self.assertEqual("HelperDict({'gcc': '/gcc', 'ls': '/ls'})", s)
+
 
 @unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
 class ImplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -219,3 +241,27 @@ class ImplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
                     pass
             msg = "'find_helpers' must be False if 'find_helpers' of root context is False"
             self.assertEqual(msg, str(cm.exception))
+
+    def test_is_dictionarylike(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context(find_helpers=True):
+            dlb.ex.Context.helper['ls']
+            with dlb.ex.Context(find_helpers=True):
+                dlb.ex.Context.helper['ls'] = dlb.ex.Context.helper['ls']
+                dlb.ex.Context.helper['gcc'] = '/gcc'
+                items = [i for i in dlb.ex.Context.helper.items()]
+                self.assertEqual([
+                    (dlb.fs.Path('gcc'), dlb.fs.Path('/gcc')),
+                    (dlb.fs.Path('ls'), dlb.ex.Context.helper['ls'])
+                ], sorted(items))
+                self.assertEqual(2, len(dlb.ex.Context.helper))
+                keys = [k for k in dlb.ex.Context.helper]
+                self.assertEqual([dlb.fs.Path('gcc'), dlb.fs.Path('ls')], sorted(keys))
+
+    def test_has_repr(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context(find_helpers=True):
+            dlb.ex.Context.helper['ls'] = '/ls'
+            dlb.ex.Context.helper['gcc'] = '/gcc'
+            s = repr(dlb.ex.Context.helper)
+            self.assertEqual("HelperDict({'gcc': '/gcc', 'ls': '/ls'})", s)

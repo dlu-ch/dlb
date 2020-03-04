@@ -22,7 +22,7 @@ import stat
 import time
 import tempfile
 import asyncio
-from typing import Pattern, Type, Optional, Union, Any, Tuple, List, Dict, Iterable
+from typing import Pattern, Type, Optional, Union, Any, Tuple, List, Dict, Collection, Iterable
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -161,7 +161,7 @@ class _EnvVarDict:
     def items(self):
         return self._value_by_name.items()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._value_by_name.__len__()
 
     def __getitem__(self, name: str) -> str:
@@ -204,8 +204,13 @@ class _EnvVarDict:
     def __iter__(self):
         return self._value_by_name.__iter__()
 
-    def __contains__(self, name):
+    def __contains__(self, name) -> bool:
         return self._value_by_name.__contains__(name)
+
+    def __repr__(self) -> str:
+        items = sorted(self.items())
+        args = ', '.join('{}: {}'.format(repr(k), repr(v)) for k, v in items)
+        return f"{self.__class__.__name__}({{{args}}})"
 
 
 _EnvVarDict.__name__ = 'EnvVarDict'
@@ -231,6 +236,14 @@ class _HelperDict:
         self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = dict()
         self._implicit_abs_path_by_helper_path = implicit_abs_path_by_helper_path
 
+    def keys(self) -> Collection[fs.Path]:
+        if not self._implicit_abs_path_by_helper_path:
+            return tuple(self._explicit_abs_path_by_helper_path)
+        return frozenset(self._explicit_abs_path_by_helper_path) | frozenset(self._implicit_abs_path_by_helper_path)
+
+    def items(self) -> Collection[Tuple[fs.Path, fs.Path]]:
+        return tuple((k, self[k]) for k in self.keys())
+
     def get(self, helper_path):
         if not isinstance(helper_path, fs.Path):
             helper_path = fs.Path(helper_path)
@@ -246,6 +259,9 @@ class _HelperDict:
         if p is not None:
             self._implicit_abs_path_by_helper_path[helper_path] = p
             return p
+
+    def __len__(self) -> int:
+        return len(self.keys())
 
     def __getitem__(self, helper_path) -> fs.Path:
         p = self.get(helper_path)
@@ -279,7 +295,10 @@ class _HelperDict:
             msg = f"not a relative helper path with an explictly assigned absolute path: {helper_path.as_string()!r}"
             raise KeyError(msg) from None
 
-    def __contains__(self, helper_path):
+    def __iter__(self):
+        return (k for k in self.keys())
+
+    def __contains__(self, helper_path) -> bool:
         if not isinstance(helper_path, fs.Path):
             helper_path = fs.Path(helper_path)
         if helper_path in self._explicit_abs_path_by_helper_path:
@@ -287,6 +306,11 @@ class _HelperDict:
         if self._implicit_abs_path_by_helper_path is None:
             return False
         return helper_path in self._implicit_abs_path_by_helper_path
+
+    def __repr__(self) -> str:
+        items = sorted(self.items())
+        args = ', '.join('{}: {}'.format(repr(k.as_string()), repr(v.as_string())) for k, v in items)
+        return f"{self.__class__.__name__}({{{args}}})"
 
 
 _HelperDict.__name__ = 'HelperDict'
