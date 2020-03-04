@@ -23,6 +23,8 @@ def check_warning_name(n: str) -> str:
 
 class CCompilerGcc(dlb_contrib_c.CCompiler):
 
+    BINARY = 'gcc'  # helper file, looked-up in the context
+
     DIALECT = 'c99'  # https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html#C-Dialect-Options
 
     SUPPRESSED_WARNINGS = ()  # names of warnings to be suppressed (e.g. 'unused-value')
@@ -49,9 +51,9 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                     compile_arguments.extend(['-I', p])  # looked up for #include <p> and #include "p"
 
             # https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
-            compile_arguments.append('-Wall')
-            compile_arguments.extend(['-Wno-' + check_warning_name(n) for n in self.SUPPRESSED_WARNINGS])
-            compile_arguments.extend(['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS])
+            compile_arguments += ['-Wall']
+            compile_arguments += ['-Wno-' + check_warning_name(n) for n in self.SUPPRESSED_WARNINGS]
+            compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
 
             commandline_arguments = compile_arguments + [
                 '-x', 'c', '-std=' + self.DIALECT, '-c', '-o', object_file,
@@ -59,11 +61,10 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                 result.source_file
             ]
 
-            commandline_tokens = ['/usr/bin/gcc']
-            for n in commandline_arguments:
-                if isinstance(n, dlb.fs.Path):
-                    n = n.native
-                commandline_tokens.append(str(n))
+            commandline_tokens = [str(context.find_path_in(self.BINARY).native)] + [
+                str(n.native) if isinstance(n, dlb.fs.Path) else str(n)
+                for n in commandline_arguments
+            ]
             proc = await asyncio.create_subprocess_exec(*commandline_tokens, cwd=context.root_path.native)
             await proc.communicate()
             if proc.returncode != 0:

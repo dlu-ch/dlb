@@ -22,7 +22,7 @@ import stat
 import time
 import tempfile
 import asyncio
-from typing import Pattern, Type, Optional, Union, Tuple, Dict
+from typing import Pattern, Type, Optional, Union, Tuple, Dict, Iterable
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -498,6 +498,35 @@ class Context(metaclass=_ContextMeta):
     def binary_search_paths(self) -> Tuple[fs.Path, ...]:
         # noinspection PyProtectedMember
         return _get_root_specifics()._binary_search_paths
+
+    def find_path_in(self, path: fs.Path, search_prefixes: Optional[Iterable[fs.Path]] = None) -> Optional[fs.Path]:
+        if not isinstance(path, fs.Path):
+            path = fs.Path(path)
+        if path.is_absolute():
+            raise ValueError("'path' must not be absolute")
+
+        if search_prefixes is None:
+            prefixes = self.binary_search_paths
+        else:
+            prefixes = []
+            if isinstance(search_prefixes, (str, bytes)):
+                raise TypeError("'search_prefixes' must be iterable (other than 'str' or 'bytes')")
+            for p in search_prefixes:
+                if not isinstance(p, fs.Path):
+                    p = fs.Path(p, is_dir=True)
+                if not p.is_dir():
+                    raise ValueError(f"not a directory: {p.as_string()!r}")
+                if not p.is_absolute():
+                    p = self.root_path / p
+                prefixes.append(p)
+
+        for prefix in prefixes:
+            p = prefix / path
+            try:
+                if path.is_dir() == stat.S_ISDIR(os.stat(p.native).st_mode):
+                    return p  # absolute
+            except OSError:
+                pass
 
     @property
     def working_tree_time_ns(self) -> int:

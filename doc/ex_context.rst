@@ -139,11 +139,33 @@ Context objects
       A duplicate-free tuple of absolute directory paths where this process should look for binaries according to
       the operating system.
 
-      It is compiled from :func:`python:os.get_exec_path() when the root context is entered.
+      It is compiled from :func:`python:os.get_exec_path()` when the root context is entered.
 
       Same on class and instance.
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. method:: find_path_in(path, search_prefixes=None)
+
+      Find the first existing and accessible *path* in *search_prefixes* and return its absolute path.
+      Returns ``None`` if *path* is not found in *search_prefixed*.
+
+      If *path* is a :class:`dlb.fs.Path` with ``path.is_dir()`` = ``True``, existing non-directories in
+      *search_prefixes* are ignored.
+      If *path* is a :class:`dlb.fs.Path` with ``path.is_dir()`` = ``False``, existing directories in
+      *search_prefixes* are ignored.
+
+      Relative paths in *search_prefixes* are treated as relative to :attr:`root_path`.
+
+      If *search_prefixes* is ``None``, :attr:`binary_search_paths` is used instead.
+
+      Does not raise :exc:`OSError`.
+
+      :param path: the relative path to find
+      :type path: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :param search_prefixes: paths of directories to search in
+      :type search_prefixes: an iterable other than :class:`python:str` or :class:`python:bytes` or ``None``
+      :return: an absolute path or ``None``.
 
    .. attribute:: working_tree_time_ns
 
