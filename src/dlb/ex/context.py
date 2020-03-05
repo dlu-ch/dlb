@@ -155,7 +155,7 @@ class _BaseEnvVarDict:
 
 class _EnvVarDict(_BaseEnvVarDict):
 
-    def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):
+    def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):  # TODO keyword only?
         self._check_non_empty_str(name=name)
 
         if isinstance(restriction, str):
@@ -168,7 +168,7 @@ class _EnvVarDict(_BaseEnvVarDict):
         if not restriction.fullmatch(example):
             raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
 
-        self._check_if_env_of_active_context()
+        self._prepare_for_modification()
 
         value = self._value_by_name.get(name)
         if value is None:
@@ -187,13 +187,14 @@ class _EnvVarDict(_BaseEnvVarDict):
         if value is not None:
             self._value_by_name[name] = value
 
-    def _check_if_env_of_active_context(self):
+    def _prepare_for_modification(self):
         if not (_contexts and _contexts[-1] is self._context):
             msg = (
                 "'env' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
             )
             raise NonActiveContextAccessError(msg)
+        self._context.complete_pending_redos()
 
     # dictionary methods
 
@@ -209,7 +210,7 @@ class _EnvVarDict(_BaseEnvVarDict):
             )
             raise AttributeError(msg)
 
-        self._check_if_env_of_active_context()
+        self._prepare_for_modification()
 
         if not self._is_valid(name, value):
             raise ValueError(f"'value' invalid with respect to active or an outer context: {value!r}")
@@ -218,7 +219,7 @@ class _EnvVarDict(_BaseEnvVarDict):
 
     def __delitem__(self, name):
         self._check_non_empty_str(name=name)
-        self._check_if_env_of_active_context()
+        self._prepare_for_modification()
         try:
             del self._value_by_name[name]
         except KeyError:
@@ -322,15 +323,14 @@ class _BaseHelperDict:
 
 class _HelperDict(_BaseHelperDict):
 
-    def _check_if_env_of_active_context(self):
+    def _prepare_for_modification(self):
         if not (_contexts and _contexts[-1] is self._context):
             msg = (
                 "'helper' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.helper' to get 'helper' of the active context"
             )
             raise NonActiveContextAccessError(msg)
-
-    # dictionary methods
+        self._context.complete_pending_redos()
 
     def __setitem__(self, helper_path, abs_path):
         if not isinstance(helper_path, fs.Path):
@@ -345,7 +345,8 @@ class _HelperDict(_BaseHelperDict):
             t = 'directory' if helper_path.is_dir() else 'non-directory'
             msg = f"when 'helper_path' is a {t}, 'abs_path' must also be a {t}"
             raise ValueError(msg)
-        self._check_if_env_of_active_context()
+
+        self._prepare_for_modification()
         self._explicit_abs_path_by_helper_path[helper_path] = abs_path
 
 
@@ -791,10 +792,23 @@ class Context(_BaseContext):
         self.active
         return self._helper
 
+    def complete_pending_redos(self):
+        self._redo_sequencer.complete_all(timeout=None)
+        self._consume_redos_and_raise_first_exception()
+
+    def _consume_redos_and_raise_first_exception(self):
+        redo_results, redo_exceptions = self._redo_sequencer.consume_all()
+        redo_exceptions = [(tid, e) for tid, e in redo_exceptions.items()]
+        if redo_exceptions:
+            redo_exceptions.sort()
+            _, e = redo_exceptions[0]
+            raise e
+
     def __enter__(self):
         if _contexts:
             if self._find_helpers and not _contexts[0]._find_helpers:
                 raise ValueError("'find_helpers' must be False if 'find_helpers' of root context is False")
+            _contexts[-1].complete_pending_redos()
             try:
                 # noinspection PyCallingNonCallable
                 self._path_cls(self.root_path)
@@ -836,12 +850,7 @@ class Context(_BaseContext):
             self._root_specifics = None
 
         if exc_val is None:
-            redo_results, redo_exceptions = self._redo_sequencer.consume_all()
-            redo_exceptions = [(tid, e) for tid, e in redo_exceptions.items()]
-            if redo_exceptions:
-                redo_exceptions.sort()
-                _, e = redo_exceptions[0]
-                raise e
+            self._consume_redos_and_raise_first_exception()
 
 
 class RedoContext(_BaseContext):

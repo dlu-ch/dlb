@@ -38,12 +38,36 @@ class ATool(dlb.ex.Tool):
 
 class MultiplePendingRedosTest(tools_for_test.TemporaryDirectoryTestCase):
 
-    def test_two_pending_redos(self):
+    def setUp(self):
+        super().setUp()
+
         pathlib.Path('.dlbroot').mkdir()
 
         pathlib.Path('a.cpp').touch(exist_ok=False)
         pathlib.Path('b.cpp').touch(exist_ok=False)
 
+    def test_one_pending_redos(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.ex.Context():
+            self.assertEqual(1, dlb.ex.Context.max_parallel_redo_count)
+            ra = ATool(source_file='a.cpp', object_file='a.o').run()
+            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            self.assertIsNotNone(ra)
+            self.assertIsNotNone(rb)
+            self.assertFalse(ra)  # redo() complete but not yet consumed
+            self.assertFalse(rb)  # redo() not complete
+
+        regex = (
+            r"(?m)"
+            r"I create a.o\n"
+            r"(.|\n)*"
+            r"I redoing right now for b.o\n"
+        )
+        self.assertRegex(output.getvalue(), regex)
+
+    def test_two_pending_redos(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
@@ -66,22 +90,72 @@ class MultiplePendingRedosTest(tools_for_test.TemporaryDirectoryTestCase):
         )
         self.assertRegex(output.getvalue(), regex)
 
-    def test_one_pending_redos(self):
-        pathlib.Path('.dlbroot').mkdir()
-
-        pathlib.Path('a.cpp').touch(exist_ok=False)
-        pathlib.Path('b.cpp').touch(exist_ok=False)
-
+    def test_inner_context_completes_redo(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
-        with dlb.ex.Context():
-            self.assertEqual(1, dlb.ex.Context.max_parallel_redo_count)
+        with dlb.ex.Context(max_parallel_redo_count=2):
+            self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').run()
-            rb = ATool(source_file='b.cpp', object_file='b.o').run()
             self.assertIsNotNone(ra)
+            self.assertFalse(ra)  # redo() not complete
+
+            with dlb.ex.Context(max_parallel_redo_count=200):
+                pass
+
+            self.assertTrue(ra)  # redo() complete
+            rb = ATool(source_file='b.cpp', object_file='b.o').run()
             self.assertIsNotNone(rb)
-            self.assertFalse(ra)  # redo() complete but not yet consumed
+            self.assertFalse(rb)  # redo() not complete
+
+        regex = (
+            r"(?m)"
+            r"I create a.o\n"
+            r"(.|\n)*"
+            r"I redoing right now for b.o\n"
+        )
+        self.assertRegex(output.getvalue(), regex)
+
+    def test_env_modification_completes_redo(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.ex.Context(max_parallel_redo_count=2):
+            self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
+            ra = ATool(source_file='a.cpp', object_file='a.o').run()
+            self.assertIsNotNone(ra)
+            self.assertFalse(ra)  # redo() not complete
+
+            dlb.ex.Context.active.env.import_from_outer('LANG', r'.*', '')
+
+            self.assertTrue(ra)  # redo() complete
+            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            self.assertIsNotNone(rb)
+            self.assertFalse(rb)  # redo() not complete
+
+        regex = (
+            r"(?m)"
+            r"I create a.o\n"
+            r"(.|\n)*"
+            r"I redoing right now for b.o\n"
+        )
+        self.assertRegex(output.getvalue(), regex)
+
+    def test_env_modification_completes_redo(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        with dlb.ex.Context(max_parallel_redo_count=2):
+            self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
+            ra = ATool(source_file='a.cpp', object_file='a.o').run()
+            self.assertIsNotNone(ra)
+            self.assertFalse(ra)  # redo() not complete
+
+            dlb.ex.Context.active.helper['a'] = '/a'
+
+            self.assertTrue(ra)  # redo() complete
+            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            self.assertIsNotNone(rb)
             self.assertFalse(rb)  # redo() not complete
 
         regex = (

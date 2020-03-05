@@ -88,8 +88,11 @@ Tool objects
       After each of the following actions the redo is guaranteed to be completed (either successfully or
       by raising an exception):
 
-        - read of an attribute of the result proxy object
+        - read of a "public" attribute of the result proxy object
         - exit of the context :meth:`run()` was called in
+        - enter of an inner context of the context :meth:`run()` was called in
+        - modification of :attr:`env <dlb.ex.context.Context.env>` or :attr:`helper <dlb.ex.context.Context.helper>` of
+          the context :meth:`run()` was called in
         - call of :meth:`run()` of the same tool instance
 
       The result proxy object contains an attribute for every dependency role of the tool which contains the concrete
