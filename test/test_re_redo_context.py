@@ -52,16 +52,3 @@ class AccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(TypeError) as cm:
                 rc = dlb.ex.RedoContext(rc)
             self.assertEqual("'context' must be a Context object", str(cm.exception))
-
-
-class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
-
-    def test_accepts_path_in_arguments(self):  #???
-        with dlb.ex.Context() as c:
-            pass
-
-    def test_fails_for_cwd_not_in_managed_tree(self):  #???
-        pass
-
-    def test_fails_for_nonexistent_cwd(self):  #???
-        pass
