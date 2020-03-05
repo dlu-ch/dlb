@@ -321,12 +321,14 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.RegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for a regular files in the :term:`managed tree`, identified by their paths.
+   Constructs a dependency role for a regular files, identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
+
+   Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
    instance of *cls*.
@@ -344,13 +346,15 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.NonRegularFile(cls=dlb.fs.Path)
 
-   Constructs a dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor
-   regular files, identified by their paths.
+   Constructs a dependency role for filesystem objects that are neither directories nor regular files,
+   identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
+
+   Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
    instance of *cls*.
@@ -368,12 +372,14 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 .. class:: Tool.Input.Directory(cls=dlb.fs.Path)
 
-   Constructs a dependency role for directories in the :term:`managed tree`, identified by their paths.
+   Constructs a dependency role for directories, identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path <dlb.ex.context.Context.root_path>`,
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
+
+   Directories outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
    as an instance of *cls*.

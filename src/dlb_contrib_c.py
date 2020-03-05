@@ -20,3 +20,6 @@ class CCompiler(dlb.ex.Tool):
 
     # paths of all files in the managed tree directly or indirectly included by *source_file*
     included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+    # path of compiler executable
+    compiler_executable = dlb.ex.Tool.Input.RegularFile(explicit=False)

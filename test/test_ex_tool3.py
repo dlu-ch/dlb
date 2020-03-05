@@ -30,8 +30,7 @@ class ATool(dlb.ex.Tool):
 
     async def redo(self, result, context):
         dlb.di.inform("redoing right now")
-
-        with (context.root_path / self.object_file).native.raw.open('xb'):
+        with open((context.root_path / self.object_file).native, 'xb'):
             pass
 
 
@@ -73,12 +72,41 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
     def test_fails_for_nonnormalized_inputfile_path(self):
         regex = (
             r"(?m)\A"
-            r"input dependency 'source_file' contains a path that is not a managed tree path: '\.\./a\.cpp'\n"
-            r"  | reason: is an upwards path: '\.\.[\\/]+a\.cpp'\Z"
+            r"input dependency 'source_file' contains an invalid path: '\.\./a\.cpp'\n"
+            r"  | reason: not in managed tree\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='../a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
+                t.run()
+
+
+class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_absolute_in_managed_tree_remains_absolute(self):
+        os.mkdir('.dlbroot')
+
+        with pathlib.Path('a.cpp').open('xb'):
+            pass
+
+        with dlb.ex.Context() as c:
+            t = ATool(source_file=c.root_path / 'a.cpp', object_file='a.o')
+            r = t.run()
+            self.assertEqual(c.root_path / 'a.cpp', r.source_file)
+
+    def test_absolute_can_be_outside_managed_tree(self):
+        with pathlib.Path('x.cpp').open('xb'):
+            pass
+
+        os.mkdir('t')
+        with tools_for_test.DirectoryChanger('t'):
+            os.mkdir('.dlbroot')
+
+            with pathlib.Path('a.cpp').open('xb'):
+                pass
+
+            with dlb.ex.Context() as c:
+                t = ATool(source_file=c.root_path / '../x.cpp', object_file='a.o')
                 t.run()
 
 
@@ -150,7 +178,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             with dlb.ex.Context():
                 t.run()
         msg = (
-            "invalid value of dependency 'source_file': 'src'\n"
+            "input dependency 'source_file' contains an invalid path: 'src'\n"
             "  | reason: filesystem object exists, but is not a regular file"
         )
         self.assertEqual(msg, str(cm.exception))
@@ -160,7 +188,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             with dlb.ex.Context():
                 t.run()
         msg = (
-            "invalid value of dependency 'include_directories': 'src/b/'\n"
+            "input dependency 'include_directories' contains an invalid path: 'src/b/'\n"
             "  | reason: filesystem object exists, but is not a directory"
         )
         self.assertEqual(msg, str(cm.exception))
@@ -170,7 +198,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             with dlb.ex.Context():
                 t.run()
         msg = (
-            "invalid value of dependency 'dummy_file': 'src/a.cpp'\n"  
+            "input dependency 'dummy_file' contains an invalid path: 'src/a.cpp'\n"  
             "  | reason: filesystem object exists, but is a regular file"
         )
         self.assertEqual(msg, str(cm.exception))
@@ -180,7 +208,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             with dlb.ex.Context():
                 t.run()
         msg = (
-            "invalid value of dependency 'dummy_file': 'src'\n"
+            "input dependency 'dummy_file' contains an invalid path: 'src'\n"
             "  | reason: filesystem object exists, but is a directory"
         )
         self.assertEqual(msg, str(cm.exception))
@@ -197,7 +225,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             with dlb.ex.Context():
                 t.run()
         msg = (
-            "invalid value of dependency 'include_directories': 'src/a.cpp/'\n"
+            "input dependency 'include_directories' contains an invalid path: 'src/a.cpp/'\n"
             "  | reason: filesystem object exists, but is not a directory"
         )
         self.assertEqual(msg, str(cm.exception))

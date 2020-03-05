@@ -65,6 +65,9 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertTrue(os.path.isfile(result.object_file.native))
         self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
+        self.assertTrue(result.compiler_executable.is_absolute())
+        self.assertTrue(os.path.isfile(result.compiler_executable.native))
+
         with dlb.ex.Context(find_helpers=True):
             t.run()
             self.assertIsNone(t.run())

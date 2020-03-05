@@ -74,6 +74,7 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                     except ValueError:
                         pass
 
+            result.compiler_executable = context.helper[self.BINARY]
             result.included_files = included_files
             os.rename(object_file.native, result.object_file.native)
         except:

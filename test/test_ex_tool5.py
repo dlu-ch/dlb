@@ -208,7 +208,10 @@ class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with self.assertRaises(dlb.ex.RedoError) as cm:
             with dlb.ex.Context():
                 t.run()
-        msg = "non-explicit input dependency 'included_files' contains a path that is not a managed tree path: 'a/../b'"
+        msg = (
+            "non-explicit input dependency 'included_files' contains a relative path "
+            "that is not a managed tree path: 'a/../b'"
+        )
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_if_redo_assigns_none_to_required(self):

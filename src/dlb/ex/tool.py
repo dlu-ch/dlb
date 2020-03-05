@@ -64,54 +64,6 @@ class RedoError(Exception):
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
-def _get_memo_for_fs_input_dependency(name: Optional[str], path: fs.Path,
-                                      memo_by_encoded_path: Dict[str, manip.FilesystemObjectMemo],
-                                      context: context_.Context) -> Tuple[str, manip.FilesystemObjectMemo]:
-    # Returns the tuple (encoded_path, memo) where encoded_path is the encoded managed tree path for *path* and *memo*
-    # is the FilesystemObjectMemo for the filesystem object with this managed tree path in *context*.
-    # memo.stat is not None.
-    #
-    # *memo_by_encoded_path* is used as a cache for *memo*. If it contains *encoded_path* as a key, its value is
-    # used as *memo*. Otherwise *memo* is read from the filesystem.
-    #
-    # Raises DependencyCheckError if *path* is not a the path of an existing filesystem object in the managed
-    # tree that has a managed tree path.
-    #
-    # *name* is thee name of the dependency role which contains *path* as a validated value. It is used in a
-    # possible exception message.
-
-    path_role = 'is' if name is None else f"input dependency {name!r} contains"
-    try:
-        try:
-            path = context.managed_tree_path_of(path, existing=True, collapsable=False)
-        except ValueError as e:
-            if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
-                raise e.oserror
-            msg = (
-                f"{path_role} a path that is not a managed tree path: {path.as_string()!r}\n"
-                f"  | reason: {ut.exception_to_line(e)}"
-            )
-            raise DependencyCheckError(msg) from None
-
-        encoded_path = rundb.encode_path(path)
-        memo = memo_by_encoded_path.get(encoded_path)
-        if memo is None:
-            # may raise OSError or ValueError:
-            memo = manip.read_filesystem_object_memo(context.root_path / path)
-        assert memo.stat is not None
-    except (ValueError, FileNotFoundError):
-        msg = f"{path_role} a path of an non-existing filesystem object: {path.as_string()!r}"
-        raise DependencyCheckError(msg) from None
-    except OSError as e:
-        msg = (
-            f"{path_role} a path of an inaccessible filesystem object: {path.as_string()!r}\n"
-            f"  | reason: {ut.exception_to_line(e)}"
-        )
-        raise DependencyCheckError(msg) from None
-
-    return encoded_path, memo
-
-
 def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
                                                  needs_redo: bool, context: context_.Context) \
         -> Tuple[manip.FilesystemObjectMemo, bool]:
@@ -227,14 +179,36 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
             for p in validated_value_tuple:  # p is a dlb.fs.Path
                 try:
-                    encoded_path, memo = _get_memo_for_fs_input_dependency(
-                        action.name, p, memo_by_encoded_path, context)
-                    action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
-                    memo_by_encoded_path[encoded_path] = memo
-                    assert memo.stat is not None
+                    try:
+                        p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                    except ValueError as e:
+                        if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
+                            raise e.oserror
+                        if not p.is_absolute():
+                            raise ValueError('not a managed tree path') from None
+
+                    # p is a relative path of a filesystem object in the managed tree or an absolute path
+                    # of filesystem object outside the managed tree
+                    if not p.is_absolute():
+                        encoded_path = rundb.encode_path(p)
+                        memo = memo_by_encoded_path.get(encoded_path)
+                        if memo is None:
+                            memo = manip.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
+                        action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
+                        memo_by_encoded_path[encoded_path] = memo
+                        assert memo.stat is not None
                 except ValueError as e:
                     msg = (
-                        f"invalid value of dependency {action.name!r}: {p.as_string()!r}\n"
+                        f"input dependency {action.name!r} contains an invalid path: {p.as_string()!r}\n"
+                        f"  | reason: {ut.exception_to_line(e)}"
+                    )
+                    raise DependencyCheckError(msg) from None
+                except FileNotFoundError:
+                    msg = f"input dependency {action.name!r} contains a path of an non-existing filesystem object: {p.as_string()!r}"
+                    raise DependencyCheckError(msg) from None
+                except OSError as e:
+                    msg = (
+                        f"input dependency {action.name!r} contains a path of an inaccessible filesystem object: {p.as_string()!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"
                     )
                     raise DependencyCheckError(msg) from None
@@ -244,12 +218,16 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     definition_file_count = 0
     for p in get_and_register_tool_info(tool.__class__).definition_paths:
         try:
-            encoded_path, memo = _get_memo_for_fs_input_dependency(
-                None, fs.Path(p), memo_by_encoded_path, context)
+            p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+            encoded_path = rundb.encode_path(p)
+            memo = memo_by_encoded_path.get(encoded_path)
+            if memo is None:
+                memo = manip.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
+            assert memo.stat is not None
             definition_file_count += 1
             memo_by_encoded_path[encoded_path] = memo
             assert memo.stat is not None
-        except (ValueError, DependencyCheckError):
+        except (ValueError, OSError):
             # silently ignore all definition files not in managed tree
             pass
     di.inform(f"added {definition_file_count} tool definition files as input dependency")
@@ -592,12 +570,14 @@ class _ToolBase:
                             try:
                                 p = context.managed_tree_path_of(p, existing=True, collapsable=False)
                             except ValueError:
-                                msg = (
-                                    f"non-explicit input dependency {action.name!r} contains a path that is not a "
-                                    f"managed tree path: {p.as_string()!r}"
-                                )
-                                raise RedoError(msg) from None
-                            encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
+                                if not p.is_absolute():
+                                    msg = (
+                                        f"non-explicit input dependency {action.name!r} contains a relative path that "
+                                        f"is not a managed tree path: {p.as_string()!r}"
+                                    )
+                                    raise RedoError(msg) from None
+                            if not p.is_absolute():
+                                encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
 
             encoded_paths_of_input_dependencies = \
                 encoded_paths_of_explicit_input_dependencies | encoded_paths_of_nonexplicit_input_dependencies
