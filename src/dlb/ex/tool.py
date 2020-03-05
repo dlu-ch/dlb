@@ -620,7 +620,7 @@ class _ToolBase:
 
         return result
 
-    async def redo(self, result: _RedoResult, context: context_.Context):
+    async def redo(self, result: _RedoResult, context: context_.RedoContext):
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):

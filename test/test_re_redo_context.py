@@ -51,7 +51,8 @@ class AccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rc = dlb.ex.RedoContext(c)
             with self.assertRaises(TypeError) as cm:
-                rc = dlb.ex.RedoContext(rc)
+                # noinspection PyTypeChecker
+                dlb.ex.RedoContext(rc)
             self.assertEqual("'context' must be a Context object", str(cm.exception))
 
 

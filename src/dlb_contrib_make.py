@@ -168,7 +168,7 @@ def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
     return rule_sources
 
 
-def additional_sources_from_rule(lines: Iterable[str]) -> List[List[str]]:
+def additional_sources_from_rule(lines: Iterable[str]) -> List[str]:
     # Extract source paths of the first Make rule in *lines* and return a list of its source paths without the
     # first one.
     # Expects exactly one rule in *line*.

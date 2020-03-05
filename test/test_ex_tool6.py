@@ -139,7 +139,7 @@ class MultiplePendingRedosTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
         )
         self.assertRegex(output.getvalue(), regex)
 
-    def test_env_modification_completes_redo(self):
+    def test_helper_modification_completes_redo(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 

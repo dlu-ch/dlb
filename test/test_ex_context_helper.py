@@ -144,21 +144,21 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_is_not_in_initially(self):
         with dlb.ex.Context():
-            self.assertNotIn('a', dlb.ex.Context.helper)
+            self.assertNotIn('a', dlb.ex.Context.active.helper)
             self.assertIsNone(dlb.ex.Context.helper.get('a'))
             with self.assertRaises(KeyError):
                 dlb.ex.Context.helper['a']
             dlb.ex.Context.helper[dlb.fs.Path('a')] = '/a'
-            self.assertIn('a', dlb.ex.Context.helper)
+            self.assertIn('a', dlb.ex.Context.active.helper)
 
     def test_inner_inherits_outer(self):
         with dlb.ex.Context():
-            self.assertNotIn('a', dlb.ex.Context.helper)
+            self.assertNotIn('a', dlb.ex.Context.active.helper)
             dlb.ex.Context.helper['b'] = '/b'
             with dlb.ex.Context():
                 dlb.ex.Context.helper['a'] = '/a'
-                self.assertIn('b', dlb.ex.Context.helper)
-            self.assertIn('b', dlb.ex.Context.helper)
+                self.assertIn('b', dlb.ex.Context.active.helper)
+            self.assertIn('b', dlb.ex.Context.active.helper)
 
     def test_inner_does_not_change_outer(self):
         with dlb.ex.Context():
@@ -169,8 +169,8 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.Context.helper['b'] = '/B'
                 self.assertEqual(dlb.fs.Path('/B'), dlb.ex.Context.helper['b'])
 
-            self.assertNotIn('a', dlb.ex.Context.helper)
-            self.assertEqual(dlb.fs.Path('/b'), dlb.ex.Context.helper['b'])
+            self.assertNotIn('a', dlb.ex.Context.active.helper)
+            self.assertEqual(dlb.fs.Path('/b'), dlb.ex.Context.active.helper['b'])
 
     def test_is_dictionarylike(self):
         with dlb.ex.Context():
@@ -181,8 +181,8 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 (dlb.fs.Path('gcc'), dlb.fs.Path('/gcc')),
                 (dlb.fs.Path('ls'), dlb.ex.Context.helper['ls'])
             ], sorted(items))
-            self.assertEqual(2, len(dlb.ex.Context.helper))
-            keys = [k for k in dlb.ex.Context.helper]
+            self.assertEqual(2, len(dlb.ex.Context.active.helper))
+            keys = [k for k in dlb.ex.Context.active.helper]
             self.assertEqual([dlb.fs.Path('gcc'), dlb.fs.Path('ls')], sorted(keys))
 
     def test_has_repr(self):
@@ -218,7 +218,7 @@ class ImplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
             p = dlb.ex.Context.helper['ls']
             self.assertEqual(q, p)
-            self.assertIn('ls', dlb.ex.Context.helper)
+            self.assertIn('ls', dlb.ex.Context.active.helper)
 
     def test_inner_fails_if_root_context_explicit_only(self):
         with dlb.ex.Context():
@@ -239,8 +239,8 @@ class ImplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                     (dlb.fs.Path('gcc'), dlb.fs.Path('/gcc')),
                     (dlb.fs.Path('ls'), dlb.ex.Context.helper['ls'])
                 ], sorted(items))
-                self.assertEqual(2, len(dlb.ex.Context.helper))
-                keys = [k for k in dlb.ex.Context.helper]
+                self.assertEqual(2, len(dlb.ex.Context.active.helper))
+                keys = [k for k in dlb.ex.Context.active.helper]
                 self.assertEqual([dlb.fs.Path('gcc'), dlb.fs.Path('ls')], sorted(keys))
 
     def test_has_repr(self):
