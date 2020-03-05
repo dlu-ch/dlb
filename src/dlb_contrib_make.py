@@ -166,3 +166,19 @@ def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
         raise ValueError("ends with '\\'")
 
     return rule_sources
+
+
+def additional_sources_from_rule(lines: Iterable[str]) -> List[List[str]]:
+    # Extract source paths of the first Make rule in *lines* and return a list of its source paths without the
+    # first one.
+    # Expects exactly one rule in *line*.
+
+    rule_sources = sources_from_rules(lines)
+    if len(rule_sources) != 1:
+        raise ValueError(f"needs exactly one rule, got {len(rule_sources)}")
+
+    rule_source = rule_sources[0]
+    if len(rule_source) < 1:
+        raise ValueError(f"needs at least one source in rule")
+
+    return rule_source[1:]

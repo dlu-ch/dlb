@@ -73,16 +73,11 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
             # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
             included_files = []
             with open(make_rules_file.native, 'r', encoding='utf-8') as dep_file:
-                sources = dlb_contrib_make.sources_from_rules(dep_file.readlines())
-            if len(sources) != 1:
-                raise Exception(f"expect exactly one rule, got {len(sources)}")
-            if len(sources[0]) < 1:
-                raise Exception(f"expect at least one source in rule, got these: {sources[0]!r}")
-            for p in sources[0][1:]:
-                try:
-                    included_files.append(context.managed_tree_path_of(p))
-                except ValueError:
-                    pass
+                for p in dlb_contrib_make.additional_sources_from_rule(dep_file.readlines()):
+                    try:
+                        included_files.append(context.managed_tree_path_of(p))
+                    except ValueError:
+                        pass
 
             os.rename(object_file.native, result.object_file.native)
         except:

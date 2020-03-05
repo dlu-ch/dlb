@@ -11,7 +11,7 @@ import dlb_contrib_make as make
 import unittest
 
 
-class ParseRuleTest(unittest.TestCase):
+class SourcesFromRulesTest(unittest.TestCase):
 
     def test_typical_single_line(self):
         r = make.sources_from_rules(['a.o: a.c /usr/include/x86_64-linux-gnu/bits/types.h a.h b.h'])
@@ -140,3 +140,28 @@ class ParseRuleTest(unittest.TestCase):
     def test_ignores_empty_and_commentonly_lines(self):
         r = make.sources_from_rules(['', '       ',  '#  a.o: a.c', '  ', 'a.o: a.c', '', '#'])
         self.assertEqual([['a.c']], r)
+
+
+class AdditionalSourcesFromRuleTest(unittest.TestCase):
+
+    def test_typical_single_line(self):
+        r = make.additional_sources_from_rule(['a.o: a.c /usr/include/x86_64-linux-gnu/bits/types.h a.h b.h'])
+        self.assertEqual(['/usr/include/x86_64-linux-gnu/bits/types.h', 'a.h', 'b.h'], r)
+
+    def test_fails_for_missing_rule(self):
+        with self.assertRaises(ValueError) as cm:
+            make.additional_sources_from_rule([])
+        self.assertEqual("needs exactly one rule, got 0", str(cm.exception))
+
+    def test_fails_for_excess_rule(self):
+        with self.assertRaises(ValueError) as cm:
+            make.additional_sources_from_rule([
+                'a.o: a.c /usr/include/x86_64-linux-gnu/bits/types.h a.h b.h',
+                'b.o: b.c'
+            ])
+        self.assertEqual("needs exactly one rule, got 2", str(cm.exception))
+
+    def test_fails_without_source(self):
+        with self.assertRaises(ValueError) as cm:
+            make.additional_sources_from_rule(['a.o:',])
+        self.assertEqual("needs at least one source in rule", str(cm.exception))
