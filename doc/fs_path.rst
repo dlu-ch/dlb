@@ -151,7 +151,7 @@ Path objects
 
       Yields all path objects of the directory contents denoted by this path and matched by the
       name filters.
-      The paths are duplicate-free and in a defined and reproducible order, but not necessarily sorted.
+      The paths are duplicate-free and in a defined and repeatable order, but not necessarily sorted.
       They are of type ``self.__class__`` if *cls* is ``None`` and of type *cls* if it is not.
 
       The path of an existing filesystem object is eventually yielded iff

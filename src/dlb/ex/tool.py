@@ -14,10 +14,8 @@ import collections
 import hashlib
 import logging
 import inspect
-import marshal
 from typing import Type, Optional, Dict, Tuple, Set
 from .. import ut
-from .. import fs
 from ..fs import manip
 from .. import di
 from . import rundb
@@ -173,7 +171,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     memo_by_encoded_path = {}
 
     for action in dependency_actions:
-        # read memo of each filesystem object of a explicit input dependency in a reproducible order
+        # read memo of each filesystem object of a explicit input dependency in a repeatable order
         if action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
                 isinstance(action.dependency, depend.FilesystemObject):
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
@@ -246,7 +244,7 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
 
     for action in dependency_actions:
 
-        # read memo of each filesystem object of a explicit input dependency in a reproducible order
+        # read memo of each filesystem object of a explicit input dependency in a repeatable order
         if action.dependency.explicit and isinstance(action.dependency, depend.Output) and \
                 isinstance(action.dependency, depend.FilesystemObject):
 
@@ -828,8 +826,7 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
     # noinspection PyUnresolvedReferences
     definition_path, in_archive_path, lineno = tool.definition_location
 
-    # TODO replace marshal - marshal.dump(d) does not only depend on d (does reuse short ASCII-only strings)
-    permanent_local_id = marshal.dumps((definition_path, in_archive_path, lineno))
+    permanent_local_id = ut.to_permanent_local_bytes((definition_path, in_archive_path, lineno))
     if definition_path is not None:
         definition_paths.add(definition_path)
 

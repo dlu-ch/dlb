@@ -8,6 +8,7 @@ This is an implementation detail - do not import it unless you know what you are
 __all__ = ('is_immutable_fundamental', 'make_fundamental')
 
 import sys
+import marshal
 import collections.abc
 from typing import Iterable, Dict, Any
 assert sys.version_info >= (3, 7)
@@ -21,33 +22,41 @@ def is_immutable_fundamental(obj):
     return obj is None or isinstance(obj, _non_container_fundamental_types)
 
 
-def _make_fundamental(obj, force_ordered):
+def _make_fundamental(obj, repeatable):
+    if repeatable:
+        if isinstance(obj, str):
+            # https://medium.com/@bdov_/https-medium-com-bdov-python-objects-part-iii-string-interning-625d3c7319de
+            # CPython implementation of marshal.dumps(): https://github.com/python/cpython/blob/master/Python/marshal.c
+            return b's' + obj.encode()
+        elif isinstance(obj, bytes):
+            return b'b' + obj
+
     if is_immutable_fundamental(obj):
         return obj
 
-    o = force_ordered
+    r = repeatable
 
     if isinstance(obj, collections.abc.Mapping):  # note: loses order of collections.OrderedDict
-        if o:
-            return tuple(sorted((_make_fundamental(k, o), _make_fundamental(v, o)) for k, v in obj.items()))
-        return {_make_fundamental(k, o): _make_fundamental(v, o) for k, v in obj.items()}
+        if r:
+            return tuple(sorted((_make_fundamental(k, r), _make_fundamental(v, r)) for k, v in obj.items()))
+        return {_make_fundamental(k, r): _make_fundamental(v, r) for k, v in obj.items()}
 
     if isinstance(obj, (set, frozenset)):
-        obj = frozenset(_make_fundamental(k, o) for k in obj)
-        if not o:
+        obj = frozenset(_make_fundamental(k, r) for k in obj)
+        if not r:
             return obj
         return tuple(sorted(obj))
 
     if isinstance(obj, collections.abc.Iterable):
-        return tuple(_make_fundamental(k, o) for k in obj)
+        return tuple(_make_fundamental(k, r) for k in obj)
 
     raise TypeError
 
 
-def make_fundamental(obj, replace_unordered_by_tuple=False):
+def make_fundamental(obj, repeatable=False):
     try:
         # note: isinstance() can lead to infinite recursion, aborted by RecursionError
-        return _make_fundamental(obj, replace_unordered_by_tuple)
+        return _make_fundamental(obj, repeatable)
     except (TypeError, ValueError, RecursionError):
         f = ', '.join(repr(c.__name__) for c in _non_container_fundamental_types)
         msg = (
@@ -56,6 +65,19 @@ def make_fundamental(obj, replace_unordered_by_tuple=False):
             f"or an iterable of only such objects"
         )
         raise TypeError(msg) from None
+
+
+def to_permanent_local_bytes(obj) -> bytes:
+    # For the same *obj*, the return value is the same for different interpreter processes as long as
+    # the components of 'dlb.ex.platform.PERMANENT_PLATFORM_ID' do not change.
+    #
+    # The following types of objects are not (the types on each line are represented indistinguishably):
+    #
+    #   - iterables that are not are not of type 'bytes', 'str'
+    #   - collections.abc.Mapping
+    #   - collections.abc.Mapping and their sorted item tuples
+
+    return marshal.dumps(make_fundamental(obj, True), 4)
 
 
 def set_module_name_to_parent(cls):  # e.g. dlb.ex.context.Context -> dlb.ex.Context

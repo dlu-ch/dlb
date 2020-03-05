@@ -12,7 +12,6 @@ __all__ = (
 )
 
 import stat
-import marshal  # TODO replace - marshal.dump(d) does not only depend on d (does reuse short ASCII-only strings)
 from typing import Type, Set, Optional, Sequence, Hashable
 from .. import ut
 from .. import fs
@@ -52,7 +51,7 @@ class Action:
         # Two instances of the same dependency class, whose properties differ, must return different
         # permanent local value ids if the meaning of this validated values `validated_values` of a concrete dependency
         # for a running tool instance depends on the difference.
-        return marshal.dumps(ut.make_fundamental(validated_values, True))  # TODO avoid string
+        return ut.to_permanent_local_bytes(validated_values)
 
     # overwrite and prepend super().get_permanent_local_instance_id() to return value
     def get_permanent_local_instance_id(self) -> bytes:
@@ -71,7 +70,7 @@ class Action:
         dependency_id, _ = _action_by_dependency[self._dependency.__class__]
         d = self.dependency
         # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.
-        return marshal.dumps((dependency_id, d.explicit))
+        return ut.to_permanent_local_bytes((dependency_id, d.explicit))
 
     # (unvalidated) initial value before redo
     # overwrite in subclass; only called if 'dependency.explicit' is False
@@ -88,7 +87,7 @@ class _FilesystemObjectMixin(Action):
         if validated_values is not None:
             validated_values = tuple(v.as_string().encode() for v in validated_values)  # avoid strings
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
-        return marshal.dumps(validated_values)
+        return ut.to_permanent_local_bytes(validated_values)
 
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         pass
@@ -134,7 +133,7 @@ class EnvVarInputAction(Action):
     def get_permanent_local_instance_id(self) -> bytes:
         # does _not_ depend on 'restriction'
         d = self.dependency
-        return super().get_permanent_local_instance_id() + marshal.dumps((d.name.encode(),))  # avoid strings
+        return super().get_permanent_local_instance_id() + ut.to_permanent_local_bytes((d.name,))
 
     def get_initial_result_for_nonexplicit(self, context: context_.Context):
         d = self.dependency

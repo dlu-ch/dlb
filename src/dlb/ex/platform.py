@@ -7,14 +7,13 @@ This is an implementation detail - do not import it unless you know what you are
 
 import sys
 import platform
-import marshal
 import sqlite3
 from .. import version
+from .. import ut
 assert sys.version_info >= (3, 7)
 
 # changes whenever the platform, the Python version or the dlb version changes
-# TODO replace marshal - marshal.dump(d) does not only depend on d (does reuse short ASCII-only strings)
-PERMANENT_PLATFORM_ID = marshal.dumps((
+PERMANENT_PLATFORM_ID = ut.to_permanent_local_bytes((
     platform.platform(),
     sys.hexversion,
     version.__version__,

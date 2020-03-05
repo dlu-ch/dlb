@@ -36,6 +36,14 @@ class MakeFundamentalTest(unittest.TestCase):
         r = dlb.ut.make_fundamental(d, True)
         self.assertEqual(((1, 2), (3, 4)), r)
 
+    def test_returns_bytes_for_str(self):
+        r = dlb.ut.make_fundamental('xyz', True)
+        self.assertEqual(b'sxyz', r)
+
+    def test_returns_bytes_for_bytes(self):
+        r = dlb.ut.make_fundamental(b'xyz', True)
+        self.assertEqual(b'bxyz', r)
+
     def test_fails_for_recursive_list(self):
         l = [1]
         l.append(l)
@@ -59,8 +67,8 @@ class MakeFundamentalTest(unittest.TestCase):
         r = dlb.ut.make_fundamental(s, True)
         self.assertEqual((
             (1, 2.5, False),
-            ((6, 9, 13), ('hello',), complex(7, 8)),
-            ((b'abc', None),)
+            ((6, 9, 13), (b'shello',), complex(7, 8)),
+            ((b'babc', None),)
         ), r)
 
     def test_fails_for_dummy_class(self):
