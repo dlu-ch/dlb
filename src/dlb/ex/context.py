@@ -6,6 +6,7 @@
 
 __all__ = (
     'Context',
+    'RedoContext',
     'ContextNestingError',
     'NotRunningError',
     'ManagementTreeError',
@@ -39,6 +40,15 @@ def _get_root_specifics() -> '_RootSpecifics':
         raise NotRunningError
     # noinspection PyProtectedMember
     return _contexts[0]._root_specifics
+
+
+def _get_rundb() -> rundb.Database:
+    # use this to access the database from dlb.ex.Tool
+    # noinspection PyProtectedMember,PyUnresolvedReferences
+    db = _get_root_specifics()._rundb
+    if db is None:
+        raise ValueError('run-database not open')
+    return db
 
 
 class ContextNestingError(Exception):
@@ -77,64 +87,29 @@ _MTIME_TEMPORARY_DIR_NAME = 't'
 _RUNDB_FILE_NAME = 'runs.sqlite'
 
 
-class _EnvVarDict:
+class _BaseEnvVarDict:
 
-    def __init__(self, context: 'Context', top_value_by_name: Optional[Dict[str, str]] = None):
-        parent_context = context.parent
-        parent = None if parent_context is None else parent_context.env
-        if parent is None:
-            self._top_value_by_name = {str(k): str(v) for k, v, in top_value_by_name.items()}
-            self._value_by_name = dict()
-        else:
-            self._top_value_by_name = dict()
-            self._value_by_name = dict(parent._value_by_name)
+    def __init__(self, context: 'Context', top_value_by_name: Dict[str, str]):
+        # these objects must not be replaced once constructed (only modified)
+        # reason: read-only view
+
         self._context = context
-        self._parent = parent
+        self._top_value_by_name = {str(k): str(v) for k, v, in top_value_by_name.items()}
+        self._value_by_name = dict() if context.parent is None else dict(context.parent.env._value_by_name)
         self._restriction_by_name: Dict[str, Pattern] = dict()
-
-    def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):
-        self._check_non_empty_str(name=name)
-
-        if isinstance(restriction, str):
-            restriction = re.compile(restriction)
-        if not isinstance(restriction, Pattern):
-            raise TypeError("'restriction' must be regular expression (compiled or str)")
-        if not isinstance(example, str):
-            raise TypeError("'example' must be a str")
-
-        if not restriction.fullmatch(example):
-            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
-
-        self._check_if_env_of_active_context()
-
-        value = self._value_by_name.get(name)
-        if value is None:
-            # import from innermost outer context that has the environment variable defined
-            value = (self._parent._value_by_name if self._parent else self._top_value_by_name).get(name)
-            value_name = 'imported'
-        else:
-            value_name = 'current'
-
-        if value is not None:
-            if not restriction.fullmatch(value):
-                raise ValueError(f"{value_name} value invalid with respect to 'restriction': {value!r}")
-
-        self._restriction_by_name[name] = restriction  # cannot be removed, once defined!
-        if value is not None:
-            self._value_by_name[name] = value
 
     def is_imported(self, name):
         self._check_non_empty_str(name=name)
         if name in self._restriction_by_name:
             return True
-        return self._parent is not None and self._parent.is_imported(name)
+        return self._context.parent is not None and self._context.parent.env.is_imported(name)
 
     def _is_valid(self, name, value):
         self._check_non_empty_str(name=name)
         restriction = self._restriction_by_name.get(name)
         if restriction is not None and not restriction.fullmatch(value):
             return False
-        return self._parent is None or self._parent._is_valid(name, value)
+        return self._context.parent is None or self._context.parent.env._is_valid(name, value)
 
     @staticmethod
     def _check_non_empty_str(**kwargs):
@@ -144,13 +119,10 @@ class _EnvVarDict:
             if not v:
                 raise ValueError(f"{k!r} must not be empty")
 
-    def _check_if_env_of_active_context(self):
-        if not (_contexts and _contexts[-1] is self._context):
-            msg = (
-                "'env' of an inactive context must not be modified\n"
-                "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
-            )
-            raise NonActiveContextAccessError(msg)
+    def __repr__(self) -> str:
+        items = sorted(self.items())
+        args = ', '.join('{}: {}'.format(repr(k), repr(v)) for k, v in items)
+        return f"{self.__class__.__name__}({{{args}}})"
 
     # dictionary methods
 
@@ -173,6 +145,59 @@ class _EnvVarDict:
             )
             raise KeyError(msg)
         return value
+
+    def __iter__(self):
+        return self._value_by_name.__iter__()
+
+    def __contains__(self, name) -> bool:
+        return self._value_by_name.__contains__(name)
+
+
+class _EnvVarDict(_BaseEnvVarDict):
+
+    def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):
+        self._check_non_empty_str(name=name)
+
+        if isinstance(restriction, str):
+            restriction = re.compile(restriction)
+        if not isinstance(restriction, Pattern):
+            raise TypeError("'restriction' must be regular expression (compiled or str)")
+        if not isinstance(example, str):
+            raise TypeError("'example' must be a str")
+
+        if not restriction.fullmatch(example):
+            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
+
+        self._check_if_env_of_active_context()
+
+        value = self._value_by_name.get(name)
+        if value is None:
+            # import from innermost outer context that has the environment variable defined
+            if self._context.parent:
+                value = self._context.parent.env._value_by_name.get(name)
+            else:
+                value = self._top_value_by_name.get(name)
+            value_name = 'imported'
+        else:
+            value_name = 'current'
+
+        if value is not None:
+            if not restriction.fullmatch(value):
+                raise ValueError(f"{value_name} value invalid with respect to 'restriction': {value!r}")
+
+        self._restriction_by_name[name] = restriction  # cannot be removed, once defined!
+        if value is not None:
+            self._value_by_name[name] = value
+
+    def _check_if_env_of_active_context(self):
+        if not (_contexts and _contexts[-1] is self._context):
+            msg = (
+                "'env' of an inactive context must not be modified\n"
+                "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
+            )
+            raise NonActiveContextAccessError(msg)
+
+    # dictionary methods
 
     def __setitem__(self, name: str, value: str):
         self._check_non_empty_str(name=name)
@@ -201,24 +226,27 @@ class _EnvVarDict:
         except KeyError:
             raise KeyError(f"not a defined environment variable in the context: {name!r}") from None
 
-    def __iter__(self):
-        return self._value_by_name.__iter__()
-
-    def __contains__(self, name) -> bool:
-        return self._value_by_name.__contains__(name)
-
-    def __repr__(self) -> str:
-        items = sorted(self.items())
-        args = ', '.join('{}: {}'.format(repr(k), repr(v)) for k, v in items)
-        return f"{self.__class__.__name__}({{{args}}})"
-
 
 _EnvVarDict.__name__ = 'EnvVarDict'
 _EnvVarDict.__qualname__ = 'Context.EnvVarDict'
 ut.set_module_name_to_parent(_EnvVarDict)
 
 
-class _HelperDict:
+class _ReadOnlyEnvVarDictView(_BaseEnvVarDict):
+
+    def __init__(self, env_var_dict: _EnvVarDict):
+        self._context = env_var_dict._context
+        self._top_value_by_name = env_var_dict._top_value_by_name
+        self._value_by_name = env_var_dict._value_by_name
+        self._restriction_by_name = env_var_dict._restriction_by_name
+
+
+_ReadOnlyEnvVarDictView.__name__ = 'ReadOnlyEnvVarDictView'
+_ReadOnlyEnvVarDictView.__qualname__ = 'Context.ReadOnlyEnvVarDictView'
+ut.set_module_name_to_parent(_ReadOnlyEnvVarDictView)
+
+
+class _BaseHelperDict:
 
     def __init__(self, context: 'Context', implicit_abs_path_by_helper_path: Optional[Dict[fs.Path, fs.Path]]):
         # a 'self.get(helper_path)' or 'self[help_path]' tries these steps in order until the result is not None
@@ -232,9 +260,19 @@ class _HelperDict:
         #
         #     self._implicit_abs_path_by_helper_path[helper_path] = [abs_path
 
+        # these objects must not be replaced once constructed (only modified)
+        # reason: read-only view
+
         self._context = context
         self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = dict()
         self._implicit_abs_path_by_helper_path = implicit_abs_path_by_helper_path
+
+    def __repr__(self) -> str:
+        items = sorted(self.items())
+        args = ', '.join('{}: {}'.format(repr(k.as_string()), repr(v.as_string())) for k, v in items)
+        return f"{self.__class__.__name__}({{{args}}})"
+
+    # dictionary methods
 
     def keys(self) -> Collection[fs.Path]:
         if not self._implicit_abs_path_by_helper_path:
@@ -269,6 +307,31 @@ class _HelperDict:
             raise KeyError(fs.Path(helper_path))
         return p
 
+    def __iter__(self):
+        return (k for k in self.keys())
+
+    def __contains__(self, helper_path) -> bool:
+        if not isinstance(helper_path, fs.Path):
+            helper_path = fs.Path(helper_path)
+        if helper_path in self._explicit_abs_path_by_helper_path:
+            return True
+        if self._implicit_abs_path_by_helper_path is None:
+            return False
+        return helper_path in self._implicit_abs_path_by_helper_path
+
+
+class _HelperDict(_BaseHelperDict):
+
+    def _check_if_env_of_active_context(self):
+        if not (_contexts and _contexts[-1] is self._context):
+            msg = (
+                "'helper' of an inactive context must not be modified\n"
+                "  | use 'dlb.ex.Context.active.helper' to get 'helper' of the active context"
+            )
+            raise NonActiveContextAccessError(msg)
+
+    # dictionary methods
+
     def __setitem__(self, helper_path, abs_path):
         if not isinstance(helper_path, fs.Path):
             helper_path = fs.Path(helper_path)
@@ -297,30 +360,13 @@ class _HelperDict:
             msg = f"not a relative helper path with an explictly assigned absolute path: {helper_path.as_string()!r}"
             raise KeyError(msg) from None
 
-    def _check_if_env_of_active_context(self):
-        if not (_contexts and _contexts[-1] is self._context):
-            msg = (
-                "'helper' of an inactive context must not be modified\n"
-                "  | use 'dlb.ex.Context.active.helper' to get 'helper' of the active context"
-            )
-            raise NonActiveContextAccessError(msg)
 
-    def __iter__(self):
-        return (k for k in self.keys())
+class _ReadOnlyHelperDictView(_BaseHelperDict):
 
-    def __contains__(self, helper_path) -> bool:
-        if not isinstance(helper_path, fs.Path):
-            helper_path = fs.Path(helper_path)
-        if helper_path in self._explicit_abs_path_by_helper_path:
-            return True
-        if self._implicit_abs_path_by_helper_path is None:
-            return False
-        return helper_path in self._implicit_abs_path_by_helper_path
-
-    def __repr__(self) -> str:
-        items = sorted(self.items())
-        args = ', '.join('{}: {}'.format(repr(k.as_string()), repr(v.as_string())) for k, v in items)
-        return f"{self.__class__.__name__}({{{args}}})"
+    def __init__(self, helper_dict: _HelperDict):
+        self._context = helper_dict._context
+        self._explicit_abs_path_by_helper_path = helper_dict._explicit_abs_path_by_helper_path
+        self._implicit_abs_path_by_helper_path = helper_dict._implicit_abs_path_by_helper_path
 
 
 _HelperDict.__name__ = 'HelperDict'
@@ -572,32 +618,21 @@ class _RootSpecifics:
                 raise first_exception
 
 
-class Context(metaclass=_ContextMeta):
+class _BaseContext(metaclass=_ContextMeta):
 
-    EnvVarDict = NotImplemented  # only Context should construct an _EnvVarDict
+    # only Context should construct instances of these:
+    EnvVarDict = NotImplemented
+    ReadOnlyEnvVarDictView = NotImplemented
+    HelperDict = NotImplemented
+    ReadOnlyHelperDictView = NotImplemented
 
     def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1,
                  find_helpers: bool = False):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' must be a subclass of 'dlb.fs.Path'")
-        self._parent: Optional[Context] = None
         self._path_cls = path_cls
-        self._max_pending_redo = max(1, int(max_parallel_redo_count))
+        self._max_parallel_redo_count = max(1, int(max_parallel_redo_count))
         self._find_helpers = bool(find_helpers)
-        self._redo_sequencer = aseq.LimitingResultSequencer(asyncio.get_event_loop())
-        self._root_specifics: Optional[_RootSpecifics] = None
-        self._env: Optional[_EnvVarDict] = None
-        self._helper: Optional[_HelperDict] = None
-
-    @property
-    def active(self) -> 'Context':
-        if not _contexts:
-            raise NotRunningError
-        return _contexts[-1]
-
-    @property
-    def parent(self) -> Optional['Context']:
-        return self._parent
 
     @property
     def path_cls(self) -> Type[fs.Path]:
@@ -605,7 +640,7 @@ class Context(metaclass=_ContextMeta):
 
     @property
     def max_parallel_redo_count(self) -> int:
-        return self._max_pending_redo
+        return self._max_parallel_redo_count
 
     @property
     def find_helpers(self) -> bool:
@@ -617,25 +652,17 @@ class Context(metaclass=_ContextMeta):
         return _get_root_specifics()._working_tree_path
 
     @property
-    def env(self) -> _EnvVarDict:
-        # noinspection PyStatementEffect
-        self.active
-        return self._env
-
-    @property
-    def helper(self) -> _HelperDict:
-        # noinspection PyStatementEffect
-        self.active
-        return self._helper
-
-    @property
     def binary_search_paths(self) -> Tuple[fs.Path, ...]:
         # noinspection PyProtectedMember
         return _get_root_specifics()._binary_search_paths
 
+    @property
+    def working_tree_time_ns(self) -> int:
+        return _get_root_specifics().working_tree_time_ns
+
     @staticmethod
     def find_path_in(path, search_prefixes: Optional[Iterable[Any]] = None) -> Optional[fs.Path]:
-        self = Context.active
+        self = _get_root_specifics()
 
         if not isinstance(path, fs.Path):
             path = fs.Path(path)
@@ -643,7 +670,7 @@ class Context(metaclass=_ContextMeta):
             raise ValueError("'path' must not be absolute")
 
         if search_prefixes is None:
-            prefixes = self.binary_search_paths
+            prefixes = self._binary_search_paths
         else:
             prefixes = []
             if isinstance(search_prefixes, (str, bytes)):
@@ -654,7 +681,7 @@ class Context(metaclass=_ContextMeta):
                 if not p.is_dir():
                     raise ValueError(f"not a directory: {p.as_string()!r}")
                 if not p.is_absolute():
-                    p = self.root_path / p
+                    p = self._working_tree_path / p
                 prefixes.append(p)
 
         for prefix in prefixes:
@@ -664,10 +691,6 @@ class Context(metaclass=_ContextMeta):
                     return p  # absolute
             except OSError:
                 pass
-
-    @property
-    def working_tree_time_ns(self) -> int:
-        return _get_root_specifics().working_tree_time_ns
 
     @staticmethod
     def managed_tree_path_of(path, *, is_dir: Optional[bool] = None,
@@ -744,6 +767,42 @@ class Context(metaclass=_ContextMeta):
             raise AttributeError("public attributes of 'dlb.ex.Context' instances are read-only")
         return super().__setattr__(key, value)
 
+
+class Context(_BaseContext):
+
+    def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1,
+                 find_helpers: bool = False):
+        super().__init__(path_cls=path_cls, max_parallel_redo_count=max_parallel_redo_count, find_helpers=find_helpers)
+
+        self._env: Optional[_EnvVarDict] = None
+        self._helper: Optional[_HelperDict] = None
+
+        self._parent: Optional[Context] = None
+        self._redo_sequencer = aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        self._root_specifics: Optional[_RootSpecifics] = None
+
+    @property
+    def active(self) -> 'Context':
+        if not _contexts:
+            raise NotRunningError
+        return _contexts[-1]
+
+    @property
+    def parent(self) -> Optional['Context']:
+        return self._parent
+
+    @property
+    def env(self) -> _EnvVarDict:
+        # noinspection PyStatementEffect
+        self.active
+        return self._env
+
+    @property
+    def helper(self) -> _HelperDict:
+        # noinspection PyStatementEffect
+        self.active
+        return self._helper
+
     def __enter__(self):
         if _contexts:
             if self._find_helpers and not _contexts[0]._find_helpers:
@@ -759,7 +818,7 @@ class Context(metaclass=_ContextMeta):
                 )
                 raise ValueError(msg) from None
             self._parent = _contexts[-1]
-            self._env = _EnvVarDict(self, None)
+            self._env = _EnvVarDict(self, dict())
         else:
             self._root_specifics = _RootSpecifics(self._path_cls)
             self._env = _EnvVarDict(self, os.environ)
@@ -781,6 +840,7 @@ class Context(metaclass=_ContextMeta):
 
         self._parent = None
         self._env = None
+        self._helper = None
 
         if self._root_specifics:
             # noinspection PyProtectedMember
@@ -796,13 +856,24 @@ class Context(metaclass=_ContextMeta):
                 raise e
 
 
-def _get_rundb() -> rundb.Database:
-    # use this to access the database from dlb.ex.Tool
-    # noinspection PyProtectedMember,PyUnresolvedReferences
-    db = _get_root_specifics()._rundb
-    if db is None:
-        raise ValueError('run-database not open')
-    return db
+class RedoContext(_BaseContext):
+    # Must only be used while a root context exists
+
+    def __init__(self, context: Context):
+        if not isinstance(context, Context):
+            raise TypeError("'context' must be a Context object")
+        super().__init__(path_cls=context.path_cls, max_parallel_redo_count=context.max_parallel_redo_count,
+                         find_helpers=context.find_helpers)
+        self._env = _ReadOnlyEnvVarDictView(context.env)
+        self._helper = _ReadOnlyHelperDictView(context.helper)
+
+    @property
+    def env(self) -> _ReadOnlyEnvVarDictView:
+        return self._env
+
+    @property
+    def helper(self) -> _ReadOnlyHelperDictView:
+        return self._helper
 
 
 ut.set_module_name_to_parent_by_name(vars(), __all__)

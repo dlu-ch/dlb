@@ -25,6 +25,7 @@ class ImportTest(unittest.TestCase):
         import dlb.ex.context
         self.assertEqual({
             'Context',
+            'RedoContext',
             'ContextNestingError',
             'NotRunningError',
             'ManagementTreeError',

@@ -557,7 +557,7 @@ class _ToolBase:
         # note: no db.commit() necessary as long as root context does commit on exception
         tid = context._redo_sequencer.wait_then_start(
             context.max_parallel_redo_count, None, self._redo_with_aftermath,
-            result, context,
+            result, context_.RedoContext(context),
             dependency_actions, memo_by_encoded_path, encoded_paths_of_explicit_input_dependencies,
             db, tool_instance_dbid)
 
