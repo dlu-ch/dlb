@@ -468,3 +468,7 @@ Exceptions
 
    Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` is modified
    while its associated :term:`context` is not the :term:`active context`.
+
+.. exception:: HelperExecutionError
+
+   Raised, when the execution of a :term:`dynamic helper` file failed.

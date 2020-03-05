@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import dlb.ex
+import asyncio
 import unittest
 import tools_for_test
 
@@ -52,3 +53,82 @@ class AccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(TypeError) as cm:
                 rc = dlb.ex.RedoContext(rc)
             self.assertEqual("'context' must be a Context object", str(cm.exception))
+
+
+class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_accepts_path_in_arguments(self):
+        os.mkdir('-l')
+        with open(os.path.join('-l', 'content'), 'xb'):
+            pass
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            e = rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout=asyncio.subprocess.PIPE)
+            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual(0, returncode)
+            regex = (
+                r"(?m)\A"
+                r".+ 0\n"
+                r".+ .+ .+ .+ 0 .+ .+ .+ content\n\Z"
+            )
+            self.assertRegex(stdout.decode(), regex)
+
+    def test_fails_for_unexpected_return_code(self):
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            with self.assertRaises(dlb.ex.HelperExecutionError) as cm:
+                asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', expected_returncodes=[1, 3]))
+            msg = f"execution of 'ls' returned unexpected exit code 0"
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_changes_cwd(self):
+        os.mkdir('-l')
+        with open(os.path.join('-l', 'content'), 'xb'):
+            pass
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            e = rd.execute_helper('ls', ['-l'], cwd=dlb.fs.Path('-l'), stdout=asyncio.subprocess.PIPE)
+            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+            regex = (
+                r"(?m)\A"
+                r".+ 0\n"
+                r".+ .+ .+ .+ 0 .+ .+ .+ content\n\Z"
+            )
+            self.assertRegex(stdout.decode(), regex)
+
+    def test_fails_for_cwd_not_in_managed_tree(self):
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            with self.assertRaises(dlb.fs.manip.PathNormalizationError):
+                asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('..')))
+
+    def test_fails_for_nonexistent_cwd(self):
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+                asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('ups')))
+            self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
+
+    def test_relative_paths_are_replaced(self):
+        os.makedirs(os.path.join('a', 'b', 'c'))
+        os.mkdir(os.path.join('a', 'x'))
+
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            e = rd.execute_helper(
+                'ls', ['-d', dlb.fs.Path('.'), dlb.fs.Path('a/x')],
+                cwd=dlb.fs.Path('a/b/c'),
+                stdout=asyncio.subprocess.PIPE)
+            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+            output = (
+                "../../..\n"
+                "../../x\n"
+            )
+            self.assertRegex(output, stdout.decode())
+
+    def test_fails_for_relative_path_not_in_managed_tree(self):
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            e = rd.execute_helper('ls', [dlb.fs.Path('..')])
+            with self.assertRaises(dlb.fs.manip.PathNormalizationError):
+                asyncio.get_event_loop().run_until_complete(e)

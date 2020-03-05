@@ -7,18 +7,17 @@
 import sys
 from typing import Iterable, Union
 import os
-import asyncio
 import dlb.fs
 import dlb_contrib_make
 import dlb_contrib_c
 assert sys.version_info >= (3, 7)
 
 
-def check_warning_name(n: str) -> str:
-    n = str(n)
-    if not n or n.startswith('no-') or '=' in n:
-        raise Exception(f"not a warning name: {n!r}")  # not usable after -W or -Werror=
-    return n
+def check_warning_name(name: str) -> str:
+    name = str(name)
+    if not name or name.startswith('no-') or '=' in name:
+        raise Exception(f"not a warning name: {name!r}")  # not usable after -W or -Werror=
+    return name
 
 
 class CCompilerGcc(dlb_contrib_c.CCompiler):
@@ -34,8 +33,9 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
         return []
 
     async def redo(self, result, context):
-        make_rules_file = context.create_temporary(is_dir=False)
-        object_file = context.create_temporary(is_dir=False)
+        make_rules_file = context.create_temporary()
+        object_file = context.create_temporary()
+
         try:
             sf = result.source_file.as_string()
             if any(c in sf for c in ':;\n\r'):
@@ -55,20 +55,15 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
             compile_arguments += ['-Wno-' + check_warning_name(n) for n in self.SUPPRESSED_WARNINGS]
             compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
 
-            commandline_arguments = compile_arguments + [
-                '-x', 'c', '-std=' + self.DIALECT, '-c', '-o', object_file,
-                '-MMD', '-MT', '_ ', '-MF', make_rules_file,
-                result.source_file
-            ]
-
-            commandline_tokens = [str(context.helper[self.BINARY].native)] + [
-                str(n.native) if isinstance(n, dlb.fs.Path) else str(n)
-                for n in commandline_arguments
-            ]
-            proc = await asyncio.create_subprocess_exec(*commandline_tokens, cwd=context.root_path.native)
-            await proc.communicate()
-            if proc.returncode != 0:
-                raise Exception(f"compilation failed with exit code {proc.returncode}")
+            # compile
+            await context.execute_helper(
+                self.BINARY,
+                compile_arguments + [
+                    '-x', 'c', '-std=' + self.DIALECT, '-c', '-o', object_file,
+                    '-MMD', '-MT', '_ ', '-MF', make_rules_file,
+                    result.source_file
+                ]
+            )
 
             # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
             included_files = []
@@ -79,11 +74,10 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                     except ValueError:
                         pass
 
+            result.included_files = included_files
             os.rename(object_file.native, result.object_file.native)
         except:
             os.remove(object_file.native)
             raise
         finally:
             os.remove(make_rules_file.native)
-
-        result.included_files = included_files

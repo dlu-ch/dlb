@@ -12,7 +12,8 @@ __all__ = (
     'ManagementTreeError',
     'NoWorkingTreeError',
     'WorkingTreeTimeError',
-    'NonActiveContextAccessError'
+    'NonActiveContextAccessError',
+    'HelperExecutionError'
 )
 
 import sys
@@ -72,6 +73,10 @@ class WorkingTreeTimeError(Exception):
 
 
 class NonActiveContextAccessError(Exception):
+    pass
+
+
+class HelperExecutionError(Exception):
     pass
 
 
@@ -871,6 +876,35 @@ class RedoContext(_BaseContext):
     @property
     def helper(self) -> _ReadOnlyHelperDictView:
         return self._helper
+
+    async def execute_helper(self, helper_file, arguments: Iterable[Union[str, fs.Path, fs.Path.Native]] = (), *,
+                             cwd: Optional[fs.Path] = None, expected_returncodes: Collection[int] = frozenset([0]),
+                             stdin=None, stdout=None, stderr=None, limit=2**16):
+        if not isinstance(helper_file, fs.Path):
+            helper_file = fs.Path(helper_file)
+
+        cwd = fs.Path('.') if cwd is None else self.managed_tree_path_of(cwd, is_dir=True)
+
+        commandline_tokens = [str(self.helper[helper_file].native)]
+        for a in arguments:
+            if isinstance(a, fs.Path):
+                if not a.is_absolute():
+                    a = self.managed_tree_path_of(a).relative_to(cwd, collapsable=True)
+                a = a.native
+            commandline_tokens.append(str(a))
+
+        proc = await asyncio.create_subprocess_exec(
+            *commandline_tokens,  # must all by str
+            cwd=(self.root_path / cwd).native,
+            stdin=stdin, stdout=stdout, stderr=stderr, limit=limit)
+        stdout, stderr = await proc.communicate()
+        returncode = proc.returncode
+
+        if returncode not in expected_returncodes:
+            msg = f"execution of {helper_file.as_string()!r} returned unexpected exit code {proc.returncode}"
+            raise HelperExecutionError(msg)
+
+        return returncode, stdout, stderr
 
 
 ut.set_module_name_to_parent_by_name(vars(), __all__)
