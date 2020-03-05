@@ -318,14 +318,29 @@ class Path(metaclass=_PathMeta):
     def is_normalized(self) -> bool:
         return '..' not in self._components
 
-    def relative_to(self, other):
+    def relative_to(self, other, *, collapsable: bool = False):
         other = self._cast(other)
         if not other.is_dir():
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
         n = len(other._components)
-        if len(self._components) < n or self._components[:n] != other._components:
+        if self._components[:n] == other._components:
+            # TODO avoid unnecessary checking of constraints
+            return self._with_components(('',) + self._components[n:])
+        if not collapsable:
             raise ValueError(f"{self.as_string()!r} does not start with {other.as_string()!r}")
-        return self._with_components(('',) + self._components[n:])  # TODO avoid unnecessary checking of constraints
+
+        if self.is_absolute() != other.is_absolute():
+            raise ValueError(f"{self.as_string()!r} cannot be relative to {other.as_string()!r}")
+
+        # assume 'other' to be collapsable
+        m = min(n, len(self._components))
+        common_prefix_length = 0
+        while common_prefix_length < m and \
+                self._components[common_prefix_length] == other._components[common_prefix_length]:
+            common_prefix_length += 1
+
+        components = ('',) + ('..',) * (n - common_prefix_length) + self._components[common_prefix_length:]
+        return self._with_components(components)  # TODO avoid unnecessary checking of constraints
 
     def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
         if not self.is_dir():

@@ -134,10 +134,13 @@ Path objects
                (i.e. it contains no ``'..'`` components)
       :rtype: bool
 
-   .. method:: relative_to(other):
+   .. method:: relative_to(other, collapsable=False):
 
-      Returns a version of this path relative to the path represented by *other* (by removing *other* from the start
-      of this path).
+      Returns a version of this path relative to the directory path represented by *other*.
+
+      If *collapsable* is ``False``, this path must be a prefix of *other*.
+      If *collapsable* is ``True``, *other* is treated as a :term:`collapsable path` and the minimum of necessary
+      :file:`..` components is prepended.
 
       :rtype: ``self.__class__``
 

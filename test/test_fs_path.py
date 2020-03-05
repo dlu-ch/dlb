@@ -302,10 +302,29 @@ class TransformationTest(unittest.TestCase):
             dlb.fs.Path('a').relative_to(dlb.fs.Path('b'))
         self.assertEqual("since Path('b') is not a directory, a path cannot be relative to it", str(cm.exception))
 
-    def test_relative_fails_for_nonprefix(self):
+    def test_relative_fails_if_other_no_prefix_and_not_collapsable(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('a').relative_to(dlb.fs.Path('b/'))
         self.assertEqual("'a' does not start with 'b/'", str(cm.exception))
+
+    def test_relative_starts_with_dotdot_if_other_no_prefix_and_collapsable(self):
+        p = dlb.fs.Path('a').relative_to(dlb.fs.Path('b/'), collapsable=True)
+        self.assertEqual('../a', p)
+
+        p = dlb.fs.Path('a/b').relative_to(dlb.fs.Path('a/b/c/'), collapsable=True)
+        self.assertEqual('..', p)
+
+        p = dlb.fs.Path('/a/b/d').relative_to(dlb.fs.Path('/a/b/c/'), collapsable=True)
+        self.assertEqual('../d', p)
+
+    def test_relative_fails_if_only_one_absolute(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('/a/b').relative_to(dlb.fs.Path('a/b/c/'), collapsable=True)
+        self.assertEqual("'/a/b' cannot be relative to 'a/b/c/'", str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('a/b').relative_to(dlb.fs.Path('/a/b/c/'), collapsable=True)
+        self.assertEqual("'a/b' cannot be relative to '/a/b/c/'", str(cm.exception))
 
     def test_parts_of_relative_and_absolute_are_different(self):
         p = dlb.fs.Path('u/v/w')
