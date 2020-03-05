@@ -89,7 +89,6 @@ Content
    toplevelspec.rst
    ex_context.rst
    ex_tool.rst
-   ex_tmpl.rst
    fs_path.rst
    di.rst
    similar_tools.rst

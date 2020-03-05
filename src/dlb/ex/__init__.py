@@ -2,7 +2,6 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-from .tmpl import *
 from .context import *
 from .tool import *
 
@@ -12,7 +11,6 @@ from .tool import *
 #                 depends on
 #
 #     mult           ->
-#     tmpl           ->
 #
 #     platform       ->
 #     rundb          ->         platform

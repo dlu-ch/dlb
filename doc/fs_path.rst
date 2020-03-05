@@ -295,9 +295,6 @@ Path objects
    If *Q* is a subclass of *P* and *P* is a subclass of :class:`dlb.fs.Path`, then ``Q.Native`` is a subclass
    of ``P.Native``.
 
-   These properties make subclasses of :class:`dlb.fs.Path.Native` well-suited for use in type specifications
-   of tokens templates (:class:`dlb.ex.tmpl.TokensTemplate`).
-
    Example (on a Posix system)::
 
       >>> dlb.fs.NoSpacePath.Native('/tmp/x y')
