@@ -12,10 +12,9 @@ A build system *generates files* in a filesystem, mostly with the help of *exter
 Its most important tasks are:
 
 - collect and transform filesystem paths
-- call tool binaries (e.g. compilers) with context-dependent command line arguments
+- find and call tool binaries (e.g. compilers) with context-dependent command line arguments
 - generate files (e.g. some program source files or configuration files)
 - make the build fast by omitting unnecessary redos
-- control the build by command line arguments
 
 These are the areas where dlb wants to be strong - all this in a precisely specified way, with emphasis on correctness,
 reliability and robustness.
@@ -36,25 +35,27 @@ Example::
 
    class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
 
-   class Compiler(CppCompilerGcc): WARNINGS = ['all']                            # (b)
+   class Compiler(CppCompilerGcc): DIALECT = 'c11'                               # (b)
    class Linker(StaticLinkerGcc): pass
 
    with dlb.ex.Context():                                                        # (c)
 
+       Path('build/out/').native.raw.mkdir(parents=True, exist_ok=True)
+
        object_files = [                                                          # (d)
           Compiler(
               source_file=p,
-              object_file=Path('build/out/' + p.as_string() + '.o')
+              object_file=Path(f'build/out/{p.as_string()}.o')
           ).run().object_file
           for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
        ]
 
        application_file = Linker(
            object_files=object_files,
-           linked_file=Path('build/out/example')                               # (e)
+           linked_file=Path('build/out/example')                                 # (e)
        ).run().linked_file
 
-       print('Size:', application_file.native.stat().st_size, 'B')             # (f)
+       print('Size:', application_file.native.raw.stat().st_size, 'B')           # (f)
 
 Explanation:
 
@@ -71,7 +72,7 @@ a. *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
 
    Compiling also means: automatically find all included files and remember them as input dependencies for future
    runs of dlb.
-   ``run()`` executes the compiler only when :term:`redo` is necessary (e.g. because one of its include files
+   ``run()`` executes the compiler only when a :term:`redo` is necessary (e.g. because one of its include files
    has changed). Otherwise is does almost nothing.
 
 #. *Link* these object files into an executable file.

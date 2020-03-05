@@ -39,7 +39,7 @@ Tools based on directory structure
 
 Some build tools are specialized in organizing large projects, fetching files from different
 sources, packaging and publishing the build products.
-They usually do so by imposing a certain directory structure and assign files a give meaning
+They usually do so by imposing a certain directory structure and assign files a given meaning
 based on this structure.
 
 Examples are:
@@ -52,7 +52,7 @@ Examples are:
 Why explicit is better than implicit
 ------------------------------------
 
-`Some argue <https://taint.org/2011/02/18/001527a.html>`_, that restricting the expressiveness and power of the
+`Some argue <https://taint.org/2011/02/18/001527a.html>`_ that restricting the expressiveness and power of the
 language used to describe a build process is a good thing. I disagree.
 
 A tailored DSL is a good thing exactly as long as you use it as foreseen by its creators.
