@@ -11,7 +11,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import pathlib
 import io
 import asyncio
 import unittest
@@ -36,15 +35,14 @@ class ATool(dlb.ex.Tool):
         result.included_files = [dlb.fs.Path('a.h'), dlb.fs.Path('b.h')]
 
 
-class MultiplePendingRedosTest(tools_for_test.TemporaryDirectoryTestCase):
+class MultiplePendingRedosTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def setUp(self):
         super().setUp()
-
-        pathlib.Path('.dlbroot').mkdir()
-
-        pathlib.Path('a.cpp').touch(exist_ok=False)
-        pathlib.Path('b.cpp').touch(exist_ok=False)
+        with open('a.cpp', 'xb'):
+            pass
+        with open('b.cpp', 'xb'):
+            pass
 
     def test_one_pending_redos(self):
         output = io.StringIO()

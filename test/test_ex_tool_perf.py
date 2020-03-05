@@ -12,7 +12,6 @@ import dlb.fs
 import dlb.di
 import dlb.ex
 import dlb.ex.rundb
-import pathlib
 import logging
 import unittest
 import cProfile
@@ -34,13 +33,11 @@ class ATool(dlb.ex.Tool):
         result.included_files = included_files
 
 
-class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
+class RunBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_scenario1(self):
-
-        pathlib.Path('.dlbroot').mkdir()
         for p in included_files + ['a.cpp']:
-            with pathlib.Path(p).open('xb'):
+            with open(p, 'xb'):
                 pass
 
         profile = cProfile.Profile()
@@ -69,14 +66,13 @@ class RunBenchmark(tools_for_test.TemporaryDirectoryTestCase):
         stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '1'))
 
 
-class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryDirectoryTestCase):
+class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_read_filesystem_object_memo_from_path(self):
         import dlb.fs.manip
 
-        pathlib.Path('.dlbroot').mkdir()
-        (pathlib.Path('a') / 'b').mkdir(parents=True)
-        with (pathlib.Path('a') / 'b' / 'c').open('xb'):
+        os.makedirs(os.path.join('a', 'b'))
+        with open(os.path.join('a', 'b', 'c'), 'xb'):
             pass
 
         dlb.di.set_threshold_level(logging.WARNING)

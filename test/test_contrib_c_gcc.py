@@ -23,11 +23,9 @@ class CCompiler(dlb_contrib_c_gcc.CCompilerGcc):
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires GCC')
-class GccTest(tools_for_test.TemporaryDirectoryTestCase):
+class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
-
-        os.mkdir('.dlbroot')
         os.mkdir('i')
 
         with open('a.c', 'w', encoding='utf-8') as f:
@@ -72,7 +70,6 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertIsNone(t.run())
 
     def test_fails_for_colon_in_name(self):
-        os.mkdir('.dlbroot')
         with open('./a:c', 'w'):
             pass
 
@@ -83,7 +80,6 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual("limitation of 'gcc -MMD' does not allow this file name: 'a:c'", str(cm.exception))
 
     def test_fails_for_multiple_inputs(self):
-        os.mkdir('.dlbroot')
         with open('a.c', 'w'):
             pass
 
@@ -97,7 +93,6 @@ class GccTest(tools_for_test.TemporaryDirectoryTestCase):
                 t.run()
 
     def test_fails_for_invalid_warning(self):
-        os.mkdir('.dlbroot')
         with open('a.c', 'w'):
             pass
 

@@ -174,7 +174,7 @@ class EnvVarInputPermanentLocalValueIdTest(unittest.TestCase):
         self.assertEqual(plvi1, plvi2)
 
 
-class EnvVarInitialResultTest(tools_for_test.TemporaryDirectoryTestCase):
+class EnvVarInitialResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_returns_none_if_nonrequired_not_defined(self):
         d = dlb.ex.Tool.Input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False, required=False)
@@ -185,7 +185,6 @@ class EnvVarInitialResultTest(tools_for_test.TemporaryDirectoryTestCase):
         except KeyError:
             pass
 
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c:
             self.assertIsNone(a.get_initial_result_for_nonexplicit(c))
             c.env.import_from_outer('AB', r'.*', '')
@@ -210,7 +209,6 @@ class EnvVarInitialResultTest(tools_for_test.TemporaryDirectoryTestCase):
             "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
         )
 
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c:
             with self.assertRaises(ValueError) as cm:
                 a.get_initial_result_for_nonexplicit(c)

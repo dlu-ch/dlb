@@ -353,13 +353,12 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
             tool.fingerprint = b''
 
 
-class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
+class ToolRegistryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nontool(self):
         class A:
             pass
 
-        os.mkdir('.dlbroot')
         with dlb.ex.Context():
             with self.assertRaises(TypeError):
                 dlb.ex.tool.get_and_register_tool_info(A)
@@ -369,7 +368,6 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
         class A(dlb.ex.Tool):
             pass
 
-        os.mkdir('.dlbroot')
         with dlb.ex.Context():
             info = dlb.ex.tool.get_and_register_tool_info(A)
 
@@ -409,7 +407,6 @@ class ToolRegistryTest(tools_for_test.TemporaryDirectoryTestCase):
         import w  # needs a name different from the already loaded modules
         del sys.path[0]
 
-        os.mkdir('.dlbroot')
         with dlb.ex.Context():
             t = time.monotonic_ns()
             info1 = dlb.ex.tool.get_and_register_tool_info(w.E)

@@ -91,3 +91,10 @@ class TemporaryDirectoryWithChmodTestCase(TemporaryDirectoryTestCase):
             if probe_file.exists():
                 probe_file.unlink()
             probe_dir.rmdir()
+
+
+class TemporaryWorkingDirectoryTestCase(TemporaryDirectoryTestCase):
+
+    def setUp(self):
+        super().setUp()
+        os.mkdir('.dlbroot')

@@ -59,14 +59,16 @@ class AccessTest(unittest.TestCase):
         self.assertEqual("public attributes of 'dlb.ex.Context' instances are read-only", str(cm.exception))
 
 
-class NestingTest(tools_for_test.TemporaryDirectoryTestCase):
+class NestingTestNotRunning(unittest.TestCase):
 
     def test_fails_if_not_running(self):
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.active
 
+
+class NestingTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
     def test_can_by_nested(self):
-        pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context() as c1:
             self.assertIs(dlb.ex.Context.active, c1)
             self.assertIs(c1.active, c1)
@@ -81,15 +83,12 @@ class NestingTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.ex.Context.active
 
     def test_nesting_error_is_detected(self):
-        pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context():
             with self.assertRaises(dlb.ex.context.ContextNestingError):
                 with dlb.ex.Context():
                     dlb.ex.context._contexts.pop()
 
     def test_meaningful_exception_on_attribute_error(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.non_existing_attribute
 
@@ -113,10 +112,9 @@ class NestingTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(str(cm.exception), msg)
 
 
-class ReuseTest(tools_for_test.TemporaryDirectoryTestCase):
+class ReuseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_context_can_be_reused(self):
-        pathlib.Path('.dlbroot').mkdir()
         c = dlb.ex.Context()
         with c:
             pass
@@ -169,18 +167,16 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertIn('working tree', str(cm.exception))
 
 
-class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
+class ManagementTreeSetupTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_missing_filesystem_objects_are_created(self):
         wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
         with dlb.ex.Context():
             self.assertTrue((wdr / 'o').is_file())
             self.assertTrue((wdr / 't').is_dir())
 
     def test_temp_dir_is_recreated_if_nonempty_directory(self):
         wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
         wdr_t = wdr / 't'
         wdr_t.mkdir()
         (wdr_t / 'c').mkdir()
@@ -205,7 +201,6 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_temp_dir_is_recreated_if_symlink(self):
         wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
         wdr_t = wdr / 't'
 
         symlink_target = wdr / 't_sysmlink_target'
@@ -223,7 +218,6 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_mtime_probe_file_is_recreated_if_directory(self):
         wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
         wdr_o = (wdr / 'o')
         wdr_o.mkdir()
         (wdr_o / 'c').mkdir()
@@ -238,7 +232,6 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_mtime_probe_uppercase_file_is_removed(self):
         wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
 
         with (wdr / 'o').open('xb'):
             pass
@@ -254,7 +247,6 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_rundb_dir_is_removed(self):
         wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
         rundb = wdr / 'runs.sqlite'
         rundb.mkdir()
 
@@ -372,16 +364,13 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
                         pass
 
 
-class WorkingTreeTimeTest(tools_for_test.TemporaryDirectoryTestCase):
+class WorkingTreeTimeTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_time_is_unavailable_if_not_running(self):
-        pathlib.Path('.dlbroot').mkdir()
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.working_tree_time_ns
 
     def test_time_does_change_after_at_most_15secs(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with dlb.ex.Context():
             start_time = time.monotonic_ns()
             start_working_tree_time = dlb.ex.Context.working_tree_time_ns
@@ -391,8 +380,6 @@ class WorkingTreeTimeTest(tools_for_test.TemporaryDirectoryTestCase):
                 time.sleep(0.015)  # typical effective working tree time resolution: 10 ms
 
     def test_exit_does_delay_to_next_change(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         for i in range(10):  # might also pass by chance (transition of working tree time too close to context exit)
             with dlb.ex.Context():
                 enter_time = dlb.ex.Context.working_tree_time_ns
@@ -401,26 +388,29 @@ class WorkingTreeTimeTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertNotEqual(enter_time, exit_time)
 
 
-class RunDatabaseTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunDatabaseNotRunningTest(unittest.TestCase):
+
+    def test_access_fails_if_not_running(self):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.context._get_rundb()
+
+
+class RunDatabaseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_nonexisting_is_created(self):
-        pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context():
             self.assertTrue((pathlib.Path('.dlbroot') / 'runs.sqlite').is_file())
 
     def test_access_is_possible_in_nonobvious_way_when_running(self):
-        pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context():
             self.assertIsInstance(dlb.ex.context._get_rundb(), dlb.ex.rundb.Database)
 
     def test_access_not_possible_in_obvious_way(self):
-        pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context():
             with self.assertRaises(AttributeError):
                 dlb.ex.Context.run_db_()
 
     def test_meaningful_exception_on_corrupt(self):
-        pathlib.Path('.dlbroot').mkdir()
         with (pathlib.Path('.dlbroot') / 'runs.sqlite').open('xb') as f:
             f.write(b'123')
 
@@ -431,10 +421,6 @@ class RunDatabaseTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertRegex(str(cm.exception), r'\A()could not setup run-database\n')
         self.assertRegex(str(cm.exception), r'\b()sqlite3.DatabaseError\b')
         self.assertRegex(str(cm.exception), r'\b()database corruption\b')
-
-    def test_access_fails_if_not_running(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.context._get_rundb()
 
 
 class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -497,12 +483,18 @@ class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmo
         wdr.chmod(0o777)
 
 
-class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
+class TemporaryFilesystemObjectsNotRunningTest(unittest.TestCase):
+
+    def test_fails_for_if_not_running(self):
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.Context.create_temporary()
+        with self.assertRaises(dlb.ex.context.NotRunningError):
+            dlb.ex.Context.create_temporary(is_dir=True)
+
+
+class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_creates_regular_file(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
-
         with dlb.ex.Context():
             t = dlb.ex.Context.root_path / '.dlbroot/t'
 
@@ -518,12 +510,9 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertTrue(p.parts[-1].startswith('aha'), repr(p))
             self.assertTrue(p.parts[-1].endswith('.o'), repr(p))
 
-        self.assertFalse((wdr / 't').exists())
+        self.assertFalse(os.path.exists(os.path.join('.dlbroot', 't')))
 
     def test_creates_directory(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
-
         with dlb.ex.Context():
             t = dlb.ex.Context.root_path / '.dlbroot/t'
             p = dlb.ex.Context.create_temporary(is_dir=True)
@@ -539,17 +528,9 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertTrue(p.parts[-1].startswith('aha'), repr(p))
             self.assertTrue(p.parts[-1].endswith('.o'), repr(p))
 
-        self.assertFalse((wdr / 't').exists())
-
-    def test_fails_for_if_not_running(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.create_temporary()
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.create_temporary(is_dir=True)
+        self.assertFalse(os.path.exists(os.path.join('.dlbroot', 't')))
 
     def test_fails_for_bytes_prefix_or_suffix(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with dlb.ex.Context():
             with self.assertRaises(TypeError):
                 dlb.ex.Context.create_temporary(prefix=b'x')
@@ -557,8 +538,6 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.Context.create_temporary(suffix=b'y')
 
     def test_fails_for_empty_prefix(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with dlb.ex.Context():
             with self.assertRaises(ValueError):
                 dlb.ex.Context.create_temporary(prefix='')
@@ -566,8 +545,6 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.Context.create_temporary(is_dir=True, prefix='')
 
     def test_fails_for_path_separator_in_prefix(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with dlb.ex.Context():
             with self.assertRaises(ValueError):
                 dlb.ex.Context.create_temporary(prefix='x' + os.path.sep)
@@ -575,8 +552,6 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.Context.create_temporary(is_dir=True, prefix='x' + os.path.sep + '..' + os.path.sep)
 
     def test_fails_for_path_separator_in_suffix(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with dlb.ex.Context():
             with self.assertRaises(ValueError):
                 dlb.ex.Context.create_temporary(suffix='x' + os.path.sep)
@@ -746,6 +721,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertFalse(dlb.ex.Context.managed_tree_path_of('a', is_dir=False, existing=True).is_dir())
             self.assertFalse(dlb.ex.Context.managed_tree_path_of(dlb.fs.Path('a/'),
                                                                  is_dir=False, existing=True).is_dir())
+
 
 class ReprTest(unittest.TestCase):
 

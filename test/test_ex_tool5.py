@@ -12,7 +12,6 @@ import dlb.fs
 import dlb.di
 import dlb.ex
 import dlb.ex.rundb
-import pathlib
 import marshal
 import tempfile
 import zipfile
@@ -35,12 +34,10 @@ class ATool(dlb.ex.Tool):
         result.included_files = [dlb.fs.Path('a.h'), dlb.fs.Path('b.h')]
 
 
-class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_new_or_missing_dependency_causes_redo(self):
-        pathlib.Path('.dlbroot').mkdir()
-
-        with pathlib.Path('a.cpp').open('xb'):
+        with open('a.cpp', 'xb'):
             pass
 
         t = ATool(source_file='a.cpp', object_file='a.o')
@@ -59,7 +56,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 
-        with pathlib.Path('a.h').open('xb'):
+        with open('a.h', 'xb'):
             pass
 
         with dlb.ex.Context():
@@ -74,7 +71,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 
-        pathlib.Path('a.h').unlink()
+        os.remove('a.h')
 
         with dlb.ex.Context():
             output = io.StringIO()
@@ -88,13 +85,9 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             self.assertIsNone(t.run())
 
     def test_invalid_dependency_causes_redo(self):
-
-        pathlib.Path('.dlbroot').mkdir()
-
-        with pathlib.Path('a.cpp').open('xb'):
+        with open('a.cpp', 'xb'):
             pass
-
-        with pathlib.Path('a.h').open('xb'):
+        with open('a.h', 'xb'):
             pass
 
         t = ATool(source_file='a.cpp', object_file='a.o')
@@ -150,8 +143,8 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 
-        pathlib.Path('t').mkdir()
-        pathlib.Path('t').chmod(0o000)
+        os.mkdir('t')
+        os.chmod('t', 0o000)
 
         try:
             with dlb.ex.Context():
@@ -166,14 +159,12 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCas
                 self.assertRegex(output.getvalue(), regex)
                 self.assertIsNone(t.run())
         finally:
-            pathlib.Path('t').chmod(0o700)
+            os.chmod('t', 0o700)
 
 
-class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
+class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_redo_that_does_not_assign_required(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
@@ -192,8 +183,6 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
     def test_nonrequired_is_none_if_redo_does_not_assign(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
@@ -208,8 +197,6 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertIsNone(result.included_files)
 
     def test_fails_if_input_dependency_not_in_managed_tree(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
@@ -225,8 +212,6 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_if_redo_assigns_none_to_required(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
@@ -242,8 +227,6 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
     def test_redo_can_assigns_none_to_nonrequired(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
@@ -258,12 +241,9 @@ class RedoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertIsNone(result.included_files)
 
 
-class EnvVarRedoResultTest(tools_for_test.TemporaryDirectoryTestCase):
+class EnvVarRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_explicit_envvar_are_assigned_on_tool_instance(self):
-
-        pathlib.Path('.dlbroot').mkdir()
-
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             language = dlb.ex.Tool.Input.EnvVar(name='LANG',
@@ -282,8 +262,6 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual('-Wall', t.cflags)
 
     def test_nonexplicit_envvar_are_assigned_on_result(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         try:
             del os.environ['LANG']
         except KeyError:
@@ -330,7 +308,7 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_if_source_has_changed(self):
 
@@ -355,8 +333,6 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
         import u3.v
         del sys.path[0]
 
-        pathlib.Path('.dlbroot').mkdir()
-
         t = u3.v.A()
 
         with dlb.ex.Context():
@@ -378,14 +354,12 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertRegex(output.getvalue(), regex)
 
 
-class ReprOfResultTest(tools_for_test.TemporaryDirectoryTestCase):
+class ReprOfResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_result_repr_is_meaningful(self):
-
-        pathlib.Path('.dlbroot').mkdir()
         t = ATool(source_file='a.cpp', object_file='a.o')
 
-        with pathlib.Path('a.cpp').open('xb'):
+        with open('a.cpp', 'xb'):
             pass
 
         with dlb.ex.Context():

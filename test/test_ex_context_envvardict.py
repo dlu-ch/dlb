@@ -14,10 +14,9 @@ import os
 import tools_for_test
 
 
-class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
+class ImportFromOuterTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_import_fails_if_argument_type_is_incorrect(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c:
             regex = r"'.+' must be a str"
             with self.assertRaisesRegex(TypeError, regex):
@@ -43,7 +42,6 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
                 c.env.import_from_outer('A_B_C', b'', example='XZ')
 
     def test_import_fails_if_example_is_invalid_with_respect_to_restriction(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c:
             regex = r"\A'example' is invalid with respect to 'restriction': '.*'\Z"
             with self.assertRaisesRegex(ValueError, regex):
@@ -52,8 +50,6 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
                 c.env.import_from_outer('A_B_C', re.compile(r'X.*Z'), example='')
 
     def test_after_import_envvar_is_imported(self):
-        os.mkdir('.dlbroot')
-
         os.environ['A_B_C'] = 'XYZ'
         try:
             del os.environ['UV']
@@ -85,8 +81,6 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
                         self.assertTrue(dlb.ex.Context.active.env.is_imported('UV'))
 
     def test_restriction_of_outer_applies_when_imported(self):
-        os.mkdir('.dlbroot')
-
         os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
             regex = r"imported value invalid with respect to 'restriction': 'XYZ'"
@@ -106,8 +100,6 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
                     dlb.ex.Context.active.env.import_from_outer('A_B_C', r'.Y.', example='aYc')
 
     def test_restriction_of_outer_applies_when_assigned(self):
-        os.mkdir('.dlbroot')
-
         os.environ.pop('A_B_C')
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('A_B_C', r'X.*Z', example='XZ')
@@ -122,8 +114,6 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
                     self.assertEqual(str(cm.exception), msg)
 
     def test_imported_can_be_assigned_and_deleted(self):
-        os.mkdir('.dlbroot')
-
         os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('A_B_C', r'X.*Z', example='XZ')
@@ -151,8 +141,6 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
             del dlb.ex.Context.active.env['A_B_C']
 
     def test_assigned_of_nonstr_to_imported_fails(self):
-        os.mkdir('.dlbroot')
-
         os.environ['ABC'] = 'XYZ'
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('ABC', r'.*', example='')
@@ -161,7 +149,6 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual("'value' must be a str", str(cm.exception))
 
     def test_import_fails_on_inactive_context(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c0:
             env0 = c0.env
             with dlb.ex.Context() as c1:
@@ -179,11 +166,9 @@ class ImportFromOuterTest(tools_for_test.TemporaryDirectoryTestCase):
 
 
 # noinspection PyUnresolvedReferences
-class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
+class AccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_empty_dict_access(self):
-        os.mkdir('.dlbroot')
-
         with dlb.ex.Context() as c:
             self.assertEqual(len(c.env), 0)
             self.assertFalse('x' in c.env)
@@ -192,8 +177,6 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual({k: v for k, v in c.env.items()}, dict())
 
     def test_env_returns_env_of_active_context(self):
-        os.mkdir('.dlbroot')
-
         c0 = dlb.ex.Context()
         with self.assertRaises(dlb.ex.context.NotRunningError):
             c0.env
@@ -218,8 +201,6 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
             c0.env
 
     def test_deletion_fails_if_undefined(self):
-        os.mkdir('.dlbroot')
-
         os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
             with self.assertRaises(KeyError) as cm:
@@ -228,8 +209,6 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(str(cm.exception), repr(msg))
 
     def test_assignment_fail_if_not_imported(self):
-        os.mkdir('.dlbroot')
-
         os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
             regex = (
@@ -245,8 +224,6 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
                         dlb.ex.Context.active.env['A_B_C'] = 'XyZ'
 
     def test_assignment_fails_on_inactive_context(self):
-        os.mkdir('.dlbroot')
-
         os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context() as c0:
             env0 = c0.env
@@ -265,8 +242,6 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
                         env1['A_B_C'] = 'XYYZ'
 
     def test_deletion_fails_on_inactive_context(self):
-        os.mkdir('.dlbroot')
-
         os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context() as c0:
             env0 = c0.env
@@ -285,10 +260,9 @@ class AccessTest(tools_for_test.TemporaryDirectoryTestCase):
                         del env1['A_B_C']
 
 
-class UsageTest(tools_for_test.TemporaryDirectoryTestCase):
+class UsageTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
-        os.mkdir('.dlbroot')
         try:
             del os.environ['LANG']
         except KeyError:
@@ -324,7 +298,6 @@ class UsageTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
 
     def test_has_repr(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context():
             dlb.ex.Context.env.import_from_outer('LANG', r'.*', example='')
             dlb.ex.Context.env.import_from_outer('ABC', r'.*', example='')

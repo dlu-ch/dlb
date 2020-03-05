@@ -14,10 +14,9 @@ import unittest
 import tools_for_test
 
 
-class RedoContextTest(tools_for_test.TemporaryDirectoryTestCase):
+class AccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_read_access_to_inactive_context_is_possible(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context():
             with dlb.ex.Context() as c1:
                 c1.helper['a'] = '/a'
@@ -33,7 +32,6 @@ class RedoContextTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(dlb.fs.Path('/b'), rc2.helper['b'])
 
     def test_write_access_to_inactive_context_fails(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c:
             c.helper['a'] = '/a'
             rc = dlb.ex.RedoContext(c)
@@ -43,16 +41,27 @@ class RedoContextTest(tools_for_test.TemporaryDirectoryTestCase):
                 rc.env['a'] = '/A'
 
     def test_fails_without_active_context(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c:
             pass
         with self.assertRaises(dlb.ex.NotRunningError):
             dlb.ex.RedoContext(c)
 
     def test_fails_for_redo_context(self):
-        os.mkdir('.dlbroot')
         with dlb.ex.Context() as c:
             rc = dlb.ex.RedoContext(c)
             with self.assertRaises(TypeError) as cm:
                 rc = dlb.ex.RedoContext(rc)
             self.assertEqual("'context' must be a Context object", str(cm.exception))
+
+
+class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_accepts_path_in_arguments(self):  #???
+        with dlb.ex.Context() as c:
+            pass
+
+    def test_fails_for_cwd_not_in_managed_tree(self):  #???
+        pass
+
+    def test_fails_for_nonexistent_cwd(self):  #???
+        pass

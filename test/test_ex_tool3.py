@@ -35,7 +35,7 @@ class ATool(dlb.ex.Tool):
             pass
 
 
-class RunWithoutRedoTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunWithoutRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_fails_without_redo(self):
@@ -43,19 +43,15 @@ class RunWithoutRedoTest(tools_for_test.TemporaryDirectoryTestCase):
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
 
-        pathlib.Path('.dlbroot').mkdir()
-
         with self.assertRaises(NotImplementedError):
             with dlb.ex.Context():
                 t = BTool(object_file='a.o')
                 t.run()
 
 
-class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonexistent_inputfile(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         regex = (
             r"\A()input dependency 'source_file' contains a path of an non-existing "
             r"filesystem object: 'src/a\.cpp'\Z"
@@ -75,8 +71,6 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirector
                 t.run()
 
     def test_fails_for_nonnormalized_inputfile_path(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         regex = (
             r"(?m)\A"
             r"input dependency 'source_file' contains a path that is not a managed tree path: '\.\./a\.cpp'\n"
@@ -88,11 +82,9 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryDirector
                 t.run()
 
 
-class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonnormalized_outputfile_path(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with pathlib.Path('a.cpp').open('xb'):
             pass
 
@@ -128,11 +120,9 @@ class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_t
         os.chmod('src', 0o600)
 
 
-class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_input_as_output(self):
-        pathlib.Path('.dlbroot').mkdir()
-
         with pathlib.Path('a.cpp').open('xb'):
             pass
 
@@ -144,10 +134,9 @@ class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_tes
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_explicit_input_dependency_of_wrong_type(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -197,7 +186,6 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_conflicting_input_dependency_types(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -215,10 +203,9 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunDoesNoRedoForIfInputNotModifiedTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunDoesNoRedoForIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_run_causes_redo_only_the_first_time(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -241,10 +228,9 @@ class RunDoesNoRedoForIfInputNotModifiedTest(tools_for_test.TemporaryDirectoryTe
             self.assertIsNone(t.run())
 
 
-class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -310,10 +296,9 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryDirector
             self.assertRegex(output.getvalue(), r'\b()filesystem object did not exist\b')
 
 
-class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
         with (src / 'a.cpp').open('xb'):
@@ -357,10 +342,9 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryDirec
             self.assertIsNone(t.run())
 
 
-class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -387,10 +371,9 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertIsNone(t.run())
 
 
-class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase):
+class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_if_not_existing(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -411,7 +394,6 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
         self.assertRegex(output.getvalue(), regex)
 
     def test_redo_if_not_output_is_directory(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -436,10 +418,9 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryDirectoryTestCase
             self.assertRegex(output.getvalue(), regex)
 
 
-class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_ignores_unexisting_output_file(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -452,7 +433,6 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase
         self.assertFalse(pathlib.Path('d').exists())
 
     def test_redo_removes_existing_output_dir(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -466,7 +446,6 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase
         self.assertFalse(pathlib.Path('d').exists())
 
     def test_redo_removes_existing_output_file(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
@@ -481,7 +460,6 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryDirectoryTestCase
         self.assertFalse(pathlib.Path('d').exists())
 
     def test_run_without_redo_does_not_remove_output_file(self):
-        pathlib.Path('.dlbroot').mkdir()
         src = pathlib.Path('src')
         src.mkdir()
 
