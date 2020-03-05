@@ -173,10 +173,8 @@ class _EnvVarDict(_BaseEnvVarDict):
         value = self._value_by_name.get(name)
         if value is None:
             # import from innermost outer context that has the environment variable defined
-            if self._context.parent:
-                value = self._context.parent.env._value_by_name.get(name)
-            else:
-                value = self._top_value_by_name.get(name)
+            d = self._context.parent.env._value_by_name if self._context.parent else self._top_value_by_name
+            value = d.get(name)
             value_name = 'imported'
         else:
             value_name = 'current'
@@ -264,7 +262,9 @@ class _BaseHelperDict:
         # reason: read-only view
 
         self._context = context
-        self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = dict()
+        self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = \
+            dict() if context.parent is None else dict(context.parent.helper._explicit_abs_path_by_helper_path)
+
         self._implicit_abs_path_by_helper_path = implicit_abs_path_by_helper_path
 
     def __repr__(self) -> str:
@@ -347,18 +347,6 @@ class _HelperDict(_BaseHelperDict):
             raise ValueError(msg)
         self._check_if_env_of_active_context()
         self._explicit_abs_path_by_helper_path[helper_path] = abs_path
-
-    def __delitem__(self, helper_path):
-        if not isinstance(helper_path, fs.Path):
-            helper_path = fs.Path(helper_path)
-        self._check_if_env_of_active_context()
-        try:
-            del self._explicit_abs_path_by_helper_path[helper_path]
-        except KeyError:
-            # do _not_ remove an item from self._implicit_abs_path_by_helper_path, since this would change the state
-            # of an outer context
-            msg = f"not a relative helper path with an explictly assigned absolute path: {helper_path.as_string()!r}"
-            raise KeyError(msg) from None
 
 
 class _ReadOnlyHelperDictView(_BaseHelperDict):

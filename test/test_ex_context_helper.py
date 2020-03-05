@@ -151,15 +151,7 @@ class ExplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
             msg = "when 'helper_path' is a non-directory, 'abs_path' must also be a non-directory"
             self.assertEqual(msg, str(cm.exception))
 
-    def test_delete_fails_for_nonexplicit(self):
-        os.mkdir('.dlbroot')
-        with dlb.ex.Context():
-            with self.assertRaises(KeyError) as cm:
-                del dlb.ex.Context.helper['a']
-            msg = "not a relative helper path with an explictly assigned absolute path: 'a'"
-            self.assertEqual(repr(msg), str(cm.exception))
-
-    def test_is_not_in_initially_and_after_delete(self):
+    def test_is_not_in_initially(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
             self.assertNotIn('a', dlb.ex.Context.helper)
@@ -168,21 +160,29 @@ class ExplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.Context.helper['a']
             dlb.ex.Context.helper[dlb.fs.Path('a')] = '/a'
             self.assertIn('a', dlb.ex.Context.helper)
-            del dlb.ex.Context.helper[dlb.fs.Path('a')]
-            self.assertNotIn('a', dlb.ex.Context.helper)
 
-    def test_inner_and_outer_are_independent(self):
+    def test_inner_inherits_outer(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
             self.assertNotIn('a', dlb.ex.Context.helper)
             dlb.ex.Context.helper['b'] = '/b'
             with dlb.ex.Context():
                 dlb.ex.Context.helper['a'] = '/a'
-                self.assertNotIn('b', dlb.ex.Context.helper)
-                with self.assertRaises(KeyError):
-                    del dlb.ex.Context.helper['b']
-            self.assertNotIn('a', dlb.ex.Context.helper)
+                self.assertIn('b', dlb.ex.Context.helper)
             self.assertIn('b', dlb.ex.Context.helper)
+
+    def test_inner_does_not_change_outer(self):
+        os.mkdir('.dlbroot')
+        with dlb.ex.Context():
+            dlb.ex.Context.helper['b'] = '/b'
+
+            with dlb.ex.Context():
+                dlb.ex.Context.helper['a'] = '/a'
+                dlb.ex.Context.helper['b'] = '/B'
+                self.assertEqual(dlb.fs.Path('/B'), dlb.ex.Context.helper['b'])
+
+            self.assertNotIn('a', dlb.ex.Context.helper)
+            self.assertEqual(dlb.fs.Path('/b'), dlb.ex.Context.helper['b'])
 
     def test_is_dictionarylike(self):
         os.mkdir('.dlbroot')
@@ -219,20 +219,6 @@ class ExplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
                 with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
                     helper0['a'] = '/a'
 
-    def test_deletion_fails_on_inactive_context(self):
-        os.mkdir('.dlbroot')
-        with dlb.ex.Context() as c0:
-            helper0 = c0.helper
-            helper0['a'] = '/a'
-            with dlb.ex.Context():
-                regex = (
-                    r"(?m)\A"
-                    r"'helper' of an inactive context must not be modified\n"
-                    r"  \| use 'dlb\.ex\.Context\.active\.helper' to get 'helper' of the active context\Z"
-                )
-                with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
-                    del helper0['a']
-
 
 @unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
 class ImplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -250,15 +236,6 @@ class ImplicitHelperTest(tools_for_test.TemporaryDirectoryTestCase):
             p = dlb.ex.Context.helper['ls']
             self.assertEqual(q, p)
             self.assertIn('ls', dlb.ex.Context.helper)
-
-    def test_delete_fails(self):
-        os.mkdir('.dlbroot')
-        with dlb.ex.Context(find_helpers=True):
-            dlb.ex.Context.helper['ls']
-            with self.assertRaises(KeyError) as cm:
-                del dlb.ex.Context.helper['ls']
-            msg = "not a relative helper path with an explictly assigned absolute path: 'ls'"
-            self.assertEqual(repr(msg), str(cm.exception))
 
     def test_inner_fails_if_root_context_explicit_only(self):
         os.mkdir('.dlbroot')

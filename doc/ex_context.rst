@@ -283,9 +283,9 @@ Context objects
       explicitly or implicitly with the help of :meth:`find_path_in()`.
 
       If the :term:`active context` and the :term:`root context` both have :attr:`find_helpers` = ``False``
-      and no paths was explicitly assigned to the dynamic helper *p* in the active contect, a look-up with
-      ``dlb.ex.Context.helper[p]`` performs a search with ``dlb.ex.Context.find_path_in(p)``. (Each such search is
-      performed only once for a given path; the result is stored.)
+      and no paths was explicitly assigned to the dynamic helper *p* in the active contect or one of its outer contexts,
+      a look-up with ``dlb.ex.Context.helper[p]`` performs a search with ``dlb.ex.Context.find_path_in(p)``.
+      (Each such search is performed only once for a given path; the result is stored.)
 
       Examples::
 
