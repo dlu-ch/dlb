@@ -52,7 +52,7 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
 
     def test_fails_for_nonexistent_inputfile(self):
         regex = (
-            r"\A()input dependency 'source_file' contains a path of an non-existing "
+            r"\A()input dependency 'source_file' contains a path of a non-existent "
             r"filesystem object: 'src/a\.cpp'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
@@ -61,7 +61,7 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
                 t.run()
 
         regex = (
-            r"\A()input dependency 'source_file' contains a path of an non-existing "
+            r"\A()input dependency 'source_file' contains a path of a non-existent "
             r"filesystem object: 'src/b/\.\./a\.cpp'\Z"
         )
         with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):

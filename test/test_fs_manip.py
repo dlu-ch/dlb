@@ -95,11 +95,11 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertFalse(os.path.exists('s'))
         self.assertTrue(os.path.exists('f'))  # still exists
 
-    def test_fails_for_nonexisting(self):
+    def test_fails_for_nonexistent(self):
         with self.assertRaises(FileNotFoundError):
             dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'n'))
 
-    def test_ignores_for_nonexisting_if_required(self):
+    def test_ignores_for_nonexistent_if_required(self):
         dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'n'), ignore_non_existing=True)
 
     def test_fails_for_relative_tmp(self):
@@ -167,7 +167,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.fs.manip.read_filesystem_object_memo(b'x')
         self.assertEqual("'abs_path' must be a str or path, not bytes", str(cm.exception))
 
-    def test_fails_for_nonexisting(self):
+    def test_fails_for_nonexistent(self):
         with self.assertRaises(FileNotFoundError):
             dlb.fs.manip.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
 
@@ -294,7 +294,7 @@ class NormalizeDotDotWithReference(tools_for_test.TemporaryDirectoryTestCase):
             dlb.fs.manip.normalize_dotdot_native_components(('a', 'b'), ref_dir_path=b'/tmp')
         self.assertEqual("'ref_dir_path' must be a str", str(cm.exception))
 
-    def test_fails_for_nonexisting_symlink(self):
+    def test_fails_for_nonexistent_symlink(self):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd'))
         with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:

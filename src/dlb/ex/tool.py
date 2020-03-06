@@ -105,7 +105,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
             pass
         if not did_not_exist_before_last_redo:
             if not needs_redo:
-                msg = f"redo necessary because of nonexistent filesystem object: {path.as_string()!r}"
+                msg = f"redo necessary because of non-existent filesystem object: {path.as_string()!r}"
                 di.inform(msg, level=logging.INFO)
                 needs_redo = True
     except OSError:
@@ -213,11 +213,15 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
                     )
                     raise DependencyCheckError(msg) from None
                 except FileNotFoundError:
-                    msg = f"input dependency {action.name!r} contains a path of an non-existing filesystem object: {p.as_string()!r}"
+                    msg = (
+                        f"input dependency {action.name!r} contains a path of a "
+                        f"non-existent filesystem object: {p.as_string()!r}"
+                    )
                     raise DependencyCheckError(msg) from None
                 except OSError as e:
                     msg = (
-                        f"input dependency {action.name!r} contains a path of an inaccessible filesystem object: {p.as_string()!r}\n"
+                        f"input dependency {action.name!r} contains a path of an "
+                        f"inaccessible filesystem object: {p.as_string()!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"
                     )
                     raise DependencyCheckError(msg) from None

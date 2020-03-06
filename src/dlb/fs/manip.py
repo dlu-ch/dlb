@@ -108,7 +108,7 @@ def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
             if lke.first_exception is not None:
                 raise lke.first_exception
         else:
-            abs_temp_dir_path = os.path.sep.join((abs_empty_dir_path, 't'))  # non-existing directory
+            abs_temp_dir_path = os.path.sep.join((abs_empty_dir_path, 't'))  # non-existent directory
             os.rename(abs_path, abs_temp_dir_path)  # POSIX: atomic on same filesystem
             shutil.rmtree(abs_temp_dir_path, ignore_errors=True)  # remove as much as possible
     except FileNotFoundError:

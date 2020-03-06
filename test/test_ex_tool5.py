@@ -79,7 +79,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             self.assertIsNotNone(t.run())  # because of new dependency
             regex = (
                 r"(?m)\b"
-                r"redo necessary because of nonexistent filesystem object: 'a.h'\n"
+                r"redo necessary because of non-existent filesystem object: 'a.h'\n"
             )
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
@@ -132,14 +132,14 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             self.assertIsNone(t.run())
 
         with dlb.ex.Context():
-            # add non-existing dependency with invalid memo
+            # add non-existent dependency with invalid memo
             rundb = dlb.ex.context._get_rundb()
             rundb.update_fsobject_input(1, 'd.h/', False, marshal.dumps(42))
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
-            regex = r"\b()redo necessary because of nonexistent filesystem object: 'd\.h'\n"
+            regex = r"\b()redo necessary because of non-existent filesystem object: 'd\.h'\n"
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 

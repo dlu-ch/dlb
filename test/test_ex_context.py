@@ -398,7 +398,7 @@ class RunDatabaseNotRunningTest(unittest.TestCase):
 
 class RunDatabaseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
-    def test_nonexisting_is_created(self):
+    def test_nonexistent_is_created(self):
         with dlb.ex.Context():
             self.assertTrue((pathlib.Path('.dlbroot') / 'runs.sqlite').is_file())
 
@@ -643,12 +643,12 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             with self.assertRaisesRegex(dlb.fs.manip.PathNormalizationError, regexp):
                 dlb.ex.Context.managed_tree_path_of(dlb.fs.Path('a/../..'), existing=True, collapsable=True)
 
-    def test_succeeds_on_nonexisting_if_assuming(self):
+    def test_succeeds_on_nonexistent_if_assuming(self):
         pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context():
             dlb.ex.Context.managed_tree_path_of('a/b', existing=True)
 
-    def test_fails_on_nonexisting_if_not_assuming(self):
+    def test_fails_on_nonexistent_if_not_assuming(self):
         pathlib.Path('.dlbroot').mkdir()
         with dlb.ex.Context():
             with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:

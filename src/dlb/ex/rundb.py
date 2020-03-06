@@ -183,7 +183,7 @@ class Database:
             connection = sqlite3.connect(rundb_abs_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
         except sqlite3.Error as e:
             exists = os.path.isfile(rundb_abs_path)  # does not raise OSError
-            state_msg = 'existing' if exists else 'non-existing'
+            state_msg = 'existing' if exists else 'non-existent'
             reason = ut.exception_to_line(e, True)
             msg = (
                 f"could not open {state_msg} run-database: {rundb_abs_path!r}\n"

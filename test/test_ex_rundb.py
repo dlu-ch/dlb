@@ -40,14 +40,14 @@ class CreationTest(tools_for_test.TemporaryDirectoryTestCase):
 
 class CreationWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
-    def test_fails_with_meaningful_message_on_permission_problem_when_nonexisting(self):
+    def test_fails_with_meaningful_message_on_permission_problem_when_nonexistent(self):
         os.mkdir('t')
         os.chmod('t', 0x000)
 
         try:
             regex = (
                 r"(?m)\A"
-                r"could not open non-existing run-database: '.+'\n"
+                r"could not open non-existent run-database: '.+'\n"
                 r"  \| reason: sqlite3.OperationalError: unable to open database file\n"
                 r"  \| check access permissions\Z"
             )
