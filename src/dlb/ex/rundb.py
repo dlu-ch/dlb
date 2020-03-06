@@ -6,6 +6,7 @@
 This is an implementation detail - do not import it unless you know what you are doing."""
 
 import os.path
+import enum
 import stat
 import dataclasses
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
@@ -159,6 +160,12 @@ class _CursorWithExceptionMapping:
             raise DatabaseError(msg) from None
 
 
+@enum.unique
+class Domain(enum.Enum):
+    EXECUTION_PARAMETERS = 'execparam'
+    ENVIRONMENT_VARIABLES = 'envvar'
+
+
 class Database:
 
     def __init__(self, rundb_path: Union[str, os.PathLike], suggestion_if_database_error: str = ''):
@@ -221,7 +228,7 @@ class Database:
 
                 "CREATE TABLE IF NOT EXISTS ToolInstDomainInput("
                     "tool_inst_dbid INTEGER, "         # tool instance
-                    "domain TEXT NOT NULL, "           # name of domain
+                    "domain TEXT NOT NULL, "           # name of domain (one of Domain)
                     "memo_digest_before BLOB, "        # memo of filesystem object before last redo of tool instance
                     "PRIMARY KEY(tool_inst_dbid, domain), "
                     "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"

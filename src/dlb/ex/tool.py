@@ -521,7 +521,8 @@ class _ToolBase:
                 # dependency of the last successful redo of the same tool instance according to the run-database
 
                 if not needs_redo:
-                    execution_parameter_digest_in_db = db.get_domain_inputs(tool_instance_dbid).get('execparam')
+                    execution_parameter_digest_in_db = \
+                        db.get_domain_inputs(tool_instance_dbid).get(rundb.Domain.EXECUTION_PARAMETERS.value)
                     if execution_parameter_digest != execution_parameter_digest_in_db:
                         di.inform("redo necessary because of changed execution parameter")
                         needs_redo = True
@@ -631,7 +632,8 @@ class _ToolBase:
                 })
                 db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
 
-                db.replace_domain_inputs(tool_instance_dbid, {'execparam': execution_parameter_digest})
+                db.replace_domain_inputs(tool_instance_dbid,
+                                         {rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest})
 
                 # note: no db.commit() necessary as long as root context does commit on exception
 
