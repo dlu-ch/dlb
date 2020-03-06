@@ -5,8 +5,6 @@
 """(Technical) utilities.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = ('is_immutable_fundamental', 'make_fundamental')
-
 import sys
 import marshal
 import collections.abc
@@ -14,12 +12,12 @@ from typing import Iterable, Dict, Any
 assert sys.version_info >= (3, 7)
 
 
-_non_container_fundamental_types = (bool, int, float, complex, str, bytes)
+non_container_fundamental_types = (bool, int, float, complex, str, bytes)
 
 
 # is obj of an immutable built-in type that is no container (except str, bytes)?
 def is_immutable_fundamental(obj):
-    return obj is None or isinstance(obj, _non_container_fundamental_types)
+    return obj is None or isinstance(obj, non_container_fundamental_types)
 
 
 def _make_fundamental(obj, repeatable):
@@ -58,13 +56,7 @@ def make_fundamental(obj, repeatable=False):
         # note: isinstance() can lead to infinite recursion, aborted by RecursionError
         return _make_fundamental(obj, repeatable)
     except (TypeError, ValueError, RecursionError):
-        f = ', '.join(repr(c.__name__) for c in _non_container_fundamental_types)
-        msg = (
-            f"cannot be made fundamental: {obj!r}\n"
-            f"  | an object is fundamental if it is 'None', or of type {f}, "
-            f"or an iterable of only such objects"
-        )
-        raise TypeError(msg) from None
+        raise TypeError from None
 
 
 def to_permanent_local_bytes(obj) -> bytes:

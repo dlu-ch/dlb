@@ -22,6 +22,7 @@ class ImportTest(unittest.TestCase):
             'DefinitionAmbiguityError',
             'DependencyRoleAssignmentError',
             'DependencyCheckError',
+            'ExecutionParameterError',
             'RedoError'},
             set(dlb.ex.tool.__all__))
         self.assertTrue('Tool' in dir(dlb.ex))

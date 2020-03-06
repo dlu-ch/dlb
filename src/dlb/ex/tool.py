@@ -4,7 +4,14 @@
 
 """Dependency-aware tool execution."""
 
-__all__ = ('Tool', 'DefinitionAmbiguityError', 'DependencyRoleAssignmentError', 'DependencyCheckError', 'RedoError')
+__all__ = (
+    'Tool',
+    'DefinitionAmbiguityError',
+    'DependencyRoleAssignmentError',
+    'DependencyCheckError',
+    'ExecutionParameterError',
+    'RedoError'
+)
 
 import sys
 import re
@@ -52,6 +59,10 @@ class DependencyRoleAssignmentError(ValueError):
 
 
 class DependencyCheckError(Exception):
+    pass
+
+
+class ExecutionParameterError(Exception):
     pass
 
 
@@ -451,6 +462,22 @@ class _ToolBase:
                 for n in self.__class__._dependency_names
             )
 
+            execution_parameter_digest = b''
+            for name in self.__class__._execution_parameter_names:
+                value = getattr(self.__class__, name)
+                try:
+                    execution_parameter_digest += ut.to_permanent_local_bytes(value)
+                except TypeError:
+                    fundamentals = ', '.join(repr(c.__name__) for c in ut.non_container_fundamental_types)
+                    msg = (
+                        f"value of execution parameter {name!r} is not fundamental: {value!r}\n"
+                        f"  | an object is fundamental if it is None, or of type {fundamentals}, "
+                        f"or a mapping or iterable of only such objects"
+                    )
+                    raise ExecutionParameterError(msg) from None
+            if len(execution_parameter_digest) >= 20:
+                execution_parameter_digest = hashlib.sha1(execution_parameter_digest).digest()
+
             db = context_._get_rundb()
 
             tool_instance_dbid = db.get_and_register_tool_instance_dbid(
@@ -494,6 +521,12 @@ class _ToolBase:
                 # dependency of the last successful redo of the same tool instance according to the run-database
 
                 if not needs_redo:
+                    execution_parameter_digest_in_db = db.get_domain_inputs(tool_instance_dbid).get('execparam')
+                    if execution_parameter_digest != execution_parameter_digest_in_db:
+                        di.inform("redo necessary because of changed execution parameter")
+                        needs_redo = True
+
+                if not needs_redo:
                     with di.Cluster('compare input dependencies with state before last successful redo',
                                     with_time=True, is_progress=True):
                         # sorting not necessary for repeatability
@@ -533,15 +566,18 @@ class _ToolBase:
         # note: no db.commit() necessary as long as root context does commit on exception
         tid = context._redo_sequencer.wait_then_start(
             context.max_parallel_redo_count, None, self._redo_with_aftermath,
-            result, context_.RedoContext(context),
-            dependency_actions, memo_by_encoded_path, encoded_paths_of_explicit_input_dependencies,
-            db, tool_instance_dbid)
+            result=result, context=context_.RedoContext(context),
+            dependency_actions=dependency_actions, memo_by_encoded_path=memo_by_encoded_path,
+            encoded_paths_of_explicit_input_dependencies=encoded_paths_of_explicit_input_dependencies,
+            execution_parameter_digest=execution_parameter_digest,
+            db=db, tool_instance_dbid=tool_instance_dbid)
 
         return context._redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_RedoResult)
 
     async def _redo_with_aftermath(self, result, context,
                                    dependency_actions, memo_by_encoded_path,
                                    encoded_paths_of_explicit_input_dependencies,
+                                   execution_parameter_digest,
                                    db, tool_instance_dbid):
         # note: no db.commit() necessary as long as root context does commit on exception
         di.inform(f"start redo for tool instance dbid {tool_instance_dbid!r}", with_time=True)
@@ -594,6 +630,9 @@ class _ToolBase:
                     for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_by_fsobject_dbid)
                 })
                 db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
+
+                db.replace_domain_inputs(tool_instance_dbid, {'execparam': execution_parameter_digest})
+
                 # note: no db.commit() necessary as long as root context does commit on exception
 
         return result
@@ -608,9 +647,11 @@ class _ToolBase:
         raise AttributeError
 
     def __repr__(self):
-        names = self.__class__._dependency_names
-        args = ', '.join('{}={}'.format(n, repr(getattr(self, n))) for n in names)
-        return f'{self.__class__.__qualname__}({args})'
+        dependency_tokens = [
+            '{}={!r}'.format(n, getattr(self, n))
+            for n in self.__class__._dependency_names
+        ]
+        return '{}({})'.format(self.__class__.__qualname__, ', '.join(dependency_tokens))
 
 
 # noinspection PyProtectedMember
@@ -632,7 +673,9 @@ class _ToolMeta(type):
                 raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
             cls.check_own_attributes()
 
-        super().__setattr__('_dependency_names', cls._get_dependency_names())
+        dependency_names, execution_parameter_names = cls._get_names()
+        super().__setattr__('_dependency_names', dependency_names)
+        super().__setattr__('_execution_parameter_names', execution_parameter_names)
         location = cls._find_definition_location(inspect.stack(context=0)[1])
         super().__setattr__('definition_location', location)
         _tool_class_by_definition_location[location] = cls
@@ -769,8 +812,10 @@ class _ToolMeta(type):
                 )
                 raise AttributeError(msg)
 
-    def _get_dependency_names(cls) -> Tuple[str, ...]:
-        dependencies = {n: getattr(cls, n) for n in dir(cls) if LOWERCASE_WORD_NAME_REGEX.match(n)}
+    def _get_names(cls) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
+        names = dir(cls)
+        dependencies = {n: getattr(cls, n) for n in names if LOWERCASE_WORD_NAME_REGEX.match(n)}
+        execution_parameters = {n: getattr(cls, n) for n in names if UPPERCASE_WORD_NAME_REGEX.match(n)}
 
         def rank_of(d):
             if isinstance(d, depend.Input):
@@ -782,7 +827,7 @@ class _ToolMeta(type):
         pairs = [(rank_of(d), not d.required, n) for n, d in dependencies.items() if isinstance(d, depend.Dependency)]
         pairs.sort()
         # order: input - intermediate - output, required first
-        return tuple(p[-1] for p in pairs)
+        return tuple(p[-1] for p in pairs), tuple(sorted(execution_parameters))
 
     def __setattr__(cls, name, value):
         raise AttributeError

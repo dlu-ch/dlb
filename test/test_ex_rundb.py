@@ -464,7 +464,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
                 rundb.declare_fsobject_input_as_modified('..')
 
 
-class ReplaceFsobjectInputsTest(tools_for_test.TemporaryDirectoryTestCase):
+class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_is_correct_after_success(self):
 
@@ -488,7 +488,7 @@ class ReplaceFsobjectInputsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'0')
             }, rundb.get_fsobject_inputs(tool_dbid0)) # input dependencies of tool_dbid0 are unchanged
 
-    def test_is_changed_after_fail(self):
+    def test_is_unchanged_after_fail(self):
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
@@ -506,6 +506,43 @@ class ReplaceFsobjectInputsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1'),
                 dlb.ex.rundb.encode_path(dlb.fs.Path('b')): (False, b'1')
             }, rundb.get_fsobject_inputs(tool_dbid))
+
+
+class ReplaceAndGetDomainInputsTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_is_correct_after_success(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+
+            tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i0')
+            rundb.replace_domain_inputs(tool_dbid1, {'a': b'A', 'b': b'BB'})
+            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid1))
+
+            tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
+            rundb.replace_domain_inputs(tool_dbid2, {'c': b'CCC'})
+
+            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid1))  # unchanged
+            rundb.replace_domain_inputs(tool_dbid1, {'a': b'!'})
+            self.assertEqual({'a': b'!'}, rundb.get_domain_inputs(tool_dbid1))  # 'b' is removed
+
+            self.assertEqual({'c': b'CCC'}, rundb.get_domain_inputs(tool_dbid2))
+
+    def test_is_unchanged_after_fail(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
+
+            rundb.replace_domain_inputs(tool_dbid, {'a': b'A', 'b': b'BB'})
+            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid))
+
+            info_by_by_encoded_path = collections.OrderedDict([
+                ('a', b'A!'),  # valid
+                (None, None)   # invalid
+            ])
+            with self.assertRaises(dlb.ex.rundb.DatabaseError):
+                rundb.replace_domain_inputs(tool_dbid, info_by_by_encoded_path)
+
+            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid))  # unchanged
 
 
 class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -530,5 +567,28 @@ class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(dict(), rundb.get_fsobject_inputs(tool_dbid0))
             self.assertEqual(2, len(rundb.get_fsobject_inputs(tool_dbid1)))
             self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid2)))
+
+            self.assertEqual(3 - 1, rundb.get_tool_instance_dbid_count())
+
+    def test_scenario2(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+
+            rundb.get_and_register_tool_instance_dbid(b't', b'i0')
+
+            tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
+            rundb.update_fsobject_input(tool_dbid1, dlb.ex.rundb.encode_path(dlb.fs.Path('a')), False, b'1')
+
+            tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i2')
+            rundb.replace_domain_inputs(tool_dbid2, {'a': b'A'})
+
+            self.assertEqual(3, rundb.get_tool_instance_dbid_count())
+
+            rundb.cleanup()
+
+            self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
+            self.assertEqual(0, len(rundb.get_domain_inputs(tool_dbid1)))
+            self.assertEqual(0, len(rundb.get_fsobject_inputs(tool_dbid2)))
+            self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
 
             self.assertEqual(3 - 1, rundb.get_tool_instance_dbid_count())

@@ -231,7 +231,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunDoesNoRedoForIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RunDoesNoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_run_causes_redo_only_the_first_time(self):
         src = pathlib.Path('src')
@@ -446,6 +446,40 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryT
             self.assertRegex(output.getvalue(), regex)
 
 
+class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo(self):
+        a_list = ['a', 2]
+
+        class BTool(dlb.ex.Tool):
+            XYZ = a_list
+
+            object_file = dlb.ex.Tool.Output.RegularFile()
+
+            async def redo(self, result, context):
+                dlb.di.inform("redoing right now")
+                with open((context.root_path / self.object_file).native, 'xb'):
+                    pass
+
+        src = pathlib.Path('src')
+        src.mkdir()
+
+        with (src / 'a.cpp').open('xb'):
+            pass
+
+        t = BTool(object_file='a.o')
+
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNone(t.run())
+
+        a_list.append(None)
+
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNone(t.run())
+
+
 class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_ignores_unexisting_output_file(self):
@@ -502,3 +536,22 @@ class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryT
         with dlb.ex.Context():
             self.assertIsNone(t.run())
         self.assertTrue(pathlib.Path('d').exists())  # still exists
+
+
+class ExecutionParameterTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails_if_execution_parameter_not_fundamental(self):
+        # noinspection PyAbstractClass
+        class BTool(dlb.ex.Tool):
+            XY = dlb.fs.Path('.')
+
+        with dlb.ex.Context():
+            t = BTool()
+            with self.assertRaises(dlb.ex.ExecutionParameterError) as cm:
+                t.run()
+            msg = (
+                "value of execution parameter 'XY' is not fundamental: Path('./')\n"
+                "  | an object is fundamental if it is None, or of type 'bool', 'int', 'float', 'complex', 'str', "
+                "'bytes', or a mapping or iterable of only such objects"
+            )
+            self.assertEqual(msg, str(cm.exception))

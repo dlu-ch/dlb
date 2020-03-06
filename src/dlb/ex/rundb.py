@@ -218,6 +218,14 @@ class Database:
                     "PRIMARY KEY(tool_inst_dbid, path), "
                     "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"
                 ");"
+
+                "CREATE TABLE IF NOT EXISTS ToolInstDomainInput("
+                    "tool_inst_dbid INTEGER, "         # tool instance
+                    "domain TEXT NOT NULL, "           # name of domain
+                    "memo_digest_before BLOB, "        # memo of filesystem object before last redo of tool instance
+                    "PRIMARY KEY(tool_inst_dbid, domain), "
+                    "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"
+                ");"
         
                 "PRAGMA foreign_keys = ON;"            # https://www.sqlite.org/foreignkeys.html
             )
@@ -277,7 +285,7 @@ class Database:
 
     def replace_fsobject_inputs(self, tool_instance_dbid: int,
                                 info_by_by_fsobject_dbid: Dict[str, Tuple[bool, bytes]]):
-        # Replace all information on input dependencies for a tool instance *tool_instance_dbid* by
+        # Replace all information on filesystem object input dependencies for a tool instance *tool_instance_dbid* by
         # *info_by_by_fsobject_dbid*.
         #
         # Includes a :meth:`commit()` at the start.
@@ -345,6 +353,37 @@ class Database:
                 "UPDATE ToolInstFsInput SET memo_before = NULL WHERE instr(path, ?) == 1",
                 (modified_encoded_path,))
 
+    def get_domain_inputs(self, tool_instance_dbid: int) -> Dict[str, bytes]:
+        # Return the *domain* and the memo digest of all domain input dependencies of the tool
+        # instance *tool_instance_dbid*.
+        #
+        # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
+        # the last :meth:`cleanup()` (if any).
+        with self._cursor_with_exception_mapping() as cursor:
+            rows = cursor.execute(
+                "SELECT domain, memo_digest_before FROM ToolInstDomainInput WHERE tool_inst_dbid == ?",
+                (tool_instance_dbid,)).fetchall()
+        return {domain: memo_digest_before for domain, memo_digest_before in rows}
+
+    def replace_domain_inputs(self, tool_instance_dbid: int, memo_digest_before_by_domain: Dict[str, bytes]):
+        # Replace all information on domain input dependencies for a tool instance *tool_instance_dbid* by
+        # *memo_digest_before_by_domain*.
+        #
+        # Includes a :meth:`commit()` at the start.
+        # In case of an exception, the information on input dependencies in the run-database remains unchanged.
+
+        with self._cursor_with_exception_mapping() as cursor:
+            try:
+                self._connection.commit()
+                cursor.execute("BEGIN")
+                cursor.execute("DELETE FROM ToolInstDomainInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
+                for domain, memo_digest_before in memo_digest_before_by_domain.items():
+                    cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?)",
+                                   (tool_instance_dbid, domain, memo_digest_before))
+            except:
+                self._connection.rollback()
+                raise
+
     def commit(self):
         with self._cursor_with_exception_mapping('commit failed'):
             self._connection.commit()
@@ -354,9 +393,10 @@ class Database:
             # remove unused tool dbids
             cursor.execute(
                 "DELETE FROM ToolInst WHERE tool_inst_dbid IN ("
-                    "SELECT ToolInst.tool_inst_dbid FROM ToolInst LEFT OUTER JOIN ToolInstFsInput "
-                    "ON ToolInst.tool_inst_dbid = ToolInstFsInput.tool_inst_dbid "
-                    "WHERE ToolInstFsInput.tool_inst_dbid IS NULL"
+                    "SELECT ti.tool_inst_dbid FROM ToolInst AS ti "
+                        "LEFT OUTER JOIN ToolInstFsInput AS fs ON ti.tool_inst_dbid = fs.tool_inst_dbid "
+                        "LEFT OUTER JOIN ToolInstDomainInput AS do ON ti.tool_inst_dbid = do.tool_inst_dbid "
+                    "WHERE fs.tool_inst_dbid IS NULL AND do.tool_inst_dbid IS NULL"
                 ")")
 
     def close(self):

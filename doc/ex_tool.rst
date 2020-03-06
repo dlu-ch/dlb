@@ -544,6 +544,10 @@ Exceptions
 
    Raised when a running :term:`tool instance` detects a problem with its dependencies before a :term:`redo`.
 
+.. exception:: ExecutionParameterError
+
+   Raised when a running :term:`tool instance` detects a problem with its execution parameters before a :term:`redo`.
+
 .. exception:: RedoError
 
    Raised when a running :term:`tool instance` detects a problem with its dependencies after a :term:`redo`.
