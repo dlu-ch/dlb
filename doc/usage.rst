@@ -110,7 +110,7 @@ Write scripts and tools
 
  - Use context to serialize groups of running tool instances, even when running in parallel [#serialize1]_::
 
-       with dlb.ex.Context(max_tool_processes=4):
+       with dlb.ex.Context(max_parallel_redo_count=4):
            ...
 
        ...  #  all running tool instances are completed here
@@ -122,11 +122,11 @@ Write scripts and tools
 Layout of working tree
 ----------------------
 
-The directory :file:`.dlbroot/` is mandatory (it marks its parent directory the root of a dlb working tree).
-Everything else
+The directory :file:`.dlbroot/` is mandatory - it marks its parent directory as the root of a dlb working tree.
+Everything else is optional.
 
 It can by useful to include dlb as :file:`dlb.zip` in the working tree (under version control). This makes the
-working tree almost self-contained (an external Python interpreter is needed).
+working tree almost self-contained (only an external Python interpreter is needed).
 
 If you use Git for version control which does not support empty directories, add an empty regular file
 :file:`.dlbroot/o`.
@@ -145,14 +145,13 @@ The lines marked with * show filesystem object only given as an example.
    test/                   *
    ...
 
-**During** a run of a dlb script (:file:`.dlbroot/t/a.o` and :file:`test/` and their content are only given as an
-example):
+**During** a run of a dlb script:
 
 ::
 
    .dlbroot/
        o                   empty regular file, used to probe the "current" mtime
-       runs.sqlite
+       runs.sqlite         run-database
        t/                  temporary files
            a.o             *
            b.o             *
@@ -173,7 +172,7 @@ example):
 
    .dlbroot/
        o                   empty regular file
-       runs.sqlite         state of the past running tool instances
+       runs.sqlite         run-database
     src/                   *
       a.c                  *
       a.h                  *

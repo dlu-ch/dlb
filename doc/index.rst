@@ -12,7 +12,7 @@ A build system *generates files* in a filesystem, mostly with the help of *exter
 Its most important tasks are:
 
 - collect and transform filesystem paths
-- find and call tool binaries (e.g. compilers) with context-dependent command line arguments
+- find and execute tool binaries (e.g. compilers) with context-dependent command line arguments
 - generate files (e.g. some program source files or configuration files)
 - make the build fast by omitting unnecessary redos
 
@@ -35,7 +35,7 @@ Example::
 
    class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
 
-   class Compiler(CppCompilerGcc): DIALECT = 'c11'                               # (b)
+   class Compiler(CppCompilerGcc): DIALECT = 'c++11'                             # (b)
    class Linker(StaticLinkerGcc): pass
 
    with dlb.ex.Context():                                                        # (c)

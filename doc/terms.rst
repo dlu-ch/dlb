@@ -52,10 +52,11 @@ Terms
       A redo is considered necessary if at least one of the following statements is true:
 
       a) Any of the output dependencies of *t* does not exist in the expected form.
-      b) Any of the input dependencies of *t* has changed its existence in the expected form since the last known start
-         of execution of *t*.
+      b) Any of the input dependencies of *t* has changed its existence in the expected form since the start of
+         the last known successful execution of *t*.
       c) Any of the input dependencies of *t* has changed a depended-upon property (e.g. filesystem attribute, value of
-         environment variable) since the last known start of execution of *t*.
+         environment variable) since the start of the last known successful execution of *t*.
+      d) Any of the execution parameters *t* has changed since the start of the last known successful execution of *t*.
 
    redo miss
       A redo miss of a :term:`tool instance` is an undesirable situation that occurs when the :term:`redo` check
@@ -68,7 +69,7 @@ Terms
       An (execution) context describes how running :term:`tool instances <tool instance>` shall interact with the
       execution environment outside the :term:`working tree` and with each other.
 
-      It is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
+      It is represented as an instance of :class:`dlb.ex.Context <dlb.ex.context.Context>` used as a context manager.
 
    active context
       The innermost :term:`context`, if any.
@@ -173,7 +174,7 @@ Terms
          (this includes symbolic links and hard links)
        - Write to a regular file
 
-      Examples of modifications of the managed tree that or no benign managed tree modification:
+      Examples of modifications of the managed tree that are no benign managed tree modifications:
 
        - Replace a regular file by any other one with :command:`mv`
          (does not :term:`update mtime <mtime update>` of the target)
