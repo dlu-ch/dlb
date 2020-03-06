@@ -284,7 +284,7 @@ class Database:
             raise ValueError(f"not a valid 'encoded_path': {encoded_path!r}")
 
         if encoded_memo_before is not None and not isinstance(encoded_memo_before, bytes):
-            raise ValueError(f"not a valid 'encoded_memo_before': {encoded_memo_before!r}")
+            raise TypeError(f"not a valid 'encoded_memo_before': {encoded_memo_before!r}")
 
         with self._cursor_with_exception_mapping() as cursor:
             cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?)",

@@ -62,7 +62,7 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                 if replacement is None:
                     compile_arguments += ['-U', macro]
                 else:
-                    replacement = replacement.strip()
+                    replacement = str(replacement).strip()
                     if replacement == '1':
                         compile_arguments += ['-D', macro]
                     else:

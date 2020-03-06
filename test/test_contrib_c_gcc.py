@@ -19,7 +19,12 @@ import tools_for_test
 
 
 class CCompiler(dlb_contrib_c_gcc.CCompilerGcc):
-    DEFINITIONS = {'LINE_SEPARATOR': '"\\n"'}
+    DEFINITIONS = {
+        '__GNUC__': None,  # predefined
+        'ONE': 1,
+        'LINE_SEPARATOR': '"\\n"',
+        'print(l)': 'printf(l LINE_SEPARATOR)'
+    }
     DIALECT = 'c11'
 
 
@@ -33,9 +38,17 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             f.write(textwrap.dedent(
                 '''
                 #include "a.h"
+                
+                #ifndef ONE
+                    #error "ONE is not defined"
+                #endif
+                
+                #ifdef __GNUC__
+                    #error "__GNUC__ is defined"
+                #endif
 
                 int main() {
-                    printf(GREETING LINE_SEPARATOR);
+                    print(GREETING);
                     return 0;
                 }
                 '''
@@ -108,3 +121,16 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with dlb.ex.Context(find_helpers=True):
                 t.run()
         self.assertEqual("not a warning name: 'no-all'", str(cm.exception))
+
+    def test_fails_for_invalid_macro(self):
+        with open('a.c', 'w'):
+            pass
+
+        class C(CCompiler):
+            DEFINITIONS = {'a(': None}
+
+        t = C(source_file='a.c', object_file='a.o')
+        with self.assertRaises(Exception) as cm:
+            with dlb.ex.Context(find_helpers=True):
+                t.run()
+        self.assertEqual("not a macro: 'a('", str(cm.exception))

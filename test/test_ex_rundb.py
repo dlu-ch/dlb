@@ -334,6 +334,14 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
             with self.assertRaises(ValueError):
                 rundb.update_fsobject_input(12, '/3', True, b'')
 
+    def test_update_fails_for_invalid_encoded_memo(self):
+        encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            with self.assertRaises(TypeError):
+                # noinspection PyTypeChecker
+                rundb.update_fsobject_input(12, encoded_path, True, '')
+
 
 class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCase):
 
