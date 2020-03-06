@@ -660,7 +660,7 @@ depend._inject_into(_ToolBase, 'Tool', '.'.join(_ToolBase.__module__.split('.')[
 
 class _ToolMeta(type):
 
-    OVERRIDEABLE_ATTRIBUTES = frozenset(('redo', '__doc__', '__module__'))
+    OVERRIDEABLE_ATTRIBUTES = frozenset(('redo', '__doc__', '__module__', '__annotations__'))
 
     def __init__(cls, name, bases, nmspc):
         super().__init__(name, bases, nmspc)

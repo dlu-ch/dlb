@@ -19,6 +19,7 @@ import tools_for_test
 
 
 class CCompiler(dlb_contrib_c_gcc.CCompilerGcc):
+    DEFINITIONS = {'LINE_SEPARATOR': '"\\n"'}
     DIALECT = 'c11'
 
 
@@ -34,7 +35,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 #include "a.h"
 
                 int main() {
-                    printf(GREETING "\\n");
+                    printf(GREETING LINE_SEPARATOR);
                     return 0;
                 }
                 '''

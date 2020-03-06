@@ -55,6 +55,19 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
             compile_arguments += ['-Wno-' + check_warning_name(n) for n in self.SUPPRESSED_WARNINGS]
             compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
 
+            for macro, replacement in self.DEFINITIONS.items():
+                if not dlb_contrib_c.IDENTIFIER.match(macro) and not dlb_contrib_c.FUNCTIONLIKE_MACRO.match(macro):
+                    raise Exception(f"not a macro: {macro!r}")
+                # *macro* is a string that does not start with '-' and does not contain '='
+                if replacement is None:
+                    compile_arguments += ['-U', macro]
+                else:
+                    replacement = replacement.strip()
+                    if replacement == '1':
+                        compile_arguments += ['-D', macro]
+                    else:
+                        compile_arguments += ['-D', f'{macro}={replacement}']
+
             # compile
             await context.execute_helper(
                 self.BINARY,
