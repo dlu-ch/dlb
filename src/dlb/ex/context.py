@@ -886,14 +886,23 @@ class RedoContext(_BaseContext):
             helper_file = fs.Path(helper_file)
 
         cwd = fs.Path('.') if cwd is None else self.managed_tree_path_of(cwd, is_dir=True)
+        longest_dotdot_prefix = ()
 
         commandline_tokens = [str(self.helper[helper_file].native)]
         for a in arguments:
             if isinstance(a, fs.Path):
                 if not a.is_absolute():
                     a = self.managed_tree_path_of(a).relative_to(cwd, collapsable=True)
+                    c = a.components[1:]
+                    if c[:len(longest_dotdot_prefix)] == longest_dotdot_prefix:
+                        while len(longest_dotdot_prefix) < len(c) and c[len(longest_dotdot_prefix)] == '..':
+                            longest_dotdot_prefix += ('..',)
                 a = a.native
             commandline_tokens.append(str(a))
+
+        if longest_dotdot_prefix:
+            manip.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
+                                                     ref_dir_path=str(self.root_path.native))
 
         proc = await asyncio.create_subprocess_exec(
             *commandline_tokens,  # must all by str

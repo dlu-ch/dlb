@@ -110,6 +110,26 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('ups')))
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
+    def test_fails_for_uncollapsable_path_relative_to_cwd(self):
+        os.mkdir('a')
+        os.makedirs(os.path.join('x', 'y', 'b', 'c'))
+        try:
+            os.symlink(os.path.join('..', 'x', 'y', 'b'), os.path.join('a', 'b'), target_is_directory=True)
+        except OSError:  # on platform or filesystem that does not support symlinks
+            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
+            raise unittest.SkipTest from None
+
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.RedoContext(c)
+            asyncio.get_event_loop().run_until_complete(rd.execute_helper(
+                'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/..'
+            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+                asyncio.get_event_loop().run_until_complete(rd.execute_helper(
+                    'ls', [dlb.fs.Path('a/b'), dlb.fs.Path('a')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/../..'
+            p = os.path.join(os.getcwd(), 'a', 'b')
+            msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
+            self.assertEqual(msg, str(cm.exception))
+
     def test_relative_paths_are_replaced(self):
         os.makedirs(os.path.join('a', 'b', 'c'))
         os.mkdir(os.path.join('a', 'x'))
