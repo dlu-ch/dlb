@@ -723,7 +723,10 @@ class _BaseContext(metaclass=_ContextMeta):
 
         if not existing:
             try:
-                sr = os.lstat(os.path.sep.join([str(self._working_tree_path_native), str(rel_path.native)]))
+                s = str(rel_path.native)
+                if s[:2] == '.' + os.path.sep:
+                    s = s[2:]
+                sr = os.lstat(os.path.sep.join([str(self._working_tree_path_native), s]))
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
