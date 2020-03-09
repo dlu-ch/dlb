@@ -227,7 +227,9 @@ class EnvVarInputFilesystemOperationTest(unittest.TestCase):
         a = dlb.ex.dependaction.get_action(d, 'd')
 
         with self.assertRaises(ValueError):
+            # noinspection PyTypeChecker
             a.check_filesystem_object_memo(None)
 
         with self.assertRaises(ValueError):
+            # noinspection PyTypeChecker
             a.replace_filesystem_object(None, None, None)
