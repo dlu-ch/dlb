@@ -464,10 +464,10 @@ Exceptions
 
    Raised, when the :term:`working tree time` behaved unexpectedly.
 
-.. exception:: NonActiveContextAccessError
+.. exception:: ContextModificationError
 
-   Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` is modified
-   while its associated :term:`context` is not the :term:`active context`.
+   Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` or
+   a helper dictionaly object is modified while its associated :term:`context` is not the :term:`active context`.
 
 .. exception:: HelperExecutionError
 

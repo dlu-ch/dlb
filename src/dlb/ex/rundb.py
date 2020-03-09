@@ -5,6 +5,8 @@
 """Abstraction of run-database.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
+__all__ = ('DatabaseError',)
+
 import os.path
 import enum
 import stat
@@ -418,3 +420,6 @@ class Database:
             summary_message_line,
             self._suggestion_if_database_error
         )
+
+
+ut.set_module_name_to_parent_by_name(vars(), __all__)

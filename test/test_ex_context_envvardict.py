@@ -159,9 +159,9 @@ class ImportFromOuterTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                         r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
                         env0.import_from_outer('A_B_C', r'X.*Z', example='XZ')
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
                         env1.import_from_outer('A_B_C', r'X.*Z', example='XZ')
 
 
@@ -236,9 +236,9 @@ class AccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                         r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
                         env0['A_B_C'] = 'XYYZ'
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
                         env1['A_B_C'] = 'XYYZ'
 
     def test_deletion_fails_on_inactive_context(self):
@@ -254,9 +254,9 @@ class AccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                         r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
                         del env0['A_B_C']
-                    with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
                         del env1['A_B_C']
 
 

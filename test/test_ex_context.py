@@ -31,7 +31,7 @@ class ImportTest(unittest.TestCase):
             'ManagementTreeError',
             'NoWorkingTreeError',
             'WorkingTreeTimeError',
-            'NonActiveContextAccessError'},
+            'ContextModificationError'},
             set(dlb.ex.context.__all__))
         self.assertTrue('Context' in dir(dlb.ex))
 

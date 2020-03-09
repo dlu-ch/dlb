@@ -51,7 +51,7 @@ class CreationWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChm
                 r"  \| reason: sqlite3.OperationalError: unable to open database file\n"
                 r"  \| check access permissions\Z"
             )
-            with self.assertRaisesRegex(dlb.ex.rundb.DatabaseError, regex):
+            with self.assertRaisesRegex(dlb.ex.DatabaseError, regex):
                 with contextlib.closing(dlb.ex.rundb.Database('t/runs.sqlite')):
                     pass
         finally:
@@ -316,7 +316,7 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_fails_if_tool_dbid_does_no_exist(self):
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite',
                                                       suggestion_if_database_error="don't panic")) as rundb:
-            with self.assertRaises(dlb.ex.rundb.DatabaseError) as cm:
+            with self.assertRaises(dlb.ex.DatabaseError) as cm:
                 encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
                 rundb.update_fsobject_input(12, encoded_path, True, b'')
             msg = (
@@ -547,7 +547,7 @@ class ReplaceAndGetDomainInputsTest(tools_for_test.TemporaryDirectoryTestCase):
                 ('a', b'A!'),  # valid
                 (None, None)   # invalid
             ])
-            with self.assertRaises(dlb.ex.rundb.DatabaseError):
+            with self.assertRaises(dlb.ex.DatabaseError):
                 rundb.replace_domain_inputs(tool_dbid, info_by_by_encoded_path)
 
             self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid))  # unchanged

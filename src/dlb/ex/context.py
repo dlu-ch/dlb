@@ -12,7 +12,7 @@ __all__ = (
     'ManagementTreeError',
     'NoWorkingTreeError',
     'WorkingTreeTimeError',
-    'NonActiveContextAccessError',
+    'ContextModificationError'
 )
 
 import sys
@@ -71,7 +71,7 @@ class WorkingTreeTimeError(Exception):
     pass
 
 
-class NonActiveContextAccessError(Exception):
+class ContextModificationError(Exception):
     pass
 
 
@@ -193,7 +193,7 @@ class _EnvVarDict(_BaseEnvVarDict):
                 "'env' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
             )
-            raise NonActiveContextAccessError(msg)
+            raise ContextModificationError(msg)
         self._context.complete_pending_redos()
 
     # dictionary methods
@@ -330,7 +330,7 @@ class _HelperDict(_BaseHelperDict):
                 "'helper' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.helper' to get 'helper' of the active context"
             )
-            raise NonActiveContextAccessError(msg)
+            raise ContextModificationError(msg)
         self._context.complete_pending_redos()
 
     def __setitem__(self, helper_path, abs_path):

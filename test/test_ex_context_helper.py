@@ -201,7 +201,7 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                     r"'helper' of an inactive context must not be modified\n"
                     r"  \| use 'dlb\.ex\.Context\.active\.helper' to get 'helper' of the active context\Z"
                 )
-                with self.assertRaisesRegex(dlb.ex.context.NonActiveContextAccessError, regex):
+                with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
                     helper0['a'] = '/a'
 
 

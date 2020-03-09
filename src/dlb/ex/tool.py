@@ -1030,5 +1030,5 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
 
 # noinspection PyCallByClass
 type.__setattr__(Tool, '__module__', '.'.join(_ToolBase.__module__.split('.')[:-1]))
-ut.set_module_name_to_parent_by_name(vars(), [n for n in __all__ if not 'Tool'])
+ut.set_module_name_to_parent_by_name(vars(), [n for n in __all__ if n != 'Tool'])
 ut.set_module_name_to_parent(_RedoResult)
