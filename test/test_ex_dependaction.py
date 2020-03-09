@@ -218,3 +218,16 @@ class EnvVarInitialResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(ValueError) as cm:
                 a.get_initial_result_for_nonexplicit(c)
             self.assertEqual(msg, str(cm.exception))
+
+
+class EnvVarInputFilesystemOperationTest(unittest.TestCase):
+
+    def test_fails_on_filesystem_operations(self):
+        d = dlb.ex.Tool.Input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False, required=False)
+        a = dlb.ex.dependaction.get_action(d, 'd')
+
+        with self.assertRaises(ValueError):
+            a.check_filesystem_object_memo(None)
+
+        with self.assertRaises(ValueError):
+            a.replace_filesystem_object(None, None, None)

@@ -246,6 +246,35 @@ class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             t.run()
 
+    def test_can_assign_output_dependency_in_managed_tree(self):
+        class BTool(dlb.ex.Tool):
+            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False)
+
+            async def redo(self, result, context):
+                result.log_file = 'x'
+
+        t = BTool()
+        with dlb.ex.Context():
+            r = t.run()
+        self.assertEqual(dlb.fs.Path('x'), r.log_file)
+
+    def test_fails_if_output_dependency_not_in_managed_tree(self):
+        class BTool(dlb.ex.Tool):
+            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False)
+
+            async def redo(self, result, context):
+                result.log_file = '/tmp/x'
+
+        t = BTool()
+        with self.assertRaises(dlb.ex.RedoError) as cm:
+            with dlb.ex.Context():
+                t.run()
+        msg = (
+            "non-explicit output dependency 'log_file' contains a path "
+            "that is not a managed tree path: '/tmp/x'"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
     def test_fails_if_redo_assigns_none_to_required(self):
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()

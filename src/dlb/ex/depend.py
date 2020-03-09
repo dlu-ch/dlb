@@ -241,7 +241,7 @@ class EnvVarInput(ConcreteDependency, Input):
 
     def compatible_and_no_less_restrictive(self, other) -> bool:
         if not super().compatible_and_no_less_restrictive(other):
-            return False  # TODO test
+            return False
 
         return self.name == other.name and self.restriction == other.restriction  # ignore example
 

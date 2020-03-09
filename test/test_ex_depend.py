@@ -389,6 +389,12 @@ class CompatibilityTest(unittest.TestCase):
         self.assertTrue(C().compatible_and_no_less_restrictive(C(unique=False)))
         self.assertFalse(C(unique=False).compatible_and_no_less_restrictive(C()))
 
+    def test_envvar_and_file_are_not_compatible(self):
+        d1 = dlb.ex.depend.RegularFileInput()
+        d2 = dlb.ex.depend.EnvVarInput(name='n1', restriction=r'.*', example='')
+        self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
+        self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
+
     def test_envvar_with_different_names_are_not_compatible(self):
         d1 = dlb.ex.depend.EnvVarInput(name='n1', restriction=r'.*', example='')
         d2 = dlb.ex.depend.EnvVarInput(name='n2', restriction=r'.*', example='')
