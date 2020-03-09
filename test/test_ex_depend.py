@@ -192,7 +192,7 @@ class SingleInputValidationTest(unittest.TestCase):
         self.assertEqual(str(cm.exception), "'value' must not be empty")
 
 
-class InputPropertyTest(unittest.TestCase):
+class PropertyTest(unittest.TestCase):
 
     def test_filesystem_input_dependency_has_cls(self):
         d = dlb.ex.depend.RegularFileInput()
@@ -208,7 +208,6 @@ class InputPropertyTest(unittest.TestCase):
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
     def test_filesystem_output_dependency_has_cls(self):
-
         d = dlb.ex.depend.RegularFileOutput(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
@@ -217,6 +216,10 @@ class InputPropertyTest(unittest.TestCase):
 
         d = dlb.ex.depend.DirectoryOutput(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
+
+    def test_regularfile_output_dependency_has_replace_by_same_content(self):
+        d = dlb.ex.depend.RegularFileOutput(replace_by_same_content=False)
+        self.assertFalse(d.replace_by_same_content)
 
     def test_envvar_intput_dependency_has_name_restriction_and_example(self):
         d = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.', example='!')

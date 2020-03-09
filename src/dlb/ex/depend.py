@@ -188,7 +188,7 @@ class RegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
         self._replace_by_same_content = bool(replace_by_same_content)  # ignore in compatible_and_no_less_restrictive()
 
     @property
-    def replace_by_same_content(self):  # TODO test
+    def replace_by_same_content(self):
         return self._replace_by_same_content
 
 

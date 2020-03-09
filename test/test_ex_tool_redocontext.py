@@ -56,12 +56,20 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             )
             self.assertRegex(stdout.decode(), regex)
 
+    def test_fails_for_directory_helper(self):
+        with dlb.ex.Context(find_helpers=True) as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            with self.assertRaises(ValueError) as cm:
+                asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls/', expected_returncodes=[1, 3]))
+            msg = "cannot execute directory: 'ls/'"
+            self.assertEqual(msg, str(cm.exception))
+
     def test_fails_for_unexpected_return_code(self):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             with self.assertRaises(dlb.ex.tool.HelperExecutionError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', expected_returncodes=[1, 3]))
-            msg = f"execution of 'ls' returned unexpected exit code 0"
+            msg = "execution of 'ls' returned unexpected exit code 0"
             self.assertEqual(msg, str(cm.exception))
 
     def test_changes_cwd(self):
@@ -144,7 +152,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             action = dlb.ex.dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
-            with self.assertRaises(dlb.ex.RedoError) as cm:
+            with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b/', 'c')
             msg = "path is not contained in any explicit output dependency: 'a/b/'"
             self.assertEqual(msg, str(cm.exception))
@@ -160,12 +168,12 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 dlb.fs.Path('c/'): directory_action
             })
 
-            with self.assertRaises(dlb.ex.RedoError) as cm:
+            with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b', 'c/')
             msg = "cannot replace non-directory by directory: 'a/b'"
             self.assertEqual(msg, str(cm.exception))
 
-            with self.assertRaises(dlb.ex.RedoError) as cm:
+            with self.assertRaises(ValueError) as cm:
                 rd.replace_output('c/', 'a/b')
             msg = "cannot replace directory by non-directory: 'c/'"
             self.assertEqual(msg, str(cm.exception))
@@ -175,7 +183,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             action = dlb.ex.dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
-            with self.assertRaises(dlb.ex.RedoError) as cm:
+            with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b', dlb.fs.Path('a/b'))
             regex = (
                 r"(?m)\A"
@@ -193,7 +201,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with open(os.path.join('a', 'b'), 'wb'):
                 pass
 
-            with self.assertRaises(dlb.ex.RedoError) as cm:
+            with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b', dlb.fs.Path('a/b'))
             msg = "cannot replace a path by itself: 'a/b'"
             self.assertEqual(msg, str(cm.exception))

@@ -91,12 +91,15 @@ class _RedoContext(context_.ReadOnlyContext):
 
     async def execute_helper(self, helper_file, arguments: Iterable[Union[str, fs.Path, fs.Path.Native]] = (), *,
                              cwd: Optional[fs.Path] = None, expected_returncodes: Collection[int] = frozenset([0]),
-                             stdin=None, stdout=None, stderr=None, limit=2**16):
+                             stdin=None, stdout=None, stderr=None, limit: int = 2**16):
         if not isinstance(helper_file, fs.Path):
             helper_file = fs.Path(helper_file)
 
         cwd = fs.Path('.') if cwd is None else self.managed_tree_path_of(cwd, is_dir=True)
         longest_dotdot_prefix = ()
+
+        if helper_file.is_dir():
+            raise ValueError(f"cannot execute directory: {helper_file.as_string()!r}")
 
         commandline_tokens = [str(self.helper[helper_file].native)]
         for a in arguments:
@@ -142,16 +145,17 @@ class _RedoContext(context_.ReadOnlyContext):
         action = self._dependency_action_by_path.get(path)
         if action is None:
             msg = f"path is not contained in any explicit output dependency: {path.as_string()!r}"
-            raise RedoError(msg)
+            raise ValueError(msg)
 
         if path.is_dir() != source.is_dir():
             if path.is_dir():
                 msg = f"cannot replace directory by non-directory: {path.as_string()!r}"
             else:
                 msg = f"cannot replace non-directory by directory: {path.as_string()!r}"
-            raise RedoError(msg)
+            raise ValueError(msg)
 
         try:
+            # TODO must be in the managed tree of in .dlbroot/t/
             source = self.managed_tree_path_of(source, managed=False)
         except manip.PathNormalizationError as e:
             if e.oserror is not None:
@@ -160,16 +164,16 @@ class _RedoContext(context_.ReadOnlyContext):
                 f"'source' is not a managed tree path of an existing filesystem object: {source.as_string()!r}\n"
                 f"  | reason: {ut.exception_to_line(e)}"
             )
-            raise RedoError(msg)
+            raise ValueError(msg)
 
         if path == source:
-            raise RedoError(f"cannot replace a path by itself: {path.as_string()!r}")
+            raise ValueError(f"cannot replace a path by itself: {path.as_string()!r}")
 
         output_possibly_changed = action.replace_filesystem_object(destination=path, source=source, context=self)
         if output_possibly_changed:
             self._unchanged_paths.discard(path)
         else:
-            self._unchanged_paths.add(path)  # TODO test
+            self._unchanged_paths.add(path)
 
     @property
     def modified_outputs(self) -> Set[fs.Path]:
@@ -744,7 +748,7 @@ class _ToolBase:
                                     encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
                         elif isinstance(action.dependency, depend.Output):
                             paths = action.dependency.tuple_from_value(validated_value)
-                            for p in paths:  # TODO test
+                            for p in paths:
                                 try:
                                     p = context.managed_tree_path_of(p, existing=True, collapsable=False)
                                 except ValueError:
