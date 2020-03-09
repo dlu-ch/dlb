@@ -37,8 +37,6 @@ class InheritanceTest(unittest.TestCase):
         self.assertTrue(issubclass(Tool.Input.Directory, Tool.Input))
         self.assertTrue(issubclass(Tool.Input.EnvVar, Tool.Input))
 
-        self.assertTrue(issubclass(Tool.Intermediate, Tool.Dependency))
-
         self.assertTrue(issubclass(Tool.Output, Tool.Dependency))
         self.assertTrue(issubclass(Tool.Output.RegularFile, Tool.Output))
         self.assertTrue(issubclass(Tool.Output.NonRegularFile, Tool.Output))

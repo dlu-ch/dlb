@@ -117,10 +117,6 @@ class Input(Dependency):
     pass
 
 
-class Intermediate(Dependency):
-    pass
-
-
 class Output(Dependency):
     pass
 
@@ -279,7 +275,6 @@ def _inject_into(owner, owner_name, owner_module):
 
     _inject_nested_class_into(owner, Input, 'Input', owner_name)
     _inject_nested_class_into(owner, Output, 'Output', owner_name)
-    _inject_nested_class_into(owner, Intermediate, 'Intermediate', owner_name)
 
     _inject_nested_class_into(owner.Input, RegularFileInput, 'RegularFile')
     _inject_nested_class_into(owner.Input, NonRegularFileInput, 'NonRegularFile')

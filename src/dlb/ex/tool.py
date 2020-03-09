@@ -973,13 +973,11 @@ class _ToolMeta(type):
         def rank_of(d):
             if isinstance(d, depend.Input):
                 return 0
-            if isinstance(d, depend.Output):
-                return 1
-            return 2
+            return 1
 
         pairs = [(rank_of(d), not d.required, n) for n, d in dependencies.items() if isinstance(d, depend.Dependency)]
         pairs.sort()
-        # order: input - intermediate - output, required first
+        # order: input - output, required first
         return tuple(p[-1] for p in pairs), tuple(sorted(execution_parameters))
 
     def __setattr__(cls, name, value):

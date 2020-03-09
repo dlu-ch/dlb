@@ -126,7 +126,6 @@ class ReprTest(unittest.TestCase):
         self.assertEqual(Tool.__name__, 'Tool')
         self.assertEqual(Tool.Dependency.__name__, 'Dependency')
         self.assertEqual(Tool.Input.__name__, 'Input')
-        self.assertEqual(Tool.Intermediate.__name__, 'Intermediate')
         self.assertEqual(Tool.Output.__name__, 'Output')
 
     def test_repr_name_reflects_recommended_module(self):
@@ -138,7 +137,6 @@ class ReprTest(unittest.TestCase):
         self.assertEqual(repr(Tool.Input.RegularFile), "<class 'dlb.ex.Tool.Input.RegularFile'>")
         self.assertEqual(repr(Tool.Output), "<class 'dlb.ex.Tool.Output'>")
         self.assertEqual(repr(Tool.Output.RegularFile), "<class 'dlb.ex.Tool.Output.RegularFile'>")
-        self.assertEqual(repr(Tool.Intermediate), "<class 'dlb.ex.Tool.Intermediate'>")
 
     # noinspection PyAbstractClass
     def test_shows_name_and_dependency_rules(self):
@@ -162,7 +160,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 165  # of this line
+        lineno = 163  # of this line
 
         class A(Tool):
             pass

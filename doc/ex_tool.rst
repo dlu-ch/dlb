@@ -290,7 +290,6 @@ abstract classes:
        edge [arrowhead=empty];
 
        "dlb.ex.Tool.Input" -> "dlb.ex.Tool.Dependency";
-       "dlb.ex.Tool.Intermediate" -> "dlb.ex.Tool.Dependency";
        "dlb.ex.Tool.Output" -> "dlb.ex.Tool.Dependency";
    }
 
@@ -302,25 +301,14 @@ abstract classes:
    The :term:`tool instance` must be :term:`redone <redo>` if it (e.g. the :term:`mtime` of a file) has changed compared
    to the state before the last successful redo of the :term:`tool instance`.
 
-   An redo *must not* modify it, successful or not.
-
-.. class:: Tool.Intermediate
-
-   A :class:`Tool.Dependency` that describes an intermediate dependency of a tool.
-
-   A :term:`redo` of a :term:`tool instance` may modify it in any possible way, provided this does not modify anything
-   (e.g. by followed symbolic links). that is not a :class:`Tool.Intermediate` dependency or
-   a :class:`Tool.Output` dependency of the same tool instance.
+   An redo *must not* modify it, successful or not (the same object can be an output dependency of the same tool
+   instance though which *can* be modified).
 
 .. class:: Tool.Output
 
    A :class:`Tool.Dependency` that describes an output dependency of a tool.
 
-   If *explicit* is ``True``, a running :term:`tool instance` will remove it before a :term:`redo`.
-   A successful redo must generate it (e.g. create a regular file).
-
-   If *explicit* is ``False``, a running :term:`tool instance` will *not* remove it before a :term:`redo`.
-   An unsuccessful redo must not modify it.
+   A successful redo *must* generate it (e.g. create a regular file).
 
 
 These are all abstract classes and contain inner classes derived from them.
@@ -344,7 +332,6 @@ from :class:`Tool.Output`.
        "dlb.ex.Tool.Output.Directory" -> "dlb.ex.Tool.Output";
 
        "dlb.ex.Tool.Input" -> "dlb.ex.Tool.Dependency";
-       "dlb.ex.Tool.Intermediate" -> "dlb.ex.Tool.Dependency";
        "dlb.ex.Tool.Output" -> "dlb.ex.Tool.Dependency";
    }
 

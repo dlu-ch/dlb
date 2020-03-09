@@ -136,10 +136,6 @@ class AbstractDependencyValidationTest(unittest.TestCase):
         self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Input'))
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Intermediate().validate(0)
-        self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Intermediate'))
-
-        with self.assertRaises(NotImplementedError) as cm:
             dlb.ex.Tool.Output().validate(0)
         self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Output'))
 

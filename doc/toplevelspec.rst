@@ -60,7 +60,7 @@ Modification of the working tree
     - |assumptionviolationeffect-repair|
       (e.g. after the :term:`run-database` has become corrupted)
     - |assumptionviolationeffect-obscure-fail|
-      (e.g. after intermediates file have been modified)
+      (e.g. after intermediate files have been modified)
     - |assumptionviolationeffect-vulnerable|
       (e.g. by a symlink attack)
     - |assumptionviolationeffect-redo-miss|
