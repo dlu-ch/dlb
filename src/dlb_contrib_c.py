@@ -32,7 +32,7 @@ class CCompiler(dlb.ex.Tool):
     DEFINITIONS = dict()  # e.g. {'VERSION': '1.2.3', 'MAX(a, b)': '(((a) > (b)) ? (a) : (b))'}
 
     source_file = dlb.ex.Tool.Input.RegularFile()
-    object_file = dlb.ex.Tool.Output.RegularFile()
+    object_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
 
     # tuple of paths of directories that are to be searched for include files in addition to the system include files
     include_search_directories = dlb.ex.Tool.Input.Directory[:](required=False)

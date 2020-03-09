@@ -33,42 +33,42 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
         return []
 
     async def redo(self, result, context):
+        sf = result.source_file.as_string()
+        if any(c in sf for c in ':;\n\r'):
+            raise Exception(f"limitation of 'gcc -MMD' does not allow this file name: {sf!r}")
+
+        compile_arguments = [c for c in self.get_compile_arguments()]
+
+        # https://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html#Directory-Options
+        if self.include_search_directories:
+            for p in self.include_search_directories:
+                # note: '=' or '$SYSROOT' would be expanded by GCC
+                # str(p.native) never starts with these
+                compile_arguments.extend(['-I', p])  # looked up for #include <p> and #include "p"
+
+        # https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+        compile_arguments += ['-Wall']
+        compile_arguments += ['-Wno-' + check_warning_name(n) for n in self.SUPPRESSED_WARNINGS]
+        compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
+
+        for macro, replacement in self.DEFINITIONS.items():
+            if not dlb_contrib_c.IDENTIFIER.match(macro) and not dlb_contrib_c.FUNCTIONLIKE_MACRO.match(macro):
+                raise Exception(f"not a macro: {macro!r}")
+            # *macro* is a string that does not start with '-' and does not contain '='
+            if replacement is None:
+                compile_arguments += ['-U', macro]
+            else:
+                replacement = str(replacement).strip()
+                if replacement == '1':
+                    compile_arguments += ['-D', macro]
+                else:
+                    compile_arguments += ['-D', f'{macro}={replacement}']
+
         make_rules_file = context.create_temporary()
         object_file = context.create_temporary()
 
+        # compile
         try:
-            sf = result.source_file.as_string()
-            if any(c in sf for c in ':;\n\r'):
-                raise Exception(f"limitation of 'gcc -MMD' does not allow this file name: {sf!r}")
-
-            compile_arguments = [c for c in self.get_compile_arguments()]
-
-            # https://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html#Directory-Options
-            if self.include_search_directories:
-                for p in self.include_search_directories:
-                    # note: '=' or '$SYSROOT' would be expanded by GCC
-                    # str(p.native) never starts with these
-                    compile_arguments.extend(['-I', p])  # looked up for #include <p> and #include "p"
-
-            # https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
-            compile_arguments += ['-Wall']
-            compile_arguments += ['-Wno-' + check_warning_name(n) for n in self.SUPPRESSED_WARNINGS]
-            compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
-
-            for macro, replacement in self.DEFINITIONS.items():
-                if not dlb_contrib_c.IDENTIFIER.match(macro) and not dlb_contrib_c.FUNCTIONLIKE_MACRO.match(macro):
-                    raise Exception(f"not a macro: {macro!r}")
-                # *macro* is a string that does not start with '-' and does not contain '='
-                if replacement is None:
-                    compile_arguments += ['-U', macro]
-                else:
-                    replacement = str(replacement).strip()
-                    if replacement == '1':
-                        compile_arguments += ['-D', macro]
-                    else:
-                        compile_arguments += ['-D', f'{macro}={replacement}']
-
-            # compile
             await context.execute_helper(
                 self.BINARY,
                 compile_arguments + [
