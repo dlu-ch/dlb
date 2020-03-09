@@ -98,6 +98,36 @@ Tool objects
       The result proxy object contains an attribute for every dependency role of the tool which contains the concrete
       dependencies (not only the explicit dependencies as on the :term:`tool instance`, but also the non-explicit ones).
 
+   .. method:: redo(result, context)
+
+      Overwrite this method to implement a new :class:`Tool`.
+
+      *result* is the result proxy object that will by returned by the calling :meth:`run()`.
+      *context* is the redo context (see :class:`Tool.RedoContext`).
+
+      For a redo to be successful, this method must perform the following tasks:
+
+       - Create all explicit output dependencies
+       - Assign values to each required non-explicit dependencies
+
+      For a filesystem object whose path *p* is contained in an output dependency, it is recommended to first write
+      to a temporary filesystem object *q* and then replace it with ``context.replace_output(p, q)``.
+      This guarantees that no incomplete output dependency is left behind (like an only half-written object file)
+      when the :term:`redo` is aborted.
+
+      A filesystem object that is an output dependencies is treated as modified be the redo if it is a non-explicit
+      dependency or if it is a explicit dependency that was replaced with `context.replace_output()`.
+
+      Example::
+
+         class ATool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+            async def redo(self, result, context):
+                result.included_files = ...
+                context.replace_output(result.object_file, ...)
+
    .. attribute:: definition_location
 
       The definition location of the class.
@@ -128,6 +158,90 @@ Tool objects
 
       The explicit dependencies of two instances are considered "similar", if they are equal or differ in a way that
       does *not affect the meaning* of the dependencies while the :term:`tool instance` is running.
+
+
+Redo context
+------------
+
+A redo context is a read-only view for a :class:`dlb.ex.Context <dlb.ex.context.Context>` with some additional
+methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
+
+.. class:: Tool.RedoContext
+
+   A redo context is constructed automatically by :meth:`Tool.run()`.
+
+   .. method:: execute_helper(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]),
+                              stdin=None, stdout=None, stderr=None, limit=2**16)
+
+      Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
+      its working directory and wait for it to complete.
+      The execution is consitered successful if an only if its returncode is one in *expected_returncodes*.
+
+      If *cwd* is not ``None``, is must be the path of directory in the :term:`managed tree`.
+      Otherwise the working tree's root is used as the working directory.
+
+      All members of *arguments* are converted to str objects.
+      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``True``, is is
+      replaced by ``str(p.native)``.
+      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``False``, is is
+      replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory.
+
+      :param helper_file: :term:`dynamic helper` to be executed as a relative path
+      :param arguments: commant-line arguments
+      :type arguments: iterable of objects that can be converted to str
+      :param cwd: working directory of the subprocess to be started
+      :type cwd: ``None`` or a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :param expected_returncodes: expected return codes of the :term:`dynamic helper` *helper_file*
+      :type expected_returncodes: collection of integers
+      :param stdin:
+         If not ``None``:
+         either a file-like object representing a pipe to be connected to the subprocess’s standard input stream using
+         :meth:`asyncio.loop.connect_read_pipe()`, or the :const:`asyncio.subprocess.PIPE` constant.
+      :param stdout:
+         If not ``None``:
+         either a file-like object representing the pipe to be connected to the subprocess’s standard output stream
+         using :meth:`asyncio.loop.connect_read_pipe()`, or the :const:`asyncio.subprocess.PIPE` constant.
+      :param stderr:
+         If not ``None``:
+         either a file-like object representing the pipe to be connected to the subprocess’s standard error stream using
+         :meth:`asyncio.loop.connect_read_pipe()`, or one of :const:`asyncio.subprocess.PIPE` or
+         :const:`asyncio.subprocess.STDOUT` constants.
+      :param limit:
+         the buffer limit for :class:`python:StreamReader` wrappers for :attr:`python:Process.stdout` and
+         :attr:`python:Process.stderr` (if :attr:`python:subprocess.PIPE` is passed to *stdout* and *stderr*
+         arguments).
+
+      :raises HelperExecutionError: if the subprocess exits with a returncode not in *expected_returncodes*.
+
+      Returns the tuple ``(returncode, stdout_data, stderr_data)``. *returncode* is the returncode
+      (contained in *expected_returncodes*). *stdout_data* and *stderr_data* are bytes object with the received data
+      from stdout and stderr, respectively.
+
+   .. method:: replace_output(path, source):
+
+      Replace the - existing or non-existent - filesystem object *path* by *source*.
+      *path* must be contained in a dependency of the tool instance.
+
+      *path* and *source* must be different filesystem objects.
+
+      After successful completion, *path* exists and *source* does not exist.
+
+      The actual operation depends on the corresponding dependency role.
+      If is it a :class:`dlb.ex.Tool.Output.RegularFile` with
+      :attr:`replace_by_same_content <dlb.ex.Tool.Output.RegularFile.replace_by_same_content>` = ``False`` and *path*
+      and *source* both exist with the same content, *path* is no replaced and treated as unchanged.
+
+      If *path* is replaced, this is always done be an atomic operation. If it fails, *path* is either *source*
+      afterwards or it does not exist.
+
+      :param path: a path of a future filesystem object in the managed tree
+      :type path: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :param source: a path of a filesystem object in the managed tree
+      :type source: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+
+      :raises ValueError:
+         if *path* is not a managed tree path contained in an explicit output dependency or *source* is not a
+         different managed tree path???.
 
 
 Dependency classes
@@ -440,17 +554,18 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 Concrete output dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------+----------------------------------------------------+
-| Dependency role class               | Keyword arguments of constructor                   |
-|                                     +-----------------------+----------------------------+
-|                                     | Name                  | Default value              |
-+=====================================+=======================+============================+
-| :class:`Tool.Output.RegularFile`    | *cls*                 | :class:`dlb.fs.Path`       |
-+-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Output.NonRegularFile` | *cls*                 | :class:`dlb.fs.Path`       |
-+-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Output.Directory`      | *cls*                 | :class:`dlb.fs.Path`       |
-+-------------------------------------+-----------------------+----------------------------+
++-------------------------------------+--------------------------------------------------------+
+| Dependency role class               | Keyword arguments of constructor                       |
+|                                     +---------------------------+----------------------------+
+|                                     | Name                      | Default value              |
++=====================================+===========================+============================+
+| :class:`Tool.Output.RegularFile`    | *cls*                     | :class:`dlb.fs.Path`       |
+|                                     | *replace_by_same_content* | ``True``                   |
++-------------------------------------+---------------------------+----------------------------+
+| :class:`Tool.Output.NonRegularFile` | *cls*                     | :class:`dlb.fs.Path`       |
++-------------------------------------+---------------------------+----------------------------+
+| :class:`Tool.Output.Directory`      | *cls*                     | :class:`dlb.fs.Path`       |
++-------------------------------------+---------------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
 keyword arguments of the constructor of :class:`Tool.Dependency`.
