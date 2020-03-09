@@ -90,25 +90,25 @@ class NestingTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_meaningful_exception_on_attribute_error(self):
         with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.non_existing_attribute
+            dlb.ex.Context.non_existent_attribute
 
         with dlb.ex.Context() as c:
             with self.assertRaises(AttributeError) as cm:
-                dlb.ex.Context._non_existing_attribute
-            self.assertEqual(str(cm.exception), "type object 'Context' has no attribute '_non_existing_attribute'")
+                dlb.ex.Context._non_existent_attribute
+            self.assertEqual(str(cm.exception), "type object 'Context' has no attribute '_non_existent_attribute'")
 
             with self.assertRaises(AttributeError) as cm:
-                c._non_existing_attribute
-            self.assertEqual(str(cm.exception), "'Context' object has no attribute '_non_existing_attribute'")
+                c._non_existent_attribute
+            self.assertEqual(str(cm.exception), "'Context' object has no attribute '_non_existent_attribute'")
 
-            msg = "'Context' object has no attribute 'non_existing_attribute'"
+            msg = "'Context' object has no attribute 'non_existent_attribute'"
 
             with self.assertRaises(AttributeError) as cm:
-                dlb.ex.Context.non_existing_attribute
+                dlb.ex.Context.non_existent_attribute
             self.assertEqual(str(cm.exception), msg)
 
             with self.assertRaises(AttributeError) as cm:
-                c.non_existing_attribute
+                c.non_existent_attribute
             self.assertEqual(str(cm.exception), msg)
 
 

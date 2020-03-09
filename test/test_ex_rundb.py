@@ -206,7 +206,7 @@ class EncodeFsobjectMemoTest(unittest.TestCase):
                 symlink_target='/')
             dlb.ex.rundb.encode_fsobject_memo(m)
 
-    def test_returns_nonempty_for_non_existing(self):
+    def test_returns_nonempty_for_non_existent(self):
         m = dlb.fs.manip.FilesystemObjectMemo()
         e = dlb.ex.rundb.encode_fsobject_memo(m)
         self.assertNotEqual(b'', e)
@@ -283,7 +283,7 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
 
 class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
 
-    def test_non_existing_is_added(self):
+    def test_non_existent_is_added(self):
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i')
 

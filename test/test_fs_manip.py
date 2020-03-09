@@ -100,7 +100,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'n'))
 
     def test_ignores_for_nonexistent_if_required(self):
-        dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'n'), ignore_non_existing=True)
+        dlb.fs.manip.remove_filesystem_object(os.path.join(os.getcwd(), 'n'), ignore_non_existent=True)
 
     def test_fails_for_relative_tmp(self):
         self.create_dir_a_in_cwd()

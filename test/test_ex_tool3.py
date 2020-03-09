@@ -515,7 +515,7 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
 
 class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
-    def test_redo_ignores_unexisting_output_file(self):
+    def test_redo_ignores_nonexistent_output_file(self):
         os.mkdir('src')
         with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass

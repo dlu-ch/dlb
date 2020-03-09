@@ -46,7 +46,7 @@ class _KeepFirstRmTreeException:
 
 def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
                              abs_empty_dir_path: Union[None, str, path_.Path] = None,
-                             ignore_non_existing: bool = False):
+                             ignore_non_existent: bool = False):
     # Removes the filesystem objects with absolute path *abs_path*.
     #
     # If *abs_path* refers to an existing symbolic link to an existing target, the symbolic link is removed,
@@ -94,7 +94,7 @@ def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
         except PermissionError:
             is_directory = os.path.isdir(abs_path)
     except FileNotFoundError:
-        if not ignore_non_existing:
+        if not ignore_non_existent:
             raise
 
     if not is_directory:
@@ -112,7 +112,7 @@ def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
             os.rename(abs_path, abs_temp_dir_path)  # POSIX: atomic on same filesystem
             shutil.rmtree(abs_temp_dir_path, ignore_errors=True)  # remove as much as possible
     except FileNotFoundError:
-        if not ignore_non_existing:
+        if not ignore_non_existent:
             raise
 
 

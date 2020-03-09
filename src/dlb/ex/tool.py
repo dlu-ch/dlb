@@ -437,7 +437,7 @@ def _remove_filesystem_objects(obstructive_paths: Iterable[fs.Path], context: co
 
         for p in obstructive_paths:
             manip.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
-                                           ignore_non_existing=True)  # may raise OSError
+                                           ignore_non_existent=True)  # may raise OSError
         try:
             manip.remove_filesystem_object(tmp_dir)
         except OSError:

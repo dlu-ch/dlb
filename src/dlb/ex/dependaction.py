@@ -204,7 +204,7 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
         dst = (r / destination).native
         tmp_dir = context.create_temporary(is_dir=True).native
         try:
-            manip.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existing=True)
+            manip.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
             os.replace(src=(r / source).native, dst=dst)
         finally:
             os.rmdir(tmp_dir)

@@ -489,8 +489,8 @@ class _RootSpecifics:
                 # prepare o for mtime probing
                 mtime_probe_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME)
                 mtime_probeu_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME.upper())
-                manip.remove_filesystem_object(mtime_probe_path, ignore_non_existing=True)
-                manip.remove_filesystem_object(mtime_probeu_path, ignore_non_existing=True)
+                manip.remove_filesystem_object(mtime_probe_path, ignore_non_existent=True)
+                manip.remove_filesystem_object(mtime_probeu_path, ignore_non_existent=True)
 
                 self._mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
                 probe_stat = os.lstat(mtime_probe_path)
@@ -502,7 +502,7 @@ class _RootSpecifics:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
                 temporary_path = os.path.join(management_tree_path, _MTIME_TEMPORARY_DIR_NAME)
-                manip.remove_filesystem_object(temporary_path, ignore_non_existing=True)
+                manip.remove_filesystem_object(temporary_path, ignore_non_existent=True)
                 os.mkdir(temporary_path)
 
                 rundb_path = os.path.join(management_tree_path, _RUNDB_FILE_NAME)
@@ -540,7 +540,7 @@ class _RootSpecifics:
         self._rundb.commit()
         temporary_path = os.path.join(str(self._working_tree_path_native),
                                       _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
-        manip.remove_filesystem_object(temporary_path, ignore_non_existing=True)
+        manip.remove_filesystem_object(temporary_path, ignore_non_existent=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
         t0 = time.monotonic_ns()  # since Python 3.7
