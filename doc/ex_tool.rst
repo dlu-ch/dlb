@@ -368,7 +368,7 @@ Concrete dependency role classes support the following methods and attributes:
 
    Each supported constructor argument is available as a property of the same name.
 
-   :raise DependencyRoleAssignmentError:
+   :raise DependencyError:
       if the arguments of the constructor do not match the declared dependency roles of the class
 
    .. method:: validate(value)
@@ -641,12 +641,7 @@ Exceptions
    Raised at the definition of a subclass of :class:`Tool`, when the location is unknown or another subclass of
    :class:`Tool` was defined before at the same location.
 
-.. exception:: DependencyRoleAssignmentError
-
-   Raised at the construction of a subclass of :class:`Tool`, when the arguments of the constructor do not
-   match the declared dependency roles of the class.
-
-.. exception:: DependencyCheckError
+.. exception:: DependencyError
 
    Raised when a running :term:`tool instance` detects a problem with its dependencies before a :term:`redo`.
 

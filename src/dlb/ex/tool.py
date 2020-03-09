@@ -7,10 +7,10 @@
 __all__ = (
     'Tool',
     'DefinitionAmbiguityError',
-    'DependencyRoleAssignmentError',
-    'DependencyCheckError',
+    'DependencyError',
     'ExecutionParameterError',
-    'RedoError'
+    'RedoError',
+    'HelperExecutionError'
 )
 
 import sys
@@ -56,11 +56,7 @@ class DefinitionAmbiguityError(SyntaxError):
     pass
 
 
-class DependencyRoleAssignmentError(ValueError):
-    pass
-
-
-class DependencyCheckError(Exception):
+class DependencyError(ValueError):
     pass
 
 
@@ -323,20 +319,20 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
                         f"input dependency {action.name!r} contains an invalid path: {p.as_string()!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"
                     )
-                    raise DependencyCheckError(msg) from None
+                    raise DependencyError(msg) from None
                 except FileNotFoundError:
                     msg = (
                         f"input dependency {action.name!r} contains a path of a "
                         f"non-existent filesystem object: {p.as_string()!r}"
                     )
-                    raise DependencyCheckError(msg) from None
+                    raise DependencyError(msg) from None
                 except OSError as e:
                     msg = (
                         f"input dependency {action.name!r} contains a path of an "
                         f"inaccessible filesystem object: {p.as_string()!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"
                     )
-                    raise DependencyCheckError(msg) from None
+                    raise DependencyError(msg) from None
 
     # treat all files used for definition of self.__class__ like explicit input dependencies if they
     # have a managed tree path.
@@ -392,14 +388,14 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                         f"{p.as_string()!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"
                     )
-                    raise DependencyCheckError(msg) from None
+                    raise DependencyError(msg) from None
                 encoded_path = rundb.encode_path(p)
                 if encoded_path in encoded_paths_of_explicit_input_dependencies:
                     msg = (
                         f"output dependency {action.name!r} contains a path that is also an explicit "
                         f"input dependency: {p.as_string()!r}"
                     )
-                    raise DependencyCheckError(msg)
+                    raise DependencyError(msg)
                 a = dependency_action_by_encoded_path.get(encoded_path)
                 if a is not None:
                     if a is action:
@@ -412,7 +408,7 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                             f"output dependencies {action.name!r} and {a.name!r} both contain the same path: "
                             f"{p.as_string()!r}"
                         )
-                    raise DependencyCheckError(msg)
+                    raise DependencyError(msg)
                 dependency_action_by_encoded_path[encoded_path] = action
                 dependency_action_by_path[p] = action
                 memo = None
@@ -521,7 +517,7 @@ class _ToolBase:
                     f"keyword argument does not name a dependency role of {self.__class__.__qualname__!r}: {name!r}\n"
                     f"  | dependency roles: {names}"
                 )
-                raise DependencyRoleAssignmentError(msg)
+                raise DependencyError(msg)
 
             role = getattr(self.__class__, name)
             if not role.explicit:
@@ -529,13 +525,13 @@ class _ToolBase:
                     f"keyword argument does name a non-explicit dependency role: {name!r}\n"
                     f"  | non-explicit dependency must not be assigned at construction"
                 )
-                raise DependencyRoleAssignmentError(msg)
+                raise DependencyError(msg)
 
             if value is None:
                 validated_value = None
                 if role.required:
                     msg = f"keyword argument for required dependency role must not be None: {name!r}"
-                    raise DependencyRoleAssignmentError(msg)
+                    raise DependencyError(msg)
             else:
                 validated_value = role.validate(value)
 
@@ -555,7 +551,7 @@ class _ToolBase:
                 if role.explicit:
                     if role.required:
                         msg = f"missing keyword argument for required and explicit dependency role: {name!r}"
-                        raise DependencyRoleAssignmentError(msg)
+                        raise DependencyError(msg)
                     object.__setattr__(self, name, None)
                 else:
                     object.__setattr__(self, name, NotImplemented)
@@ -573,7 +569,7 @@ class _ToolBase:
                     hashalg.update(dependency_fingerprint)  # dependency_fingerprint must not be empty
                 except KeyError:
                     msg = f"keyword names unregistered dependency class {role.__class__!r}: {name!r}"
-                    raise DependencyRoleAssignmentError(msg)
+                    raise DependencyError(msg)
 
         # permanent local tool instance fingerprint for this instance (do not compare fingerprint between
         # different self.__class__!)

@@ -60,12 +60,12 @@ class ConstructionTest(unittest.TestCase):
         self.assertIsInstance(ConstructionTest.DTool.map_file, Tool.Output)
 
     def test_must_have_argument_for_required_explicit_dependency(self):
-        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             ConstructionTest.BTool(source_file='x.cpp')
         msg = "missing keyword argument for required and explicit dependency role: 'object_file'"
         self.assertEqual(msg, str(cm.exception))
 
-        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             ConstructionTest.BTool(source_file=None)
         msg = "keyword argument for required dependency role must not be None: 'source_file'"
         self.assertEqual(msg, str(cm.exception))
@@ -76,11 +76,11 @@ class ConstructionTest(unittest.TestCase):
             "  | dependency roles: 'source_file', 'log_file', 'object_file', 'map_file'"
         )
 
-        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             ConstructionTest.BTool(temporary_file='x.cpp.o._')
         self.assertEqual(msg, str(cm.exception))
 
-        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             ConstructionTest.BTool(temporary_file=None)
         self.assertEqual(msg, str(cm.exception))
 
@@ -90,11 +90,11 @@ class ConstructionTest(unittest.TestCase):
             "  | non-explicit dependency must not be assigned at construction"
         )
 
-        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             ConstructionTest.BTool(log_file='x.log')
         self.assertEqual(msg, str(cm.exception))
 
-        with self.assertRaises(dlb.ex.DependencyRoleAssignmentError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             ConstructionTest.BTool(log_file=None)
         self.assertEqual(msg, str(cm.exception))
 
@@ -308,7 +308,7 @@ class DependencyActionRegistrationTest(unittest.TestCase):
             oho = D()
 
         regex = r"keyword names unregistered dependency class <class '.+'>: 'oho'"
-        with self.assertRaisesRegex(dlb.ex.DependencyRoleAssignmentError, regex):
+        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
             T(oho='x')
 
 

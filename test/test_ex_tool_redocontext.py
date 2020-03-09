@@ -67,7 +67,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_unexpected_return_code(self):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
-            with self.assertRaises(dlb.ex.tool.HelperExecutionError) as cm:
+            with self.assertRaises(dlb.ex.HelperExecutionError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', expected_returncodes=[1, 3]))
             msg = "execution of 'ls' returned unexpected exit code 0"
             self.assertEqual(msg, str(cm.exception))

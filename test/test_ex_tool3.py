@@ -55,7 +55,7 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
             r"\A()input dependency 'source_file' contains a path of a non-existent "
             r"filesystem object: 'src/a\.cpp'\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='src/a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
@@ -64,7 +64,7 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
             r"\A()input dependency 'source_file' contains a path of a non-existent "
             r"filesystem object: 'src/b/\.\./a\.cpp'\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='src/b/../a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
@@ -75,7 +75,7 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
             r"input dependency 'source_file' contains an invalid path: '\.\./a\.cpp'\n"
             r"  | reason: not in managed tree\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='../a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
@@ -121,7 +121,7 @@ class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryWorkingDirecto
             r"output dependency 'object_file' contains a path that is not a managed tree path: '\.\./a\.o'\n"
             r"  | reason: is an upwards path: '\.\.[\\/]+a\.o'\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='a.cpp', object_file='../a.o')
                 t.run()
@@ -140,7 +140,7 @@ class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_t
             r"input dependency 'source_file' contains a path of an inaccessible filesystem object: 'src/a\.cpp'\n"
             r"  \| reason: .*\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.DependencyCheckError, regex):
+        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
             with dlb.ex.Context():
                 t = ATool(source_file='src/a.cpp', object_file='out/a.o', include_directories=['src/serdes/'])
                 t.run()
@@ -154,7 +154,7 @@ class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_tes
         with pathlib.Path('a.cpp').open('xb'):
             pass
 
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t = ATool(source_file='a.cpp', object_file='a.cpp')
                 t.run()
@@ -171,7 +171,7 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
         log_files = dlb.ex.Tool.Output.RegularFile[:](required=False, unique=False)
 
     def test_fails_for_two_files(self):
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(object_file='o', log_files=['o'])
                 t.run()
@@ -179,7 +179,7 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_two_files_in_same_dependency(self):
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(log_files=['o', 'o'])
                 t.run()
@@ -187,7 +187,7 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_file_and_directory(self):
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(object_file='o', temp_dir='o/')
                 t.run()
@@ -207,7 +207,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             pass
 
         t = ATool(source_file='src', object_file='a.o')
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t.run()
         msg = (
@@ -217,7 +217,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
         self.assertEqual(msg, str(cm.exception))
 
         t = ATool(source_file='src/a.cpp', include_directories=['src/b/'], object_file='a.o')
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t.run()
         msg = (
@@ -227,7 +227,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
         self.assertEqual(msg, str(cm.exception))
 
         t = ATool(source_file='src/a.cpp', dummy_file='src/a.cpp', object_file='a.o')
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t.run()
         msg = (
@@ -237,7 +237,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
         self.assertEqual(msg, str(cm.exception))
 
         t = ATool(source_file='src/a.cpp', dummy_file='src', object_file='a.o')
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t.run()
         msg = (
@@ -254,7 +254,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             pass
 
         t = ATool(source_file='src/a.cpp', include_directories=['src/a.cpp/'], object_file='a.o')
-        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
                 t.run()
         msg = (
