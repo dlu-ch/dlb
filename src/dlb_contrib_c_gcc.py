@@ -89,7 +89,7 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
 
             result.compiler_executable = context.helper[self.BINARY]
             result.included_files = included_files
-            os.rename(object_file.native, result.object_file.native)
+            context.replace_output(result.object_file, object_file)
         except:
             os.remove(object_file.native)
             raise

@@ -28,7 +28,7 @@ class ATool(dlb.ex.Tool):
     async def redo(self, result, context):
         dlb.di.inform("redoing right now")
 
-        with (context.root_path / self.object_file).native.raw.open('xb'):
+        with (context.root_path / self.object_file).native.raw.open('wb'):
              pass
 
         result.included_files = [dlb.fs.Path('a.h'), dlb.fs.Path('b.h')]
@@ -164,7 +164,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
 
 class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
-    def test_fails_for_redo_that_does_not_assign_required(self):
+    def test_fails_for_redo_that_does_not_assign_required_input(self):
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
@@ -177,8 +177,26 @@ class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with dlb.ex.Context():
                 t.run()
         msg = (
-            "non-explicit input dependency not assigned during redo: 'included_files'\n"
+            "non-explicit dependency not assigned during redo: 'included_files'\n"
             "  | use 'result.included_files = ...' in body of redo(self, result, context)"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_redo_that_does_not_assign_required_output(self):
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False)
+
+            async def redo(self, result, context):
+                pass
+
+        t = BTool(object_file='a.o')
+        with self.assertRaises(dlb.ex.RedoError) as cm:
+            with dlb.ex.Context():
+                t.run()
+        msg = (
+            "non-explicit dependency not assigned during redo: 'log_file'\n"
+            "  | use 'result.log_file = ...' in body of redo(self, result, context)"
         )
         self.assertEqual(msg, str(cm.exception))
 
@@ -186,6 +204,7 @@ class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
+            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False, required=False)
 
             # noinspection PyShadowingNames
             async def redo(self, result, context):
@@ -195,8 +214,9 @@ class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             result = t.run()
         self.assertIsNone(result.included_files)
+        self.assertIsNone(result.log_file)
 
-    def test_fails_if_input_dependency_not_in_managed_tree(self):
+    def test_fails_if_input_dependency_if_relative_and_not_in_managed_tree(self):
         class BTool(dlb.ex.Tool):
             object_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
@@ -213,6 +233,18 @@ class RedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             "that is not a managed tree path: 'a/../b'"
         )
         self.assertEqual(msg, str(cm.exception))
+
+    def test_silently_ignores_input_dependency_if_absolute_and_not_in_managed_tree(self):
+        class BTool(dlb.ex.Tool):
+            object_file = dlb.ex.Tool.Output.RegularFile()
+            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+            async def redo(self, result, context):
+                result.included_files = ['/x/y']
+
+        t = BTool(object_file='a.o')
+        with dlb.ex.Context():
+            t.run()
 
     def test_fails_if_redo_assigns_none_to_required(self):
         class BTool(dlb.ex.Tool):

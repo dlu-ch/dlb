@@ -6,14 +6,13 @@
 
 __all__ = (
     'Context',
-    'RedoContext',
+    'ReadOnlyContext',
     'ContextNestingError',
     'NotRunningError',
     'ManagementTreeError',
     'NoWorkingTreeError',
     'WorkingTreeTimeError',
     'NonActiveContextAccessError',
-    'HelperExecutionError'
 )
 
 import sys
@@ -73,10 +72,6 @@ class WorkingTreeTimeError(Exception):
 
 
 class NonActiveContextAccessError(Exception):
-    pass
-
-
-class HelperExecutionError(Exception):
     pass
 
 
@@ -611,7 +606,7 @@ class _RootSpecifics:
                 )
                 raise ManagementTreeError(msg) from None
             else:
-                raise first_exception
+                raise first_exception  # TODO test
 
 
 class _BaseContext(metaclass=_ContextMeta):
@@ -688,9 +683,10 @@ class _BaseContext(metaclass=_ContextMeta):
             except OSError:
                 pass
 
+    # TODO rename to working_tree_path_of(), also in glossary
     @staticmethod
     def managed_tree_path_of(path, *, is_dir: Optional[bool] = None,
-                             existing: bool = False, collapsable: bool = False) -> fs.Path:
+                             existing: bool = False, collapsable: bool = False, managed: bool = True) -> fs.Path:
         # this must be very fast for relative dlb.fs.Path with existing = True
 
         self = _get_root_specifics()
@@ -719,7 +715,7 @@ class _BaseContext(metaclass=_ContextMeta):
             rel_components = ('',) + manip.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
 
-        if len(rel_components) >= 2 and rel_components[1] in ('..', _MANAGEMENTTREE_DIR_NAME):
+        if managed and len(rel_components) > 1 and rel_components[1] == _MANAGEMENTTREE_DIR_NAME:  # TODO test
             raise ValueError(f'path not in managed tree: {path.as_string()!r}') from None
 
         # may raise ValueError
@@ -860,7 +856,7 @@ class Context(_BaseContext):
             self._consume_redos_and_raise_first_exception()
 
 
-class RedoContext(_BaseContext):
+class ReadOnlyContext(_BaseContext):
     # Must only be used while a root context exists
 
     def __init__(self, context: Context):
@@ -878,44 +874,6 @@ class RedoContext(_BaseContext):
     @property
     def helper(self) -> _ReadOnlyHelperDictView:
         return self._helper
-
-    async def execute_helper(self, helper_file, arguments: Iterable[Union[str, fs.Path, fs.Path.Native]] = (), *,
-                             cwd: Optional[fs.Path] = None, expected_returncodes: Collection[int] = frozenset([0]),
-                             stdin=None, stdout=None, stderr=None, limit=2**16):
-        if not isinstance(helper_file, fs.Path):
-            helper_file = fs.Path(helper_file)
-
-        cwd = fs.Path('.') if cwd is None else self.managed_tree_path_of(cwd, is_dir=True)
-        longest_dotdot_prefix = ()
-
-        commandline_tokens = [str(self.helper[helper_file].native)]
-        for a in arguments:
-            if isinstance(a, fs.Path):
-                if not a.is_absolute():
-                    a = self.managed_tree_path_of(a).relative_to(cwd, collapsable=True)
-                    c = a.components[1:]
-                    if c[:len(longest_dotdot_prefix)] == longest_dotdot_prefix:
-                        while len(longest_dotdot_prefix) < len(c) and c[len(longest_dotdot_prefix)] == '..':
-                            longest_dotdot_prefix += ('..',)
-                a = a.native
-            commandline_tokens.append(str(a))
-
-        if longest_dotdot_prefix:
-            manip.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
-                                                     ref_dir_path=str(self.root_path.native))
-
-        proc = await asyncio.create_subprocess_exec(
-            *commandline_tokens,  # must all by str
-            cwd=(self.root_path / cwd).native,
-            stdin=stdin, stdout=stdout, stderr=stderr, limit=limit)
-        stdout, stderr = await proc.communicate()
-        returncode = proc.returncode
-
-        if returncode not in expected_returncodes:
-            msg = f"execution of {helper_file.as_string()!r} returned unexpected exit code {proc.returncode}"
-            raise HelperExecutionError(msg)
-
-        return returncode, stdout, stderr
 
 
 ut.set_module_name_to_parent_by_name(vars(), __all__)

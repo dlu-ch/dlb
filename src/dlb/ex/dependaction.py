@@ -11,6 +11,7 @@ __all__ = (
     'get_action'
 )
 
+import os
 import stat
 from typing import Type, Set, Optional, Sequence, Hashable
 from .. import ut
@@ -81,6 +82,13 @@ class Action:
     def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
         raise ValueError("is not a filesystem object")
 
+    # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
+    def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
+        # *source* and *destination* are different managed tree paths with same *is_dir()*
+        # remove *source* if successful
+        # return bool is *destination* is possibly changed
+        raise ValueError("is not a filesystem object that is an output dependency")
+
 
 class _FilesystemObjectMixin(Action):
     def get_permanent_local_value_id(self, validated_values: Optional[Sequence[fs.Path]]) -> bytes:
@@ -146,15 +154,61 @@ class EnvVarInputAction(Action):
 
 
 class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action):
-    pass
+
+    def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
+        do_replace = self.dependency.replace_by_same_content
+
+        src = str((context.root_path / source).native)
+        dst = str((context.root_path / destination).native)
+
+        if not do_replace:
+            try:
+                ssrc = os.lstat(src)
+                sdst = os.lstat(dst)
+                if stat.S_IFMT(ssrc.st_mode) != stat.S_IFMT(sdst.st_mode) or ssrc.st_size != sdst.st_size:
+                    do_replace = True  # type or size differs
+                else:
+                    max_size = 8 * 1024  # as in filecmp.BUFSIZE
+                    with open(src, 'rb') as fsrc, open(dst, 'rb') as fdst:
+                        while True:
+                            bsrc = fsrc.read(max_size)
+                            bdst = fdst.read(max_size)
+                            if bsrc != bdst:
+                                do_replace = True
+                                break
+                            if not bsrc:
+                                break  # both files are completely read without difference
+            except OSError:
+                do_replace = True  # e.g. if *destination* does not exist
+
+        if not do_replace:
+            os.remove(src)
+            return False
+
+        os.replace(src=src, dst=dst)
+        return True
 
 
 class NonRegularFileOutputAction(_NonRegularFileMixin, _FilesystemObjectMixin, Action):
-    pass
+
+    def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
+        r = context.root_path
+        os.replace(src=(r / source).native, dst=(r / destination).native)
+        return True
 
 
 class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
-    pass
+
+    def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
+        r = context.root_path
+        dst = (r / destination).native
+        tmp_dir = context.create_temporary(is_dir=True).native
+        try:
+            manip.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existing=True)
+            os.replace(src=(r / source).native, dst=dst)
+        finally:
+            os.rmdir(tmp_dir)
+        return True
 
 
 def register_action(dependency_id: int, dependency: Type[depend.Dependency], action: Type[Action]):

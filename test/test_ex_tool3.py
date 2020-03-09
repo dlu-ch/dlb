@@ -30,7 +30,7 @@ class ATool(dlb.ex.Tool):
 
     async def redo(self, result, context):
         dlb.di.inform("redoing right now")
-        with open((context.root_path / self.object_file).native, 'xb'):
+        with open((context.root_path / self.object_file).native, 'wb'):
             pass
 
 
@@ -159,6 +159,39 @@ class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_tes
                 t = ATool(source_file='a.cpp', object_file='a.cpp')
                 t.run()
         msg = "output dependency 'object_file' contains a path that is also an explicit input dependency: 'a.cpp'"
+        self.assertEqual(msg, str(cm.exception))
+
+
+class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    # noinspection PyAbstractClass
+    class BTool(dlb.ex.Tool):
+        object_file = dlb.ex.Tool.Output.RegularFile(required=False)
+        temp_dir = dlb.ex.Tool.Output.Directory(required=False)
+        log_files = dlb.ex.Tool.Output.RegularFile[:](required=False, unique=False)
+
+    def test_fails_for_two_files(self):
+        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+            with dlb.ex.Context():
+                t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(object_file='o', log_files=['o'])
+                t.run()
+        msg = "output dependencies 'object_file' and 'log_files' both contain the same path: 'o'"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_two_files_in_same_dependency(self):
+        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+            with dlb.ex.Context():
+                t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(log_files=['o', 'o'])
+                t.run()
+        msg = "output dependency 'log_files' contains the same path more than once: 'o'"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_file_and_directory(self):
+        with self.assertRaises(dlb.ex.DependencyCheckError) as cm:
+            with dlb.ex.Context():
+                t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(object_file='o', temp_dir='o/')
+                t.run()
+        msg = "output dependencies 'temp_dir' and 'object_file' both contain the same path: 'o/'"
         self.assertEqual(msg, str(cm.exception))
 
 
@@ -458,7 +491,7 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
 
             async def redo(self, result, context):
                 dlb.di.inform("redoing right now")
-                with open((context.root_path / self.object_file).native, 'xb'):
+                with open((context.root_path / self.object_file).native, 'wb'):
                     pass
 
         src = pathlib.Path('src')
@@ -480,62 +513,63 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
             self.assertIsNone(t.run())
 
 
-class RunRedoRemovesExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_ignores_unexisting_output_file(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
-        self.assertFalse(pathlib.Path('d').exists())
+        self.assertFalse(os.path.exists('d'))
 
-    def test_redo_removes_existing_output_dir(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+    def test_redo_does_not_remove_nonobstructing_outputs(self):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
-        pathlib.Path('d').mkdir()
+        with open('a.o', 'xb'):
+            pass
+        os.mkdir('d/')
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
-        self.assertFalse(pathlib.Path('d').exists())
+        self.assertTrue(os.path.exists('a.o'))
+        self.assertTrue(os.path.exists('d'))
 
-    def test_redo_removes_existing_output_file(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+    def test_redo_removes_obstructing_outputs(self):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
-        with pathlib.Path('d').open('xb'):
+        with open('d', 'xb'):
+            pass
+        os.mkdir('a.o')
+
+        t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+        self.assertTrue(os.path.isfile('a.o'))
+        self.assertFalse(os.path.exists('d'))
+
+    def test_run_without_redo_does_not_remove_output_files(self):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
-        self.assertFalse(pathlib.Path('d').exists())
 
-    def test_run_without_redo_does_not_remove_output_file(self):
-        src = pathlib.Path('src')
-        src.mkdir()
+        os.mkdir('d')
 
-        with (src / 'a.cpp').open('xb'):
-            pass
-
-        t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
-        with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-
-        pathlib.Path('d').mkdir()
         with dlb.ex.Context():
             self.assertIsNone(t.run())
-        self.assertTrue(pathlib.Path('d').exists())  # still exists
+
+        self.assertTrue(os.path.isfile('a.o'))
+        self.assertTrue(os.path.isdir('d'))
+
 
 
 class ExecutionParameterTest(tools_for_test.TemporaryWorkingDirectoryTestCase):

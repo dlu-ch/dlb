@@ -17,12 +17,14 @@ import sys
 import re
 import os
 import stat
+import asyncio
 import collections
 import hashlib
 import logging
 import inspect
-from typing import Type, Optional, Dict, Tuple, Set
+from typing import Type, Optional, Union, Dict, Tuple, Set, Iterable, Collection
 from .. import ut
+from .. import fs
 from ..fs import manip
 from .. import di
 from . import rundb
@@ -70,7 +72,113 @@ class RedoError(Exception):
     pass
 
 
+class HelperExecutionError(Exception):
+    pass
+
+
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
+
+
+class _RedoContext(context_.ReadOnlyContext):
+
+    def __init__(self, context: context_.Context, dependency_action_by_path: Dict[fs.Path, dependaction.Action]):
+        if not isinstance(dependency_action_by_path, dict):
+            raise TypeError
+
+        super().__init__(context)
+        self._dependency_action_by_path = dependency_action_by_path
+        self._unchanged_paths = set()
+
+    async def execute_helper(self, helper_file, arguments: Iterable[Union[str, fs.Path, fs.Path.Native]] = (), *,
+                             cwd: Optional[fs.Path] = None, expected_returncodes: Collection[int] = frozenset([0]),
+                             stdin=None, stdout=None, stderr=None, limit=2**16):
+        if not isinstance(helper_file, fs.Path):
+            helper_file = fs.Path(helper_file)
+
+        cwd = fs.Path('.') if cwd is None else self.managed_tree_path_of(cwd, is_dir=True)
+        longest_dotdot_prefix = ()
+
+        commandline_tokens = [str(self.helper[helper_file].native)]
+        for a in arguments:
+            if isinstance(a, fs.Path):
+                if not a.is_absolute():
+                    a = self.managed_tree_path_of(a).relative_to(cwd, collapsable=True)
+                    c = a.components[1:]
+                    if c[:len(longest_dotdot_prefix)] == longest_dotdot_prefix:
+                        while len(longest_dotdot_prefix) < len(c) and c[len(longest_dotdot_prefix)] == '..':
+                            longest_dotdot_prefix += ('..',)
+                a = a.native
+            commandline_tokens.append(str(a))
+
+        if longest_dotdot_prefix:
+            manip.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
+                                                     ref_dir_path=str(self.root_path.native))
+
+        proc = await asyncio.create_subprocess_exec(
+            *commandline_tokens,  # must all by str
+            cwd=(self.root_path / cwd).native,
+            stdin=stdin, stdout=stdout, stderr=stderr, limit=limit)
+        stdout, stderr = await proc.communicate()
+        returncode = proc.returncode
+
+        if returncode not in expected_returncodes:
+            msg = f"execution of {helper_file.as_string()!r} returned unexpected exit code {proc.returncode}"
+            raise HelperExecutionError(msg)
+
+        return returncode, stdout, stderr
+
+    def replace_output(self, path, source):
+        # *path* may or may not exist.
+        #
+        # After if successful completion
+        #  - *path* exists
+        #  - *source* does not exist
+
+        if not isinstance(path, fs.Path):
+            path = fs.Path(path)
+        if not isinstance(source, fs.Path):
+            source = fs.Path(source)
+
+        action = self._dependency_action_by_path.get(path)
+        if action is None:
+            msg = f"path is not contained in any explicit output dependency: {path.as_string()!r}"
+            raise RedoError(msg)
+
+        if path.is_dir() != source.is_dir():
+            if path.is_dir():
+                msg = f"cannot replace directory by non-directory: {path.as_string()!r}"
+            else:
+                msg = f"cannot replace non-directory by directory: {path.as_string()!r}"
+            raise RedoError(msg)
+
+        try:
+            source = self.managed_tree_path_of(source, managed=False)
+        except manip.PathNormalizationError as e:
+            if e.oserror is not None:
+                e = e.oserror
+            msg = (
+                f"'source' is not a managed tree path of an existing filesystem object: {source.as_string()!r}\n"
+                f"  | reason: {ut.exception_to_line(e)}"
+            )
+            raise RedoError(msg)
+
+        if path == source:
+            raise RedoError(f"cannot replace a path by itself: {path.as_string()!r}")
+
+        output_possibly_changed = action.replace_filesystem_object(destination=path, source=source, context=self)
+        if output_possibly_changed:
+            self._unchanged_paths.discard(path)
+        else:
+            self._unchanged_paths.add(path)  # TODO test
+
+    @property
+    def modified_outputs(self) -> Set[fs.Path]:
+        return set(self._dependency_action_by_path) - self._unchanged_paths
+
+
+_RedoContext.__name__ = 'RedoContext'
+_RedoContext.__qualname__ = 'Tool.RedoContext'
+ut.set_module_name_to_parent(_RedoContext)
 
 
 def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
@@ -251,11 +359,18 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
 def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
                                         encoded_paths_of_explicit_input_dependencies: Set[str],
                                         needs_redo: bool,
-                                        context: context_.Context) -> bool:
+                                        context: context_.Context) \
+        -> Tuple[Dict[fs.Path, dependaction.Action], Set[fs.Path], bool]:
     # For all explicit output dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.
     #
     # Returns ``True`` if at least one of the filesystem objects does not exist.
+
+    dependency_action_by_encoded_path = dict()
+    dependency_action_by_path = dict()
+
+    # managed tree paths of existing filesystem objects with unexpected memos (e.g. wrong type):
+    obstructive_paths = set()
 
     for action in dependency_actions:
 
@@ -274,17 +389,36 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                         f"  | reason: {ut.exception_to_line(e)}"
                     )
                     raise DependencyCheckError(msg) from None
-                if rundb.encode_path(p) in encoded_paths_of_explicit_input_dependencies:
+                encoded_path = rundb.encode_path(p)
+                if encoded_path in encoded_paths_of_explicit_input_dependencies:
                     msg = (
                         f"output dependency {action.name!r} contains a path that is also an explicit "
                         f"input dependency: {p.as_string()!r}"
                     )
                     raise DependencyCheckError(msg)
+                a = dependency_action_by_encoded_path.get(encoded_path)
+                if a is not None:
+                    if a is action:
+                        msg = (
+                            f"output dependency {action.name!r} contains the same path more than once: "
+                            f"{p.as_string()!r}"
+                        )
+                    else:
+                        msg = (
+                            f"output dependencies {action.name!r} and {a.name!r} both contain the same path: "
+                            f"{p.as_string()!r}"
+                        )
+                    raise DependencyCheckError(msg)
+                dependency_action_by_encoded_path[encoded_path] = action
+                dependency_action_by_path[p] = action
+                memo = None
                 try:
                     # may raise OSError or ValueError (if 'path' not representable on native system)
                     memo = manip.read_filesystem_object_memo(context.root_path / p)
                     action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
                 except (ValueError, OSError) as e:
+                    if memo is not None and memo.stat is not None:
+                        obstructive_paths.add(p)
                     if not needs_redo:
                         msg = (
                             f"redo necessary because of filesystem object that "
@@ -294,32 +428,16 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                         di.inform(msg)
                         needs_redo = True
 
-    return needs_redo
+    return dependency_action_by_path, obstructive_paths, needs_redo
 
 
-def _remove_explicit_output_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
-                                         context: context_.Context):
-    # Remove all filesystem objects that are explicit output dependencies of *tool*.
+def _remove_filesystem_objects(obstructive_paths: Iterable[fs.Path], context: context_.Context):
+    if obstructive_paths:
+        tmp_dir = str(context.create_temporary(is_dir=True).native)  # may raise OSError
 
-    tmp_dir = None
-
-    # noinspection PyProtectedMember
-    db = context_._get_rundb()
-
-    for action in dependency_actions:
-        if action.dependency.explicit and isinstance(action.dependency, depend.Output) and \
-                isinstance(action.dependency, depend.FilesystemObject):
-            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
-            for p in validated_value_tuple:  # p is a (valid) managed tree path as a dlb.fs.Path
-                if tmp_dir is None:
-                    tmp_dir = context.create_temporary(is_dir=True)  # may raise OSError
-                manip.remove_filesystem_object(context.root_path / p,
-                                               abs_empty_dir_path=tmp_dir,
-                                               ignore_non_existing=True)  # may raise OSError
-                encoded_path = rundb.encode_path(p)
-                db.declare_fsobject_input_as_modified(encoded_path)
-
-    if tmp_dir is not None:
+        for p in obstructive_paths:
+            manip.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
+                                           ignore_non_existing=True)  # may raise OSError
         try:
             manip.remove_filesystem_object(tmp_dir)
         except OSError:
@@ -379,6 +497,8 @@ _RedoResult.__qualname__ = 'Tool.{}'.format(_RedoResult.__name__)
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class _ToolBase:
+    # only _ToolBase should construct instances of this:
+    RedoContext = NotImplemented
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -508,7 +628,7 @@ class _ToolBase:
 
                 with di.Cluster('explicit output dependencies', with_time=True, is_progress=True):
                     encoded_paths_of_explicit_input_dependencies = set(memo_by_encoded_path.keys())
-                    needs_redo = _check_explicit_output_dependencies(
+                    dependency_action_by_path, obstructive_paths, needs_redo = _check_explicit_output_dependencies(
                         self, dependency_actions, encoded_paths_of_explicit_input_dependencies, False, context)
 
                 with di.Cluster('input dependencies of the last redo', with_time=True, is_progress=True):
@@ -550,12 +670,13 @@ class _ToolBase:
                                 needs_redo = True
                                 break
 
-            if not needs_redo:
-                return None  # no redo
+        if not needs_redo:
+            return None  # no redo
 
-            with di.Cluster('remove filesystem objects that are explicit output dependencies',
+        if obstructive_paths:
+            with di.Cluster('remove obstructive filesystem objects that are explicit output dependencies',
                             with_time=True, is_progress=True):
-                _remove_explicit_output_dependencies(self, dependency_actions, context)
+                _remove_filesystem_objects(obstructive_paths, context)
 
         result = _RedoResult(self)
 
@@ -571,7 +692,7 @@ class _ToolBase:
         # note: no db.commit() necessary as long as root context does commit on exception
         tid = context._redo_sequencer.wait_then_start(
             context.max_parallel_redo_count, None, self._redo_with_aftermath,
-            result=result, context=context_.RedoContext(context),
+            result=result, context=_RedoContext(context, dependency_action_by_path),
             dependency_actions=dependency_actions, memo_by_encoded_path=memo_by_encoded_path,
             encoded_paths_of_explicit_input_dependencies=encoded_paths_of_explicit_input_dependencies,
             execution_parameter_digest=execution_parameter_digest,
@@ -589,34 +710,51 @@ class _ToolBase:
         await self.redo(result, context)
 
         with di.Cluster(f"memorize successful redo for tool instance dbid {tool_instance_dbid!r}", with_time=True):
-            # collect non-explicit input dependencies of this redo
+            # collect non-explicit input and output dependencies of this redo
             encoded_paths_of_nonexplicit_input_dependencies = set()
+            encoded_paths_of_modified_output_dependencies = set()
+
             for action in dependency_actions:
-                if not action.dependency.explicit and isinstance(action.dependency, depend.Input):
+                if not action.dependency.explicit:
                     validated_value = getattr(result, action.name)
                     if validated_value is NotImplemented:
                         if action.dependency.required:
                             msg = (
-                                f"non-explicit input dependency not assigned during redo: {action.name!r}\n"
+                                f"non-explicit dependency not assigned during redo: {action.name!r}\n"
                                 f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
                             )
                             raise RedoError(msg)
                         validated_value = None
                         setattr(result, action.name, validated_value)
                     if isinstance(action.dependency, depend.FilesystemObject):
-                        paths = action.dependency.tuple_from_value(validated_value)
-                        for p in paths:
-                            try:
-                                p = context.managed_tree_path_of(p, existing=True, collapsable=False)
-                            except ValueError:
+                        if isinstance(action.dependency, depend.Input):
+                            paths = action.dependency.tuple_from_value(validated_value)
+                            for p in paths:
+                                try:
+                                    p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                                except ValueError:
+                                    # TODO separate test if in working tree from test if in managed tree
+                                    if not p.is_absolute():
+                                        msg = (
+                                            f"non-explicit input dependency {action.name!r} contains a relative path "
+                                            f"that is not a managed tree path: {p.as_string()!r}"
+                                        )
+                                        raise RedoError(msg) from None
                                 if not p.is_absolute():
+                                    encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
+                        elif isinstance(action.dependency, depend.Output):
+                            paths = action.dependency.tuple_from_value(validated_value)
+                            for p in paths:  # TODO test
+                                try:
+                                    p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                                except ValueError:
                                     msg = (
-                                        f"non-explicit input dependency {action.name!r} contains a relative path that "
-                                        f"is not a managed tree path: {p.as_string()!r}"
+                                        f"non-explicit output dependency {action.name!r} contains a path "
+                                        f"that is not a managed tree path: {p.as_string()!r}"
                                     )
                                     raise RedoError(msg) from None
-                            if not p.is_absolute():
-                                encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
+                                encoded_paths_of_modified_output_dependencies.add(rundb.encode_path(p))
+                            # TODO test if unique
 
             encoded_paths_of_input_dependencies = \
                 encoded_paths_of_explicit_input_dependencies | encoded_paths_of_nonexplicit_input_dependencies
@@ -639,11 +777,16 @@ class _ToolBase:
                 db.replace_domain_inputs(tool_instance_dbid,
                                          {rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest})
 
-                # note: no db.commit() necessary as long as root context does commit on exception
+            for p in context.modified_outputs:
+                encoded_paths_of_modified_output_dependencies.add(rundb.encode_path(p))
+            for p in encoded_paths_of_modified_output_dependencies:
+                db.declare_fsobject_input_as_modified(p)
+
+            # note: no db.commit() necessary as long as root context does commit on exception
 
         return result
 
-    async def redo(self, result: _RedoResult, context: context_.RedoContext):
+    async def redo(self, result: _RedoResult, context: _RedoContext):
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):

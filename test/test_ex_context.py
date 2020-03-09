@@ -25,14 +25,13 @@ class ImportTest(unittest.TestCase):
         import dlb.ex.context
         self.assertEqual({
             'Context',
-            'RedoContext',
+            'ReadOnlyContext',
             'ContextNestingError',
             'NotRunningError',
             'ManagementTreeError',
             'NoWorkingTreeError',
             'WorkingTreeTimeError',
-            'NonActiveContextAccessError',
-            'HelperExecutionError'},
+            'NonActiveContextAccessError'},
             set(dlb.ex.context.__all__))
         self.assertTrue('Context' in dir(dlb.ex))
 
@@ -729,3 +728,44 @@ class ReprTest(unittest.TestCase):
     def test_repr_name_reflects_recommended_module(self):
         self.assertEqual(repr(dlb.ex.Context), "<class 'dlb.ex.Context'>")
         self.assertEqual(repr(dlb.ex.context._EnvVarDict), "<class 'dlb.ex.Context.EnvVarDict'>")
+
+
+class ReadOnlyAccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_read_access_to_inactive_context_is_possible(self):
+        with dlb.ex.Context():
+            with dlb.ex.Context() as c1:
+                c1.helper['a'] = '/a'
+                with dlb.ex.Context() as c2:
+                    c2.helper['b'] = '/b'
+                    rc1 = dlb.ex.ReadOnlyContext(c1)
+                    rc2 = dlb.ex.ReadOnlyContext(c2)
+                    self.assertEqual(dlb.fs.Path('/a'), rc1.helper['a'])
+                    self.assertEqual(dlb.fs.Path('/b'), rc2.helper['b'])
+                self.assertEqual(dlb.fs.Path('/a'), rc1.helper['a'])
+                self.assertEqual(dlb.fs.Path('/b'), rc2.helper['b'])
+            self.assertEqual(dlb.fs.Path('/a'), rc1.helper['a'])
+            self.assertEqual(dlb.fs.Path('/b'), rc2.helper['b'])
+
+    def test_write_access_to_inactive_context_fails(self):
+        with dlb.ex.Context() as c:
+            c.helper['a'] = '/a'
+            rc = dlb.ex.ReadOnlyContext(c)
+            with self.assertRaises(TypeError):
+                rc.helper['a'] = '/A'
+            with self.assertRaises(TypeError):
+                rc.env['a'] = '/A'
+
+    def test_fails_without_active_context(self):
+        with dlb.ex.Context() as c:
+            pass
+        with self.assertRaises(dlb.ex.NotRunningError):
+            dlb.ex.ReadOnlyContext(c)
+
+    def test_fails_for_redo_context(self):
+        with dlb.ex.Context() as c:
+            rc = dlb.ex.ReadOnlyContext(c)
+            with self.assertRaises(TypeError) as cm:
+                # noinspection PyTypeChecker
+                dlb.ex.ReadOnlyContext(rc)
+            self.assertEqual("'context' must be a Context object", str(cm.exception))

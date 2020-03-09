@@ -182,7 +182,14 @@ class DirectoryInput(_DirectoryMixin, ConcreteDependency, Input):
 
 
 class RegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
-    pass
+
+    def __init__(self, *, replace_by_same_content: bool = True, **kwargs):
+        super().__init__(**kwargs)
+        self._replace_by_same_content = bool(replace_by_same_content)  # ignore in compatible_and_no_less_restrictive()
+
+    @property
+    def replace_by_same_content(self):  # TODO test
+        return self._replace_by_same_content
 
 
 class NonRegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
@@ -234,7 +241,7 @@ class EnvVarInput(ConcreteDependency, Input):
 
     def compatible_and_no_less_restrictive(self, other) -> bool:
         if not super().compatible_and_no_less_restrictive(other):
-            return False
+            return False  # TODO test
 
         return self.name == other.name and self.restriction == other.restriction  # ignore example
 

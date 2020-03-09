@@ -456,7 +456,7 @@ In addition to the keyword arguments of the specific constructors described here
 keyword arguments of the constructor of :class:`Tool.Dependency`.
 
 
-.. class:: Tool.Output.RegularFile(cls=dlb.fs.Path)
+.. class:: Tool.Output.RegularFile(cls=dlb.fs.Path, replace_by_same_content=True)
 
    Constructs a dependency role for regular files in the :term:`managed tree`, identified by their paths.
 
@@ -468,7 +468,11 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path
    as an instance of *cls*.
 
-   Example:
+   If *replace_by_same_content* is ``False`` for a dependency role containing *p*, ``context.replace_output(p, q)``
+   in :meth:`redo(..., context) <dlb.ex.Tool.redo()>` does not replace *p* if *p* and *q* both exist as accessible
+   regular files and have the same content.
+
+   Example::
 
       >>> class Tool(dlb.ex.Tool):
       >>>    object_file = dlb.ex.Tool.Output.RegularFile(cls=dlb.fs.NoSpacePath)
@@ -550,4 +554,4 @@ Exceptions
 
 .. exception:: RedoError
 
-   Raised when a running :term:`tool instance` detects a problem with its dependencies after a :term:`redo`.
+   Raised when a running :term:`tool instance` detects a problem with its dependencies during or after a :term:`redo`.

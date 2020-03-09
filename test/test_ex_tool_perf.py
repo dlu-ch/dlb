@@ -28,7 +28,7 @@ class ATool(dlb.ex.Tool):
     included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
     async def redo(self, result, context):
-        with (context.root_path / self.object_file).native.raw.open('xb'):
+        with (context.root_path / self.object_file).native.raw.open('wb'):
             pass
         result.included_files = included_files
 
