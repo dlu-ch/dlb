@@ -375,7 +375,7 @@ class _RootSpecifics:
 
         # 1. check if the process' working directory is a working tree`s root
 
-        self._root_path = worktree.get_checked_root_path_from_cwd(path_cls)
+        self._root_path = worktree.get_checked_root_path_from_cwd(os.getcwd(), path_cls)
         root_path = str(self._root_path.native)
         self._root_path_native_str = root_path
         # TODO make sure the "calling" source file is in the managed tree

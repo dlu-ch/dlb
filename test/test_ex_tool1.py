@@ -28,6 +28,10 @@ class ImportTest(unittest.TestCase):
             set(dlb.ex.tool.__all__))
         self.assertTrue('Tool' in dir(dlb.ex))
 
+    def test_module_is_correct(self):
+        for n in dlb.ex.tool.__all__:
+            self.assertEqual('dlb.ex', dlb.ex.tool.__dict__[n].__module__)
+
 
 class InheritanceTest(unittest.TestCase):
 

@@ -38,6 +38,10 @@ class ImportTest(unittest.TestCase):
         mc = set(n for n in dlb.ex.context._ContextMeta.__dict__ if not n.startswith('_'))
         self.assertEqual(set(), rs.intersection(mc))
 
+    def test_module_is_correct(self):
+        for n in dlb.ex.context.__all__:
+            self.assertEqual('dlb.ex', dlb.ex.context.__dict__[n].__module__)
+
 
 # noinspection PyPropertyAccess
 class AccessTest(unittest.TestCase):
@@ -382,6 +386,22 @@ class WorkingTreeTimeTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with dlb.ex.Context():
                 exit_time = dlb.ex.Context.working_tree_time_ns
             self.assertNotEqual(enter_time, exit_time)
+
+    def test_fails_if_working_tree_time_ns_does_not_change(self):
+        r = None
+        try:
+            regex = (
+                r"(?m)\A"
+                r"failed to cleanup management tree for '.+'\n"
+                r"  \| reason: working tree time did not change for at least 10 s of system time\Z"
+            )
+            with self.assertRaisesRegex(dlb.ex.ManagementTreeError, regex):
+                with dlb.ex.Context() as c:
+                    r = c._root_specifics.__class__
+                    orig = r.working_tree_time_ns
+                    r.working_tree_time_ns = 1
+        finally:
+            r.working_tree_time_ns = orig
 
 
 class RunDatabaseNotRunningTest(unittest.TestCase):

@@ -88,7 +88,7 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
             raise TypeError("'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes")
 
         if isinstance(abs_empty_dir_path, fs.Path):
-            abs_empty_dir_path = str(abs_empty_dir_path.native)  # TODO test
+            abs_empty_dir_path = str(abs_empty_dir_path.native)
         else:
             abs_empty_dir_path = os.fspath(abs_empty_dir_path)
 
@@ -124,7 +124,7 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
             os.rename(abs_path, abs_temp_dir_path)  # POSIX: atomic on same filesystem
             shutil.rmtree(abs_temp_dir_path, ignore_errors=True)  # remove as much as possible
     except FileNotFoundError:
-        if not ignore_non_existent:  # TODO test
+        if not ignore_non_existent:
             raise
 
 
@@ -227,11 +227,9 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
 
 
 # TODO check if canonical-case path
-def get_checked_root_path_from_cwd(path_cls: Type[fs.Path]):
-    root_path = os.getcwd()
-
+def get_checked_root_path_from_cwd(cwd: str, path_cls: Type[fs.Path]):
     try:
-        root_path = path_cls(path_cls.Native(root_path), is_dir=True)
+        root_path = path_cls(path_cls.Native(cwd), is_dir=True)
     except (ValueError, OSError) as e:
         msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
             f'current directory violates imposed path restrictions\n'
@@ -248,15 +246,15 @@ def get_checked_root_path_from_cwd(path_cls: Type[fs.Path]):
     try:
         # may raise FileNotFoundError, RuntimeError
         real_root_path = root_path.native.raw.resolve(strict=True)
-        if not os.path.samefile(str(real_root_path), root_path_str):
-            raise ValueError  # TODO test
+        if real_root_path != root_path.native.raw:
+            raise ValueError
     except (ValueError, OSError, RuntimeError):
         msg = (
-            f"supposedly equivalent forms of current directory's path point to different filesystem objects\n"
-            f'  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n'
-            f'  | try again?'
+            "supposedly equivalent forms of current directory's path point to different filesystem objects\n"
+            "  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n"
+            "  | try again?"
         )
-        raise ValueError(msg) from None
+        raise NoWorkingTreeError(msg) from None
 
     msg = (
         f'current directory is no working tree: {root_path.as_string()!r}\n'
@@ -348,6 +346,3 @@ def prepare_locked_working_tree(root_path: fs.Path):
         raise ManagementTreeError(msg) from None
 
     return mtime_probe, db, is_working_tree_case_sensitive
-
-
-ut.set_module_name_to_parent_by_name(vars(), __all__)

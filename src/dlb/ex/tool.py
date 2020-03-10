@@ -394,7 +394,7 @@ def _remove_filesystem_objects(obstructive_paths: Iterable[fs.Path], context: co
                                               ignore_non_existent=True)  # may raise OSError
         try:
             worktree.remove_filesystem_object(tmp_dir)
-        except OSError:
+        except OSError:  # TODO test
             pass  # try again when root context is cleaned-up
 
 

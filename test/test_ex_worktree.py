@@ -128,6 +128,26 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
                 abs_empty_dir_path=os.path.abspath(abs_temp_dir_path))
         self.assertFalse(os.path.exists('a'))
 
+        self.create_dir_a_in_cwd()
+        with tempfile.TemporaryDirectory(dir='.') as abs_temp_dir_path:
+            dlb.ex.worktree.remove_filesystem_object(
+                os.path.join(os.getcwd(), 'a'),
+                abs_empty_dir_path=dlb.fs.Path(dlb.fs.Path.Native(os.path.abspath(abs_temp_dir_path))))
+        self.assertFalse(os.path.exists('a'))
+
+    def test_fails_for_nonexistent_tmp_if_not_to_ignore(self):
+        self.create_dir_a_in_cwd()
+
+        with self.assertRaises(FileNotFoundError):
+            dlb.ex.worktree.remove_filesystem_object(
+                os.path.join(os.getcwd(), 'a'),
+                abs_empty_dir_path=os.path.join(os.getcwd(), 'does', 'not', 'exist'))
+
+        dlb.ex.worktree.remove_filesystem_object(
+            os.path.join(os.getcwd(), 'a'),
+            abs_empty_dir_path=os.path.join(os.getcwd(), 'does', 'not', 'exist'),
+            ignore_non_existent=True)
+
     def test_removes_most_of_nonempty_directory_in_place_if_permission_denied_in_subdirectory(self):
         self.create_dir_a_in_cwd(all_writable=False)
 
@@ -322,3 +342,27 @@ class NormalizeDotDotWithReference(tools_for_test.TemporaryDirectoryTestCase):
         regex = r"\A()not a collapsable path, since this is a symbolic link: '.+'\Z"
         with self.assertRaisesRegex(dlb.ex.worktree.WorkingTreePathError, regex):
             dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
+
+
+class GetCheckRootPathFromCwdTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_fails_for_symlink(self):
+        os.mkdir('a')
+        os.makedirs(os.path.join('x', 'y'))
+
+        try:
+            os.symlink(os.path.join('..', 'x'), os.path.join('a', 'b'), target_is_directory=True)
+        except OSError:  # on platform or filesystem that does not support symlinks
+            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
+            raise unittest.SkipTest from None
+
+        os.mkdir(os.path.join('a', 'b', 'y', '.dlbroot'))
+        with self.assertRaises(dlb.ex.worktree.NoWorkingTreeError) as cm:
+            dlb.ex.worktree.get_checked_root_path_from_cwd(
+                os.path.abspath(os.path.join('a', 'b', 'y')), path_cls=dlb.fs.Path)
+        msg = (
+            "supposedly equivalent forms of current directory's path point to different filesystem objects\n"
+            "  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n"
+            "  | try again?"
+        )
+        self.assertEqual(msg, str(cm.exception))
