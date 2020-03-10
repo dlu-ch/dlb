@@ -151,7 +151,7 @@ Context objects
       A duplicate-free tuple of absolute directory paths where this process should look for binaries according to
       the operating system.
 
-      It is compiled from :func:`python:os.get_exec_path()` when the root context is entered.
+      It is compiled from the members :func:`python:os.get_exec_path()` when the root context is entered.
 
       Same on class and instance.
 

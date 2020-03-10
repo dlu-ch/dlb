@@ -382,16 +382,18 @@ class _RootSpecifics:
         self._root_path_native_str = root_path
         # TODO make sure the "calling" source file is in the managed tree
 
-        # path of all existing directories in os.get_exec_path(), that can be representat as dlb.fs.Path
+        # path of all existing directories in os.get_exec_path(), that can be represented as dlb.fs.Path
         binary_search_paths = []
-        for p in os.get_exec_path():
+        for p in os.get_exec_path():  # do _not_ expand a leading '~'
             try:
                 pn = fs.Path.Native(p)
                 if os.path.isdir(pn):
                     p = fs.Path(p, is_dir=True)
+                    if not p.is_absolute():
+                        p = self._root_path / p
                     if p not in binary_search_paths:
                         binary_search_paths.append(p)
-            except (OSError, ValueError):  # TODO test
+            except (OSError, ValueError):
                 pass
         self._binary_search_paths = tuple(binary_search_paths)
 

@@ -36,6 +36,55 @@ class BinarySearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         self.assertEqual(len(set(paths)), len(paths))
 
+    def test_nondirectories_and_nonexistent_paths_are_ignored(self):
+        os.mkdir('d')
+        with open('f', 'xb'):
+            pass
+
+        orig_path = os.environ['PATH']
+        os.environ['PATH'] = os.pathsep.join(
+            [os.getcwd(), os.path.join(os.getcwd(), 'd'), os.path.join(os.getcwd(), 'f')])
+        with dlb.ex.Context():
+            paths = dlb.ex.Context.binary_search_paths
+        os.environ['PATH'] = orig_path
+
+        cwd = dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
+        self.assertEqual((cwd, cwd / 'd/'), paths)  # same order
+
+    def test_relative_paths_are_relative_to_root_path(self):
+        os.mkdir('d')
+
+        orig_path = os.environ['PATH']
+        os.environ['PATH'] = 'd'
+        with dlb.ex.Context():
+            paths = dlb.ex.Context.binary_search_paths
+        os.environ['PATH'] = orig_path
+
+        cwd = dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
+        self.assertEqual((cwd / 'd/',), paths)
+
+    def test_leading_tilde_is_not_expanded(self):
+        os.mkdir('d')
+
+        orig_path = os.environ['PATH']
+        os.environ['PATH'] = '~'
+        with dlb.ex.Context():
+            paths = dlb.ex.Context.binary_search_paths
+        os.environ['PATH'] = orig_path
+
+        self.assertEqual((), paths)
+
+    def test_invalid_paths_are_ignored(self):
+        os.mkdir('d')
+
+        orig_path = os.environ['PATH']
+        os.environ['PATH'] = os.pathsep
+        with dlb.ex.Context():
+            paths = dlb.ex.Context.binary_search_paths
+        os.environ['PATH'] = orig_path
+
+        self.assertEqual((), paths)
+
 
 class FindPathInNotRunningTest(unittest.TestCase):
 
