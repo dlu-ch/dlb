@@ -401,25 +401,11 @@ class _RootSpecifics:
 
         # 3. then prepare it
 
-        self._rundb = None
         self._mtime_probe = None
-
+        self._rundb = None
         try:
-            try:  # OSError in this block -> ManagementTreeError
-                self._mtime_probe, self._is_working_tree_case_sensitive, rundb_path = \
-                    worktree.prepare_locked_working_tree(self._root_path)
-                self._rundb = rundb.Database(rundb_path,
-                                             f"if you suspect database corruption, remove the "
-                                             f"run-database file(s): {rundb_path!r}")
-            except rundb.DatabaseError as e:
-                # rundb.DatabaseError on error may have multi-line message
-                raise ManagementTreeError(str(e)) from None
-            except OSError as e:  # TODO test
-                msg = (
-                    f'failed to setup management tree for {root_path!r}\n'
-                    f'  | reason: {ut.exception_to_line(e)}'  # only first line
-                )
-                raise ManagementTreeError(msg) from None
+            self._mtime_probe, self._rundb, self._is_working_tree_case_sensitive = \
+                worktree.prepare_locked_working_tree(self._root_path)
         except Exception:
             self._close_and_unlock_if_open()
             raise
@@ -464,17 +450,18 @@ class _RootSpecifics:
                 most_serious_exception = e
             self._mtime_probe = None
 
-        try:
-            worktree.unlock_working_tree(self._root_path)
-        except Exception as e:
-            most_serious_exception = e
-
         if self._rundb:
             try:
                 self._rundb.close()  # note: uncommitted changes are lost!
             except Exception as e:
                 most_serious_exception = e
             self._rundb = None
+
+        try:
+            worktree.unlock_working_tree(self._root_path)
+        except Exception as e:
+            if most_serious_exception is None:
+                most_serious_exception = e
 
         if most_serious_exception:
             raise most_serious_exception
@@ -636,6 +623,7 @@ class _BaseContext(metaclass=_ContextMeta):
 
         return rel_path
 
+    # TODO move most of this to worktree
     @staticmethod
     def create_temporary(*, suffix='', prefix='t', is_dir=False) -> fs.Path:
         self = _get_root_specifics()

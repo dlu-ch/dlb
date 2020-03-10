@@ -300,7 +300,6 @@ def unlock_working_tree(root_path: fs.Path):
 
 def prepare_locked_working_tree(root_path: fs.Path):
     management_tree_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME)
-    mtime_probe = None
 
     try:
         rundb_path = os.path.join(management_tree_path, RUNDB_FILE_NAME)
@@ -322,24 +321,33 @@ def prepare_locked_working_tree(root_path: fs.Path):
         remove_filesystem_object(mtime_probeu_path, ignore_non_existent=True)
 
         mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
-        probe_stat = os.lstat(mtime_probe_path)
-        try:
-            probeu_stat = os.lstat(mtime_probeu_path)
-        except FileNotFoundError:
-            is_working_tree_case_sensitive = True
-        else:
-            is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
+        try:
+            probe_stat = os.lstat(mtime_probe_path)
+            try:
+                probeu_stat = os.lstat(mtime_probeu_path)
+            except FileNotFoundError:
+                is_working_tree_case_sensitive = True
+            else:
+                is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
+
+            db = rundb.Database(rundb_path, f"if you suspect database corruption, "
+                                            f"remove the run-database file(s): {rundb_path!r}")
+        except:
+            mtime_probe.close()
+            raise
+
+    except rundb.DatabaseError as e:
+        # rundb.DatabaseError on error may have multi-line message
+        raise ManagementTreeError(str(e)) from None
     except OSError as e:
-        if mtime_probe is not None:
-            mtime_probe.close()  # TODO test
         msg = (
             f'failed to setup management tree for {root_path.as_string()!r}\n'
             f'  | reason: {ut.exception_to_line(e)}'  # only first line
         )
         raise ManagementTreeError(msg) from None
 
-    return mtime_probe, is_working_tree_case_sensitive, rundb_path
+    return mtime_probe, db, is_working_tree_case_sensitive
 
 
 ut.set_module_name_to_parent_by_name(vars(), __all__)

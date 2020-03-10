@@ -182,7 +182,6 @@ _RedoContext.__qualname__ = 'Tool.RedoContext'
 ut.set_module_name_to_parent(_RedoContext)
 
 
-# TODO move to worktree (rundb dependency?)
 def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
                                                  needs_redo: bool, root_path: fs.Path) \
         -> Tuple[rundb.FilesystemObjectMemo, bool]:
@@ -226,56 +225,6 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
             needs_redo = True  # comparision not possible -> redo
 
     return memo, needs_redo  # memo.state may be None
-
-
-# TODO move to worktree (rundb dependency?)
-def _check_input_memo_for_redo(memo: rundb.FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
-                               is_explicit: bool) -> Optional[str]:
-    # Compares the present *memo* if a filesystem object in the managed tree that is an input dependency with its
-    # last known encoded state *last_encoded_memo*, if any.
-    #
-    # Returns ``None`` if no redo is necessary due to the difference of *memo* and *last_encoded_memo* and
-    # a short line describing the reason otherwise.
-
-    if last_encoded_memo is None:
-        if is_explicit:
-            return 'was an output dependency of a redo'
-        return 'was an new dependency or an output dependency of a redo'
-
-    try:
-        last_memo = rundb.decode_encoded_fsobject_memo(last_encoded_memo)
-    except ValueError:
-        return 'state before last successful redo is unknown'
-
-    if is_explicit:
-        assert memo.stat is not None
-        if last_memo.stat is None:
-            return 'filesystem object did not exist'
-    elif (memo.stat is None) != (last_memo.stat is None):
-        return 'existence has changed'
-    elif memo.stat is None:
-        # non-explicit dependency of a filesystem object that does not exist and did not exist before the
-        # last successful redo
-        return None
-
-    assert memo.stat is not None
-    assert last_memo.stat is not None
-
-    if stat.S_IFMT(memo.stat.mode) != stat.S_IFMT(last_memo.stat.mode):
-        return 'type of filesystem object has changed'
-
-    if stat.S_ISLNK(memo.stat.mode) and memo.symlink_target != last_memo.symlink_target:
-        return 'symbolic link target has changed'
-
-    if memo.stat.size != last_memo.stat.size:
-        return 'size has changed'
-
-    if memo.stat.mtime_ns != last_memo.stat.mtime_ns:
-        return 'mtime has changed'
-
-    if (memo.stat.mode, memo.stat.uid, memo.stat.gid) != \
-            (last_memo.stat.mode, last_memo.stat.uid, last_memo.stat.gid):
-        return 'permissions or owner have changed'
 
 
 def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
@@ -435,7 +384,7 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
     return dependency_action_by_path, obstructive_paths, needs_redo
 
 
-# TODO move to worktree
+# TODO move to worktree (once temporary objects are created in worktree)
 def _remove_filesystem_objects(obstructive_paths: Iterable[fs.Path], context: context_.Context):
     if obstructive_paths:
         tmp_dir = str(context.create_temporary(is_dir=True).native)  # may raise OSError
@@ -663,7 +612,7 @@ class _ToolBase:
                         for encoded_path, memo in memo_by_encoded_path.items():
                             is_explicit, last_encoded_memo = inputs_from_last_redo.get(encoded_path, (True, None))
                             assert memo.stat is not None or not is_explicit
-                            redo_reason = _check_input_memo_for_redo(
+                            redo_reason = rundb.compare_fsobject_memo_to_encoded_from_last_redo(
                                 memo, last_encoded_memo, encoded_path in encoded_paths_of_explicit_input_dependencies)
                             if redo_reason is not None:
                                 path = rundb.decode_encoded_path(encoded_path)

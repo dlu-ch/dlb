@@ -149,6 +149,55 @@ def decode_encoded_fsobject_memo(encoded_memo: bytes) -> FilesystemObjectMemo:
         symlink_target=symlink_target)
 
 
+def compare_fsobject_memo_to_encoded_from_last_redo(memo: FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
+                                                    is_explicit: bool) -> Optional[str]:
+    # Compares the present *memo* if a filesystem object in the managed tree that is an input dependency with its
+    # last known encoded state *last_encoded_memo*, if any.
+    #
+    # Returns ``None`` if no redo is necessary due to the difference of *memo* and *last_encoded_memo* and
+    # a short line describing the reason otherwise.
+
+    if last_encoded_memo is None:
+        if is_explicit:
+            return 'was an output dependency of a redo'
+        return 'was an new dependency or an output dependency of a redo'
+
+    try:
+        last_memo = decode_encoded_fsobject_memo(last_encoded_memo)
+    except ValueError:
+        return 'state before last successful redo is unknown'
+
+    if is_explicit:
+        assert memo.stat is not None
+        if last_memo.stat is None:
+            return 'filesystem object did not exist'
+    elif (memo.stat is None) != (last_memo.stat is None):
+        return 'existence has changed'
+    elif memo.stat is None:
+        # non-explicit dependency of a filesystem object that does not exist and did not exist before the
+        # last successful redo
+        return None
+
+    assert memo.stat is not None
+    assert last_memo.stat is not None
+
+    if stat.S_IFMT(memo.stat.mode) != stat.S_IFMT(last_memo.stat.mode):
+        return 'type of filesystem object has changed'
+
+    if stat.S_ISLNK(memo.stat.mode) and memo.symlink_target != last_memo.symlink_target:
+        return 'symbolic link target has changed'
+
+    if memo.stat.size != last_memo.stat.size:
+        return 'size has changed'
+
+    if memo.stat.mtime_ns != last_memo.stat.mtime_ns:
+        return 'mtime has changed'
+
+    if (memo.stat.mode, memo.stat.uid, memo.stat.gid) != \
+            (last_memo.stat.mode, last_memo.stat.uid, last_memo.stat.gid):
+        return 'permissions or owner have changed'
+
+
 class DatabaseError(Exception):
     pass
 
