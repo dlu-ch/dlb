@@ -7,6 +7,7 @@ This is an implementation detail - do not import it unless you know what you are
 
 import sys
 import marshal
+import dataclasses
 import collections.abc
 from typing import Iterable, Dict, Any
 assert sys.version_info >= (3, 7)
@@ -48,6 +49,9 @@ def _make_fundamental(obj, repeatable):
     if isinstance(obj, collections.abc.Iterable):
         return tuple(_make_fundamental(k, r) for k in obj)
 
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return dataclasses.astuple(obj)
+
     raise TypeError
 
 
@@ -68,6 +72,7 @@ def to_permanent_local_bytes(obj) -> bytes:
     #   - iterables that are not are not of type 'bytes', 'str'
     #   - collections.abc.Mapping
     #   - collections.abc.Mapping and their sorted item tuples
+    #   - dataclass instances and their tuple representation
 
     return marshal.dumps(make_fundamental(obj, True), 4)
 

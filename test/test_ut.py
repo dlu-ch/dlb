@@ -8,6 +8,7 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ut
+import dataclasses
 import collections
 import unittest
 
@@ -43,6 +44,16 @@ class MakeFundamentalTest(unittest.TestCase):
     def test_returns_bytes_for_bytes(self):
         r = dlb.ut.make_fundamental(b'xyz', True)
         self.assertEqual(b'bxyz', r)
+
+    def test_returns_tuple_for_dataclass(self):
+        @dataclasses.dataclass
+        class D:
+            a: str
+            b: int
+
+        d = D('ui', 0)
+        r = dlb.ut.make_fundamental(d, True)
+        self.assertEqual(dataclasses.astuple(d), r)
 
     def test_fails_for_recursive_list(self):
         l = [1]

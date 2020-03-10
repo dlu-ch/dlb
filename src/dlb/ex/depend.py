@@ -6,6 +6,7 @@
 This is an implementation detail - do not import it unless you know what you are doing."""
 
 import re
+import dataclasses
 from typing import Pattern, TypeVar, Type, Optional, Iterable, Dict, Hashable, Union, Tuple
 from .. import fs
 from . import mult
@@ -190,7 +191,10 @@ class DirectoryOutput(_DirectoryMixin, Output):
 
 
 class EnvVarInput(Input):
-    Value = NotImplemented  # ???
+    @dataclasses.dataclass(frozen=True, eq=True)
+    class Value:
+        name: str
+        value: Union[str, Dict[str, str]]
 
     def __init__(self, *, name: str, restriction: Union[str, Pattern], example: str, **kwargs):
         super().__init__(**kwargs)
@@ -250,10 +254,9 @@ class EnvVarInput(Input):
 
         # return only validates/possibly modify value
         groups = m.groupdict()
-        if groups:
-            return groups
+        validated_value = groups if groups else value
 
-        return value
+        return EnvVarInput.Value(name=self.name, value=validated_value)
 
 
 def _inject_into(owner, owner_name, owner_module):

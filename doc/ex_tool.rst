@@ -543,13 +543,8 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    The value of the environment variable is valid if it a string that matches the regular expression *restriction*,
    or if it is ``None`` and *required* is ``False``.
 
-   ???Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is a string or
-   a dictionary of strings:
-
-      a. If *restriction* contains at least one named group: the dictionary of all groups of the validated value
-         of the environment variable.
-
-      b. Otherwise, the validated value of the environment variable.
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
+   with the environment variable's name and value.
 
    Example::
 
@@ -560,11 +555,11 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
       >>>                   example='sv_SE')
       >>>     flags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction=r'.+', example='-Wall')
       >>> tool = Tool(language='de_CH')  # use 'de_CH' as value of the environment variable for all
-      >>> tool.language['territory']
+      >>> tool.language.value['territory']
       'CH'
       >>> tool.flags
       NotImplemented
-      >>> tool.run().flags  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
+      >>> tool.run().flags.value  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
       '-O2'
 
    :param restriction: regular expression
@@ -574,7 +569,17 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    .. class:: Value
 
-      Is ???.
+      A :class:`dataclasses.dataclass` object with the following attributes:
+
+      .. attribute:: name
+
+         The name of the environment variable, as in the corresponding concrete dependency.
+
+      .. attribute:: value
+
+         If *restriction* of the corresponding concrete dependency contains at least one named group:
+         the dictionary of all groups of the validated value of the environment variable.
+         The validated value of the environment variable otherwise.
 
 
 Concrete output dependency role classes
