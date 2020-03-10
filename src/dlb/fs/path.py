@@ -5,6 +5,7 @@
 """Classes to represent and access filesystem objects in a safe and platform-independent manner."""
 
 __all__ = (
+    'PathLike',
     'Path', 'RelativePath', 'AbsolutePath', 'NormalizedPath', 'NoSpacePath',
     'PosixPath', 'PortablePosixPath',
     'PortableWindowsPath', 'WindowsPath',
@@ -17,7 +18,7 @@ import os
 import collections.abc
 import functools
 import pathlib  # since Python 3.4
-from typing import Pattern, Optional, Tuple
+from typing import Pattern, Optional, Union, Tuple, Sequence
 assert sys.version_info >= (3, 7)
 
 
@@ -197,9 +198,12 @@ class _PathMeta(type):
         cls.Native = meta(cls.__name__ + '.Native', (_Native,), {})
 
 
+PathLike = Union['Path', _Native, pathlib.PurePath, str, Sequence]
+
+
 @functools.total_ordering
 class Path(metaclass=_PathMeta):
-    def __init__(self, path, *, is_dir: Optional[bool] = None):
+    def __init__(self, path: PathLike, *, is_dir: Optional[bool] = None):
         check = True
 
         if isinstance(path, Path):  # P(P()) must be very fast for every subclass of Path
@@ -279,7 +283,7 @@ class Path(metaclass=_PathMeta):
             if self.__class__.__bases__ != (object,):  # dlb.fs.Path() must be fast
                 self._check_constrains()
 
-    def _cast(self, other):
+    def _cast(self, other: PathLike):
         if other.__class__ is self.__class__:
             return other
         return self.__class__(other)
@@ -318,7 +322,7 @@ class Path(metaclass=_PathMeta):
     def is_normalized(self) -> bool:
         return '..' not in self._components
 
-    def relative_to(self, other, *, collapsable: bool = False):
+    def relative_to(self, other: PathLike, *, collapsable: bool = False):
         other = self._cast(other)
         if not other.is_dir():
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
@@ -449,7 +453,7 @@ class Path(metaclass=_PathMeta):
             return s
         return s + '/'
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: PathLike):
         if not self.is_dir():
             raise ValueError(f'cannot append to non-directory path: {self!r}')
         other = self._cast(other)
@@ -461,15 +465,15 @@ class Path(metaclass=_PathMeta):
         # TODO avoid unnecessary checking of constraints
         return self._with_components(self._components + o[1:], is_dir=other._is_dir)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other: PathLike):
         return self._cast(other) / self
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: PathLike) -> bool:
         # on all platform, comparison is case sensitive
         other = self._cast(other)
         return (self._components, self._is_dir) == (other._components, other._is_dir)
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: PathLike) -> bool:
         other = self._cast(other)
         return (self._components, self._is_dir) < (other._components, other._is_dir)
 

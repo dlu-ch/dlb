@@ -23,7 +23,7 @@ import stat
 import time
 import tempfile
 import asyncio
-from typing import Pattern, Type, Optional, Union, Any, Tuple, List, Dict, Collection, Iterable
+from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -284,7 +284,7 @@ class _BaseHelperDict:
     def items(self) -> Collection[Tuple[fs.Path, fs.Path]]:
         return tuple((k, self[k]) for k in self.keys())
 
-    def get(self, helper_path):
+    def get(self, helper_path: fs.PathLike):
         if not isinstance(helper_path, fs.Path):
             helper_path = fs.Path(helper_path)
         p = self._explicit_abs_path_by_helper_path.get(helper_path)
@@ -303,7 +303,7 @@ class _BaseHelperDict:
     def __len__(self) -> int:
         return len(self.keys())
 
-    def __getitem__(self, helper_path) -> fs.Path:
+    def __getitem__(self, helper_path: fs.PathLike) -> fs.Path:
         p = self.get(helper_path)
         if p is None:
             raise KeyError(fs.Path(helper_path))
@@ -312,7 +312,7 @@ class _BaseHelperDict:
     def __iter__(self):
         return (k for k in self.keys())
 
-    def __contains__(self, helper_path) -> bool:
+    def __contains__(self, helper_path: fs.PathLike) -> bool:
         if not isinstance(helper_path, fs.Path):
             helper_path = fs.Path(helper_path)
         if helper_path in self._explicit_abs_path_by_helper_path:
@@ -333,7 +333,7 @@ class _HelperDict(_BaseHelperDict):
             raise ContextModificationError(msg)
         self._context.complete_pending_redos()
 
-    def __setitem__(self, helper_path, abs_path):
+    def __setitem__(self, helper_path: fs.PathLike, abs_path: fs.PathLike):
         if not isinstance(helper_path, fs.Path):
             helper_path = fs.Path(helper_path)
         if helper_path.is_absolute():
@@ -652,7 +652,7 @@ class _BaseContext(metaclass=_ContextMeta):
         return _get_root_specifics().working_tree_time_ns
 
     @staticmethod
-    def find_path_in(path, search_prefixes: Optional[Iterable[Any]] = None) -> Optional[fs.Path]:
+    def find_path_in(path: fs.PathLike, search_prefixes: Optional[Iterable[fs.PathLike]] = None) -> Optional[fs.Path]:
         self = _get_root_specifics()
 
         if not isinstance(path, fs.Path):
@@ -684,7 +684,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 pass
 
     @staticmethod
-    def working_tree_path_of(path, *, is_dir: Optional[bool] = None,
+    def working_tree_path_of(path: fs.PathLike, *, is_dir: Optional[bool] = None,
                              existing: bool = False, collapsable: bool = False,
                              allow_temporary: bool = False,
                              allow_nontemporary_management: bool = False) -> fs.Path:

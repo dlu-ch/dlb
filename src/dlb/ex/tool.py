@@ -22,7 +22,7 @@ import collections
 import hashlib
 import logging
 import inspect
-from typing import Type, Optional, Union, Dict, Tuple, Set, Iterable, Collection
+from typing import Type, Optional, Any, Dict, Tuple, Set, Iterable, Collection
 from .. import ut
 from .. import fs
 from ..fs import manip
@@ -85,8 +85,8 @@ class _RedoContext(context_.ReadOnlyContext):
         self._dependency_action_by_path = dependency_action_by_path
         self._unchanged_paths = set()
 
-    async def execute_helper(self, helper_file, arguments: Iterable[Union[str, fs.Path, fs.Path.Native]] = (), *,
-                             cwd: Optional[fs.Path] = None, expected_returncodes: Collection[int] = frozenset([0]),
+    async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
+                             cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
                              stdin=None, stdout=None, stderr=None, limit: int = 2**16):
         if not isinstance(helper_file, fs.Path):
             helper_file = fs.Path(helper_file)
@@ -127,7 +127,7 @@ class _RedoContext(context_.ReadOnlyContext):
 
         return returncode, stdout, stderr
 
-    def replace_output(self, path, source):
+    def replace_output(self, path: fs.PathLike, source: fs.PathLike):
         # *path* may or may not exist.
         #
         # After if successful completion

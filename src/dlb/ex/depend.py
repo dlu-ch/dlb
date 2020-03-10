@@ -146,6 +146,7 @@ class _FilesystemObjectMixin(FilesystemObject):
 
     def validate_single(self, value) -> fs.Path:
         value = super().validate_single(value)
+        # noinspection PyTypeChecker
         return self._path_cls(value)
 
 

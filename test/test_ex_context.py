@@ -574,6 +574,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         with (pathlib.Path('a') / 'b' / 'c').open('w'):
             pass
 
+        # noinspection PyTypeChecker
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             # noinspection PyPep8Naming
             C = dlb.ex.Context.path_cls

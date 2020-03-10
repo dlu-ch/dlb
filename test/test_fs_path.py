@@ -131,11 +131,13 @@ class ConstructionTest(unittest.TestCase):
 
     def test_from_none(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.fs.Path(None)
         self.assertEqual("'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence", str(cm.exception))
 
     def test_from_int(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.fs.Path(1)
         msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
         self.assertEqual(msg, str(cm.exception))
