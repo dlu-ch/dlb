@@ -48,8 +48,6 @@ def _get_rundb() -> rundb.Database:
     # use this to access the database from dlb.ex.Tool
     # noinspection PyProtectedMember,PyUnresolvedReferences
     db = _get_root_specifics()._rundb
-    if db is None:
-        raise ValueError('run-database not open')
     return db
 
 
@@ -482,14 +480,11 @@ class _RootSpecifics:
             first_exception = e
 
         if first_exception:
-            if isinstance(first_exception, (OSError, rundb.DatabaseError)):
-                msg = (
-                    f'failed to cleanup management tree for {str(self._root_path.native)!r}\n'
-                    f'  | reason: {ut.exception_to_line(first_exception)}'
-                )
-                raise ManagementTreeError(msg) from None
-            else:
-                raise first_exception  # TODO test
+            msg = (
+                f'failed to cleanup management tree for {str(self._root_path.native)!r}\n'
+                f'  | reason: {ut.exception_to_line(first_exception)}'
+            )
+            raise ManagementTreeError(msg) from None
 
 
 class _BaseContext(metaclass=_ContextMeta):

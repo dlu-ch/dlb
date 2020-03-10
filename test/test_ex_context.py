@@ -239,7 +239,7 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
 class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
-    def test_meaningful_exception_on_permission_error_while_setup(self):
+    def test_meaningful_exception(self):
         os.mkdir('.dlbroot')
         temp_path = os.path.join('.dlbroot', 't')
         os.mkdir(temp_path)
@@ -256,7 +256,10 @@ class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirec
 
         os.chmod(temp_path, 0o777)
 
-    def test_meaningful_exception_on_permission_error_while_cleanup(self):
+
+class ManagementTreeCleanupWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+
+    def test_meaningful_exception(self):
         os.mkdir('.dlbroot')
         temp_path = os.path.join('.dlbroot', 't')
 
@@ -271,6 +274,20 @@ class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirec
                 os.chmod(temp_path, 0o000)
 
         os.chmod(temp_path, 0o777)
+
+
+class ManagementTreeCleanupTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_meaningful_exception_on_strange_error_while_cleanup(self):
+        with self.assertRaises(dlb.ex.ManagementTreeError):
+            with dlb.ex.Context() as c:
+                c._root_specifics._mtime_probe.close()
+                c._root_specifics._mtime_probe = 1
+
+        with self.assertRaises(dlb.ex.ManagementTreeError):
+            with dlb.ex.Context() as c:
+                c._root_specifics._rundb.close()
+                c._root_specifics._rundb = '2'
 
 
 class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
