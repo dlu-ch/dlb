@@ -161,6 +161,7 @@ class MatchesCountTest(unittest.TestCase):
                 pass
 
 
+# noinspection PyPep8Naming
 class MultiplicityHolderTest(unittest.TestCase):
 
     class M(dlb.ex.mult.MultiplicityHolder):
@@ -189,7 +190,6 @@ class MultiplicityHolderTest(unittest.TestCase):
             MultiplicityHolderTest.M(1, b=2).multiplicity = None
 
     def test_name_contains_multiplicity(self):
-        # noinspection PyPep8Naming
         M = MultiplicityHolderTest.M[:3]
         self.assertEqual(MultiplicityHolderTest.M.__name__ + '[:3]', M.__name__)
         self.assertEqual(MultiplicityHolderTest.M.__qualname__ + '[:3]', M.__qualname__)

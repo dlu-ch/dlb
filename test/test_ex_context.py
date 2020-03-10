@@ -544,6 +544,7 @@ class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryWorkingDirectoryTes
                 dlb.ex.Context.create_temporary(is_dir=True, suffix='x' + os.path.sep + '..' + os.path.sep)
 
 
+# noinspection PyTypeChecker
 class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
 
     class StupidPath(dlb.fs.Path):
@@ -560,23 +561,22 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
 
         # noinspection PyTypeChecker
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
-            # noinspection PyPep8Naming
-            C = dlb.ex.Context.path_cls
+            cls = dlb.ex.Context.path_cls
             p = dlb.ex.Context.working_tree_path_of(dlb.ex.Context.root_path)
-            self.assertIs(p.__class__, C)
+            self.assertIs(p.__class__, cls)
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
-            self.assertEqual(p, C('.', is_dir=True))
+            self.assertEqual(p, cls('.', is_dir=True))
 
             p = dlb.ex.Context.working_tree_path_of(dlb.ex.Context.root_path / dlb.fs.Path('a/b'))
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
-            self.assertEqual(p, C('a/b', is_dir=True))
+            self.assertEqual(p, cls('a/b', is_dir=True))
 
             p = dlb.ex.Context.working_tree_path_of((dlb.ex.Context.root_path / dlb.fs.Path('a/b/c')).native.raw)
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
-            self.assertEqual(p, C('a/b/c', is_dir=False))
+            self.assertEqual(p, cls('a/b/c', is_dir=False))
 
     def test_absolute_path_in_working_tree_is_correct(self):
         os.mkdir('.dlbroot')
@@ -697,10 +697,9 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             pass
 
         with dlb.ex.Context():
-            # noinspection PyPep8Naming
-            C = dlb.ex.Context.path_cls
-            self.assertEqual(dlb.ex.Context.working_tree_path_of('d'), C('d/'))
-            self.assertEqual(dlb.ex.Context.working_tree_path_of('f/'), C('f'))
+            cls = dlb.ex.Context.path_cls
+            self.assertEqual(dlb.ex.Context.working_tree_path_of('d'), cls('d/'))
+            self.assertEqual(dlb.ex.Context.working_tree_path_of('f/'), cls('f'))
 
     def test_fail_if_unsupported_type(self):
         os.mkdir('.dlbroot')

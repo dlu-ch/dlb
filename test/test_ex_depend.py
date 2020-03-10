@@ -11,10 +11,11 @@ import dlb.fs
 import dlb.ex.mult
 import dlb.ex.depend
 import re
+from typing import Tuple, Type
 import unittest
 
 
-filesystem_dependency_classes = (
+filesystem_dependency_classes: Tuple[Type[dlb.ex.depend.Dependency], ...] = (
     dlb.ex.depend.RegularFileInput,
     dlb.ex.depend.NonRegularFileInput,
     dlb.ex.depend.DirectoryInput,
@@ -52,8 +53,8 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
     # stands for any non-abstract subclass of Dependency:
     D = dlb.ex.depend.RegularFileInput
 
+    # noinspection PyPep8Naming
     def test_fails_for_none(self):
-        # noinspection PyPep8Naming
         D = CommonOfConcreteValidationTest.D[1:]
 
         msg = "'value' must not be None"
@@ -327,9 +328,9 @@ class SingleOutputValidationTest(unittest.TestCase):
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
 
+# noinspection PyPep8Naming
 class TupleFromValueTest(unittest.TestCase):
 
-    # noinspection PyPep8Naming
     def test_returns_none_or_tuple(self):
         D = dlb.ex.depend.RegularFileInput(required=False)
 
