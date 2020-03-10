@@ -83,7 +83,7 @@ _MTIME_PROBE_FILE_NAME = 'o'
 assert _MTIME_PROBE_FILE_NAME.upper() != _MTIME_PROBE_FILE_NAME
 
 _LOCK_DIRNAME = 'lock'
-_MTIME_TEMPORARY_DIR_NAME = 't'
+_TEMPORARY_DIR_NAME = 't'
 _RUNDB_FILE_NAME = 'runs.sqlite'
 
 
@@ -395,11 +395,11 @@ class _RootSpecifics:
 
         # cwd must be a working tree`s root
 
-        working_tree_path = os.getcwd()
+        root_path = os.getcwd()
         # TODO check if canonical-case path
 
         try:
-            self._working_tree_path = path_cls(path_cls.Native(working_tree_path), is_dir=True)
+            self._root_path = path_cls(path_cls.Native(root_path), is_dir=True)
         except (ValueError, OSError) as e:
             msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
                 f'current directory violates imposed path restrictions\n'
@@ -408,17 +408,17 @@ class _RootSpecifics:
             )
             raise ValueError(msg) from None
 
-        self._working_tree_path_native = self._working_tree_path.native
+        self._root_path_native = self._root_path.native
 
         # from pathlib.py of Python 3.7.3:
         # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
 
-        working_tree_path = str(self._working_tree_path_native)
+        root_path = str(self._root_path_native)
 
         try:
             # may raise FileNotFoundError, RuntimeError
-            real_working_tree_path = self._working_tree_path_native.raw.resolve(strict=True)
-            if not os.path.samefile(str(real_working_tree_path), working_tree_path):
+            real_root_path = self._root_path_native.raw.resolve(strict=True)
+            if not os.path.samefile(str(real_root_path), root_path):
                 raise ValueError
         except (ValueError, OSError, RuntimeError):
             msg = (
@@ -432,12 +432,12 @@ class _RootSpecifics:
         self._mtime_probe = None
         self._rundb = None
 
-        management_tree_path = os.path.join(working_tree_path, _MANAGEMENTTREE_DIR_NAME)
+        management_tree_path = os.path.join(root_path, _MANAGEMENTTREE_DIR_NAME)
 
         # 1. is this a working tree?
 
         msg = (
-            f'current directory is no working tree: {str(working_tree_path)!r}\n'
+            f'current directory is no working tree: {str(root_path)!r}\n'
             f'  | reason: does not contain a directory {_MANAGEMENTTREE_DIR_NAME!r} (that is not a symbolic link)'
         )
         try:
@@ -462,7 +462,7 @@ class _RootSpecifics:
             os.mkdir(lock_dir_path)
         except OSError as e:
             msg = (
-                f'cannot acquire lock for exclusive access to working tree {working_tree_path!r}\n'
+                f'cannot acquire lock for exclusive access to working tree {root_path!r}\n'
                 f'  | reason: {ut.exception_to_line(e)}\n'
                 f'  | to break the lock (if you are sure no other dlb process is running): '
                 f'remove {lock_dir_path!r}'
@@ -501,7 +501,7 @@ class _RootSpecifics:
                 else:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
-                temporary_path = os.path.join(management_tree_path, _MTIME_TEMPORARY_DIR_NAME)
+                temporary_path = os.path.join(management_tree_path, _TEMPORARY_DIR_NAME)
                 manip.remove_filesystem_object(temporary_path, ignore_non_existent=True)
                 os.mkdir(temporary_path)
 
@@ -524,7 +524,7 @@ class _RootSpecifics:
             raise ManagementTreeError(str(e)) from None
         except OSError as e:
             msg = (
-                f'failed to setup management tree for {working_tree_path!r}\n'
+                f'failed to setup management tree for {root_path!r}\n'
                 f'  | reason: {ut.exception_to_line(e)}'  # only first line
             )
             raise ManagementTreeError(msg) from None
@@ -538,8 +538,8 @@ class _RootSpecifics:
     def _cleanup(self):
         self._rundb.cleanup()
         self._rundb.commit()
-        temporary_path = os.path.join(str(self._working_tree_path_native),
-                                      _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+        temporary_path = os.path.join(str(self._root_path_native),
+                                      _MANAGEMENTTREE_DIR_NAME, _TEMPORARY_DIR_NAME)
         manip.remove_filesystem_object(temporary_path, ignore_non_existent=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
@@ -569,7 +569,7 @@ class _RootSpecifics:
                 most_serious_exception = e
             self._mtime_probe = None
 
-        lock_dir_path = os.path.join(str(self._working_tree_path_native), _MANAGEMENTTREE_DIR_NAME, _LOCK_DIRNAME)
+        lock_dir_path = os.path.join(str(self._root_path_native), _MANAGEMENTTREE_DIR_NAME, _LOCK_DIRNAME)
         try:
             os.rmdir(lock_dir_path)  # unlock
         except Exception as e:
@@ -601,7 +601,7 @@ class _RootSpecifics:
         if first_exception:
             if isinstance(first_exception, (OSError, rundb.DatabaseError)):
                 msg = (
-                    f'failed to cleanup management tree for {str(self._working_tree_path.native)!r}\n'
+                    f'failed to cleanup management tree for {str(self._root_path.native)!r}\n'
                     f'  | reason: {ut.exception_to_line(first_exception)}'
                 )
                 raise ManagementTreeError(msg) from None
@@ -640,7 +640,7 @@ class _BaseContext(metaclass=_ContextMeta):
     @property
     def root_path(self) -> fs.Path:
         # noinspection PyProtectedMember
-        return _get_root_specifics()._working_tree_path
+        return _get_root_specifics()._root_path
 
     @property
     def binary_search_paths(self) -> Tuple[fs.Path, ...]:
@@ -672,7 +672,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 if not p.is_dir():
                     raise ValueError(f"not a directory: {p.as_string()!r}")
                 if not p.is_absolute():
-                    p = self._working_tree_path / p
+                    p = self._root_path / p
                 prefixes.append(p)
 
         for prefix in prefixes:
@@ -683,10 +683,11 @@ class _BaseContext(metaclass=_ContextMeta):
             except OSError:
                 pass
 
-    # TODO rename to working_tree_path_of(), also in glossary
     @staticmethod
-    def managed_tree_path_of(path, *, is_dir: Optional[bool] = None,
-                             existing: bool = False, collapsable: bool = False, managed: bool = True) -> fs.Path:
+    def working_tree_path_of(path, *, is_dir: Optional[bool] = None,
+                             existing: bool = False, collapsable: bool = False,
+                             allow_temporary: bool = False,
+                             allow_nontemporary_management: bool = False) -> fs.Path:
         # this must be very fast for relative dlb.fs.Path with existing = True
 
         self = _get_root_specifics()
@@ -703,7 +704,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 (native_components[0],) + \
                 manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
 
-            native_root_path_components = self._working_tree_path_native.components
+            native_root_path_components = self._root_path_native.components
             n = len(native_root_path_components)
             if normalized_native_components[:n] != native_root_path_components:
                 raise manip.PathNormalizationError("does not start with the working tree's root path")
@@ -711,12 +712,18 @@ class _BaseContext(metaclass=_ContextMeta):
             rel_components = ('',) + normalized_native_components[n:]
         else:
             # 'collapsable' means only the part relative to the working tree's root
-            ref_dir_path = None if collapsable else str(self._working_tree_path_native)
+            ref_dir_path = None if collapsable else str(self._root_path_native)
             rel_components = ('',) + manip.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
 
-        if managed and len(rel_components) > 1 and rel_components[1] == _MANAGEMENTTREE_DIR_NAME:  # TODO test
-            raise ValueError(f'path not in managed tree: {path.as_string()!r}') from None
+        if len(rel_components) > 1 and rel_components[1] == _MANAGEMENTTREE_DIR_NAME:
+            if len(rel_components) > 2 and rel_components[2] == _TEMPORARY_DIR_NAME:
+                permitted = allow_temporary
+            else:
+                permitted = allow_nontemporary_management
+            if not permitted:
+                msg = f"path in non-permitted part of the working tree: {path.as_string()!r}"
+                raise manip.PathNormalizationError(msg)
 
         # may raise ValueError
         rel_path = path.__class__(rel_components, is_dir=path.is_dir()) if path.components != rel_components else path
@@ -726,7 +733,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 s = str(rel_path.native)
                 if s[:2] == '.' + os.path.sep:
                     s = s[2:]
-                sr = os.lstat(os.path.sep.join([str(self._working_tree_path_native), s]))
+                sr = os.lstat(os.path.sep.join([str(self._root_path_native), s]))
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
@@ -748,7 +755,7 @@ class _BaseContext(metaclass=_ContextMeta):
         if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
             raise ValueError("'prefix' must not contain a path separator")
 
-        t = os.path.join(str(self._working_tree_path_native), _MANAGEMENTTREE_DIR_NAME, _MTIME_TEMPORARY_DIR_NAME)
+        t = os.path.join(str(self._root_path_native), _MANAGEMENTTREE_DIR_NAME, _TEMPORARY_DIR_NAME)
         is_dir = bool(is_dir)
         if is_dir:
             p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)

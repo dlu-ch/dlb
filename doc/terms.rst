@@ -148,8 +148,11 @@ Terms
    normal path
       A path without :file:`..` components.
 
+   working tree path
+      The :term:`normal path` of an existing filesystem object relative to the :term:`working tree`'s root.
+
    managed tree path
-      The :term:`normal path` of an existing filesystem object relative to the :term:`managed tree`'s root.
+      A working tree path of file system object in the :term:`managed tree`.
 
    run-database
       The database in the :term:`management tree` that stores information on the current and past

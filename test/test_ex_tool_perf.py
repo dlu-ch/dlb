@@ -95,7 +95,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
 
             for i in range(10000):
                 dlb.fs.manip.read_filesystem_object_memo(
-                    c.root_path / c.managed_tree_path_of(p, existing=True, collapsable=False))
+                    c.root_path / c.working_tree_path_of(p, existing=True, collapsable=False))
 
             profile.disable()
 

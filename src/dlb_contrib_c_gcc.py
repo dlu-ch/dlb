@@ -83,7 +83,7 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
             with open(make_rules_file.native, 'r', encoding='utf-8') as dep_file:
                 for p in dlb_contrib_make.additional_sources_from_rule(dep_file.readlines()):
                     try:
-                        included_files.append(context.managed_tree_path_of(p))
+                        included_files.append(context.working_tree_path_of(p))
                     except ValueError:
                         pass
 

@@ -91,7 +91,7 @@ class _RedoContext(context_.ReadOnlyContext):
         if not isinstance(helper_file, fs.Path):
             helper_file = fs.Path(helper_file)
 
-        cwd = fs.Path('.') if cwd is None else self.managed_tree_path_of(cwd, is_dir=True)
+        cwd = fs.Path('.') if cwd is None else self.working_tree_path_of(cwd, is_dir=True, allow_temporary=True)
         longest_dotdot_prefix = ()
 
         if helper_file.is_dir():
@@ -101,7 +101,8 @@ class _RedoContext(context_.ReadOnlyContext):
         for a in arguments:
             if isinstance(a, fs.Path):
                 if not a.is_absolute():
-                    a = self.managed_tree_path_of(a).relative_to(cwd, collapsable=True)
+                    a = self.working_tree_path_of(a, existing=True,
+                                                  allow_temporary=True).relative_to(cwd, collapsable=True)
                     c = a.components[1:]
                     if c[:len(longest_dotdot_prefix)] == longest_dotdot_prefix:
                         while len(longest_dotdot_prefix) < len(c) and c[len(longest_dotdot_prefix)] == '..':
@@ -151,13 +152,13 @@ class _RedoContext(context_.ReadOnlyContext):
             raise ValueError(msg)
 
         try:
-            # TODO must be in the managed tree of in .dlbroot/t/
-            source = self.managed_tree_path_of(source, managed=False)
+            source = self.working_tree_path_of(source, allow_temporary=True)
         except manip.PathNormalizationError as e:
             if e.oserror is not None:
                 e = e.oserror
             msg = (
-                f"'source' is not a managed tree path of an existing filesystem object: {source.as_string()!r}\n"
+                f"'source' is not a permitted working tree path of an existing filesystem object: "
+                f"{source.as_string()!r}\n"
                 f"  | reason: {ut.exception_to_line(e)}"
             )
             raise ValueError(msg)
@@ -297,12 +298,13 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
             for p in validated_value_tuple:  # p is a dlb.fs.Path
                 try:
                     try:
-                        p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                        p = context.working_tree_path_of(p, existing=True, collapsable=False)
                     except ValueError as e:
                         if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
                             raise e.oserror
                         if not p.is_absolute():
                             raise ValueError('not a managed tree path') from None
+                        # absolute paths to the management tree are ok
 
                     # p is a relative path of a filesystem object in the managed tree or an absolute path
                     # of filesystem object outside the managed tree
@@ -339,7 +341,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     definition_file_count = 0
     for p in get_and_register_tool_info(tool.__class__).definition_paths:
         try:
-            p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+            p = context.working_tree_path_of(p, existing=True, collapsable=False)
             encoded_path = rundb.encode_path(p)
             memo = memo_by_encoded_path.get(encoded_path)
             if memo is None:
@@ -381,7 +383,7 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
             for p in validated_value_tuple:  # p is a dlb.fs.Path
                 try:
-                    p = context.managed_tree_path_of(p, existing=True, collapsable=True)
+                    p = context.working_tree_path_of(p, existing=True, collapsable=True)
                 except ValueError as e:
                     msg = (
                         f"output dependency {action.name!r} contains a path that is not a managed tree path: "
@@ -731,22 +733,22 @@ class _ToolBase:
                             paths = action.dependency.tuple_from_value(validated_value)
                             for p in paths:
                                 try:
-                                    p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                                    p = context.working_tree_path_of(p, existing=True, collapsable=False)
                                 except ValueError:
-                                    # TODO separate test if in working tree from test if in managed tree
                                     if not p.is_absolute():
                                         msg = (
                                             f"non-explicit input dependency {action.name!r} contains a relative path "
                                             f"that is not a managed tree path: {p.as_string()!r}"
                                         )
                                         raise RedoError(msg) from None
+                                # absolute paths to the management tree are silently ignored
                                 if not p.is_absolute():
                                     encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
                         elif isinstance(action.dependency, depend.Output):
                             paths = action.dependency.tuple_from_value(validated_value)
                             for p in paths:
                                 try:
-                                    p = context.managed_tree_path_of(p, existing=True, collapsable=False)
+                                    p = context.working_tree_path_of(p, existing=True, collapsable=False)
                                 except ValueError:
                                     msg = (
                                         f"non-explicit output dependency {action.name!r} contains a path "

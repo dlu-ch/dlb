@@ -87,7 +87,15 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             )
             self.assertRegex(stdout.decode(), regex)
 
-    def test_fails_for_cwd_not_in_managed_tree(self):
+            e = rd.execute_helper('ls', ['-l'], cwd='.dlbroot/t', stdout=asyncio.subprocess.PIPE)
+            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+            regex = (
+                r"(?m)\A"
+                r".+ 0\n"
+            )
+            self.assertRegex(stdout.decode(), regex)
+
+    def test_fails_for_cwd_not_in_working_tree(self):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             with self.assertRaises(dlb.fs.manip.PathNormalizationError):
@@ -127,17 +135,18 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper(
-                'ls', ['-d', dlb.fs.Path('.'), dlb.fs.Path('a/x')],
+                'ls', ['-d', dlb.fs.Path('.'), dlb.fs.Path('a/x'), dlb.fs.Path('.dlbroot/t/')],
                 cwd=dlb.fs.Path('a/b/c'),
                 stdout=asyncio.subprocess.PIPE)
             returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
             output = (
                 "../../..\n"
+                "../../../.dlbroot/t\n"
                 "../../x\n"
             )
             self.assertRegex(output, stdout.decode())
 
-    def test_fails_for_relative_path_not_in_managed_tree(self):
+    def test_fails_for_relative_path_not_in_working_tree(self):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper('ls', [dlb.fs.Path('..')])
@@ -187,7 +196,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 rd.replace_output('a/b', dlb.fs.Path('a/b'))
             regex = (
                 r"(?m)\A"
-                r"'source' is not a managed tree path of an existing filesystem object: 'a/b'\n"
+                r"'source' is not a permitted working tree path of an existing filesystem object: 'a/b'\n"
                 r"  \| reason: .*\Z"
             )
             self.assertRegex(str(cm.exception), regex)

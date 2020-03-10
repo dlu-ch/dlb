@@ -232,7 +232,8 @@ Context objects
       :raises FileExistsError: if all tried candidates already existed
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: managed_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False)
+   .. method:: working_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False,
+                                    allow_nontemporary_management=False, allow_temporary=False)
 
       Return the :term:`managed tree path` of the *path* of a filesystem object in the :term:`managed tree`.
 
@@ -247,6 +248,11 @@ Context objects
       If *existing* is ``False``, :meth:`is_dir() <dlb.fs.Path.is_dir()>` of the returned path reflects the type
       of the actual filesystem object. Raises :exc:`dlb.fs.PathNormalizationError` if *path* does not exist.
 
+      If *allow_nontemporary_management* is ``True``, the resulting path may denote a filesystem object in
+      the :term:`management tree` except in :file:`.dlbroot/t`.
+      If *allow_temporary* is ``True``, the resulting path may denote a filesystem object in :file:`.dlbroot/t`
+      of the :term:`management tree`.
+
       Does *not* raise :exc:`OSError`.
 
       Same on class and instance.
@@ -259,10 +265,19 @@ Context objects
       :type existing: bool
       :param collapsable: assume that any relative to the working tree root is :term:`collapsable <collapsable path>`?
       :type collapsable: bool
+      :param allow_nontemporary_management:
+         is the path permitted to denote a filesystem object the :term`management tree` except ones
+         in :file:`.dlbroot/t`?
+      :type allow_nontemporary_management: bool
+      :param allow_temporary:
+         is the path permitted to denote a filesystem object in :file:`.dlbroot/t` of the :term:`management tree`?
+      :type allow_temporary: bool
       :return: a :class:`dlb.fs.Path` *p* with ``p.is_absolute() == False`` and ``p.is_normalized() == True``
       :rtype: same class as *path* if *path* is a :class:`dlb.fs.Path` and :class:`dlb.fs.Path` otherwise
 
-      :raises dlb.fs.PathNormalizationError: if *path* does not exist in the  :term:`managed tree`
+      :raises dlb.fs.PathNormalizationError:
+          if *path* does not exist in the parts of the :term:`working tree` that are described by
+          *allow_nontemporary_management* and *allow_temporary*
       :raises ValueError: if the resulting path is not representable
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -468,7 +483,3 @@ Exceptions
 
    Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` or
    a helper dictionaly object is modified while its associated :term:`context` is not the :term:`active context`.
-
-.. exception:: HelperExecutionError
-
-   Raised, when the execution of a :term:`dynamic helper` file failed.

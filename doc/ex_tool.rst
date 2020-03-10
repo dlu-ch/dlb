@@ -177,14 +177,17 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       its working directory and wait for it to complete.
       The execution is consitered successful if an only if its returncode is one in *expected_returncodes*.
 
-      If *cwd* is not ``None``, is must be the path of directory in the :term:`managed tree`.
+      If *cwd* is not ``None``, is must be the path of directory in the :term:`managed tree` or in :file:`.dlbroot/t/`
+      of the :term:`management tree`.
       Otherwise the working tree's root is used as the working directory.
 
       All members of *arguments* are converted to str objects.
+
       If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``True``, is is
       replaced by ``str(p.native)``.
       If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``False``, is is
-      replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory.
+      replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory. Is must denote
+      a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of the :term:`management tree`.
 
       :param helper_file: :term:`dynamic helper` to be executed as a relative path
       :param arguments: commant-line arguments
@@ -652,3 +655,7 @@ Exceptions
 .. exception:: RedoError
 
    Raised when a running :term:`tool instance` detects a problem with its dependencies during or after a :term:`redo`.
+
+.. exception:: HelperExecutionError
+
+   Raised, when the execution of a :term:`dynamic helper` file failed.
