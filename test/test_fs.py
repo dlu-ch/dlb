@@ -516,31 +516,31 @@ class DirectoryListingTest(unittest.TestCase):
 class NativeComponentsTest(unittest.TestCase):
 
     def test_has_properties(self):
-        nc = dlb.fs.path._NativeComponents(('', 'a', 'b'), '/')
+        nc = dlb.fs._NativeComponents(('', 'a', 'b'), '/')
         self.assertEqual(('', 'a', 'b'), nc.components)
         self.assertEqual('/', nc.sep)
 
     def test_str_is_correct_for_posix(self):
-        self.assertEqual('.', str(dlb.fs.path._NativeComponents(('',), '/')))
-        self.assertEqual('./a\\b/c', str(dlb.fs.path._NativeComponents(('', 'a\\b', 'c'), '/')))
+        self.assertEqual('.', str(dlb.fs._NativeComponents(('',), '/')))
+        self.assertEqual('./a\\b/c', str(dlb.fs._NativeComponents(('', 'a\\b', 'c'), '/')))
 
-        self.assertEqual('/', str(dlb.fs.path._NativeComponents(('/',), '/')))
-        self.assertEqual('//', str(dlb.fs.path._NativeComponents(('//',), '/')))
-        self.assertEqual('/a\\b/c', str(dlb.fs.path._NativeComponents(('/', 'a\\b', 'c'), '/')))
-        self.assertEqual('//a\\b/c', str(dlb.fs.path._NativeComponents(('//', 'a\\b', 'c'), '/')))
+        self.assertEqual('/', str(dlb.fs._NativeComponents(('/',), '/')))
+        self.assertEqual('//', str(dlb.fs._NativeComponents(('//',), '/')))
+        self.assertEqual('/a\\b/c', str(dlb.fs._NativeComponents(('/', 'a\\b', 'c'), '/')))
+        self.assertEqual('//a\\b/c', str(dlb.fs._NativeComponents(('//', 'a\\b', 'c'), '/')))
 
     def test_str_is_correct_for_windows(self):
-        self.assertEqual('.', str(dlb.fs.path._NativeComponents(('',), '\\')))
-        self.assertEqual('.\\a\\b', str(dlb.fs.path._NativeComponents(('', 'a', 'b'), '\\')))
+        self.assertEqual('.', str(dlb.fs._NativeComponents(('',), '\\')))
+        self.assertEqual('.\\a\\b', str(dlb.fs._NativeComponents(('', 'a', 'b'), '\\')))
 
-        self.assertEqual('C:\\', str(dlb.fs.path._NativeComponents(('C:\\',), '\\')))
-        self.assertEqual('C:\\Windows', str(dlb.fs.path._NativeComponents(('C:\\', 'Windows'), '\\')))
-        self.assertEqual('\\\\u\\r', str(dlb.fs.path._NativeComponents(('\\\\u\\r',), '\\')))
-        self.assertEqual('\\\\u\\r\\t', str(dlb.fs.path._NativeComponents(('\\\\u\\r', 't'), '\\')))
+        self.assertEqual('C:\\', str(dlb.fs._NativeComponents(('C:\\',), '\\')))
+        self.assertEqual('C:\\Windows', str(dlb.fs._NativeComponents(('C:\\', 'Windows'), '\\')))
+        self.assertEqual('\\\\u\\r', str(dlb.fs._NativeComponents(('\\\\u\\r',), '\\')))
+        self.assertEqual('\\\\u\\r\\t', str(dlb.fs._NativeComponents(('\\\\u\\r', 't'), '\\')))
 
         # note: the components in the following lines must be avoided by the caller (unsafe)
-        self.assertEqual('.\\a:b\\c', str(dlb.fs.path._NativeComponents(('', 'a:b', 'c'), '\\')))
-        self.assertEqual('C:', str(dlb.fs.path._NativeComponents(('C:',), '\\')))
+        self.assertEqual('.\\a:b\\c', str(dlb.fs._NativeComponents(('', 'a:b', 'c'), '\\')))
+        self.assertEqual('C:', str(dlb.fs._NativeComponents(('C:',), '\\')))
 
 
 class NativeTest(unittest.TestCase):

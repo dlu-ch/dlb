@@ -90,7 +90,7 @@ Content
    toplevelspec.rst
    ex_context.rst
    ex_tool.rst
-   fs_path.rst
+   fs.rst
    di.rst
    similar_tools.rst
 
