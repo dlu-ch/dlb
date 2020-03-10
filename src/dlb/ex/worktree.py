@@ -5,15 +5,39 @@
 """Filesystem manipulations in the working tree.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = ('WorkingTreePathError',)
+__all__ = (
+    'NoWorkingTreeError',
+    'ManagementTreeError',
+    'WorkingTreePathError'
+)
 
 import os
 import stat
 import shutil
 import dataclasses
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Type
 from .. import ut
 from .. import fs
+
+
+# a directory containing a directory with this name is considered a working tree of dlb
+MANAGEMENTTREE_DIR_NAME = '.dlbroot'
+
+# a directory containing a directory with this name is considered a working tree of dlb
+MTIME_PROBE_FILE_NAME = 'o'
+assert MTIME_PROBE_FILE_NAME.upper() != MTIME_PROBE_FILE_NAME
+
+LOCK_DIRNAME = 'lock'
+TEMPORARY_DIR_NAME = 't'
+RUNDB_FILE_NAME = 'runs.sqlite'
+
+
+class NoWorkingTreeError(Exception):
+    pass
+
+
+class ManagementTreeError(Exception):
+    pass
 
 
 class WorkingTreePathError(ValueError):
@@ -79,7 +103,7 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
             raise TypeError("'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes")
 
         if isinstance(abs_empty_dir_path, fs.Path):
-            abs_empty_dir_path = str(abs_empty_dir_path.native)
+            abs_empty_dir_path = str(abs_empty_dir_path.native)  # TODO test
         else:
             abs_empty_dir_path = os.fspath(abs_empty_dir_path)
 
@@ -115,7 +139,7 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
             os.rename(abs_path, abs_temp_dir_path)  # POSIX: atomic on same filesystem
             shutil.rmtree(abs_temp_dir_path, ignore_errors=True)  # remove as much as possible
     except FileNotFoundError:
-        if not ignore_non_existent:
+        if not ignore_non_existent:  # TODO test
             raise
 
 
@@ -215,6 +239,122 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
         raise WorkingTreePathError(oserror=e) from None
 
     return normalized_components
+
+
+# TODO check if canonical-case path
+def get_checked_root_path_from_cwd(path_cls: Type[fs.Path]):
+    root_path = os.getcwd()
+
+    try:
+        root_path = path_cls(path_cls.Native(root_path), is_dir=True)
+    except (ValueError, OSError) as e:
+        msg = (  # assume that ut.exception_to_string(e) contains the working_tree_path
+            f'current directory violates imposed path restrictions\n'
+            f'  | reason: {ut.exception_to_line(e)}\n'
+            f'  | move the working directory or choose a less restrictive path class for the root context'
+        )
+        raise ValueError(msg) from None
+
+    # from pathlib.py of Python 3.7.3:
+    # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
+
+    root_path_str = str(root_path.native)
+
+    try:
+        # may raise FileNotFoundError, RuntimeError
+        real_root_path = root_path.native.raw.resolve(strict=True)
+        if not os.path.samefile(str(real_root_path), root_path_str):
+            raise ValueError  # TODO test
+    except (ValueError, OSError, RuntimeError):
+        msg = (
+            f"supposedly equivalent forms of current directory's path point to different filesystem objects\n"
+            f'  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n'
+            f'  | try again?'
+        )
+        raise ValueError(msg) from None
+
+    msg = (
+        f'current directory is no working tree: {root_path.as_string()!r}\n'
+        f'  | reason: does not contain a directory {MANAGEMENTTREE_DIR_NAME!r} '
+        f'(that is not a symbolic link)'
+    )
+    try:
+        mode = os.lstat(os.path.join(root_path_str, MANAGEMENTTREE_DIR_NAME)).st_mode
+    except Exception:
+        raise NoWorkingTreeError(msg) from None
+    if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
+        raise NoWorkingTreeError(msg) from None
+
+    return root_path
+
+
+def lock_working_tree(root_path: fs.Path):
+    lock_dir_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME, LOCK_DIRNAME)
+    try:
+        try:
+            mode = os.lstat(lock_dir_path).st_mode
+            if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
+                remove_filesystem_object(lock_dir_path)
+        except FileNotFoundError:
+            pass
+        os.mkdir(lock_dir_path)
+    except OSError as e:
+        msg = (
+            f'cannot acquire lock for exclusive access to working tree {root_path.as_string()!r}\n'
+            f'  | reason: {ut.exception_to_line(e)}\n'
+            f'  | to break the lock (if you are sure no other dlb process is running): '
+            f'remove {lock_dir_path!r}'
+        )
+        raise ManagementTreeError(msg) from None
+
+
+def unlock_working_tree(root_path: fs.Path):
+    lock_dir_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME, LOCK_DIRNAME)
+    os.rmdir(lock_dir_path)
+
+
+def prepare_locked_working_tree(root_path: fs.Path):
+    management_tree_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME)
+    mtime_probe = None
+
+    try:
+        rundb_path = os.path.join(management_tree_path, RUNDB_FILE_NAME)
+        try:
+            mode = os.lstat(rundb_path).st_mode
+            if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
+                remove_filesystem_object(rundb_path)
+        except FileNotFoundError:
+            pass
+
+        temporary_path = os.path.join(management_tree_path, TEMPORARY_DIR_NAME)
+        remove_filesystem_object(temporary_path, ignore_non_existent=True)
+        os.mkdir(temporary_path)
+
+        # prepare o for mtime probing
+        mtime_probe_path = os.path.join(management_tree_path, MTIME_PROBE_FILE_NAME)
+        mtime_probeu_path = os.path.join(management_tree_path, MTIME_PROBE_FILE_NAME.upper())
+        remove_filesystem_object(mtime_probe_path, ignore_non_existent=True)
+        remove_filesystem_object(mtime_probeu_path, ignore_non_existent=True)
+
+        mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
+        probe_stat = os.lstat(mtime_probe_path)
+        try:
+            probeu_stat = os.lstat(mtime_probeu_path)
+        except FileNotFoundError:
+            is_working_tree_case_sensitive = True
+        else:
+            is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
+
+    except OSError as e:
+        if mtime_probe is not None:
+            mtime_probe.close()  # TODO test
+        msg = (
+            f'failed to setup management tree for {root_path.as_string()!r}\n'
+            f'  | reason: {ut.exception_to_line(e)}'  # only first line
+        )
+        raise ManagementTreeError(msg) from None
+
+    return mtime_probe, is_working_tree_case_sensitive, rundb_path
 
 
 ut.set_module_name_to_parent_by_name(vars(), __all__)

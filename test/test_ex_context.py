@@ -123,12 +123,6 @@ class ReuseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
 class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
 
-    def test_management_tree_paths_are_portable(self):
-        import dlb.fs
-        dlb.fs.PortablePath(dlb.ex.context._MANAGEMENTTREE_DIR_NAME)
-        dlb.fs.PortablePath(dlb.ex.context._MTIME_PROBE_FILE_NAME)
-        dlb.fs.PortablePath(dlb.ex.context._RUNDB_FILE_NAME)
-
     def test_fails_if_dlbroot_does_not_exist(self):
         with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
             with dlb.ex.Context():

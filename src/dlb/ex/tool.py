@@ -182,7 +182,7 @@ _RedoContext.__qualname__ = 'Tool.RedoContext'
 ut.set_module_name_to_parent(_RedoContext)
 
 
-# TODO move to worktree
+# TODO move to worktree (rundb dependency?)
 def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
                                                  needs_redo: bool, root_path: fs.Path) \
         -> Tuple[worktree.FilesystemObjectMemo, bool]:
@@ -228,7 +228,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
     return memo, needs_redo  # memo.state may be None
 
 
-# TODO move to worktree
+# TODO move to worktree (rundb dependency?)
 def _check_input_memo_for_redo(memo: worktree.FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
                                is_explicit: bool) -> Optional[str]:
     # Compares the present *memo* if a filesystem object in the managed tree that is an input dependency with its

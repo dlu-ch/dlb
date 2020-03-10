@@ -15,6 +15,15 @@ import unittest
 import tools_for_test
 
 
+class FilenamePortabilityTest(unittest.TestCase):
+
+    def test_management_tree_paths_are_portable(self):
+        import dlb.fs
+        dlb.fs.PortablePath(dlb.ex.worktree.MANAGEMENTTREE_DIR_NAME)
+        dlb.fs.PortablePath(dlb.ex.worktree.MTIME_PROBE_FILE_NAME)
+        dlb.fs.PortablePath(dlb.ex.worktree.RUNDB_FILE_NAME)
+
+
 class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
 
     @staticmethod
