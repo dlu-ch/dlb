@@ -12,7 +12,6 @@ import dlb.fs
 import dlb.fs.manip
 import dlb.ex
 import dlb.ex.rundb
-import pathlib
 import stat
 import time
 import unittest
@@ -150,11 +149,11 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertIn('working tree', str(cm.exception))
 
     def test_fails_if_dlbroot_is_symlink_to_dir(self):
-        pathlib.Path('dlbroot_sysmlink_target').mkdir()
+        os.mkdir('dlbroot_sysmlink_target')
 
         try:
-            pathlib.Path('.dlbroot').symlink_to('dlbroot_sysmlink_target', target_is_directory=True)
-            self.assertTrue(pathlib.Path('.dlbroot').is_symlink())
+            os.symlink('dlbroot_sysmlink_target', '.dlbroot', target_is_directory=True)
+            self.assertTrue(os.path.islink('.dlbroot'))
         except OSError:  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
@@ -170,100 +169,88 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
 class ManagementTreeSetupTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_missing_filesystem_objects_are_created(self):
-        wdr = pathlib.Path('.dlbroot')
         with dlb.ex.Context():
-            self.assertTrue((wdr / 'o').is_file())
-            self.assertTrue((wdr / 't').is_dir())
+            self.assertTrue(os.path.isfile(os.path.join('.dlbroot', 'o')))
+            self.assertTrue(os.path.isdir(os.path.join('.dlbroot', 't')))
 
     def test_temp_dir_is_recreated_if_nonempty_directory(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr_t = wdr / 't'
-        wdr_t.mkdir()
-        (wdr_t / 'c').mkdir()
+        temp_path = os.path.join('.dlbroot', 't')
+        os.makedirs(os.path.join(temp_path, 'c'))
 
-        with (wdr_t / 'a').open('wb'):
+        with open(os.path.join(temp_path, 'a'), 'wb'):
             pass
-        with (wdr_t / 'c' / 'b').open('wb'):
+        with open(os.path.join(temp_path, 'c', 'b'), 'wb'):
             pass
 
-        sr0 = wdr_t.stat()
-        wdr_t.chmod(stat.S_IMODE(sr0.st_mode) ^ stat.S_IXOTH)  # change permission
-        sr1 = wdr_t.stat()
+        sr0 = os.stat(temp_path)
+        os.chmod(temp_path, stat.S_IMODE(sr0.st_mode) ^ stat.S_IXOTH)  # change permission
+        sr1 = os.stat(temp_path)
         if stat.S_IMODE(sr0.st_mode) == stat.S_IMODE(sr1.st_mode):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, the permission should have changed')
             raise unittest.SkipTest
 
         with dlb.ex.Context():
-            self.assertTrue(wdr_t.is_dir())
-            self.assertTupleEqual((), tuple(p for p in wdr_t.iterdir()))
-            sr2 = wdr_t.stat()
+            self.assertTrue(os.path.isdir(temp_path))
+            self.assertEqual([], os.listdir(temp_path))
+            sr2 = os.stat(temp_path)
             self.assertNotEqual(sr1, sr2)  # since inode could be reused, comparison of inodes would not work reliably
 
     def test_temp_dir_is_recreated_if_symlink(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr_t = wdr / 't'
+        temp_path = os.path.join('.dlbroot', 't')
 
-        symlink_target = wdr / 't_sysmlink_target'
-        symlink_target.mkdir()
+        symlink_target = os.path.join('.dlbroot', 't_sysmlink_target')
+        os.mkdir(symlink_target)
         try:
-            wdr_t.symlink_to(symlink_target, target_is_directory=True)
-            self.assertTrue(wdr_t.is_symlink())
+            os.symlink(symlink_target, temp_path, target_is_directory=True)
+            self.assertTrue(os.path.islink(temp_path))
         except OSError:  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
         with dlb.ex.Context():
-            self.assertTrue(wdr_t.is_dir())
-            self.assertFalse(wdr_t.is_symlink())
+            self.assertTrue(os.path.isdir(temp_path))
+            self.assertFalse(os.path.islink(temp_path))
 
     def test_mtime_probe_file_is_recreated_if_directory(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr_o = (wdr / 'o')
-        wdr_o.mkdir()
-        (wdr_o / 'c').mkdir()
+        mprobe_file = os.path.join('.dlbroot', 'o')
+        os.mkdir(mprobe_file)
+        os.mkdir(os.path.join(mprobe_file, 'c'))
 
-        with (wdr_o / 'a').open('wb'):
+        with open(os.path.join(mprobe_file, 'a'), 'wb'):
             pass
-        with (wdr_o / 'c' / 'b').open('wb'):
+        with open(os.path.join(mprobe_file, 'c', 'b'), 'wb'):
             pass
 
         with dlb.ex.Context():
-            self.assertTrue(wdr_o.is_file())
+            self.assertTrue(os.path.isfile(mprobe_file))
 
     def test_mtime_probe_uppercase_file_is_removed(self):
-        wdr = pathlib.Path('.dlbroot')
-
-        with (wdr / 'o').open('xb'):
+        with open(os.path.join('.dlbroot', 'o'), 'xb'):
             pass
         try:
-            with (wdr / 'O').open('xb'):
+            with open(os.path.join('.dlbroot', 'O'), 'xb'):
                 pass
         except FileExistsError:
             raise unittest.SkipTest from None  # filesystem is not case-sensitive
 
         with dlb.ex.Context():
-            self.assertTrue((wdr / 'o').is_file())
-            self.assertFalse((wdr / 'O').exists())
+            self.assertTrue(os.path.isfile(os.path.join('.dlbroot', 'o')))
+            self.assertFalse(os.path.exists(os.path.join('.dlbroot', 'O')))
 
     def test_rundb_dir_is_removed(self):
-        wdr = pathlib.Path('.dlbroot')
-        rundb = wdr / 'runs.sqlite'
-        rundb.mkdir()
-
+        os.makedirs(os.path.join('.dlbroot', 'runs.sqlite'))
         with dlb.ex.Context():
             pass
-
-        self.assertTrue(rundb.is_file())
+        self.assertTrue(os.path.isfile(os.path.join('.dlbroot', 'runs.sqlite')))
 
 
 class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
     def test_meaningful_exception_on_permission_error_while_setup(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
-        wdr_t = wdr / 't'
-        wdr_t.mkdir()
-        wdr_t.chmod(0o000)
+        os.mkdir('.dlbroot')
+        temp_path = os.path.join('.dlbroot', 't')
+        os.mkdir(temp_path)
+        os.chmod(temp_path, 0o000)
 
         regex = (
             r"(?m)\A"
@@ -274,12 +261,11 @@ class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirec
             with dlb.ex.Context():
                 pass
 
-        wdr_t.chmod(0o777)
+        os.chmod(temp_path, 0o777)
 
     def test_meaningful_exception_on_permission_error_while_cleanup(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
-        wdr_t = wdr / 't'
+        os.mkdir('.dlbroot')
+        temp_path = os.path.join('.dlbroot', 't')
 
         regex = (
             r"(?m)\A"
@@ -288,16 +274,16 @@ class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirec
         )
         with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
             with dlb.ex.Context():
-                (wdr_t / 'c').mkdir()
-                wdr_t.chmod(0o000)
+                os.mkdir(os.path.join(temp_path, 'c'))
+                os.chmod(temp_path, 0o000)
 
-        wdr_t.chmod(0o777)
+        os.chmod(temp_path, 0o777)
 
 
 class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_root_is_unavailable_if_not_running(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with self.assertRaises(dlb.ex.context.NotRunningError):
             dlb.ex.Context.root_path
@@ -307,7 +293,7 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
             c.root_path
 
     def test_root_is_correct(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with dlb.ex.Context() as c:
             p = c.root_path
@@ -320,7 +306,7 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(p, cl)
 
     def test_path_class_is_correct(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.NoSpacePath)
@@ -337,10 +323,10 @@ class PathsTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual("'path_cls' must be a subclass of 'dlb.fs.Path'", str(cm.exception))
 
     def test_entering_fails_if_path_not_representable(self):
-        pathlib.Path('x y').mkdir()
+        os.mkdir('x y')
 
         with tools_for_test.DirectoryChanger('x y'):
-            pathlib.Path('.dlbroot').mkdir()
+            os.mkdir('.dlbroot')
 
             regex = (
                 r"(?m)\A"
@@ -399,7 +385,7 @@ class RunDatabaseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_nonexistent_is_created(self):
         with dlb.ex.Context():
-            self.assertTrue((pathlib.Path('.dlbroot') / 'runs.sqlite').is_file())
+            self.assertTrue(os.path.isfile(os.path.join('.dlbroot', 'runs.sqlite')))
 
     def test_access_is_possible_in_nonobvious_way_when_running(self):
         with dlb.ex.Context():
@@ -411,7 +397,7 @@ class RunDatabaseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.Context.run_db_()
 
     def test_meaningful_exception_on_corrupt(self):
-        with (pathlib.Path('.dlbroot') / 'runs.sqlite').open('xb') as f:
+        with open(os.path.join('.dlbroot', 'runs.sqlite'), 'xb') as f:
             f.write(b'123')
 
         with self.assertRaises(dlb.ex.ManagementTreeError) as cm:
@@ -426,8 +412,8 @@ class RunDatabaseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fail_if_lock_dir_exists(self):
-        pathlib.Path('.dlbroot').mkdir()
-        (pathlib.Path('.dlbroot') / 'lock').mkdir()
+        os.mkdir('.dlbroot')
+        os.mkdir(os.path.join('.dlbroot', 'lock'))
 
         regex = (
             r"(?m)\A"
@@ -441,8 +427,9 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
                 pass
 
     def test_succeeds_if_lock_file_exists(self):
-        pathlib.Path('.dlbroot').mkdir()
-        (pathlib.Path('.dlbroot') / 'lock').touch()
+        os.mkdir('.dlbroot')
+        with open(os.path.join('.dlbroot', 'lock'), 'xb'):
+            pass
         with dlb.ex.Context():
             pass
 
@@ -450,9 +437,8 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
 class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
     def test_meaningful_exception_on_permission_error(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
-        wdr.chmod(0o000)
+        os.mkdir('.dlbroot')
+        os.chmod('.dlbroot', 0o000)
 
         regex = (
             r"(?m)\A"
@@ -465,11 +451,10 @@ class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmo
             with dlb.ex.Context():
                 pass
 
-        wdr.chmod(0o777)
+        os.chmod('.dlbroot', 0o777)
 
     def test_meaningful_exception_if_unlock_fails(self):
-        wdr = pathlib.Path('.dlbroot')
-        wdr.mkdir()
+        os.mkdir('.dlbroot')
 
         regex = (
             r"(?m)\A"
@@ -478,9 +463,9 @@ class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmo
         )
         with self.assertRaisesRegex(dlb.ex.ManagementTreeError, regex):
             with dlb.ex.Context():
-                wdr.chmod(0o000)
+                os.chmod('.dlbroot', 0o000)
 
-        wdr.chmod(0o777)
+        os.chmod('.dlbroot', 0o777)
 
 
 class TemporaryFilesystemObjectsNotRunningTest(unittest.TestCase):
@@ -568,10 +553,9 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
 
     # noinspection PyCallingNonCallable,PyArgumentList
     def test_root_is_managed_tree_path(self):
-        pathlib.Path('.dlbroot').mkdir()
-        pathlib.Path('a').mkdir()
-        (pathlib.Path('a') / 'b').mkdir()
-        with (pathlib.Path('a') / 'b' / 'c').open('w'):
+        os.mkdir('.dlbroot')
+        os.makedirs(os.path.join('a', 'b'))
+        with open(os.path.join('a', 'b', 'c'), 'w'):
             pass
 
         # noinspection PyTypeChecker
@@ -595,40 +579,39 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(p, C('a/b/c', is_dir=False))
 
     def test_absolute_path_in_working_tree_is_correct(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
+        os.makedirs(os.path.join('a', 'b', 'c'))
 
         with dlb.ex.Context():
-            (pathlib.Path('a') / 'b' / 'c').mkdir(parents=True)
-
             p = dlb.ex.Context.working_tree_path_of(os.getcwd(), is_dir=True)
             self.assertEqual(dlb.fs.Path('.'), p)
 
-            p = dlb.ex.Context.working_tree_path_of(pathlib.Path.cwd() / 'a' / 'b' / 'c' / '..')
+            p = dlb.ex.Context.working_tree_path_of(os.path.join(os.getcwd(), 'a',  'b',  'c',  '..'))
             self.assertEqual(dlb.fs.Path('a/b/'), p)
 
     def test_fails_for_absolute_path_outside_working_tree(self):
-        (pathlib.Path('a') / 'b' / 'c').mkdir(parents=True)
-        (pathlib.Path('a') / 'b2' / 'c2').mkdir(parents=True)
+        os.makedirs(os.path.join('a', 'b', 'c'))
+        os.makedirs(os.path.join('a', 'b2', 'c2'))
 
-        old_cw = pathlib.Path.cwd()
+        old_cw = os.getcwd()
 
-        with tools_for_test.DirectoryChanger(pathlib.Path('a') / 'b'):
-            pathlib.Path('.dlbroot').mkdir()
+        with tools_for_test.DirectoryChanger(os.path.join('a', 'b')):
+            os.mkdir('.dlbroot')
             with dlb.ex.Context():
                 with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
-                    dlb.ex.Context.working_tree_path_of(old_cw / 'a' / 'b2' / 'c2')
+                    dlb.ex.Context.working_tree_path_of(os.path.join(old_cw, 'a', 'b2', 'c2'))
                 msg = "does not start with the working tree's root path"
                 self.assertEqual(msg, str(cm.exception))
 
     def test_is_class_of_argument(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
             p = dlb.ex.Context.working_tree_path_of(dlb.fs.NoSpacePath('a/../b'), existing=True, collapsable=True)
             self.assertIs(p.__class__, dlb.fs.NoSpacePath)
 
     def test_fails_on_nonrepresentable(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
             regexp = r"\A()invalid path for 'ManagedTreePathTest\.StupidPath': .+\Z"
@@ -637,19 +620,19 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
                                                     existing=True, collapsable=True)
 
     def test_fails_on_upwards(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             regexp = r"\A()is an upwards path: .+\Z"
             with self.assertRaisesRegex(dlb.fs.manip.PathNormalizationError, regexp):
                 dlb.ex.Context.working_tree_path_of(dlb.fs.Path('a/../..'), existing=True, collapsable=True)
 
     def test_succeeds_on_nonexistent_if_assuming(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
         with dlb.ex.Context():
             dlb.ex.Context.working_tree_path_of('a/b', existing=True)
 
     def test_fails_on_nonexistent_if_not_assuming(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
         with dlb.ex.Context():
             with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
                 dlb.ex.Context.working_tree_path_of('a/b')
@@ -660,11 +643,11 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_on_symlink_in_managedtree_if_not_assuming(self):
-        pathlib.Path('.dlbroot').mkdir()
-        (pathlib.Path('x') / 'b').mkdir(parents=True)
+        os.mkdir('.dlbroot')
+        os.makedirs(os.path.join('x', 'b'))
 
         try:
-            pathlib.Path('a').symlink_to('x', target_is_directory=True)
+            os.symlink('x', 'a', target_is_directory=True)
         except OSError:  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
@@ -675,15 +658,15 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_on_parent(self):
-        pathlib.Path('u').mkdir()
+        os.mkdir('u')
         with tools_for_test.DirectoryChanger('u'):
-            pathlib.Path('.dlbroot').mkdir()
+            os.mkdir('.dlbroot')
             with dlb.ex.Context():
                 with self.assertRaises(ValueError):
                     dlb.ex.Context.working_tree_path_of('../')
 
     def test_fails_on_management_tree_if_not_permitted(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
             with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
@@ -708,8 +691,8 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
 
     # noinspection PyCallingNonCallable,PyTypeChecker
     def test_corrects_isdir_if_notassuming(self):
-        pathlib.Path('.dlbroot').mkdir()
-        pathlib.Path('d').mkdir()
+        os.mkdir('.dlbroot')
+        os.mkdir('d')
         with open('f', 'w'):
             pass
 
@@ -720,7 +703,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(dlb.ex.Context.working_tree_path_of('f/'), C('f'))
 
     def test_fail_if_unsupported_type(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
             with self.assertRaises(TypeError) as cm:
@@ -729,7 +712,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
     def test_isdir_is_respected(self):
-        pathlib.Path('.dlbroot').mkdir()
+        os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
             self.assertTrue(dlb.ex.Context.working_tree_path_of('a', is_dir=True, existing=True).is_dir())

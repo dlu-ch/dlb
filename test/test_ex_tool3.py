@@ -15,7 +15,6 @@ import dlb.fs.manip
 import dlb.ex.rundb
 import marshal
 import io
-import pathlib
 import unittest
 import tools_for_test
 
@@ -85,8 +84,7 @@ class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirecto
 
     def test_absolute_in_managed_tree_remains_absolute(self):
         os.mkdir('.dlbroot')
-
-        with pathlib.Path('a.cpp').open('xb'):
+        with open('a.cpp', 'xb'):
             pass
 
         with dlb.ex.Context() as c:
@@ -95,14 +93,13 @@ class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirecto
             self.assertEqual(c.root_path / 'a.cpp', r.source_file)
 
     def test_absolute_can_be_outside_managed_tree(self):
-        with pathlib.Path('x.cpp').open('xb'):
+        with open('x.cpp', 'xb'):
             pass
 
         os.mkdir('t')
         with tools_for_test.DirectoryChanger('t'):
             os.mkdir('.dlbroot')
-
-            with pathlib.Path('a.cpp').open('xb'):
+            with open('a.cpp', 'xb'):
                 pass
 
             with dlb.ex.Context() as c:
@@ -113,7 +110,7 @@ class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirecto
 class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonnormalized_outputfile_path(self):
-        with pathlib.Path('a.cpp').open('xb'):
+        with open('a.cpp', 'xb'):
             pass
 
         regex = (
@@ -130,10 +127,9 @@ class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryWorkingDirecto
 class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
 
     def test_fails_for_inaccessible_inputfile(self):
-        pathlib.Path('.dlbroot').mkdir()
-        src = pathlib.Path('src')
-        src.mkdir()
-        src.chmod(0o000)
+        os.mkdir('.dlbroot')
+        os.mkdir('src')
+        os.chmod('src', 0o000)
 
         regex = (
             r"(?m)\A"
@@ -151,7 +147,7 @@ class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_t
 class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_input_as_output(self):
-        with pathlib.Path('a.cpp').open('xb'):
+        with open('a.cpp', 'xb'):
             pass
 
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -198,12 +194,10 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
 class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_explicit_input_dependency_of_wrong_type(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
-        with (src / 'b').open('xb'):
+        with open(os.path.join('src', 'b'), 'xb'):
             pass
 
         t = ATool(source_file='src', object_file='a.o')
@@ -247,10 +241,8 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_conflicting_input_dependency_types(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', include_directories=['src/a.cpp/'], object_file='a.o')
@@ -267,12 +259,10 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
 class RunDoesNoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_run_causes_redo_only_the_first_time(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
-        with pathlib.Path('a.o').open('xb'):
+        with open('a.o', 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
@@ -292,10 +282,8 @@ class RunDoesNoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirecto
 class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
@@ -324,8 +312,8 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
 
         with dlb.ex.Context():
             self.assertIsNone(t.run())
-            (src / 'a.cpp').chmod(0o000)
-            (src / 'a.cpp').chmod(0o600)
+            os.chmod(os.path.join('src', 'a.cpp'), 0o000)
+            os.chmod(os.path.join('src', 'a.cpp'), 0o600)
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertIsNotNone(t.run())
@@ -360,15 +348,14 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
 class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
-        nonregular = src / 'n'
+        nonregular = os.path.join('src', 'n')
 
         try:
-            nonregular.symlink_to('a/', target_is_directory=True)
+            os.symlink('a/', nonregular, target_is_directory=True)
         except OSError:  # on platform or filesystem that does not support symlinks
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
@@ -379,8 +366,8 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorki
             self.assertIsNotNone(t.run())
             self.assertIsNone(t.run())
 
-        nonregular.unlink()
-        nonregular.symlink_to('a', target_is_directory=False)
+        os.remove(nonregular)
+        os.symlink('a', nonregular, target_is_directory=False)
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -388,7 +375,7 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorki
             self.assertRegex(output.getvalue(), r'\b()symbolic link target has changed\b')
             self.assertIsNone(t.run())
 
-        nonregular.unlink()
+        os.remove(nonregular)
         try:
             os.mkfifo(nonregular)
         except OSError:  # on platform or filesystem that does not support named pipe
@@ -406,12 +393,10 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorki
 class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
-        with (src / 'b.cpp').open('xb'):
+        with open(os.path.join('src', 'b.cpp'), 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
@@ -435,17 +420,15 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTes
 class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_if_not_existing(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
 
-        pathlib.Path('a.o').unlink()
+        os.remove('a.o')
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -455,18 +438,16 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryT
         self.assertRegex(output.getvalue(), regex)
 
     def test_redo_if_not_output_is_directory(self):
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
             self.assertIsNotNone(t.run())
 
-        pathlib.Path('a.o').unlink()
-        pathlib.Path('a.o').mkdir()
+        os.remove('a.o')
+        os.mkdir('a.o')
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -494,10 +475,8 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
                 with open((context.root_path / self.object_file).native, 'wb'):
                     pass
 
-        src = pathlib.Path('src')
-        src.mkdir()
-
-        with (src / 'a.cpp').open('xb'):
+        os.mkdir('src')
+        with open(os.path.join('src', 'a.cpp'), 'xb'):
             pass
 
         t = BTool(object_file='a.o')
