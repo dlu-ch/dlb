@@ -8,8 +8,8 @@ here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-import dlb.ex.worktree
 import dlb.ex.rundb
+import dlb.ex.worktree
 import stat
 import collections
 import contextlib
@@ -180,34 +180,34 @@ class EncodeFsobjectMemoTest(unittest.TestCase):
     def test_fails_for_noninteger_mtime(self):
         with self.assertRaises(TypeError):
             # noinspection PyTypeChecker
-            m = dlb.ex.worktree.FilesystemObjectMemo(
-                stat=dlb.ex.worktree.FilesystemStatSummary(mode=stat.S_IFREG, size=0, mtime_ns=1.25, uid=0, gid=0),
+            m = dlb.ex.rundb.FilesystemObjectMemo(
+                stat=dlb.ex.rundb.FilesystemStatSummary(mode=stat.S_IFREG, size=0, mtime_ns=1.25, uid=0, gid=0),
                 symlink_target=None)
             dlb.ex.rundb.encode_fsobject_memo(m)
 
     def test_fails_for_symlink_without_target(self):
         with self.assertRaises(TypeError):
-            m = dlb.ex.worktree.FilesystemObjectMemo(
-                stat=dlb.ex.worktree.FilesystemStatSummary(mode=stat.S_IFLNK, size=0, mtime_ns=0, uid=0, gid=0),
+            m = dlb.ex.rundb.FilesystemObjectMemo(
+                stat=dlb.ex.rundb.FilesystemStatSummary(mode=stat.S_IFLNK, size=0, mtime_ns=0, uid=0, gid=0),
                 symlink_target=None)
             dlb.ex.rundb.encode_fsobject_memo(m)
 
         with self.assertRaises(TypeError):
             # noinspection PyTypeChecker
-            m = dlb.ex.worktree.FilesystemObjectMemo(
-                stat=dlb.ex.worktree.FilesystemStatSummary(mode=stat.S_IFLNK, size=0, mtime_ns=0, uid=0, gid=0),
+            m = dlb.ex.rundb.FilesystemObjectMemo(
+                stat=dlb.ex.rundb.FilesystemStatSummary(mode=stat.S_IFLNK, size=0, mtime_ns=0, uid=0, gid=0),
                 symlink_target=b'')
             dlb.ex.rundb.encode_fsobject_memo(m)
 
     def test_fails_for_nosymlink_with_target(self):
         with self.assertRaises(ValueError):
-            m = dlb.ex.worktree.FilesystemObjectMemo(
-                stat=dlb.ex.worktree.FilesystemStatSummary(mode=stat.S_IFREG, size=0, mtime_ns=0, uid=0, gid=0),
+            m = dlb.ex.rundb.FilesystemObjectMemo(
+                stat=dlb.ex.rundb.FilesystemStatSummary(mode=stat.S_IFREG, size=0, mtime_ns=0, uid=0, gid=0),
                 symlink_target='/')
             dlb.ex.rundb.encode_fsobject_memo(m)
 
     def test_returns_nonempty_for_non_existent(self):
-        m = dlb.ex.worktree.FilesystemObjectMemo()
+        m = dlb.ex.rundb.FilesystemObjectMemo()
         e = dlb.ex.rundb.encode_fsobject_memo(m)
         self.assertNotEqual(b'', e)
 
@@ -226,12 +226,12 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
 
     def test_runtrip_works(self):
         paths = [
-            dlb.ex.worktree.FilesystemObjectMemo(),
-            dlb.ex.worktree.FilesystemObjectMemo(
-                stat=dlb.ex.worktree.FilesystemStatSummary(mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
+            dlb.ex.rundb.FilesystemObjectMemo(),
+            dlb.ex.rundb.FilesystemObjectMemo(
+                stat=dlb.ex.rundb.FilesystemStatSummary(mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
                 symlink_target=None),
-            dlb.ex.worktree.FilesystemObjectMemo(
-                stat=dlb.ex.worktree.FilesystemStatSummary(
+            dlb.ex.rundb.FilesystemObjectMemo(
+                stat=dlb.ex.rundb.FilesystemStatSummary(
                     mode=stat.S_IFLNK | stat.S_IRWXG, size=2, mtime_ns=3, uid=4, gid=5),
                 symlink_target='/a/b/c/')
         ]
@@ -242,8 +242,8 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
         self.assertEqual(paths, paths_roundtrip)
 
     def test_fails_for_invalid_encoded(self):
-        m = dlb.ex.worktree.FilesystemObjectMemo(
-             stat=dlb.ex.worktree.FilesystemStatSummary(mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
+        m = dlb.ex.rundb.FilesystemObjectMemo(
+             stat=dlb.ex.rundb.FilesystemStatSummary(mode=stat.S_IFREG, size=2, mtime_ns=3, uid=4, gid=5),
              symlink_target=None)
 
         with self.assertRaises(ValueError):
@@ -270,8 +270,8 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             dlb.ex.rundb.decode_encoded_fsobject_memo(b)  # symlink target for non-symlink
 
-        m = dlb.ex.worktree.FilesystemObjectMemo(
-             stat=dlb.ex.worktree.FilesystemStatSummary(mode=stat.S_IFLNK, size=2, mtime_ns=3, uid=4, gid=5),
+        m = dlb.ex.rundb.FilesystemObjectMemo(
+             stat=dlb.ex.rundb.FilesystemStatSummary(mode=stat.S_IFLNK, size=2, mtime_ns=3, uid=4, gid=5),
              symlink_target='a')
         b = dlb.ex.rundb.encode_fsobject_memo(m)
         t = marshal.loads(b)

@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import dlb.ex
-import dlb.ex.rundb
 import stat
 import time
 import unittest

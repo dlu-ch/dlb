@@ -26,8 +26,8 @@ from typing import Type, Optional, Any, Dict, Tuple, Set, Iterable, Collection
 from .. import ut
 from .. import fs
 from .. import di
-from . import worktree
 from . import rundb
+from . import worktree
 from . import context as context_
 from . import depend
 from . import dependaction
@@ -185,10 +185,10 @@ ut.set_module_name_to_parent(_RedoContext)
 # TODO move to worktree (rundb dependency?)
 def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
                                                  needs_redo: bool, root_path: fs.Path) \
-        -> Tuple[worktree.FilesystemObjectMemo, bool]:
+        -> Tuple[rundb.FilesystemObjectMemo, bool]:
 
     path = None
-    memo = worktree.FilesystemObjectMemo()
+    memo = rundb.FilesystemObjectMemo()
 
     try:
         path = rundb.decode_encoded_path(encoded_path)  # may raise ValueError
@@ -229,7 +229,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
 
 
 # TODO move to worktree (rundb dependency?)
-def _check_input_memo_for_redo(memo: worktree.FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
+def _check_input_memo_for_redo(memo: rundb.FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
                                is_explicit: bool) -> Optional[str]:
     # Compares the present *memo* if a filesystem object in the managed tree that is an input dependency with its
     # last known encoded state *last_encoded_memo*, if any.
@@ -280,7 +280,7 @@ def _check_input_memo_for_redo(memo: worktree.FilesystemObjectMemo, last_encoded
 
 def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
                                                     context: context_.Context) \
-        -> Dict[str, worktree.FilesystemObjectMemo]:
+        -> Dict[str, rundb.FilesystemObjectMemo]:
 
     # For all explicit input dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.

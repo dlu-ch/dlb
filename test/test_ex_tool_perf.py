@@ -11,7 +11,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import dlb.ex.rundb
 import logging
 import cProfile
 import pstats

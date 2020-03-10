@@ -16,6 +16,7 @@ import stat
 from typing import Type, Set, Optional, Sequence, Hashable
 from .. import ut
 from .. import fs
+from . import rundb
 from . import worktree
 from . import context as context_
 from . import depend
@@ -79,7 +80,7 @@ class Action:
         return NotImplemented
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
-    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
         raise ValueError("is not a filesystem object")
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
@@ -97,19 +98,19 @@ class _FilesystemObjectMixin(Action):
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
         return ut.to_permanent_local_bytes(validated_values)
 
-    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
         pass
 
 
 class _RegularFileMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISREG(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a regular file")
 
 
 class _NonRegularFileMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if stat.S_ISREG(memo.stat.mode):
             raise ValueError("filesystem object exists, but is a regular file")
@@ -118,7 +119,7 @@ class _NonRegularFileMixin(_FilesystemObjectMixin):
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISDIR(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a directory")

@@ -17,7 +17,6 @@ from typing import Optional, Union, Dict, Tuple
 from .. import ut
 from .. import fs
 from . import platform
-from . import worktree
 
 
 # Why 'marshal'?
@@ -47,6 +46,21 @@ from . import worktree
 #
 #   - A round-trip for typical data takes abound 5 to 10 as long with json as with marshal
 #   - The serialized data is of about the same length; some data is a bit shorter with marshal, some a bit longer.
+
+
+@dataclasses.dataclass
+class FilesystemStatSummary:
+    mode: int
+    size: int
+    mtime_ns: int
+    uid: int
+    gid: int
+
+
+@dataclasses.dataclass
+class FilesystemObjectMemo:
+    stat: Optional[FilesystemStatSummary] = None
+    symlink_target: Optional[str] = None
 
 
 def is_encoded_path(encoded_path: str) -> bool:
@@ -85,10 +99,10 @@ def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
     return fs.Path(s, is_dir=is_dir or s == '.')  # path from string is faster than from components
 
 
-def encode_fsobject_memo(memo: worktree.FilesystemObjectMemo) -> bytes:
+def encode_fsobject_memo(memo: FilesystemObjectMemo) -> bytes:
     # Return a representation of *memo* as marshal-encoded tuple.
 
-    if not isinstance(memo, worktree.FilesystemObjectMemo):
+    if not isinstance(memo, FilesystemObjectMemo):
         raise TypeError
 
     if memo.stat is None:  # filesystem object did not exist
@@ -109,7 +123,7 @@ def encode_fsobject_memo(memo: worktree.FilesystemObjectMemo) -> bytes:
         memo.symlink_target))
 
 
-def decode_encoded_fsobject_memo(encoded_memo: bytes) -> worktree.FilesystemObjectMemo:
+def decode_encoded_fsobject_memo(encoded_memo: bytes) -> FilesystemObjectMemo:
     if not isinstance(encoded_memo, bytes):
         raise TypeError
 
@@ -118,7 +132,7 @@ def decode_encoded_fsobject_memo(encoded_memo: bytes) -> worktree.FilesystemObje
         raise ValueError
 
     if not t:
-        return worktree.FilesystemObjectMemo()
+        return FilesystemObjectMemo()
 
     mode, size, mtime_ns, uid, gid, symlink_target = t  # ValueError if number does not match
     if not all(isinstance(f, int) for f in t[:5]):
@@ -130,8 +144,8 @@ def decode_encoded_fsobject_memo(encoded_memo: bytes) -> worktree.FilesystemObje
     if stat.S_ISLNK(mode) and not isinstance(symlink_target, str):
         raise ValueError
 
-    return worktree.FilesystemObjectMemo(
-        stat=worktree.FilesystemStatSummary(mode=mode, size=size, mtime_ns=mtime_ns, uid=uid, gid=gid),
+    return FilesystemObjectMemo(
+        stat=FilesystemStatSummary(mode=mode, size=size, mtime_ns=mtime_ns, uid=uid, gid=gid),
         symlink_target=symlink_target)
 
 

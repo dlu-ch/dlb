@@ -186,7 +186,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
         sr0 = os.lstat('x')
 
         m = dlb.ex.worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
-        self.assertIsInstance(m, dlb.ex.worktree.FilesystemObjectMemo)
+        self.assertIsInstance(m, dlb.ex.rundb.FilesystemObjectMemo)
 
         self.assertEqual(sr0.st_mode, m.stat.mode)
         self.assertEqual(sr0.st_size, m.stat.size)
@@ -208,7 +208,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 
             sr0 = os.lstat('s')
             m = dlb.ex.worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
-            self.assertIsInstance(m, dlb.ex.worktree.FilesystemObjectMemo)
+            self.assertIsInstance(m, dlb.ex.rundb.FilesystemObjectMemo)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertEqual(m.symlink_target, 'd' + os.path.sep)
@@ -228,7 +228,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 
             sr0 = os.lstat('s')
             m = dlb.ex.worktree.read_filesystem_object_memo(dlb.fs.Path(os.path.join(os.getcwd(), 's')))
-            self.assertIsInstance(m, dlb.ex.worktree.FilesystemObjectMemo)
+            self.assertIsInstance(m, dlb.ex.rundb.FilesystemObjectMemo)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertIsInstance(m.symlink_target, str)

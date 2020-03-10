@@ -11,8 +11,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import dlb.ex.worktree
-import dlb.ex.rundb
 import marshal
 import io
 import unittest
@@ -336,7 +334,7 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
             rundb = dlb.ex.context._get_rundb()
             rundb.replace_fsobject_inputs(1, {
                 dlb.ex.rundb.encode_path(dlb.fs.Path('src/a.cpp')):
-                    (True, dlb.ex.rundb.encode_fsobject_memo(dlb.ex.worktree.FilesystemObjectMemo()))
+                    (True, dlb.ex.rundb.encode_fsobject_memo(dlb.ex.rundb.FilesystemObjectMemo()))
             })
 
             output = io.StringIO()

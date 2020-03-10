@@ -27,9 +27,9 @@ import asyncio
 from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable
 from .. import ut
 from .. import fs
+from . import rundb
 from . import worktree
 from .worktree import *
-from . import rundb
 from . import aseq
 assert sys.version_info >= (3, 7)
 

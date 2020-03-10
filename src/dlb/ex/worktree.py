@@ -14,10 +14,10 @@ __all__ = (
 import os
 import stat
 import shutil
-import dataclasses
 from typing import Optional, Union, Tuple, Type
 from .. import ut
 from .. import fs
+from . import rundb
 
 
 # a directory containing a directory with this name is considered a working tree of dlb
@@ -44,21 +44,6 @@ class WorkingTreePathError(ValueError):
     def __init__(self, *args, oserror: Optional[OSError] = None):
         super().__init__(*args)
         self.oserror = oserror
-
-
-@dataclasses.dataclass
-class FilesystemStatSummary:
-    mode: int
-    size: int
-    mtime_ns: int
-    uid: int
-    gid: int
-
-
-@dataclasses.dataclass
-class FilesystemObjectMemo:
-    stat: Optional[FilesystemStatSummary] = None
-    symlink_target: Optional[str] = None
 
 
 class _KeepFirstRmTreeException:
@@ -143,7 +128,7 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
             raise
 
 
-def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> FilesystemObjectMemo:
+def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> rundb.FilesystemObjectMemo:
     # Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
     # as a ``FilesystemObjectMemo`` object.
     #
@@ -175,9 +160,9 @@ def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> FilesystemObje
 
     sr = os.lstat(abs_path)
 
-    memo = FilesystemObjectMemo()
-    memo.stat = FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
-                                      uid=sr.st_uid, gid=sr.st_gid)
+    memo = rundb.FilesystemObjectMemo()
+    memo.stat = rundb.FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
+                                            uid=sr.st_uid, gid=sr.st_gid)
 
     if not stat.S_ISLNK(sr.st_mode):
         return memo
