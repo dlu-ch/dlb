@@ -408,16 +408,15 @@ class _RootSpecifics:
             )
             raise ValueError(msg) from None
 
-        self._root_path_native = self._root_path.native
+        root_path = str(self._root_path.native)
+        self._root_path_native_str = root_path
 
         # from pathlib.py of Python 3.7.3:
         # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
 
-        root_path = str(self._root_path_native)
-
         try:
             # may raise FileNotFoundError, RuntimeError
-            real_root_path = self._root_path_native.raw.resolve(strict=True)
+            real_root_path = self._root_path.native.raw.resolve(strict=True)
             if not os.path.samefile(str(real_root_path), root_path):
                 raise ValueError
         except (ValueError, OSError, RuntimeError):
@@ -538,8 +537,7 @@ class _RootSpecifics:
     def _cleanup(self):
         self._rundb.cleanup()
         self._rundb.commit()
-        temporary_path = os.path.join(str(self._root_path_native),
-                                      _MANAGEMENTTREE_DIR_NAME, _TEMPORARY_DIR_NAME)
+        temporary_path = os.path.join(self._root_path_native_str, _MANAGEMENTTREE_DIR_NAME, _TEMPORARY_DIR_NAME)
         manip.remove_filesystem_object(temporary_path, ignore_non_existent=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
@@ -569,7 +567,7 @@ class _RootSpecifics:
                 most_serious_exception = e
             self._mtime_probe = None
 
-        lock_dir_path = os.path.join(str(self._root_path_native), _MANAGEMENTTREE_DIR_NAME, _LOCK_DIRNAME)
+        lock_dir_path = os.path.join(self._root_path_native_str, _MANAGEMENTTREE_DIR_NAME, _LOCK_DIRNAME)
         try:
             os.rmdir(lock_dir_path)  # unlock
         except Exception as e:
@@ -704,7 +702,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 (native_components[0],) + \
                 manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
 
-            native_root_path_components = self._root_path_native.components
+            native_root_path_components = self._root_path.native.components
             n = len(native_root_path_components)
             if normalized_native_components[:n] != native_root_path_components:
                 raise manip.PathNormalizationError("does not start with the working tree's root path")
@@ -712,7 +710,7 @@ class _BaseContext(metaclass=_ContextMeta):
             rel_components = ('',) + normalized_native_components[n:]
         else:
             # 'collapsable' means only the part relative to the working tree's root
-            ref_dir_path = None if collapsable else str(self._root_path_native)
+            ref_dir_path = None if collapsable else self._root_path_native_str
             rel_components = ('',) + manip.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
 
@@ -733,7 +731,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 s = str(rel_path.native)
                 if s[:2] == '.' + os.path.sep:
                     s = s[2:]
-                sr = os.lstat(os.path.sep.join([str(self._root_path_native), s]))
+                sr = os.lstat(os.path.sep.join([self._root_path_native_str, s]))
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
                 raise manip.PathNormalizationError(oserror=e) from None
@@ -755,7 +753,7 @@ class _BaseContext(metaclass=_ContextMeta):
         if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
             raise ValueError("'prefix' must not contain a path separator")
 
-        t = os.path.join(str(self._root_path_native), _MANAGEMENTTREE_DIR_NAME, _TEMPORARY_DIR_NAME)
+        t = os.path.join(self._root_path_native_str, _MANAGEMENTTREE_DIR_NAME, _TEMPORARY_DIR_NAME)
         is_dir = bool(is_dir)
         if is_dir:
             p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)

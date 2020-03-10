@@ -148,7 +148,7 @@ class _Native:
     def __fspath__(self) -> str:  # make this class a safer os.PathLike
         return str(self)
 
-    def __str__(self) -> str:  # TODO cache?
+    def __str__(self) -> str:
         s = str(self._native_components)
         return s
 
@@ -210,6 +210,7 @@ class Path(metaclass=_PathMeta):
 
             self._components = path._components
             self._is_dir = path._is_dir
+            self._native = path._native
             check = self.__class__ is not path.__class__
 
         elif isinstance(path, str):  # must be very fast
@@ -223,6 +224,7 @@ class Path(metaclass=_PathMeta):
 
             self._components = (anchor,) + tuple(c for c in path.split('/') if c and c != '.')
             self._is_dir = path[-1] == '/' or path[-2:] == '/.'
+            self._native = None
 
         elif isinstance(path, collections.abc.Sequence):
 
@@ -236,12 +238,16 @@ class Path(metaclass=_PathMeta):
                 raise ValueError("if 'path' is a parts tuple, none except its first element must contain '/'")
             self._components = (components[0],) + nonroot_components
             self._is_dir = False
+            self._native = None
 
         else:
 
             # convert
             if isinstance(path, _Native):
+                self._native = path
                 path = path.raw
+            else:
+                self._native = None
 
             if not isinstance(path, pathlib.PurePath):
                 raise TypeError("'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence")
@@ -309,6 +315,7 @@ class Path(metaclass=_PathMeta):
         p._components = components
         if is_dir is not None:
             p._is_dir = bool(is_dir)
+        p._native = None
         p._sanitize_is_dir()
         p._check_constrains()
         return p
@@ -437,7 +444,9 @@ class Path(metaclass=_PathMeta):
     @property
     def native(self):
         # must be fast
-        return _Native(_native_components(self.components))  # does _not_ check restrictions again
+        if self._native is None:
+            self._native = _Native(_native_components(self.components))  # does _not_ check restrictions again
+        return self._native
 
     def _as_string(self) -> str:
         c = self._components

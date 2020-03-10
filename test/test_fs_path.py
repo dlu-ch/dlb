@@ -261,9 +261,9 @@ class OrderingAndComparisonTest(unittest.TestCase):
         self.assertEqual(len(s), 3)
 
 
-class TransformationTest(unittest.TestCase):
+class AppendTest(unittest.TestCase):
 
-    def test_appending_relative_to_dir_is_possible(self):
+    def test_relative_to_dir_is_possible(self):
         p = dlb.fs.Path('..') / dlb.fs.Path('a/b/c/d')
         self.assertEqual(p, dlb.fs.Path('../a/b/c/d'))
 
@@ -276,17 +276,27 @@ class TransformationTest(unittest.TestCase):
         p = '/u/v/' / dlb.fs.Path('.')
         self.assertEqual(p, dlb.fs.Path('/u/v/'))
 
-    def test_appending_relative_to_nondir_is_not_permitted(self):
+    def test_fails_for_nondir(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('../x') / dlb.fs.Path('a/b/c/d')
         self.assertEqual("cannot append to non-directory path: Path('../x')", str(cm.exception))
 
-    def test_appending_absolute_to_dir_is_not_permitted(self):
+    def test_fails_for_absolute(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('..') / dlb.fs.Path('/a/b/c/d')
         self.assertEqual("cannot append absolute path: Path('/a/b/c/d')", str(cm.exception))
 
-    def test_relative_removes_prefix(self):
+    def test_affects_native(self):
+        p = dlb.fs.Path('a/b/c/')
+        pn = str(p.native)
+        p2 = p / dlb.fs.Path('x/y')
+        pn2 = str(p2.native)
+        self.assertNotEqual(pn2, pn)
+
+
+class RelativeToTest(unittest.TestCase):
+
+    def test_removes_prefix(self):
         p = dlb.fs.Path('../../a/b/c/../d/e/f/').relative_to('../../a/b/')
         self.assertEqual(p, dlb.fs.Path('c/../d/e/f/'))
 
@@ -299,17 +309,17 @@ class TransformationTest(unittest.TestCase):
         p = dlb.fs.Path('/u/v/w').relative_to('/')
         self.assertEqual(p, dlb.fs.Path('u/v/w'))
 
-    def test_relative_fails_for_nondirectory(self):
+    def test_fails_for_nondirectory(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('a').relative_to(dlb.fs.Path('b'))
         self.assertEqual("since Path('b') is not a directory, a path cannot be relative to it", str(cm.exception))
 
-    def test_relative_fails_if_other_no_prefix_and_not_collapsable(self):
+    def test_fails_if_other_no_prefix_and_not_collapsable(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('a').relative_to(dlb.fs.Path('b/'))
         self.assertEqual("'a' does not start with 'b/'", str(cm.exception))
 
-    def test_relative_starts_with_dotdot_if_other_no_prefix_and_collapsable(self):
+    def test_starts_with_dotdot_if_other_no_prefix_and_collapsable(self):
         p = dlb.fs.Path('a').relative_to(dlb.fs.Path('b/'), collapsable=True)
         self.assertEqual('../a', p)
 
@@ -319,7 +329,7 @@ class TransformationTest(unittest.TestCase):
         p = dlb.fs.Path('/a/b/d').relative_to(dlb.fs.Path('/a/b/c/'), collapsable=True)
         self.assertEqual('../d', p)
 
-    def test_relative_fails_if_only_one_absolute(self):
+    def test_fails_if_only_one_absolute(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('/a/b').relative_to(dlb.fs.Path('a/b/c/'), collapsable=True)
         self.assertEqual("'/a/b' cannot be relative to 'a/b/c/'", str(cm.exception))
@@ -328,14 +338,17 @@ class TransformationTest(unittest.TestCase):
             dlb.fs.Path('a/b').relative_to(dlb.fs.Path('/a/b/c/'), collapsable=True)
         self.assertEqual("'a/b' cannot be relative to '/a/b/c/'", str(cm.exception))
 
-    def test_parts_of_relative_and_absolute_are_different(self):
+
+class PartsAndSliceTest(unittest.TestCase):
+
+    def test_relative_and_absolute_are_different(self):
         p = dlb.fs.Path('u/v/w')
         self.assertEqual(p.parts, ('u', 'v', 'w'))
 
         p = dlb.fs.Path('/u/v/w')
         self.assertEqual(p.parts, ('/', 'u', 'v', 'w'))
 
-    def test_parts_of_directory_and_nondirectory_are_equal(self):
+    def test_directory_and_nondirectory_are_equal(self):
         p = dlb.fs.Path('/u/v/w')
         self.assertEqual(p.parts, ('/', 'u', 'v', 'w'))
 
@@ -532,6 +545,11 @@ class NativeComponentsTest(unittest.TestCase):
 
 class NativeTest(unittest.TestCase):
 
+    def test_construction_of_nonnative_keeps_native(self):
+        pn = dlb.fs.Path.Native('x/y')
+        p = dlb.fs.Path(pn)
+        self.assertIs(p.native, pn)
+
     def test_str_prefixes_relative_with_dot(self):
         s = str(dlb.fs.Path('x').native)
         self.assertEqual(s.replace('\\', '/'), './x')
@@ -586,7 +604,6 @@ class NativeTest(unittest.TestCase):
         self.assertEqual(3, CheckCountingPath.n)
 
     def test_isinstance_checks_restrictions(self):
-
         self.assertIsInstance(dlb.fs.Path('a').native, dlb.fs.Path.Native)
         self.assertIsInstance(dlb.fs.NoSpacePath('a').native, dlb.fs.Path.Native)
         self.assertNotIsInstance(dlb.fs.Path('a ').native, dlb.fs.NoSpacePath)
@@ -594,7 +611,6 @@ class NativeTest(unittest.TestCase):
         self.assertNotIsInstance(dlb.fs.Path('a '), dlb.fs.NoSpacePath.Native)
 
     def test_issubclass(self):
-
         self.assertFalse(issubclass(dlb.fs.Path.Native, dlb.fs.Path))
         self.assertTrue(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.Path.Native))
         self.assertFalse(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.PortableWindowsPath.Native))
