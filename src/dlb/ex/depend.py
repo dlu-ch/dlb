@@ -67,9 +67,9 @@ class Dependency(mult.MultiplicityHolder):
 
     # final
     def validate(self, value) -> Optional[Union[V, Tuple[V, ...]]]:
-        if not isinstance(self, ConcreteDependency):
+        if not hasattr(self, 'Value'):
             msg = (
-                f"{self.__class__!r} is abstract\n"
+                f"{self.__class__!r} is an abstract dependency class\n"
                 f"  | use one of its documented subclasses instead"
             )
             raise NotImplementedError(msg)
@@ -109,10 +109,6 @@ class Dependency(mult.MultiplicityHolder):
         return tuple(v for v in value)
 
 
-class ConcreteDependency:
-    pass
-
-
 class Input(Dependency):
     pass
 
@@ -121,13 +117,9 @@ class Output(Dependency):
     pass
 
 
-# validated value is a dlb.fs.Path instance (if multiplicity is None) or a tuple of dlb.fs.Path instance (otherwise)
-# TODO document
-class FilesystemObject(Dependency):
-    pass
+class _FilesystemObjectMixin:
+    Value = fs.Path
 
-
-class _FilesystemObjectMixin(FilesystemObject):
     def __init__(self, *, cls: Type[fs.Path] = fs.Path, **kwargs):
         super().__init__(**kwargs)
         if not (isinstance(cls, type) and issubclass(cls, fs.Path)):
@@ -166,19 +158,19 @@ class _DirectoryMixin(_FilesystemObjectMixin):
         return value
 
 
-class RegularFileInput(_NonDirectoryMixin, ConcreteDependency, Input):
+class RegularFileInput(_NonDirectoryMixin, Input):
     pass
 
 
-class NonRegularFileInput(_NonDirectoryMixin, ConcreteDependency, Input):
+class NonRegularFileInput(_NonDirectoryMixin, Input):
     pass
 
 
-class DirectoryInput(_DirectoryMixin, ConcreteDependency, Input):
+class DirectoryInput(_DirectoryMixin, Input):
     pass
 
 
-class RegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
+class RegularFileOutput(_NonDirectoryMixin, Output):
 
     def __init__(self, *, replace_by_same_content: bool = True, **kwargs):
         super().__init__(**kwargs)
@@ -189,15 +181,16 @@ class RegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
         return self._replace_by_same_content
 
 
-class NonRegularFileOutput(_NonDirectoryMixin, ConcreteDependency, Output):
+class NonRegularFileOutput(_NonDirectoryMixin, Output):
     pass
 
 
-class DirectoryOutput(_DirectoryMixin, ConcreteDependency, Output):
+class DirectoryOutput(_DirectoryMixin, Output):
     pass
 
 
-class EnvVarInput(ConcreteDependency, Input):
+class EnvVarInput(Input):
+    Value = NotImplemented  # ???
 
     def __init__(self, *, name: str, restriction: Union[str, Pattern], example: str, **kwargs):
         super().__init__(**kwargs)

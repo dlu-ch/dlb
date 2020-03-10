@@ -14,6 +14,16 @@ import re
 import unittest
 
 
+filesystem_dependency_classes = (
+    dlb.ex.depend.RegularFileInput,
+    dlb.ex.depend.NonRegularFileInput,
+    dlb.ex.depend.DirectoryInput,
+    dlb.ex.depend.RegularFileOutput,
+    dlb.ex.depend.NonRegularFileOutput,
+    dlb.ex.depend.DirectoryOutput
+)
+
+
 class BaseDependencyTest(unittest.TestCase):
 
     def test_is_multiplicity_holder(self):
@@ -22,7 +32,7 @@ class BaseDependencyTest(unittest.TestCase):
 
     def test_validate_fail_with_meaningful_message(self):
         msg = (
-            "<class 'dlb.ex.Tool.Dependency'> is abstract\n"
+            "<class 'dlb.ex.Tool.Dependency'> is an abstract dependency class\n"
             "  | use one of its documented subclasses instead"
         )
 
@@ -118,12 +128,16 @@ class CommonOfConcreteFilesystemObjectTest(unittest.TestCase):
         msg = "'cls' is not a subclass of 'dlb.fs.Path'"
         self.assertEqual(str(cm.exception), msg)
 
+    def test_value_is_path(self):
+        for c in filesystem_dependency_classes:
+            self.assertIs(c.Value, dlb.fs.Path, repr(c))
+
 
 class AbstractDependencyValidationTest(unittest.TestCase):
 
     def test_fails_with_meaningful_message(self):
         msg_tmpl = (
-            "<class {!r}> is abstract\n"
+            "<class {!r}> is an abstract dependency class\n"
             "  | use one of its documented subclasses instead"
         )
 
@@ -332,16 +346,7 @@ class TupleFromValueTest(unittest.TestCase):
 class CompatibilityTest(unittest.TestCase):
 
     def test_is_compatible_to_self(self):
-        Ds = [
-            dlb.ex.depend.RegularFileInput,
-            dlb.ex.depend.NonRegularFileInput,
-            dlb.ex.depend.DirectoryInput,
-            dlb.ex.depend.RegularFileOutput,
-            dlb.ex.depend.NonRegularFileOutput,
-            dlb.ex.depend.DirectoryOutput
-        ]
-
-        for D in Ds:
+        for D in filesystem_dependency_classes:
             self.assertTrue(D().compatible_and_no_less_restrictive(D()))
 
         d1 = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.*', example='')
@@ -404,23 +409,40 @@ class CompatibilityTest(unittest.TestCase):
         self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 
 
-class CoverageTest(unittest.TestCase):
-    def test_all_concrete_dependency_is_complete(self):
-        true_subclasses_of_concrete_dependency = {
-            v  for n, v in dlb.ex.depend.__dict__.items() \
-            if isinstance(v, type) and issubclass(v, dlb.ex.depend.ConcreteDependency) and
-               v is not dlb.ex.depend.ConcreteDependency
+class ValueOfNonAbstractDependencyTest(unittest.TestCase):
+
+    def test_each_public_nonabstract_dependency_has_value(self):
+        abstract_dependencies = (
+            dlb.ex.depend.Input,
+            dlb.ex.depend.Output
+        )
+
+        public_dependency_classes_except_abstract_ones = {
+            v for n, v in dlb.ex.depend.__dict__.items() \
+            if isinstance(v, type) and issubclass(v, dlb.ex.depend.Dependency) and
+               v is not dlb.ex.depend.Dependency and not n.startswith('_') and
+               v not in abstract_dependencies
         }
 
-        covered_dependencies = (
-            dlb.ex.depend.RegularFileInput,
-            dlb.ex.depend.NonRegularFileInput,
-            dlb.ex.depend.DirectoryInput,
-            dlb.ex.depend.EnvVarInput,
-            dlb.ex.depend.RegularFileOutput,
-            dlb.ex.depend.NonRegularFileOutput,
-            dlb.ex.depend.DirectoryOutput
+        for v in public_dependency_classes_except_abstract_ones:
+            self.assertTrue(hasattr(v, 'Value'), repr(v))
+
+
+class CoverageTest(unittest.TestCase):
+    def test_all_concrete_dependency_is_complete(self):
+        public_dependency_classes_except_abstract_ones = {
+            v  for n, v in dlb.ex.depend.__dict__.items() \
+            if isinstance(v, type) and issubclass(v, dlb.ex.depend.Dependency) and
+               v is not dlb.ex.depend.Dependency and not n.startswith('_')
+        }
+
+        covered_concrete_dependencies = filesystem_dependency_classes + (dlb.ex.depend.EnvVarInput,)
+
+        covered_abstract_dependencies = (
+            dlb.ex.depend.Input,
+            dlb.ex.depend.Output
         )
 
         # make sure no concrete dependency class is added to dlb.ex.depend without a test here
-        self.assertEqual(set(covered_dependencies), true_subclasses_of_concrete_dependency)
+        self.assertEqual(set(covered_concrete_dependencies) | set(covered_abstract_dependencies),
+                         public_dependency_classes_except_abstract_ones)

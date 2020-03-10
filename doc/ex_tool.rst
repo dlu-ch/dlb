@@ -243,8 +243,9 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :type source: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
 
       :raises ValueError:
-         if *path* is not a managed tree path contained in an explicit output dependency or *source* is not a
-         different managed tree path???.
+         if *path* is not a :term:`managed tree path` contained in an explicit output dependency or *source* is not a
+         :term:`working tree path` of a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of
+         the :term:`management tree` that is different from *path*.
 
 
 Dependency classes
@@ -282,8 +283,8 @@ Example::
     tool.cache_dir_path  # (Path('build/out/Generated/'), Path('src/Implementation/'))
 
 
-Dependency classes are organized in an a hierarchy to their meaning to a :term:`tool` with the means of the following
-abstract classes:
+Dependency classes are organized in an a hierarchy according to their meaning to a :term:`tool` by the means of the
+following abstract classes:
 
 .. graphviz::
 
@@ -295,7 +296,6 @@ abstract classes:
        "dlb.ex.Tool.Input" -> "dlb.ex.Tool.Dependency";
        "dlb.ex.Tool.Output" -> "dlb.ex.Tool.Dependency";
    }
-
 
 .. class:: Tool.Input
 
@@ -374,6 +374,14 @@ Concrete dependency role classes support the following methods and attributes:
    :raise DependencyError:
       if the arguments of the constructor do not match the declared dependency roles of the class
 
+   .. class:: Value
+
+      A (potentically abstract) class such that ``isinstance(v, Value)`` is ``True`` for each validated single value
+      *v* of each instance *t* of this class.
+
+      This is the type of ``t.validate()`` if :attr:`multipliciy` is ``None`` and the type of each member
+      of ``t.validate()`` otherwise.
+
    .. method:: validate(value)
 
       :param value: The concrete dependency to convert and validate except ``None``
@@ -396,6 +404,15 @@ Concrete dependency role classes support the following methods and attributes:
       The multiplicity of the dependency role.
 
       Is ``None`` or a :class:`dlb.ex.mult.MultiplicityRange`.
+
+   .. method:: tuple_from_value(value)
+
+      Return *value* if :attr:`multiplicity` is ``None`` and a tuple of its members otherwise.
+
+      Example::
+
+         # returns a tuple of t.Value objects or raises an exception:
+         >>> v = t.tuple_from_value(t.validate(...))
 
 
 Input dependency role classes
@@ -434,8 +451,9 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
-   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
-   instance of *cls*.
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   otherwise.
 
    Example::
 
@@ -447,6 +465,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
+
+   .. class:: Value
+
+      Is :class:`dlb.fs.Path`.
 
 .. class:: Tool.Input.NonRegularFile(cls=dlb.fs.Path)
 
@@ -460,8 +482,9 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
-   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
-   instance of *cls*.
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   otherwise.
 
    Example::
 
@@ -474,6 +497,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
 
+   .. class:: Value
+
+      Is :class:`dlb.fs.Path`.
+
 .. class:: Tool.Input.Directory(cls=dlb.fs.Path)
 
    Constructs a dependency role for directories, identified by their paths.
@@ -485,8 +512,9 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    Directories outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
-   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
-   as an instance of *cls*.
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the directory's path as an
+   instance of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the
+   directory's paths otherwise.
 
    Example::
 
@@ -498,6 +526,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
+
+   .. class:: Value
+
+      Is :class:`dlb.fs.Path`.
 
 .. class:: Tool.Input.EnvVar(name, restriction, example)
 
@@ -511,7 +543,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    The value of the environment variable is valid if it a string that matches the regular expression *restriction*,
    or if it is ``None`` and *required* is ``False``.
 
-   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is a string or
+   ???Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is a string or
    a dictionary of strings:
 
       a. If *restriction* contains at least one named group: the dictionary of all groups of the validated value
@@ -539,6 +571,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :type restriction: str | :class:`python:typing.Pattern`
    :param example: typical value of a environment variable, *restriction* must match this
    :type example: str
+
+   .. class:: Value
+
+      Is ???.
 
 
 Concrete output dependency role classes
@@ -570,8 +606,9 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
 
-   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path
-   as an instance of *cls*.
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   otherwise.
 
    If *replace_by_same_content* is ``False`` for a dependency role containing *p*, ``context.replace_output(p, q)``
    in :meth:`redo(..., context) <dlb.ex.Tool.redo()>` does not replace *p* if *p* and *q* both exist as accessible
@@ -588,6 +625,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
 
+   .. class:: Value
+
+      Is :class:`dlb.fs.Path`.
+
 .. class:: Tool.Output.NonRegularFile(cls=dlb.fs.Path)
 
    Constructs a dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor
@@ -598,8 +639,9 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
 
-   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the file's path as an
-   instance of *cls*.
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   otherwise.
 
    Example::
 
@@ -612,6 +654,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
 
+   .. class:: Value
+
+      Is :class:`dlb.fs.Path`.
+
 .. class:: Tool.Output.Directory(cls=dlb.fs.Path)
 
    Constructs a dependency role for directories in the :term:`managed tree`, identified by their paths.
@@ -621,8 +667,9 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    and it must be :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>`
    (if the path does not contain :file:`..` components, these requirements are met).
 
-   Each single concrete dependency validated by :meth:`validate() <Tool.Dependency.validate()>` is the directory's path
-   as an instance of *cls*.
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the directory's path as an
+   instance of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the
+   directory's paths otherwise.
 
    Example::
 
@@ -634,6 +681,10 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    :param cls: class to be used to represent the path
    :type cls: dlb.fs.Path
+
+   .. class:: Value
+
+      Is :class:`dlb.fs.Path`.
 
 
 Exceptions

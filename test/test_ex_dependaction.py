@@ -25,6 +25,8 @@ class GetActionTest(unittest.TestCase):
 
 
 class RegisterTest(unittest.TestCase):
+    class DummyAction(dlb.ex.dependaction.Action):
+        pass
 
     def test_fails_for_registered_action(self):
         with self.assertRaises(ValueError):
@@ -32,12 +34,12 @@ class RegisterTest(unittest.TestCase):
                                                 dlb.ex.dependaction.RegularFileInputAction)
 
     def test_fails_for_registered_dependency_id(self):
-
-        class DummyAction(dlb.ex.dependaction.Action):
-            pass
-
         with self.assertRaises(ValueError):
-            dlb.ex.dependaction.register_action(3, dlb.ex.depend.RegularFileInput, DummyAction)
+            dlb.ex.dependaction.register_action(3, dlb.ex.depend.RegularFileInput, RegisterTest.DummyAction)
+
+    def test_fails_for_abstract_dependency_class(self):
+        with self.assertRaises(TypeError):
+            dlb.ex.dependaction.register_action(3, dlb.ex.depend.Input, RegisterTest.DummyAction)
 
 
 class RegularFileInputPermanentLocalInstanceIdTest(unittest.TestCase):

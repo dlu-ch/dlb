@@ -212,10 +212,13 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
 
 
 def register_action(dependency_id: int, dependency: Type[depend.Dependency], action: Type[Action]):
-    # Registers the dependency class 'dependency' and assigns it an action 'action' as well as the
+    # Registers the concrete dependency class 'dependency' and assigns it an action 'action' as well as the
     # dependency id 'dependency_id'.
     # 'dependency_id' must be an integer unique among all registered dependency class and must not change between
     # different dlb run.
+
+    if not (issubclass(dependency, depend.Dependency) and hasattr(dependency, 'Value')):
+        raise TypeError
 
     dependency_id = int(dependency_id)
     try:

@@ -293,7 +293,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     for action in dependency_actions:
         # read memo of each filesystem object of a explicit input dependency in a repeatable order
         if action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
-                isinstance(action.dependency, depend.FilesystemObject):
+                action.dependency.Value is fs.Path:
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
             for p in validated_value_tuple:  # p is a dlb.fs.Path
                 try:
@@ -378,7 +378,7 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
 
         # read memo of each filesystem object of a explicit input dependency in a repeatable order
         if action.dependency.explicit and isinstance(action.dependency, depend.Output) and \
-                isinstance(action.dependency, depend.FilesystemObject):
+                action.dependency.Value is fs.Path:
 
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
             for p in validated_value_tuple:  # p is a dlb.fs.Path
@@ -728,7 +728,7 @@ class _ToolBase:
                             raise RedoError(msg)
                         validated_value = None
                         setattr(result, action.name, validated_value)
-                    if isinstance(action.dependency, depend.FilesystemObject):
+                    if action.dependency.Value is fs.Path:
                         if isinstance(action.dependency, depend.Input):
                             paths = action.dependency.tuple_from_value(validated_value)
                             for p in paths:
@@ -937,7 +937,7 @@ class _ToolMeta(type):
                                 raise TypeError(msg)
                 else:
                     # noinspection PyUnresolvedReferences
-                    if not (isinstance(value, _ToolBase.Dependency) and isinstance(value, depend.ConcreteDependency)):
+                    if not (isinstance(value, _ToolBase.Dependency) and hasattr(value.__class__, 'Value')):
                         msg = (
                             f"the value of {name!r} must be callable or an instance of a concrete subclass of "
                             f"'dlb.ex.Tool.Dependency'"
