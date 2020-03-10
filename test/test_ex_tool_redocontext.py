@@ -98,13 +98,13 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_cwd_not_in_working_tree(self):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError):
+            with self.assertRaises(dlb.ex.WorkingTreePathError):
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('..')))
 
     def test_fails_for_nonexistent_cwd(self):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('ups')))
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
@@ -121,7 +121,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             rd = dlb.ex.tool._RedoContext(c, dict())
             asyncio.get_event_loop().run_until_complete(rd.execute_helper(
                 'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/..'
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper(
                     'ls', [dlb.fs.Path('a/b'), dlb.fs.Path('a')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/../..'
             p = os.path.join(os.getcwd(), 'a', 'b')
@@ -150,7 +150,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper('ls', [dlb.fs.Path('..')])
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError):
+            with self.assertRaises(dlb.ex.WorkingTreePathError):
                 asyncio.get_event_loop().run_until_complete(e)
 
 

@@ -12,7 +12,8 @@ __all__ = (
     'ManagementTreeError',
     'NoWorkingTreeError',
     'WorkingTreeTimeError',
-    'ContextModificationError'
+    'ContextModificationError',
+    'WorkingTreePathError'
 )
 
 import sys
@@ -26,7 +27,8 @@ import asyncio
 from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable
 from .. import ut
 from .. import fs
-from ..fs import manip
+from . import worktree
+from .worktree import *
 from . import rundb
 from . import aseq
 assert sys.version_info >= (3, 7)
@@ -455,7 +457,7 @@ class _RootSpecifics:
             try:
                 mode = os.lstat(lock_dir_path).st_mode
                 if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
-                    manip.remove_filesystem_object(lock_dir_path)
+                    worktree.remove_filesystem_object(lock_dir_path)
             except FileNotFoundError:
                 pass
             os.mkdir(lock_dir_path)
@@ -488,8 +490,8 @@ class _RootSpecifics:
                 # prepare o for mtime probing
                 mtime_probe_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME)
                 mtime_probeu_path = os.path.join(management_tree_path, _MTIME_PROBE_FILE_NAME.upper())
-                manip.remove_filesystem_object(mtime_probe_path, ignore_non_existent=True)
-                manip.remove_filesystem_object(mtime_probeu_path, ignore_non_existent=True)
+                worktree.remove_filesystem_object(mtime_probe_path, ignore_non_existent=True)
+                worktree.remove_filesystem_object(mtime_probeu_path, ignore_non_existent=True)
 
                 self._mtime_probe = open(mtime_probe_path, 'xb')  # always a fresh file (no link to an existing one)
                 probe_stat = os.lstat(mtime_probe_path)
@@ -501,14 +503,14 @@ class _RootSpecifics:
                     self._is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
                 temporary_path = os.path.join(management_tree_path, _TEMPORARY_DIR_NAME)
-                manip.remove_filesystem_object(temporary_path, ignore_non_existent=True)
+                worktree.remove_filesystem_object(temporary_path, ignore_non_existent=True)
                 os.mkdir(temporary_path)
 
                 rundb_path = os.path.join(management_tree_path, _RUNDB_FILE_NAME)
                 try:
                     mode = os.lstat(rundb_path).st_mode
                     if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):
-                        manip.remove_filesystem_object(rundb_path)
+                        worktree.remove_filesystem_object(rundb_path)
                 except FileNotFoundError:
                     pass
 
@@ -538,7 +540,7 @@ class _RootSpecifics:
         self._rundb.cleanup()
         self._rundb.commit()
         temporary_path = os.path.join(self._root_path_native_str, _MANAGEMENTTREE_DIR_NAME, _TEMPORARY_DIR_NAME)
-        manip.remove_filesystem_object(temporary_path, ignore_non_existent=True)
+        worktree.remove_filesystem_object(temporary_path, ignore_non_existent=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
         t0 = time.monotonic_ns()  # since Python 3.7
@@ -700,18 +702,18 @@ class _BaseContext(metaclass=_ContextMeta):
             # may raise PathNormalizationError
             normalized_native_components = \
                 (native_components[0],) + \
-                manip.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
+                worktree.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
 
             native_root_path_components = self._root_path.native.components
             n = len(native_root_path_components)
             if normalized_native_components[:n] != native_root_path_components:
-                raise manip.PathNormalizationError("does not start with the working tree's root path")
+                raise worktree.WorkingTreePathError("does not start with the working tree's root path")
 
             rel_components = ('',) + normalized_native_components[n:]
         else:
             # 'collapsable' means only the part relative to the working tree's root
             ref_dir_path = None if collapsable else self._root_path_native_str
-            rel_components = ('',) + manip.normalize_dotdot_native_components(
+            rel_components = ('',) + worktree.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
 
         if len(rel_components) > 1 and rel_components[1] == _MANAGEMENTTREE_DIR_NAME:
@@ -721,7 +723,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 permitted = allow_nontemporary_management
             if not permitted:
                 msg = f"path in non-permitted part of the working tree: {path.as_string()!r}"
-                raise manip.PathNormalizationError(msg)
+                raise worktree.WorkingTreePathError(msg)
 
         # may raise ValueError
         rel_path = path.__class__(rel_components, is_dir=path.is_dir()) if path.components != rel_components else path
@@ -734,7 +736,7 @@ class _BaseContext(metaclass=_ContextMeta):
                 sr = os.lstat(os.path.sep.join([self._root_path_native_str, s]))
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
-                raise manip.PathNormalizationError(oserror=e) from None
+                raise worktree.WorkingTreePathError(oserror=e) from None
             if is_dir != rel_path.is_dir():
                 rel_path = path.__class__(rel_components, is_dir=is_dir)
 

@@ -483,3 +483,7 @@ Exceptions
 
    Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` or
    a helper dictionaly object is modified while its associated :term:`context` is not the :term:`active context`.
+
+.. exception:: WorkingTreePathError
+
+   Raised, when a path is not a :term:`working tree path` with certain properties where it should be.

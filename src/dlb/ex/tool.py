@@ -25,8 +25,8 @@ import inspect
 from typing import Type, Optional, Any, Dict, Tuple, Set, Iterable, Collection
 from .. import ut
 from .. import fs
-from ..fs import manip
 from .. import di
+from . import worktree
 from . import rundb
 from . import context as context_
 from . import depend
@@ -111,8 +111,8 @@ class _RedoContext(context_.ReadOnlyContext):
             commandline_tokens.append(str(a))
 
         if longest_dotdot_prefix:
-            manip.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
-                                                     ref_dir_path=str(self.root_path.native))
+            worktree.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
+                                                        ref_dir_path=str(self.root_path.native))
 
         proc = await asyncio.create_subprocess_exec(
             *commandline_tokens,  # must all by str
@@ -153,7 +153,7 @@ class _RedoContext(context_.ReadOnlyContext):
 
         try:
             source = self.working_tree_path_of(source, allow_temporary=True)
-        except manip.PathNormalizationError as e:
+        except worktree.WorkingTreePathError as e:
             if e.oserror is not None:
                 e = e.oserror
             msg = (
@@ -182,12 +182,13 @@ _RedoContext.__qualname__ = 'Tool.RedoContext'
 ut.set_module_name_to_parent(_RedoContext)
 
 
+# TODO move to worktree
 def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded_memo: Optional[bytes],
-                                                 needs_redo: bool, context: context_.Context) \
-        -> Tuple[manip.FilesystemObjectMemo, bool]:
+                                                 needs_redo: bool, root_path: fs.Path) \
+        -> Tuple[worktree.FilesystemObjectMemo, bool]:
 
     path = None
-    memo = manip.FilesystemObjectMemo()
+    memo = worktree.FilesystemObjectMemo()
 
     try:
         path = rundb.decode_encoded_path(encoded_path)  # may raise ValueError
@@ -203,7 +204,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
     try:
         # do _not_ check if in managed tree: does no harm if _not_ in managed tree
         # may raise OSError or ValueError (if 'path' not representable on native system)
-        memo = manip.read_filesystem_object_memo(context.root_path / path)
+        memo = worktree.read_filesystem_object_memo(root_path / path)
     except (ValueError, FileNotFoundError):
         # ignore if did not exist according to valid 'encoded_memo'
         did_not_exist_before_last_redo = False
@@ -227,7 +228,8 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
     return memo, needs_redo  # memo.state may be None
 
 
-def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
+# TODO move to worktree
+def _check_input_memo_for_redo(memo: worktree.FilesystemObjectMemo, last_encoded_memo: Optional[bytes],
                                is_explicit: bool) -> Optional[str]:
     # Compares the present *memo* if a filesystem object in the managed tree that is an input dependency with its
     # last known encoded state *last_encoded_memo*, if any.
@@ -278,7 +280,7 @@ def _check_input_memo_for_redo(memo: manip.FilesystemObjectMemo, last_encoded_me
 
 def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
                                                     context: context_.Context) \
-        -> Dict[str, manip.FilesystemObjectMemo]:
+        -> Dict[str, worktree.FilesystemObjectMemo]:
 
     # For all explicit input dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.
@@ -300,7 +302,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
                     try:
                         p = context.working_tree_path_of(p, existing=True, collapsable=False)
                     except ValueError as e:
-                        if isinstance(e, manip.PathNormalizationError) and e.oserror is not None:
+                        if isinstance(e, worktree.WorkingTreePathError) and e.oserror is not None:
                             raise e.oserror
                         if not p.is_absolute():
                             raise ValueError('not a managed tree path') from None
@@ -312,7 +314,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
                         encoded_path = rundb.encode_path(p)
                         memo = memo_by_encoded_path.get(encoded_path)
                         if memo is None:
-                            memo = manip.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
+                            memo = worktree.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
                         action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
                         memo_by_encoded_path[encoded_path] = memo
                         assert memo.stat is not None
@@ -345,7 +347,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
             encoded_path = rundb.encode_path(p)
             memo = memo_by_encoded_path.get(encoded_path)
             if memo is None:
-                memo = manip.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
+                memo = worktree.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
             assert memo.stat is not None
             definition_file_count += 1
             memo_by_encoded_path[encoded_path] = memo
@@ -416,7 +418,7 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                 memo = None
                 try:
                     # may raise OSError or ValueError (if 'path' not representable on native system)
-                    memo = manip.read_filesystem_object_memo(context.root_path / p)
+                    memo = worktree.read_filesystem_object_memo(context.root_path / p)
                     action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
                 except (ValueError, OSError) as e:
                     if memo is not None and memo.stat is not None:
@@ -433,15 +435,16 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
     return dependency_action_by_path, obstructive_paths, needs_redo
 
 
+# TODO move to worktree
 def _remove_filesystem_objects(obstructive_paths: Iterable[fs.Path], context: context_.Context):
     if obstructive_paths:
         tmp_dir = str(context.create_temporary(is_dir=True).native)  # may raise OSError
 
         for p in obstructive_paths:
-            manip.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
-                                           ignore_non_existent=True)  # may raise OSError
+            worktree.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
+                                              ignore_non_existent=True)  # may raise OSError
         try:
-            manip.remove_filesystem_object(tmp_dir)
+            worktree.remove_filesystem_object(tmp_dir)
         except OSError:
             pass  # try again when root context is cleaned-up
 
@@ -639,7 +642,7 @@ class _ToolBase:
                     for encoded_path, (is_explicit, last_encoded_memo) in inputs_from_last_redo.items():
                         if not is_explicit and encoded_path not in memo_by_encoded_path:
                             memo, needs_redo = _get_memo_for_fs_input_dependency_from_rundb(
-                                encoded_path, last_encoded_memo, needs_redo, context)
+                                encoded_path, last_encoded_memo, needs_redo, context.root_path)
                             memo_by_encoded_path[encoded_path] = memo  # memo.state may be None
 
                 # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that

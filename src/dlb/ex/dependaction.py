@@ -16,7 +16,7 @@ import stat
 from typing import Type, Set, Optional, Sequence, Hashable
 from .. import ut
 from .. import fs
-from ..fs import manip
+from . import worktree
 from . import context as context_
 from . import depend
 
@@ -79,7 +79,7 @@ class Action:
         return NotImplemented
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
-    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
         raise ValueError("is not a filesystem object")
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
@@ -97,19 +97,19 @@ class _FilesystemObjectMixin(Action):
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
         return ut.to_permanent_local_bytes(validated_values)
 
-    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
         pass
 
 
 class _RegularFileMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISREG(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a regular file")
 
 
 class _NonRegularFileMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if stat.S_ISREG(memo.stat.mode):
             raise ValueError("filesystem object exists, but is a regular file")
@@ -118,7 +118,7 @@ class _NonRegularFileMixin(_FilesystemObjectMixin):
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: manip.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: worktree.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISDIR(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a directory")
@@ -204,7 +204,7 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
         dst = (r / destination).native
         tmp_dir = context.create_temporary(is_dir=True).native
         try:
-            manip.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
+            worktree.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
             os.replace(src=(r / source).native, dst=dst)
         finally:
             os.rmdir(tmp_dir)

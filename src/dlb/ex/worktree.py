@@ -2,18 +2,21 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Filesystem manipulations.
+"""Filesystem manipulations in the working tree.
 This is an implementation detail - do not import it unless you know what you are doing."""
+
+__all__ = ('WorkingTreePathError',)
 
 import os
 import stat
 import shutil
 import dataclasses
 from typing import Optional, Union, Tuple
-from . import path as path_
+from .. import ut
+from .. import fs
 
 
-class PathNormalizationError(ValueError):
+class WorkingTreePathError(ValueError):
     def __init__(self, *args, oserror: Optional[OSError] = None):
         super().__init__(*args)
         self.oserror = oserror
@@ -44,8 +47,8 @@ class _KeepFirstRmTreeException:
             self.first_exception = value
 
 
-def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
-                             abs_empty_dir_path: Union[None, str, path_.Path] = None,
+def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
+                             abs_empty_dir_path: Union[None, str, fs.Path] = None,
                              ignore_non_existent: bool = False):
     # Removes the filesystem objects with absolute path *abs_path*.
     #
@@ -59,7 +62,7 @@ def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
     # *abs_temp_path* is not ``None``, is must denote an empty and writable directory on the same filesystem
     # as *abs_path*. Use a temporary directory, if possible.
 
-    if isinstance(abs_path, path_.Path):
+    if isinstance(abs_path, fs.Path):
         abs_path = str(abs_path.native)
     else:
         if isinstance(abs_path, bytes):
@@ -75,7 +78,7 @@ def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
             # prevent special treatment by byte paths
             raise TypeError("'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes")
 
-        if isinstance(abs_empty_dir_path, path_.Path):
+        if isinstance(abs_empty_dir_path, fs.Path):
             abs_empty_dir_path = str(abs_empty_dir_path.native)
         else:
             abs_empty_dir_path = os.fspath(abs_empty_dir_path)
@@ -116,7 +119,7 @@ def remove_filesystem_object(abs_path: Union[str, path_.Path], *,
             raise
 
 
-def read_filesystem_object_memo(abs_path: Union[str, path_.Path]) -> FilesystemObjectMemo:
+def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> FilesystemObjectMemo:
     # Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
     # as a ``FilesystemObjectMemo`` object.
     #
@@ -134,7 +137,7 @@ def read_filesystem_object_memo(abs_path: Union[str, path_.Path]) -> FilesystemO
 
     # must be fast
 
-    if isinstance(abs_path, path_.Path):
+    if isinstance(abs_path, fs.Path):
         is_abs = abs_path.is_absolute()
         abs_path = str(abs_path.native)
     else:
@@ -197,18 +200,21 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
                 break
 
             if i == 0:
-                path = path_.Path(('',) + components)
-                raise PathNormalizationError(f"is an upwards path: {path.as_string()!r}")
+                path = fs.Path(('',) + components)
+                raise WorkingTreePathError(f"is an upwards path: {path.as_string()!r}")
 
             if ref_dir_path is not None:
                 p = os.path.sep.join((ref_dir_path,) + normalized_components[:i])
                 sr = os.lstat(p)
                 if stat.S_ISLNK(sr.st_mode):
                     msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
-                    raise PathNormalizationError(msg) from None
+                    raise WorkingTreePathError(msg) from None
 
             normalized_components = normalized_components[:i - 1] + normalized_components[i + 1:]
     except OSError as e:
-        raise PathNormalizationError(oserror=e) from None
+        raise WorkingTreePathError(oserror=e) from None
 
     return normalized_components
+
+
+ut.set_module_name_to_parent_by_name(vars(), __all__)

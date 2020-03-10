@@ -16,8 +16,8 @@ import sqlite3
 from typing import Optional, Union, Dict, Tuple
 from .. import ut
 from .. import fs
-from ..fs import manip
 from . import platform
+from . import worktree
 
 
 # Why 'marshal'?
@@ -85,10 +85,10 @@ def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
     return fs.Path(s, is_dir=is_dir or s == '.')  # path from string is faster than from components
 
 
-def encode_fsobject_memo(memo: manip.FilesystemObjectMemo) -> bytes:
+def encode_fsobject_memo(memo: worktree.FilesystemObjectMemo) -> bytes:
     # Return a representation of *memo* as marshal-encoded tuple.
 
-    if not isinstance(memo, manip.FilesystemObjectMemo):
+    if not isinstance(memo, worktree.FilesystemObjectMemo):
         raise TypeError
 
     if memo.stat is None:  # filesystem object did not exist
@@ -109,7 +109,7 @@ def encode_fsobject_memo(memo: manip.FilesystemObjectMemo) -> bytes:
         memo.symlink_target))
 
 
-def decode_encoded_fsobject_memo(encoded_memo: bytes) -> manip.FilesystemObjectMemo:
+def decode_encoded_fsobject_memo(encoded_memo: bytes) -> worktree.FilesystemObjectMemo:
     if not isinstance(encoded_memo, bytes):
         raise TypeError
 
@@ -118,7 +118,7 @@ def decode_encoded_fsobject_memo(encoded_memo: bytes) -> manip.FilesystemObjectM
         raise ValueError
 
     if not t:
-        return manip.FilesystemObjectMemo()
+        return worktree.FilesystemObjectMemo()
 
     mode, size, mtime_ns, uid, gid, symlink_target = t  # ValueError if number does not match
     if not all(isinstance(f, int) for f in t[:5]):
@@ -130,8 +130,8 @@ def decode_encoded_fsobject_memo(encoded_memo: bytes) -> manip.FilesystemObjectM
     if stat.S_ISLNK(mode) and not isinstance(symlink_target, str):
         raise ValueError
 
-    return manip.FilesystemObjectMemo(
-        stat=manip.FilesystemStatSummary(mode=mode, size=size, mtime_ns=mtime_ns, uid=uid, gid=gid),
+    return worktree.FilesystemObjectMemo(
+        stat=worktree.FilesystemStatSummary(mode=mode, size=size, mtime_ns=mtime_ns, uid=uid, gid=gid),
         symlink_target=symlink_target)
 
 

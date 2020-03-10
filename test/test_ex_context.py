@@ -9,7 +9,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
-import dlb.fs.manip
 import dlb.ex
 import dlb.ex.rundb
 import stat
@@ -30,7 +29,8 @@ class ImportTest(unittest.TestCase):
             'ManagementTreeError',
             'NoWorkingTreeError',
             'WorkingTreeTimeError',
-            'ContextModificationError'},
+            'ContextModificationError',
+            'WorkingTreePathError'},
             set(dlb.ex.context.__all__))
         self.assertTrue('Context' in dir(dlb.ex))
 
@@ -598,7 +598,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         with tools_for_test.DirectoryChanger(os.path.join('a', 'b')):
             os.mkdir('.dlbroot')
             with dlb.ex.Context():
-                with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+                with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                     dlb.ex.Context.working_tree_path_of(os.path.join(old_cw, 'a', 'b2', 'c2'))
                 msg = "does not start with the working tree's root path"
                 self.assertEqual(msg, str(cm.exception))
@@ -623,7 +623,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             regexp = r"\A()is an upwards path: .+\Z"
-            with self.assertRaisesRegex(dlb.fs.manip.PathNormalizationError, regexp):
+            with self.assertRaisesRegex(dlb.ex.WorkingTreePathError, regexp):
                 dlb.ex.Context.working_tree_path_of(dlb.fs.Path('a/../..'), existing=True, collapsable=True)
 
     def test_succeeds_on_nonexistent_if_assuming(self):
@@ -634,11 +634,11 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_fails_on_nonexistent_if_not_assuming(self):
         os.mkdir('.dlbroot')
         with dlb.ex.Context():
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 dlb.ex.Context.working_tree_path_of('a/b')
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 dlb.ex.Context.working_tree_path_of('a/..')
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
@@ -653,7 +653,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             raise unittest.SkipTest from None
 
         with dlb.ex.Context():
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 dlb.ex.Context.working_tree_path_of('a/../b', collapsable=True)
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
@@ -669,20 +669,20 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
 
         with dlb.ex.Context():
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 dlb.ex.Context.working_tree_path_of('.dlbroot')
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot'", str(cm.exception))
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 dlb.ex.Context.working_tree_path_of('.dlbroot/o')
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot/o'", str(cm.exception))
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 dlb.ex.Context.working_tree_path_of('.dlbroot/t')
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot/t'", str(cm.exception))
 
             p = dlb.ex.Context.working_tree_path_of('.dlbroot/o', allow_nontemporary_management=True)
             self.assertEqual(dlb.fs.Path('.dlbroot/o'), p)
 
-            with self.assertRaises(dlb.fs.manip.PathNormalizationError) as cm:
+            with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 dlb.ex.Context.working_tree_path_of('.dlbroot/t', allow_nontemporary_management=True)
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot/t'", str(cm.exception))
 

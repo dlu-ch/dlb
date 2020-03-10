@@ -13,7 +13,6 @@ import dlb.di
 import dlb.ex
 import dlb.ex.rundb
 import logging
-import unittest
 import cProfile
 import pstats
 import tools_for_test
@@ -69,7 +68,7 @@ class RunBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
 class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_read_filesystem_object_memo_from_path(self):
-        import dlb.fs.manip
+        import dlb.ex.worktree
 
         os.makedirs(os.path.join('a', 'b'))
         with open(os.path.join('a', 'b', 'c'), 'xb'):
@@ -94,7 +93,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
             #   90 ms (current - without pathlib)
 
             for i in range(10000):
-                dlb.fs.manip.read_filesystem_object_memo(
+                dlb.ex.worktree.read_filesystem_object_memo(
                     c.root_path / c.working_tree_path_of(p, existing=True, collapsable=False))
 
             profile.disable()

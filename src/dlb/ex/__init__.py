@@ -12,12 +12,13 @@ from .tool import *
 #                 depends on
 #
 #     mult           ->
-#
 #     platform       ->
-#     rundb          ->         platform
+#
+#     worktree
+#     rundb          ->         worktree  platform
 #     aseq           ->
-#     context        ->                   rundb  aseq
+#     context        ->         worktree            rundb  aseq
 #
 #     depend         ->   mult
-#     dependaction   ->                                context   depend
-#     tool           ->                          aseq  context   depend   dependaction
+#     dependaction   ->                                          context   depend
+#     tool           ->         worktree                   aseq  context   depend   dependaction
