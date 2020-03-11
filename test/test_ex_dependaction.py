@@ -176,52 +176,6 @@ class EnvVarInputPermanentLocalValueIdTest(unittest.TestCase):
         self.assertEqual(plvi1, plvi2)
 
 
-class EnvVarInitialResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
-
-    def test_returns_none_if_nonrequired_not_defined(self):
-        d = dlb.ex.Tool.Input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False, required=False)
-        a = dlb.ex.dependaction.get_action(d, 'd')
-
-        try:
-            del os.environ['AB']
-        except KeyError:
-            pass
-
-        with dlb.ex.Context() as c:
-            self.assertIsNone(a.get_initial_result_for_nonexplicit(c))
-            c.env.import_from_outer('AB', r'.*', '')
-
-            self.assertIsNone(a.get_initial_result_for_nonexplicit(c))
-            c.env['AB'] = 'xy'
-            self.assertEqual('xy', a.get_initial_result_for_nonexplicit(c))
-            c.env['AB'] = 'x_'
-            self.assertEqual('x_', a.get_initial_result_for_nonexplicit(c))
-
-    def test_fails_if_required_not_defined(self):
-        d = dlb.ex.Tool.Input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False)
-        a = dlb.ex.dependaction.get_action(d, 'd')
-
-        try:
-            del os.environ['AB']
-        except KeyError:
-            pass
-
-        msg = (
-            "not a defined environment variable in the context: 'AB'\n"
-            "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
-        )
-
-        with dlb.ex.Context() as c:
-            with self.assertRaises(ValueError) as cm:
-                a.get_initial_result_for_nonexplicit(c)
-            self.assertEqual(msg, str(cm.exception))
-
-            c.env.import_from_outer('AB', r'.*', '')
-            with self.assertRaises(ValueError) as cm:
-                a.get_initial_result_for_nonexplicit(c)
-            self.assertEqual(msg, str(cm.exception))
-
-
 class EnvVarInputFilesystemOperationTest(unittest.TestCase):
 
     def test_fails_on_filesystem_operations(self):

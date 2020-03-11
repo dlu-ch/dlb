@@ -318,11 +318,11 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 pass
 
         t = BTool(object_file='a.o', language='de_CH')
-        self.assertEqual({'language': 'de', 'territory': 'CH'}, t.language.value)
+        self.assertEqual({'language': 'de', 'territory': 'CH'}, t.language.groups)
         self.assertIsNone(t.cflags)
 
         t = BTool(object_file='a.o', language='de_CH', cflags='-Wall')
-        self.assertEqual('-Wall', t.cflags.value)
+        self.assertEqual('-Wall', t.cflags.raw)
 
     def test_nonexplicit_envvar_are_assigned_on_result(self):
         try:
@@ -357,7 +357,7 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             c.env['LANG'] = 'de_CH'
             result = t.run()
 
-        self.assertEqual({'language': 'de', 'territory': 'CH'}, result.language.value)
+        self.assertEqual({'language': 'de', 'territory': 'CH'}, result.language.groups)
         self.assertIsNone(result.cflags)
 
         with dlb.ex.Context() as c:

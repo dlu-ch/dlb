@@ -105,6 +105,12 @@ Tool objects
       *result* is the result proxy object that will by returned by the calling :meth:`run()`.
       *context* is the redo context (see :class:`Tool.RedoContext`).
 
+      Use :meth:`context.execute_helper() <Tool.RedoContext.execute_helper()>` and
+      :meth:`context.replace_output() <Tool.RedoContext.replace_output()>`.
+
+      Assign to attributes of *result* to define a non-explicit concrete dependency for the dependency role with the
+      same name.
+
       For a redo to be successful, this method must perform the following tasks:
 
        - Create all explicit output dependencies
@@ -575,11 +581,13 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
          The name of the environment variable, as in the corresponding concrete dependency.
 
-      .. attribute:: value
+      .. attribute:: raw
 
-         If *restriction* of the corresponding concrete dependency contains at least one named group:
-         the dictionary of all groups of the validated value of the environment variable.
-         The validated value of the environment variable otherwise.
+         The value of the environment variable.
+
+      .. attribute:: groups
+
+         The names groups of *restriction* of the corresponding concrete dependency ???.
 
 
 Concrete output dependency role classes

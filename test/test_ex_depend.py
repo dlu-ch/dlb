@@ -186,22 +186,20 @@ class SingleInputValidationTest(unittest.TestCase):
 
     def test_envvar_returns_str_or_dict(self):
         d = dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+[a-z]+', example='42s')
-        self.assertEqual(dlb.ex.depend.EnvVarInput.Value(name='number', value='123mm'), d.validate('123mm'))
+        self.assertEqual(dlb.ex.depend.EnvVarInput.Value(name='number', raw='123mm', groups={}),
+                         d.validate('123mm'))
 
         d = dlb.ex.depend.EnvVarInput(
             name='number',
             restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s')
 
-        self.assertEqual(dlb.ex.depend.EnvVarInput.Value(name='number', value={'num': '123', 'unit': 'mm'}),
+        self.assertEqual(dlb.ex.depend.EnvVarInput.Value(name='number', raw='123mm',
+                                                         groups={'num': '123', 'unit': 'mm'}),
                          d.validate('123mm'))
 
         with self.assertRaises(TypeError) as cm:
             d.validate(b'')
         self.assertEqual(str(cm.exception), "'value' must be a str")
-
-        with self.assertRaises(ValueError) as cm:
-            d.validate('')
-        self.assertEqual(str(cm.exception), "'value' must not be empty")
 
 
 class PropertyTest(unittest.TestCase):

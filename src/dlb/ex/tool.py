@@ -16,13 +16,12 @@ __all__ = (
 import sys
 import re
 import os
-import stat
 import asyncio
 import collections
 import hashlib
 import logging
 import inspect
-from typing import Type, Optional, Any, Dict, Tuple, Set, Iterable, Collection
+from typing import Type, Optional, Union, Any, Dict, Tuple, Set, Iterable, Collection
 from .. import ut
 from .. import fs
 from .. import di
@@ -75,6 +74,7 @@ class HelperExecutionError(Exception):
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
+# TODO modify self.env according to explicit dlb.ex.Tool.Input.EnvVar dependencies
 class _RedoContext(context_.ReadOnlyContext):
 
     def __init__(self, context: context_.Context, dependency_action_by_path: Dict[fs.Path, dependaction.Action]):
@@ -85,6 +85,7 @@ class _RedoContext(context_.ReadOnlyContext):
         self._dependency_action_by_path = dependency_action_by_path
         self._unchanged_paths = set()
 
+    # TODO use self.env
     async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
                              cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
                              stdin=None, stdout=None, stderr=None, limit: int = 2**16):
@@ -239,53 +240,59 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     # Returns a dictionary whose key are encoded managed tree paths and whose values are the corresponding
     # FilesystemObjectMemo m with ``m.stat is not None``.
 
-    memo_by_encoded_path = {}
+    memo_by_encoded_path: Dict[str, rundb.FilesystemObjectMemo] = {}
+    envvar_value_by_name: Dict[str, Union[str, Dict[str, str]]] = {}
 
     for action in dependency_actions:
         # read memo of each filesystem object of a explicit input dependency in a repeatable order
-        if action.dependency.explicit and isinstance(action.dependency, depend.Input) and \
-                action.dependency.Value is fs.Path:
-            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
-            for p in validated_value_tuple:  # p is a dlb.fs.Path
-                try:
+        if action.dependency.explicit and isinstance(action.dependency, depend.Input):
+            if action.dependency.Value is fs.Path:
+                validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
+                for p in validated_value_tuple:  # p is a dlb.fs.Path
                     try:
-                        p = context.working_tree_path_of(p, existing=True, collapsable=False)
-                    except ValueError as e:
-                        if isinstance(e, worktree.WorkingTreePathError) and e.oserror is not None:
-                            raise e.oserror
-                        if not p.is_absolute():
-                            raise ValueError('not a managed tree path') from None
-                        # absolute paths to the management tree are ok
+                        try:
+                            p = context.working_tree_path_of(p, existing=True, collapsable=False)
+                        except ValueError as e:
+                            if isinstance(e, worktree.WorkingTreePathError) and e.oserror is not None:
+                                raise e.oserror
+                            if not p.is_absolute():
+                                raise ValueError('not a managed tree path') from None
+                            # absolute paths to the management tree are ok
 
-                    # p is a relative path of a filesystem object in the managed tree or an absolute path
-                    # of filesystem object outside the managed tree
-                    if not p.is_absolute():
-                        encoded_path = rundb.encode_path(p)
-                        memo = memo_by_encoded_path.get(encoded_path)
-                        if memo is None:
-                            memo = worktree.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
-                        action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
-                        memo_by_encoded_path[encoded_path] = memo
-                        assert memo.stat is not None
-                except ValueError as e:
-                    msg = (
-                        f"input dependency {action.name!r} contains an invalid path: {p.as_string()!r}\n"
-                        f"  | reason: {ut.exception_to_line(e)}"
-                    )
-                    raise DependencyError(msg) from None
-                except FileNotFoundError:
-                    msg = (
-                        f"input dependency {action.name!r} contains a path of a "
-                        f"non-existent filesystem object: {p.as_string()!r}"
-                    )
-                    raise DependencyError(msg) from None
-                except OSError as e:
-                    msg = (
-                        f"input dependency {action.name!r} contains a path of an "
-                        f"inaccessible filesystem object: {p.as_string()!r}\n"
-                        f"  | reason: {ut.exception_to_line(e)}"
-                    )
-                    raise DependencyError(msg) from None
+                        # p is a relative path of a filesystem object in the managed tree or an absolute path
+                        # of filesystem object outside the managed tree
+                        if not p.is_absolute():
+                            encoded_path = rundb.encode_path(p)
+                            memo = memo_by_encoded_path.get(encoded_path)
+                            if memo is None:
+                                memo = worktree.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
+                            action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
+                            memo_by_encoded_path[encoded_path] = memo
+                            assert memo.stat is not None
+                    except ValueError as e:
+                        msg = (
+                            f"input dependency {action.name!r} contains an invalid path: {p.as_string()!r}\n"
+                            f"  | reason: {ut.exception_to_line(e)}"
+                        )
+                        raise DependencyError(msg) from None
+                    except FileNotFoundError:
+                        msg = (
+                            f"input dependency {action.name!r} contains a path of a "
+                            f"non-existent filesystem object: {p.as_string()!r}"
+                        )
+                        raise DependencyError(msg) from None
+                    except OSError as e:
+                        msg = (
+                            f"input dependency {action.name!r} contains a path of an "
+                            f"inaccessible filesystem object: {p.as_string()!r}\n"
+                            f"  | reason: {ut.exception_to_line(e)}"
+                        )
+                        raise DependencyError(msg) from None
+            elif action.dependency.Value is depend.EnvVarInput.Value:
+                for ev in action.dependency.tuple_from_value(getattr(tool, action.name)):
+                    # ev is a depend.EnvVarInput.Value
+                    # TODO check if conflicting (in constructor?)
+                    envvar_value_by_name[ev.name] = ev.raw
 
     # treat all files used for definition of self.__class__ like explicit input dependencies if they
     # have a managed tree path.
@@ -306,7 +313,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
             pass
     di.inform(f"added {definition_file_count} tool definition files as input dependency")
 
-    return memo_by_encoded_path
+    return memo_by_encoded_path, envvar_value_by_name
 
 
 def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
@@ -573,8 +580,8 @@ class _ToolBase:
             with di.Cluster('check redo necessity', with_time=True, is_progress=True):
 
                 with di.Cluster('explicit input dependencies', with_time=True, is_progress=True):
-                    memo_by_encoded_path = _check_and_memorize_explicit_input_dependencies(
-                        self, dependency_actions, context)
+                    memo_by_encoded_path, envvar_value_by_name = \
+                        _check_and_memorize_explicit_input_dependencies(self, dependency_actions, context)
 
                 # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
                 # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
@@ -598,11 +605,37 @@ class _ToolBase:
                 # is an explicit or non-explicit input dependency of this call of 'run()' or an non-explicit input
                 # dependency of the last successful redo of the same tool instance according to the run-database
 
+                with di.Cluster('environment variables', with_time=True, is_progress=True):
+                    for action in dependency_actions:
+                        if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
+                            d = action.dependency
+                            value = envvar_value_by_name.get(d.name)
+                            if value is None:
+                                if d.required:
+                                    try:
+                                        value = context.env[d.name]
+                                    except KeyError as e:
+                                        raise RedoError(*e.args) from None
+                                else:
+                                    value = context.env.get(d.name)
+                            if value is not None:
+                                envvar_value_by_name[d.name] = value  # validate at redo
+
+                    envvar_digest = b''
+                    for name in sorted(envvar_value_by_name):
+                        envvar_digest += ut.to_permanent_local_bytes((name, envvar_value_by_name[name]))
+                    if len(envvar_digest) >= 20:
+                        envvar_digest = hashlib.sha1(envvar_digest).digest()
+
                 if not needs_redo:
-                    execution_parameter_digest_in_db = \
-                        db.get_domain_inputs(tool_instance_dbid).get(rundb.Domain.EXECUTION_PARAMETERS.value)
+                    domain_inputs_in_db = db.get_domain_inputs(tool_instance_dbid)
+                    execution_parameter_digest_in_db = domain_inputs_in_db.get(rundb.Domain.EXECUTION_PARAMETERS.value)
+                    envvar_digest_in_db = domain_inputs_in_db.get(rundb.Domain.ENVIRONMENT_VARIABLES.value)
                     if execution_parameter_digest != execution_parameter_digest_in_db:
                         di.inform("redo necessary because of changed execution parameter")
+                        needs_redo = True
+                    elif envvar_digest != envvar_digest_in_db:
+                        di.inform("redo necessary because of changed environment variable")
                         needs_redo = True
 
                 if not needs_redo:
@@ -635,13 +668,16 @@ class _ToolBase:
         result = _RedoResult(self)
 
         for action in dependency_actions:
-            if not action.dependency.explicit and getattr(result, action.name) is NotImplemented:
+            if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
                 try:
-                    value = action.get_initial_result_for_nonexplicit(context)
-                    if value is not NotImplemented:
-                        setattr(result, action.name, value)
+                    value = envvar_value_by_name.get(action.dependency.name)
+                    setattr(result, action.name, value)  # validates on assignment
                 except ValueError as e:
-                    raise RedoError(*e.args)
+                    msg = (
+                        f"input dependency {action.name!r} cannot use environment variable {action.dependency.name!r}\n"
+                        f"  | reason: {ut.exception_to_line(e)}"
+                    )
+                    raise RedoError(msg) from None
 
         # note: no db.commit() necessary as long as root context does commit on exception
         tid = context._redo_sequencer.wait_then_start(
@@ -649,7 +685,7 @@ class _ToolBase:
             result=result, context=_RedoContext(context, dependency_action_by_path),
             dependency_actions=dependency_actions, memo_by_encoded_path=memo_by_encoded_path,
             encoded_paths_of_explicit_input_dependencies=encoded_paths_of_explicit_input_dependencies,
-            execution_parameter_digest=execution_parameter_digest,
+            execution_parameter_digest=execution_parameter_digest, envvar_digest=envvar_digest,
             db=db, tool_instance_dbid=tool_instance_dbid)
 
         return context._redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_RedoResult)
@@ -657,7 +693,7 @@ class _ToolBase:
     async def _redo_with_aftermath(self, result, context,
                                    dependency_actions, memo_by_encoded_path,
                                    encoded_paths_of_explicit_input_dependencies,
-                                   execution_parameter_digest,
+                                   execution_parameter_digest, envvar_digest,
                                    db, tool_instance_dbid):
         # note: no db.commit() necessary as long as root context does commit on exception
         di.inform(f"start redo for tool instance dbid {tool_instance_dbid!r}", with_time=True)
@@ -728,8 +764,9 @@ class _ToolBase:
                 })
                 db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
 
-                db.replace_domain_inputs(tool_instance_dbid,
-                                         {rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest})
+                db.replace_domain_inputs(tool_instance_dbid, {
+                    rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest,
+                    rundb.Domain.ENVIRONMENT_VARIABLES.value: envvar_digest})
 
             for p in context.modified_outputs:
                 encoded_paths_of_modified_output_dependencies.add(rundb.encode_path(p))

@@ -490,6 +490,111 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
             self.assertIsNone(t.run())
 
 
+class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo_for_explicit(self):
+        class BTool(dlb.ex.Tool):
+            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH')
+
+            async def redo(self, result, context):
+                pass
+
+        t = BTool(language='fr_FR')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNone(t.run())
+
+        t = BTool(language='fr_FR')
+        with dlb.ex.Context():
+            self.assertIsNone(t.run())
+
+        t = BTool(language='it_IT')
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNone(t.run())
+
+    def test_redo_for_nonexplicit(self):
+        class BTool(dlb.ex.Tool):
+            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH', explicit=False)
+
+            async def redo(self, result, context):
+                pass
+
+        t = BTool()
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env['LANG'] = 'fr_FR'
+            r = t.run()
+            self.assertIsNotNone(r)
+            self.assertEqual('fr_FR', r.language.raw)
+            self.assertIsNone(t.run())
+
+        t = BTool()
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env['LANG'] = 'fr_FR'
+            self.assertIsNone(t.run())
+
+        t = BTool()
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env['LANG'] = 'it_IT'
+            r = t.run()
+            self.assertIsNotNone(r)
+            self.assertEqual('it_IT', r.language.raw)
+            self.assertIsNone(t.run())
+
+    def test_fails_for_nonexplicit_with_invalid_envvar_value(self):
+        class BTool(dlb.ex.Tool):
+            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'[a-z]+_[A-Z]+',
+                                                example='de_CH', explicit=False)
+
+            async def redo(self, result, context):
+                pass
+
+        t = BTool()
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env['LANG'] = '_'
+            with self.assertRaises(dlb.ex.RedoError) as cm:
+                t.run()
+            msg = (
+                "input dependency 'language' cannot use environment variable 'LANG'\n"
+                "  | reason: value is invalid with respect to restriction: '_'"
+            )
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_redo_for_explicit_and_nonexplicit(self):
+        class BTool(dlb.ex.Tool):
+            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH', explicit=False)
+            language2 = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH')
+
+            async def redo(self, result, context):
+                pass
+
+        t = BTool(language2='it_IT')
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env['LANG'] = 'fr_FR'
+            r = t.run()
+            self.assertIsNotNone(r)
+            self.assertEqual('it_IT', r.language.raw)
+            self.assertEqual('it_IT', r.language2.raw)
+            self.assertIsNone(t.run())
+
+        t = BTool(language2='it_IT')
+        with dlb.ex.Context():
+            self.assertIsNone(t.run())
+
+        t = BTool(language2='fr_FR')
+        with dlb.ex.Context():
+            r = t.run()
+            self.assertIsNotNone(r)
+            self.assertEqual('fr_FR', r.language.raw)
+            self.assertEqual('fr_FR', r.language2.raw)
+            self.assertIsNone(t.run())
+
+
 class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_ignores_nonexistent_output_file(self):
@@ -546,7 +651,6 @@ class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkin
 
         self.assertTrue(os.path.isfile('a.o'))
         self.assertTrue(os.path.isdir('d'))
-
 
 
 class ExecutionParameterTest(tools_for_test.TemporaryWorkingDirectoryTestCase):

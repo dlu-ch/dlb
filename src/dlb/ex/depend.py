@@ -194,7 +194,8 @@ class EnvVarInput(Input):
     @dataclasses.dataclass(frozen=True, eq=True)
     class Value:
         name: str
-        value: Union[str, Dict[str, str]]
+        raw: str
+        groups: Dict[str, str]
 
     def __init__(self, *, name: str, restriction: Union[str, Pattern], example: str, **kwargs):
         super().__init__(**kwargs)
@@ -245,18 +246,12 @@ class EnvVarInput(Input):
 
         if not isinstance(value, str):
             raise TypeError("'value' must be a str")
-        if not value:
-            raise ValueError("'value' must not be empty")
 
         m = self._restriction.fullmatch(value)
         if not m:
             raise ValueError(f"value is invalid with respect to restriction: {value!r}")
 
-        # return only validates/possibly modify value
-        groups = m.groupdict()
-        validated_value = groups if groups else value
-
-        return EnvVarInput.Value(name=self.name, value=validated_value)
+        return EnvVarInput.Value(name=self.name, raw=value, groups=m.groupdict())
 
 
 def _inject_into(owner, owner_name, owner_module):

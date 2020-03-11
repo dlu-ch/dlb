@@ -74,11 +74,6 @@ class Action:
         # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.
         return ut.to_permanent_local_bytes((dependency_id, d.explicit))
 
-    # (unvalidated) initial value before redo
-    # overwrite in subclass; only called if 'dependency.explicit' is False
-    def get_initial_result_for_nonexplicit(self, context: context_.Context):
-        return NotImplemented
-
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
     def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
         raise ValueError("is not a filesystem object")
@@ -143,15 +138,6 @@ class EnvVarInputAction(Action):
         # does _not_ depend on 'restriction'
         d = self.dependency
         return super().get_permanent_local_instance_id() + ut.to_permanent_local_bytes((d.name,))
-
-    def get_initial_result_for_nonexplicit(self, context: context_.Context):
-        d = self.dependency
-        n = d.name
-        try:
-            value = context.env[n] if d.required else context.env.get(n)
-        except KeyError as e:
-            raise ValueError(*e.args) from None
-        return value
 
 
 class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action):
