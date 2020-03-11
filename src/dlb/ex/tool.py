@@ -117,7 +117,7 @@ class _RedoContext(context_.ReadOnlyContext):
 
         proc = await asyncio.create_subprocess_exec(
             *commandline_tokens,  # must all by str
-            cwd=(self.root_path / cwd).native,
+            cwd=(self.root_path / cwd).native, env=self.env,
             stdin=stdin, stdout=stdout, stderr=stderr, limit=limit)
         stdout, stderr = await proc.communicate()
         returncode = proc.returncode
@@ -230,7 +230,7 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
 
 def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
                                                     context: context_.Context) \
-        -> Dict[str, rundb.FilesystemObjectMemo]:
+        -> Tuple[Dict[str, rundb.FilesystemObjectMemo], Dict[str, str]]:
 
     # For all explicit input dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.
@@ -241,7 +241,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     # FilesystemObjectMemo m with ``m.stat is not None``.
 
     memo_by_encoded_path: Dict[str, rundb.FilesystemObjectMemo] = {}
-    envvar_value_by_name: Dict[str, Union[str, Dict[str, str]]] = {}
+    envvar_value_by_name: Dict[str, str] = {}
 
     for action in dependency_actions:
         # read memo of each filesystem object of a explicit input dependency in a repeatable order
