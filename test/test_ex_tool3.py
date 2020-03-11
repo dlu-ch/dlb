@@ -27,8 +27,7 @@ class ATool(dlb.ex.Tool):
 
     async def redo(self, result, context):
         dlb.di.inform("redoing right now")
-        with open((context.root_path / self.object_file).native, 'wb'):
-            pass
+        open((context.root_path / self.object_file).native, 'wb').close()
 
 
 class RunWithoutRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -82,8 +81,7 @@ class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirecto
 
     def test_absolute_in_managed_tree_remains_absolute(self):
         os.mkdir('.dlbroot')
-        with open('a.cpp', 'xb'):
-            pass
+        open('a.cpp', 'xb').close()
 
         with dlb.ex.Context() as c:
             t = ATool(source_file=c.root_path / 'a.cpp', object_file='a.o')
@@ -91,14 +89,12 @@ class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirecto
             self.assertEqual(c.root_path / 'a.cpp', r.source_file)
 
     def test_absolute_can_be_outside_managed_tree(self):
-        with open('x.cpp', 'xb'):
-            pass
+        open('x.cpp', 'xb').close()
 
         os.mkdir('t')
         with tools_for_test.DirectoryChanger('t'):
             os.mkdir('.dlbroot')
-            with open('a.cpp', 'xb'):
-                pass
+            open('a.cpp', 'xb').close()
 
             with dlb.ex.Context() as c:
                 t = ATool(source_file=c.root_path / '../x.cpp', object_file='a.o')
@@ -108,8 +104,7 @@ class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirecto
 class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonnormalized_outputfile_path(self):
-        with open('a.cpp', 'xb'):
-            pass
+        open('a.cpp', 'xb').close()
 
         regex = (
             r"(?m)\A"
@@ -145,8 +140,7 @@ class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_t
 class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_input_as_output(self):
-        with open('a.cpp', 'xb'):
-            pass
+        open('a.cpp', 'xb').close()
 
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
@@ -193,10 +187,8 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
 
     def test_fails_for_explicit_input_dependency_of_wrong_type(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
-        with open(os.path.join('src', 'b'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
+        open(os.path.join('src', 'b'), 'xb').close()
 
         t = ATool(source_file='src', object_file='a.o')
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -240,8 +232,7 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
 
     def test_fails_for_conflicting_input_dependency_types(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         t = ATool(source_file='src/a.cpp', include_directories=['src/a.cpp/'], object_file='a.o')
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -258,10 +249,8 @@ class RunDoesNoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirecto
 
     def test_run_causes_redo_only_the_first_time(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
-        with open('a.o', 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
+        open('a.o', 'xb').close()
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
 
@@ -281,8 +270,7 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
 
     def test_redo(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
 
@@ -347,8 +335,7 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorki
 
     def test_redo(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         nonregular = os.path.join('src', 'n')
 
@@ -392,10 +379,8 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTes
 
     def test_redo(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
-        with open(os.path.join('src', 'b.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
+        open(os.path.join('src', 'b.cpp'), 'xb').close()
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
         t2 = ATool(source_file='src/b.cpp', object_file='src/a.cpp')
@@ -419,8 +404,7 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryT
 
     def test_redo_if_not_existing(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
@@ -437,8 +421,7 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryT
 
     def test_redo_if_not_output_is_directory(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
@@ -470,12 +453,10 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
 
             async def redo(self, result, context):
                 dlb.di.inform("redoing right now")
-                with open((context.root_path / self.object_file).native, 'wb'):
-                    pass
+                open((context.root_path / self.object_file).native, 'wb').close()
 
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         t = BTool(object_file='a.o')
 
@@ -599,8 +580,7 @@ class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkin
 
     def test_redo_ignores_nonexistent_output_file(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
@@ -609,10 +589,8 @@ class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkin
 
     def test_redo_does_not_remove_nonobstructing_outputs(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
-        with open('a.o', 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
+        open('a.o', 'xb').close()
         os.mkdir('d/')
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
@@ -623,10 +601,8 @@ class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkin
 
     def test_redo_removes_obstructing_outputs(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
-        with open('d', 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
+        open('d', 'xb').close()
         os.mkdir('a.o')
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
@@ -637,8 +613,7 @@ class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkin
 
     def test_run_without_redo_does_not_remove_output_files(self):
         os.mkdir('src')
-        with open(os.path.join('src', 'a.cpp'), 'xb'):
-            pass
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():

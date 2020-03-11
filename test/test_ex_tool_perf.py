@@ -35,8 +35,7 @@ class RunBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_scenario1(self):
         for p in included_files + ['a.cpp']:
-            with open(p, 'xb'):
-                pass
+            open(p, 'xb').close()
 
         profile = cProfile.Profile()
 
@@ -70,8 +69,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
         import dlb.ex.worktree
 
         os.makedirs(os.path.join('a', 'b'))
-        with open(os.path.join('a', 'b', 'c'), 'xb'):
-            pass
+        open(os.path.join('a', 'b', 'c'), 'xb').close()
 
         dlb.di.set_threshold_level(logging.WARNING)
         p = dlb.fs.Path('a/b/c')

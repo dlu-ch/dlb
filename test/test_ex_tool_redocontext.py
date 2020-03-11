@@ -42,8 +42,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_accepts_path_in_arguments(self):
         os.mkdir('-l')
-        with open(os.path.join('-l', 'content'), 'xb'):
-            pass
+        open(os.path.join('-l', 'content'), 'xb').close()
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout=asyncio.subprocess.PIPE)
@@ -74,8 +73,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_changes_cwd(self):
         os.mkdir('-l')
-        with open(os.path.join('-l', 'content'), 'xb'):
-            pass
+        open(os.path.join('-l', 'content'), 'xb').close()
         with dlb.ex.Context(find_helpers=True) as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper('ls', ['-l'], cwd=dlb.fs.Path('-l'), stdout=asyncio.subprocess.PIPE)
@@ -207,8 +205,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
             os.mkdir('a')
-            with open(os.path.join('a', 'b'), 'wb'):
-                pass
+            open(os.path.join('a', 'b'), 'wb').close()
 
             with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b', dlb.fs.Path('a/b'))

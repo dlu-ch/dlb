@@ -38,8 +38,7 @@ class BinarySearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_nondirectories_and_nonexistent_paths_are_ignored(self):
         os.mkdir('d')
-        with open('f', 'xb'):
-            pass
+        open('f', 'xb').close()
 
         orig_path = os.environ['PATH']
         os.environ['PATH'] = os.pathsep.join(
@@ -151,8 +150,7 @@ class FindPathInTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertIsNone(p)
 
     def test_finds_only_nondirectory_for_nondirectory(self):
-        with open('d', 'xb'):
-            pass
+        open('d', 'xb').close()
         with dlb.ex.Context():
             p = dlb.ex.Context().find_path_in('d', ['.'])
             self.assertEqual(dlb.ex.Context.root_path / 'd', p)

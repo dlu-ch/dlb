@@ -36,8 +36,7 @@ class ATool(dlb.ex.Tool):
 class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_new_or_missing_dependency_causes_redo(self):
-        with open('a.cpp', 'xb'):
-            pass
+        open('a.cpp', 'xb').close()
 
         t = ATool(source_file='a.cpp', object_file='a.o')
 
@@ -55,8 +54,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             self.assertRegex(output.getvalue(), regex)
             self.assertIsNone(t.run())
 
-        with open('a.h', 'xb'):
-            pass
+        open('a.h', 'xb').close()
 
         with dlb.ex.Context():
             output = io.StringIO()
@@ -84,10 +82,8 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             self.assertIsNone(t.run())
 
     def test_invalid_dependency_causes_redo(self):
-        with open('a.cpp', 'xb'):
-            pass
-        with open('a.h', 'xb'):
-            pass
+        open('a.cpp', 'xb').close()
+        open('a.h', 'xb').close()
 
         t = ATool(source_file='a.cpp', object_file='a.o')
 
@@ -392,8 +388,7 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase
     def test_redo_if_source_has_changed(self):
 
         with tempfile.TemporaryDirectory() as content_tmp_dir_path:
-            with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w'):
-                pass
+            open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
             with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
                 f.write(
                     'import dlb.ex\n'
@@ -438,8 +433,7 @@ class ReprOfResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
     def test_result_repr_is_meaningful(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
 
-        with open('a.cpp', 'xb'):
-            pass
+        open('a.cpp', 'xb').close()
 
         with dlb.ex.Context():
             r = t.run()

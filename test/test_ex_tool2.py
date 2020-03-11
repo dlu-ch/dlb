@@ -178,8 +178,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_location_in_zip_archive_is_correct(self):
         with tempfile.TemporaryDirectory() as tmp_dir_path:
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
-                with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w'):
-                    pass
+                open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
                 with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
                     f.write(
                         'import dlb.ex\n'
@@ -201,8 +200,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_fails_for_zip_without_zip_suffix(self):
         with tempfile.TemporaryDirectory() as tmp_dir_path:
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
-                with open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w'):
-                    pass
+                open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
                 with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
                     f.write(
                         'import dlb.ex\n'
@@ -378,8 +376,7 @@ class ToolRegistryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_path_of_tools_defined_in_managed_tree_are_correct(self):
         os.mkdir('a')
-        with open(os.path.join('a/__init__.py'), 'x'):
-            pass
+        open(os.path.join('a/__init__.py'), 'x').close()
         with open(os.path.join('a/u.py'), 'x') as f:
             f.write(
                 'import dlb.ex\n'

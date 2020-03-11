@@ -87,9 +87,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertIsNone(t.run())
 
     def test_fails_for_colon_in_name(self):
-        with open('./a:c', 'w'):
-            pass
-
+        open('./a:c', 'w').close()
         t = CCompiler(source_file='a:c', object_file='a.o')
         with self.assertRaises(Exception) as cm:
             with dlb.ex.Context(find_helpers=True):
@@ -97,8 +95,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertEqual("limitation of 'gcc -MMD' does not allow this file name: 'a:c'", str(cm.exception))
 
     def test_fails_for_multiple_inputs(self):
-        with open('a.c', 'w'):
-            pass
+        open('a.c', 'w').close()
 
         class C(CCompiler):
             def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
@@ -110,8 +107,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 t.run()
 
     def test_fails_for_invalid_warning(self):
-        with open('a.c', 'w'):
-            pass
+        open('a.c', 'w').close()
 
         class C(CCompiler):
             SUPPRESSED_WARNINGS = ('no-all',)
@@ -123,8 +119,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertEqual("not a warning name: 'no-all'", str(cm.exception))
 
     def test_fails_for_invalid_macro(self):
-        with open('a.c', 'w'):
-            pass
+        open('a.c', 'w').close()
 
         class C(CCompiler):
             DEFINITIONS = {'a(': None}

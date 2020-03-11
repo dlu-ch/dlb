@@ -38,8 +38,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
             os.chmod(os.path.join('a',  'b1', 'c'), 0o000)
 
     def test_fails_for_relative_path(self):
-        with open('x', 'wb'):
-            pass
+        open('x', 'wb').close()
 
         with self.assertRaises(ValueError) as cm:
             dlb.ex.worktree.remove_filesystem_object('x')
@@ -62,8 +61,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
 
     # noinspection PyTypeChecker
     def test_fails_for_bytes_path(self):
-        with open('x', 'wb'):
-            pass
+        open('x', 'wb').close()
 
         with self.assertRaises(TypeError) as cm:
             dlb.ex.worktree.remove_filesystem_object(b'x')
@@ -75,8 +73,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
     def test_removes_existing_regular_file(self):
-        with open('f', 'wb'):
-            pass
+        open('f', 'wb').close()
 
         dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'f'))
 
@@ -90,8 +87,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertFalse(os.path.exists('d'))
 
     def test_removes_symbolic_link(self):
-        with open('f', 'wb'):
-            pass
+        open('f', 'wb').close()
 
         try:
             os.symlink('f', 's', target_is_directory=False)
@@ -175,8 +171,7 @@ class RemoveFilesystemObjectTest(tools_for_test.TemporaryDirectoryTestCase):
 class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_fails_for_relative_path(self):
-        with open('x', 'wb'):
-            pass
+        open('x', 'wb').close()
 
         with self.assertRaises(ValueError) as cm:
             dlb.ex.worktree.read_filesystem_object_memo('x')
@@ -188,8 +183,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual("not an absolute path: '.{}x'".format(escaped_sep), str(cm.exception))
 
     def test_fails_for_bytes_path(self):
-        with open('x', 'wb'):
-            pass
+        open('x', 'wb').close()
 
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
@@ -201,8 +195,7 @@ class ReadFilesystemObjectMemoTest(tools_for_test.TemporaryDirectoryTestCase):
             dlb.ex.worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
 
     def test_return_stat_for_existing_regular(self):
-        with open('x', 'wb'):
-            pass
+        open('x', 'wb').close()
 
         sr0 = os.lstat('x')
 
@@ -429,15 +422,13 @@ class TemporaryTest(tools_for_test.TemporaryDirectoryTestCase):
         with dlb.ex.worktree.Temporary(path_provider=pp, is_dir=True) as p:
             self.assertIsInstance(p, dlb.fs.Path)
             self.assertTrue(os.path.isdir(p.native))
-            with open('f', 'xb'):
-                pass
+            open('f', 'xb').close()
         self.assertFalse(os.path.exists(p.native))
 
     def test_contentmanager_fails_on_existing_file(self):
         pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
         t = dlb.ex.worktree.Temporary(path_provider=pp, is_dir=False)
-        with open(t.path.native, 'xb'):
-            pass
+        open(t.path.native, 'xb').close()
         with self.assertRaises(FileExistsError):
             with t:
                 pass

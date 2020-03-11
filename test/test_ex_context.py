@@ -135,8 +135,7 @@ class WorkingTreeRequirementTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertIn('working tree', str(cm.exception))
 
     def test_fails_if_dlbroot_is_file(self):
-        with open('.dlbroot', 'wb'):
-            pass
+        open('.dlbroot', 'wb').close()
 
         with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
             with dlb.ex.Context():
@@ -174,10 +173,8 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         temp_path = os.path.join('.dlbroot', 't')
         os.makedirs(os.path.join(temp_path, 'c'))
 
-        with open(os.path.join(temp_path, 'a'), 'wb'):
-            pass
-        with open(os.path.join(temp_path, 'c', 'b'), 'wb'):
-            pass
+        open(os.path.join(temp_path, 'a'), 'wb').close()
+        open(os.path.join(temp_path, 'c', 'b'), 'wb').close()
 
         sr0 = os.stat(temp_path)
         os.chmod(temp_path, stat.S_IMODE(sr0.st_mode) ^ stat.S_IXOTH)  # change permission
@@ -213,20 +210,16 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         os.mkdir(mprobe_file)
         os.mkdir(os.path.join(mprobe_file, 'c'))
 
-        with open(os.path.join(mprobe_file, 'a'), 'wb'):
-            pass
-        with open(os.path.join(mprobe_file, 'c', 'b'), 'wb'):
-            pass
+        open(os.path.join(mprobe_file, 'a'), 'wb').close()
+        open(os.path.join(mprobe_file, 'c', 'b'), 'wb').close()
 
         with dlb.ex.Context():
             self.assertTrue(os.path.isfile(mprobe_file))
 
     def test_mtime_probe_uppercase_file_is_removed(self):
-        with open(os.path.join('.dlbroot', 'o'), 'xb'):
-            pass
+        open(os.path.join('.dlbroot', 'o'), 'xb').close()
         try:
-            with open(os.path.join('.dlbroot', 'O'), 'xb'):
-                pass
+            open(os.path.join('.dlbroot', 'O'), 'xb').close()
         except FileExistsError:
             raise unittest.SkipTest from None  # filesystem is not case-sensitive
 
@@ -458,8 +451,7 @@ class ProcessLockTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_succeeds_if_lock_file_exists(self):
         os.mkdir('.dlbroot')
-        with open(os.path.join('.dlbroot', 'lock'), 'xb'):
-            pass
+        open(os.path.join('.dlbroot', 'lock'), 'xb').close()
         with dlb.ex.Context():
             pass
 
@@ -571,8 +563,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_root_is_managed_tree_path(self):
         os.mkdir('.dlbroot')
         os.makedirs(os.path.join('a', 'b'))
-        with open(os.path.join('a', 'b', 'c'), 'w'):
-            pass
+        open(os.path.join('a', 'b', 'c'), 'w').close()
 
         # noinspection PyTypeChecker
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
@@ -708,8 +699,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
     def test_corrects_isdir_if_notassuming(self):
         os.mkdir('.dlbroot')
         os.mkdir('d')
-        with open('f', 'w'):
-            pass
+        open('f', 'w').close()
 
         with dlb.ex.Context():
             cls = dlb.ex.Context.path_cls

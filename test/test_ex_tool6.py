@@ -39,10 +39,8 @@ class MultiplePendingRedosTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
 
     def setUp(self):
         super().setUp()
-        with open('a.cpp', 'xb'):
-            pass
-        with open('b.cpp', 'xb'):
-            pass
+        open('a.cpp', 'xb').close()
+        open('b.cpp', 'xb').close()
 
     def test_one_pending_redos(self):
         output = io.StringIO()
