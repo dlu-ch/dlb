@@ -43,6 +43,11 @@ Contexts can be nested::
 
    # no active context
 
+Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe what happens in the context::
+
+    with dlb.di.Cluster('this happens in the context'), dlb.ex.Context():
+        ...
+
 
 Context objects
 ---------------
