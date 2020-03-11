@@ -186,6 +186,7 @@ class SingleInputValidationTest(unittest.TestCase):
 
     def test_envvar_returns_str_or_dict(self):
         d = dlb.ex.depend.EnvVarInput(name='number', restriction=r'[0-9]+[a-z]+', example='42s')
+        # noinspection PyCallByClass
         self.assertEqual(dlb.ex.depend.EnvVarInput.Value(name='number', raw='123mm', groups={}),
                          d.validate('123mm'))
 
@@ -193,6 +194,7 @@ class SingleInputValidationTest(unittest.TestCase):
             name='number',
             restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s')
 
+        # noinspection PyCallByClass
         self.assertEqual(dlb.ex.depend.EnvVarInput.Value(name='number', raw='123mm',
                                                          groups={'num': '123', 'unit': 'mm'}),
                          d.validate('123mm'))

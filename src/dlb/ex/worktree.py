@@ -168,7 +168,7 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
     if not is_directory:
         return
 
-    # was a directory on last remove attempt
+    # was a directory at last remove attempt
     try:
         if abs_empty_dir_path is None:
             lke = _KeepFirstRmTreeException()

@@ -252,22 +252,23 @@ class EnvVarInput(Input):
         if not m:
             raise ValueError(f"value is invalid with respect to restriction: {value!r}")
 
+        # noinspection PyCallByClass
         return EnvVarInput.Value(name=self.name, raw=value, groups=m.groupdict())
 
 
 class ObjectOutput(Output):
-     Value = Any  # except None and NotImplemented
+    Value = Any  # except None and NotImplemented
 
-     def __init__(self, **kwargs):
-         super().__init__(**kwargs)
-         if self.explicit:
-             raise ValueError("must not be explicit")
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self.explicit:
+            raise ValueError("must not be explicit")
 
-     def validate_single(self, value) -> Any:
-         value = super().validate_single(value)
-         if value is NotImplemented:
+    def validate_single(self, value) -> Any:
+        value = super().validate_single(value)
+        if value is NotImplemented:
             raise ValueError(f"value is invalid: {value!r}")
-         return copy.deepcopy(value)
+        return copy.deepcopy(value)
 
 
 def _inject_into(owner, owner_name, owner_module):
