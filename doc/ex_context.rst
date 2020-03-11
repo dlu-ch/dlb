@@ -187,49 +187,38 @@ Context objects
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: create_temporary(self, suffix='', prefix='t', is_dir=False)
+   .. method:: temporary(self, suffix='', is_dir=False)
 
-      Create a temporary regular file (for *is_dir* = ``False``) or a temporary directory (for *is_dir* = ``True``)
-      in the :term:`management tree` and return is absolute path.
+      Return a :class:`dlb.ex.Temporary` object, representing a temporary regular file (for *is_dir* = ``False``) or a
+      temporary directory (for *is_dir* = ``True``) in the :term:`management tree` with a unique path.
 
-      The file name will end with *suffix* (without an added dot) and begin with *prefix*.
+      Usage example::
 
-      *prefix* must not be empty.
-      *prefix* and *suffix* must not contain an path separator.
+          with context.temporary(suffix='.o') as p:
+              ...  # an empty file with absolute path *p* exists
 
-      Permissions:
+          ... = context.temporary().path  # just get the absolute path, do not create the file
 
-       - A created regular file is readable and writable only by the creating user ID.
-         If the platform uses permission bits to indicate whether a file is executable, the file is executable by
-         no one.
+      The *path* attribute of the returned object is an absolute path in the same directory for all calls in the
+      :term:`root context`, as a :class:`dlb.fs.Path` object. Its last component is unique among all calls
+      in the :term:`root context`. ``path.is_dir()`` is *is_dir*.
 
-       - A created directory is readable, writable, and searchable only by the creating user ID.
+      The unique path component starts with a lower-case letter and ends with *suffix*.
+      It contains only lower-case letters and decimal digits between its first characters and the suffix.
+      If *suffix* is not empty, is must start with a character from strings.punctuation and must not contain ``'/'``.
+      The the unique path component without the *suffix* is at most 12 characters long for the first 2**61 calls.
+
+      When used as a context manager, an empty regular file or directory with *path* is created when entered and removed
+      (with its content) on exit. Raises :exc:`FileExistError` if the regular file or directory exists.
 
       Same on class and instance.
 
-      .. note::
-         Use the temporary directory to store intermediate filesystem objects meant to replace filesystem objects
-         in the :term:`managed tree` eventually. This guarantees a correct :term:`mtime` of the target
-         (provided, the assumption :ref:`A-F1 <assumption-f1>` holds).
-
-      .. note::
-         The number of file name candidates tried for a given combination of *prefix* and *suffix* is limited by an
-         OS-dependent number. A best practise is therefore to remove the created regular file or directory manually
-         after use, although they are removed automatically when the :term:`root context` is exited.
-
-      :param suffix: suffix of the file name of the path
+      :param suffix: suffix of the unique path component
       :type suffix: str
-
-      :param prefix: prefix of the file name of the path
-      :type prefix: str
-
       :type is_dir: bool
 
-      :return: an :class:`dlb.fs.Path` *p* with ``p.is_dir() = is_dir``
-      :rtype: :class:`dlb.fs.Path`
-
-      :raises ValueError: if *prefix* is empty or the resulting path is not representable as a :class:`dlb.fs.Path`
-      :raises FileExistsError: if all tried candidates already existed
+      :raises ValueError: if *suffix* is invalid
+      :raises FileExistsError: if the regular file or directory exists (when used as content manager)
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: working_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False,

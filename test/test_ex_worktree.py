@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import dlb.ex.worktree
+import string
 import tempfile
 import unittest
 import tools_for_test
@@ -366,3 +367,87 @@ class GetCheckRootPathFromCwdTest(tools_for_test.TemporaryDirectoryTestCase):
             "  | try again?"
         )
         self.assertEqual(msg, str(cm.exception))
+
+
+class UniquePathProviderTest(unittest.TestCase):
+
+    def test_generates_prefixed_unique(self):
+        pp = dlb.ex.worktree.UniquePathProvider('x/y/')
+        self.assertEqual(dlb.fs.Path('x/y/'), pp.root_path)
+        self.assertEqual(dlb.fs.Path('x/y/a'), pp.generate())
+        self.assertEqual(dlb.fs.Path('x/y/b/'), pp.generate(is_dir=True))
+        self.assertEqual(dlb.fs.Path('x/y/c'), pp.generate())
+
+    def test_generated_name_is_valid(self):
+        pp = dlb.ex.worktree.UniquePathProvider('.')
+        regex = '^[a-z][a-z0-9]*$'
+        p = None
+        for i in range(26 + 26 * 36 + 26 * 36 * 36):
+            p = pp.generate()
+            self.assertRegex(p.parts[0], regex)
+        self.assertEqual("z99", p.parts[0])
+
+    def test_fails_for_suffix_with_slash(self):
+        pp = dlb.ex.worktree.UniquePathProvider('.')
+        with self.assertRaises(ValueError) as cm:
+            pp.generate(suffix='_/_')
+        msg = "'suffix' must not contain '/': '_/_'"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_suffix_with_leading_letter(self):
+        pp = dlb.ex.worktree.UniquePathProvider('.')
+        with self.assertRaises(ValueError) as cm:
+            pp.generate(suffix='A')
+        msg = "non-empty 'suffix' must start with character from strings.punctuation, not 'A'"
+        self.assertEqual(msg, str(cm.exception))
+
+
+class TemporaryTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_provides_path_with_out_creating(self):
+        pp = dlb.ex.worktree.UniquePathProvider('/tmp/does/not/exist/')
+        t = dlb.ex.worktree.Temporary(path_provider=pp)
+        self.assertIsInstance(t.path, dlb.fs.Path)
+        self.assertTrue(t.path.is_absolute())
+
+    def test_fails_for_relative_root_path(self):
+        pp = dlb.ex.worktree.UniquePathProvider('.')
+        with self.assertRaises(ValueError) as cm:
+            dlb.ex.worktree.Temporary(path_provider=pp)
+        msg = "'root_path' of 'path_provider' must be absolute"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_contentmanager_creates_and_removes_file(self):
+        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        with dlb.ex.worktree.Temporary(path_provider=pp, is_dir=False) as p:
+            self.assertIsInstance(p, dlb.fs.Path)
+            self.assertTrue(os.path.isfile(p.native))
+        self.assertFalse(os.path.exists(p.native))
+
+    def test_contentmanager_creates_and_removes_directory(self):
+        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        with dlb.ex.worktree.Temporary(path_provider=pp, is_dir=True) as p:
+            self.assertIsInstance(p, dlb.fs.Path)
+            self.assertTrue(os.path.isdir(p.native))
+            with open('f', 'xb'):
+                pass
+        self.assertFalse(os.path.exists(p.native))
+
+    def test_contentmanager_fails_on_existing_file(self):
+        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        t = dlb.ex.worktree.Temporary(path_provider=pp, is_dir=False)
+        with open(t.path.native, 'xb'):
+            pass
+        with self.assertRaises(FileExistsError):
+            with t:
+                pass
+        self.assertTrue(os.path.exists(t.path.native))  # not removed
+
+    def test_contentmanager_fails_on_existing_directory(self):
+        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        t = dlb.ex.worktree.Temporary(path_provider=pp, is_dir=True)
+        os.mkdir(t.path.native)
+        with self.assertRaises(FileExistsError):
+            with t:
+                pass
+        self.assertTrue(os.path.exists(t.path.native))  # not removed

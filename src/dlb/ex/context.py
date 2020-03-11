@@ -22,7 +22,6 @@ import os
 import os.path
 import stat
 import time
-import tempfile
 import asyncio
 from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable
 from .. import ut
@@ -401,10 +400,11 @@ class _RootSpecifics:
 
         # 3. then prepare it
 
+        self._temp_path_provider = None
         self._mtime_probe = None
         self._rundb = None
         try:
-            self._mtime_probe, self._rundb, self._is_working_tree_case_sensitive = \
+            self._temp_path_provider, self._mtime_probe, self._rundb, self._is_working_tree_case_sensitive = \
                 worktree.prepare_locked_working_tree(self._root_path)
         except Exception:
             self._close_and_unlock_if_open()
@@ -419,9 +419,7 @@ class _RootSpecifics:
     def _cleanup(self):
         self._rundb.cleanup()
         self._rundb.commit()
-        temporary_path = os.path.join(
-            self._root_path_native_str, worktree.MANAGEMENTTREE_DIR_NAME, worktree.TEMPORARY_DIR_NAME)
-        worktree.remove_filesystem_object(temporary_path, ignore_non_existent=True)
+        worktree.remove_filesystem_object(str(self._temp_path_provider.root_path.native), ignore_non_existent=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self):
         t0 = time.monotonic_ns()  # since Python 3.7
@@ -620,28 +618,10 @@ class _BaseContext(metaclass=_ContextMeta):
 
         return rel_path
 
-    # TODO move most of this to worktree
     @staticmethod
-    def create_temporary(*, suffix='', prefix='t', is_dir=False) -> fs.Path:
+    def temporary(*, suffix: str = '', is_dir: bool = False) -> worktree.Temporary:
         self = _get_root_specifics()
-
-        if not isinstance(suffix, str) or not isinstance(prefix, str):
-            raise TypeError("'prefix' and 'suffix' must be str")
-        if not prefix:
-            raise ValueError("'prefix' must not be empty")
-        if os.path.sep in prefix or (os.path.altsep and os.path.altsep in prefix):
-            raise ValueError("'prefix' must not contain a path separator")
-        if os.path.sep in suffix or (os.path.altsep and os.path.altsep in suffix):
-            raise ValueError("'prefix' must not contain a path separator")
-
-        t = os.path.join(self._root_path_native_str, worktree.MANAGEMENTTREE_DIR_NAME, worktree.TEMPORARY_DIR_NAME)
-        is_dir = bool(is_dir)
-        if is_dir:
-            p_str = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=t)
-        else:
-            fd, p_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=t)
-            os.close(fd)
-        return fs.Path(fs.Path.Native(p_str), is_dir=is_dir)
+        return worktree.Temporary(path_provider=self._temp_path_provider, suffix=suffix, is_dir=is_dir)
 
     def __setattr__(self, key, value):
         if not key.startswith('_'):

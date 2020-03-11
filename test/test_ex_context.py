@@ -498,80 +498,65 @@ class ProcessLockPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmo
         os.chmod('.dlbroot', 0o777)
 
 
-class TemporaryFilesystemObjectsNotRunningTest(unittest.TestCase):
+class TemporaryNotRunningTest(unittest.TestCase):
 
     def test_fails_for_if_not_running(self):
         with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.create_temporary()
+            dlb.ex.Context.temporary(is_dir=False)
         with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.Context.create_temporary(is_dir=True)
+            dlb.ex.Context.temporary(is_dir=True)
 
 
-class TemporaryFilesystemObjectsTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class TemporaryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_creates_regular_file(self):
         with dlb.ex.Context():
             t = dlb.ex.Context.root_path / '.dlbroot/t'
 
-            p = dlb.ex.Context.create_temporary()
-            self.assertIsInstance(p, dlb.fs.Path)
-            self.assertFalse(p.is_dir())
-            self.assertTrue(p.native.raw.is_file())
-            self.assertEqual(t.native.raw, p.native.raw.parent)
+            with dlb.ex.Context.temporary() as p:
+                self.assertIsInstance(p, dlb.fs.Path)
+                self.assertFalse(p.is_dir())
+                self.assertTrue(p.native.raw.is_file())
+                self.assertEqual(t.native.raw, p.native.raw.parent)
 
-            p = dlb.ex.Context.create_temporary(is_dir=False, suffix='.o', prefix='aha')
-            self.assertTrue(p.native.raw.is_file())
-            self.assertEqual(t.native.raw, p.native.raw.parent)
-            self.assertTrue(p.parts[-1].startswith('aha'), repr(p))
-            self.assertTrue(p.parts[-1].endswith('.o'), repr(p))
+            with dlb.ex.Context.temporary(is_dir=False, suffix='.o') as p:
+                self.assertTrue(p.native.raw.is_file())
+                self.assertEqual(t.native.raw, p.native.raw.parent)
+                self.assertTrue(p.parts[-1].endswith('.o'), repr(p))
 
         self.assertFalse(os.path.exists(os.path.join('.dlbroot', 't')))
 
     def test_creates_directory(self):
         with dlb.ex.Context():
             t = dlb.ex.Context.root_path / '.dlbroot/t'
-            p = dlb.ex.Context.create_temporary(is_dir=True)
-            self.assertIsInstance(p, dlb.fs.Path)
-            self.assertTrue(p.is_dir())
-            self.assertTrue(p.native.raw.is_dir())
-            self.assertEqual(t.native.raw, p.native.raw.parent)
 
-            p = dlb.ex.Context.create_temporary(is_dir=True, suffix='.o', prefix='aha')
-            self.assertIsInstance(p, dlb.fs.Path)
-            self.assertTrue(p.native.raw.is_dir())
-            self.assertEqual(t.native.raw, p.native.raw.parent)
-            self.assertTrue(p.parts[-1].startswith('aha'), repr(p))
-            self.assertTrue(p.parts[-1].endswith('.o'), repr(p))
+            with dlb.ex.Context.temporary(is_dir=True) as p:
+                self.assertIsInstance(p, dlb.fs.Path)
+                self.assertTrue(p.is_dir())
+                self.assertTrue(p.native.raw.is_dir())
+                self.assertEqual(t.native.raw, p.native.raw.parent)
+
+            with dlb.ex.Context.temporary(is_dir=True, suffix='.o') as p:
+                self.assertIsInstance(p, dlb.fs.Path)
+                self.assertTrue(p.native.raw.is_dir())
+                self.assertEqual(t.native.raw, p.native.raw.parent)
+                self.assertTrue(p.parts[-1].endswith('.o'), repr(p))
 
         self.assertFalse(os.path.exists(os.path.join('.dlbroot', 't')))
 
-    def test_fails_for_bytes_prefix_or_suffix(self):
+    def test_fails_for_slash_in_suffix(self):
         with dlb.ex.Context():
-            with self.assertRaises(TypeError):
-                dlb.ex.Context.create_temporary(prefix=b'x')
-            with self.assertRaises(TypeError):
-                dlb.ex.Context.create_temporary(suffix=b'y')
+            with self.assertRaises(ValueError) as cm:
+                dlb.ex.Context.temporary(suffix='./y')
+            msg = "'suffix' must not contain '/': './y'"
+            self.assertEqual(msg, str(cm.exception))
 
-    def test_fails_for_empty_prefix(self):
+    def test_fails_for_if_suffix_does_not_starts_with_punctuation(self):
         with dlb.ex.Context():
-            with self.assertRaises(ValueError):
-                dlb.ex.Context.create_temporary(prefix='')
-            with self.assertRaises(ValueError):
-                dlb.ex.Context.create_temporary(is_dir=True, prefix='')
-
-    def test_fails_for_path_separator_in_prefix(self):
-        with dlb.ex.Context():
-            with self.assertRaises(ValueError):
-                dlb.ex.Context.create_temporary(prefix='x' + os.path.sep)
-            with self.assertRaises(ValueError):
-                dlb.ex.Context.create_temporary(is_dir=True, prefix='x' + os.path.sep + '..' + os.path.sep)
-
-    def test_fails_for_path_separator_in_suffix(self):
-        with dlb.ex.Context():
-            with self.assertRaises(ValueError):
-                dlb.ex.Context.create_temporary(suffix='x' + os.path.sep)
-            with self.assertRaises(ValueError):
-                dlb.ex.Context.create_temporary(is_dir=True, suffix='x' + os.path.sep + '..' + os.path.sep)
+            with self.assertRaises(ValueError) as cm:
+                dlb.ex.Context.temporary(suffix='x')
+            msg = "non-empty 'suffix' must start with character from strings.punctuation, not 'x'"
+            self.assertEqual(msg, str(cm.exception))
 
 
 # noinspection PyTypeChecker

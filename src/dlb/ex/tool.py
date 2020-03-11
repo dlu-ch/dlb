@@ -394,15 +394,11 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
 # TODO move to worktree (once temporary objects are created in worktree)
 def _remove_filesystem_objects(obstructive_paths: Iterable[fs.Path], context: context_.Context):
     if obstructive_paths:
-        tmp_dir = str(context.create_temporary(is_dir=True).native)  # may raise OSError
-
-        for p in obstructive_paths:
-            worktree.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
-                                              ignore_non_existent=True)  # may raise OSError
-        try:
+        with context.temporary(is_dir=True) as tmp_dir:  # may raise OSError
+            for p in obstructive_paths:
+                worktree.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
+                                                  ignore_non_existent=True)  # may raise OSError
             worktree.remove_filesystem_object(tmp_dir)
-        except OSError:  # TODO test
-            pass  # try again when root context is cleaned-up
 
 
 class _RedoResult:

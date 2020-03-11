@@ -6,11 +6,13 @@
 This is an implementation detail - do not import it unless you know what you are doing."""
 
 __all__ = (
+    'Temporary',
     'NoWorkingTreeError',
     'ManagementTreeError',
     'WorkingTreePathError'
 )
 
+import string
 import os
 import stat
 import shutil
@@ -54,6 +56,60 @@ class _KeepFirstRmTreeException:
         _, value, _ = excinfo
         if self.first_exception is None and value is not None:
             self.first_exception = value
+
+
+class UniquePathProvider:
+    FIRST_CHARACTERS = string.ascii_lowercase
+    CHARACTERS = FIRST_CHARACTERS + string.digits
+
+    def __init__(self, root_path: fs.PathLike):
+        self._root_path = fs.Path(root_path)
+        self._i = 0
+
+    @property
+    def root_path(self):
+        return self._root_path
+
+    def generate(self, *, suffix: str = '', is_dir: bool = False) -> fs.Path:
+        # Return a path unique to this object by appending a unique path component to *root_path*.
+        #
+        # The unique path component starts with a lower-case letter and ends with suffix.
+        # It contains only lower-case letters and decimal digits between its first characters and the suffix.
+        # If *suffix* is not empty, is must start with a character from strings.punctuation and must not contain '/'.
+        #
+        # After *n* successful calls of this method since construction, the number *m* of characters in the
+        # last path component (without suffix) is
+        #
+        #    m = math.ceil((math.log2(35 * n / 26 + 1) / math.log2(36))).
+        #
+        # For n = 2**64, m is 13.
+        # With an *suffix* that is a valid dlb.fs.PortablePosixPath of at most two characters, the unique path component
+        # is a valid dlb.fs.PortablePosixPath for the first 3_519_940_422_753_201_122 ~= 1.5 * 2**61 calls.
+
+        suffix = str(suffix)
+        if suffix:
+            if suffix[0] not in string.punctuation:
+                raise ValueError(f"non-empty 'suffix' must start with character from "
+                                 f"strings.punctuation, not {suffix[0]!r}")
+            if '/' in suffix:
+                raise ValueError(f"'suffix' must not contain '/': {suffix!r}")
+
+        # assume a case-insensitive filesystem
+        i = self._i
+        i, d = divmod(i, len(self.FIRST_CHARACTERS))
+        n = self.FIRST_CHARACTERS[d]
+        while i > 0:
+            i, d = divmod(i - 1, len(self.CHARACTERS))
+            n += self.CHARACTERS[d]
+
+        n += suffix
+        if is_dir:
+            n += '/'
+
+        p = self._root_path / n
+
+        self._i += 1
+        return p
 
 
 def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
@@ -126,6 +182,33 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
     except FileNotFoundError:
         if not ignore_non_existent:
             raise
+
+
+class Temporary:
+    def __init__(self, *, path_provider: UniquePathProvider, suffix: str = '', is_dir: bool = False):
+        if not path_provider.root_path.is_absolute():
+            raise ValueError("'root_path' of 'path_provider' must be absolute")
+        self._path = path_provider.generate(suffix=suffix, is_dir=is_dir)
+        self._temporary_path_provider = path_provider
+        self._did_create = False
+
+    @property
+    def path(self) -> fs.Path:
+        return self._path
+
+    def __enter__(self) -> fs.Path:
+        # create an empty directory or file, raise an FileExistsError if it exists
+        p = self._path.native
+        if self._path.is_dir():
+            os.mkdir(p, mode=0o733)
+        else:
+            os.close(os.open(p, flags=os.O_CREAT | os.O_EXCL, mode=0o622))
+        self._did_create = True
+        return self._path
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._did_create:
+            remove_filesystem_object(self._path.native, ignore_non_existent=True)
 
 
 def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> rundb.FilesystemObjectMemo:
@@ -299,7 +382,13 @@ def unlock_working_tree(root_path: fs.Path):
 def prepare_locked_working_tree(root_path: fs.Path):
     management_tree_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME)
 
+    temp_path_provider = UniquePathProvider(root_path / f'{MANAGEMENTTREE_DIR_NAME}/{TEMPORARY_DIR_NAME}/')
+
     try:
+        temporary_path = str(temp_path_provider.root_path.native)
+        remove_filesystem_object(temporary_path, ignore_non_existent=True)
+        os.mkdir(temporary_path)
+
         rundb_path = os.path.join(management_tree_path, RUNDB_FILE_NAME)
         try:
             mode = os.lstat(rundb_path).st_mode
@@ -307,10 +396,6 @@ def prepare_locked_working_tree(root_path: fs.Path):
                 remove_filesystem_object(rundb_path)
         except FileNotFoundError:
             pass
-
-        temporary_path = os.path.join(management_tree_path, TEMPORARY_DIR_NAME)
-        remove_filesystem_object(temporary_path, ignore_non_existent=True)
-        os.mkdir(temporary_path)
 
         # prepare o for mtime probing
         mtime_probe_path = os.path.join(management_tree_path, MTIME_PROBE_FILE_NAME)
@@ -345,4 +430,4 @@ def prepare_locked_working_tree(root_path: fs.Path):
         )
         raise ManagementTreeError(msg) from None
 
-    return mtime_probe, db, is_working_tree_case_sensitive
+    return temp_path_provider, mtime_probe, db, is_working_tree_case_sensitive

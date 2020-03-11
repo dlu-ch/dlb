@@ -6,7 +6,6 @@
 
 import sys
 from typing import Iterable, Union
-import os
 import dlb.fs
 import dlb_contrib_make
 import dlb_contrib_c
@@ -64,11 +63,8 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                 else:
                     compile_arguments += ['-D', f'{macro}={replacement}']
 
-        make_rules_file = context.create_temporary()
-        object_file = context.create_temporary()
-
         # compile
-        try:
+        with context.temporary() as make_rules_file, context.temporary() as object_file:
             await context.execute_helper(
                 self.BINARY,
                 compile_arguments + [
@@ -90,8 +86,3 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
             result.compiler_executable = context.helper[self.BINARY]
             result.included_files = included_files
             context.replace_output(result.object_file, object_file)
-        except:
-            os.remove(object_file.native)
-            raise
-        finally:
-            os.remove(make_rules_file.native)

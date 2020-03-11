@@ -18,7 +18,6 @@ from .. import ut
 from .. import fs
 from . import rundb
 from . import worktree
-from . import context as context_
 from . import depend
 
 
@@ -189,12 +188,9 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
         r = context.root_path
         dst = (r / destination).native
-        tmp_dir = context.create_temporary(is_dir=True).native
-        try:
+        with context.temporary(is_dir=True) as tmp_dir:
             worktree.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
             os.replace(src=(r / source).native, dst=dst)
-        finally:
-            os.rmdir(tmp_dir)
         return True
 
 

@@ -127,12 +127,19 @@ Tool objects
       Example::
 
          class ATool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
+            BINARY = 'atool'
+
+            source_file = dlb.ex.Tool.Input.RegularFile()
+            output_file = dlb.ex.Tool.Output.RegularFile()
             included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
             async def redo(self, result, context):
-                result.included_files = ...
-                context.replace_output(result.object_file, ...)
+                if ...:
+                    raise Exception('invalid ...')
+                with context.temporary() as temp_file_
+                   await context.execute_helper(self.BINARY, ['-o', temp_file, result.source_file])
+                   result.included_files = ...
+                   context.replace_output(result.output_file, temp_file)
 
    .. attribute:: definition_location
 
@@ -587,7 +594,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       .. attribute:: groups
 
-         The names groups of *restriction* of the corresponding concrete dependency ???.
+         The named groups of *restriction* of the corresponding concrete dependency when matched against *raw*.
 
 
 Concrete output dependency role classes
