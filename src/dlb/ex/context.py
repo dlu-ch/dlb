@@ -75,8 +75,8 @@ class _BaseEnvVarDict:
 
         self._context = context
         self._top_value_by_name = {str(k): str(v) for k, v, in top_value_by_name.items()}
-        self._value_by_name = dict() if context.parent is None else dict(context.parent.env._value_by_name)
-        self._restriction_by_name: Dict[str, Pattern] = dict()
+        self._value_by_name = {} if context.parent is None else dict(context.parent.env._value_by_name)
+        self._restriction_by_name: Dict[str, Pattern] = {}
 
     def is_imported(self, name):
         self._check_non_empty_str(name=name)
@@ -245,7 +245,7 @@ class _BaseHelperDict:
 
         self._context = context
         self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = \
-            dict() if context.parent is None else dict(context.parent.helper._explicit_abs_path_by_helper_path)
+            {} if context.parent is None else dict(context.parent.helper._explicit_abs_path_by_helper_path)
 
         self._implicit_abs_path_by_helper_path = implicit_abs_path_by_helper_path
 
@@ -370,7 +370,7 @@ class _ContextMeta(type):
 
 class _RootSpecifics:
     def __init__(self, path_cls: Type[fs.Path]):
-        self._implicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = dict()
+        self._implicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = {}
         self._path_cls = path_cls
 
         # 1. check if the process' working directory is a working tree`s root
@@ -712,7 +712,7 @@ class Context(_BaseContext):
                 )
                 raise ValueError(msg) from None
             self._parent = _contexts[-1]
-            self._env = _EnvVarDict(self, dict())
+            self._env = _EnvVarDict(self, {})
         else:
             self._root_specifics = _RootSpecifics(self._path_cls)
             self._env = _EnvVarDict(self, os.environ)

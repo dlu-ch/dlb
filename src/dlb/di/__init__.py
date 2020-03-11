@@ -124,7 +124,7 @@ def _normalize_message_lines(message, *, name: str) -> Tuple[List[str], bool]:
 def _expand_fields_and_continuations(normalized_lines: Sequence[str]) -> List[str]:
 
     fields_per_line: List[List[str]] = []
-    len_by_field_index: Dict[int, int] = dict()
+    len_by_field_index: Dict[int, int] = {}
 
     for line in normalized_lines:
         r = _FIELD_SEPARATOR_REGEX.split(line)  # length of list is uneven

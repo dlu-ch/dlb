@@ -319,8 +319,8 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
     #
     # Returns ``True`` if at least one of the filesystem objects does not exist.
 
-    dependency_action_by_encoded_path = dict()
-    dependency_action_by_path = dict()
+    dependency_action_by_encoded_path = {}
+    dependency_action_by_path = {}
 
     # managed tree paths of existing filesystem objects with unexpected memos (e.g. wrong type):
     obstructive_paths = set()

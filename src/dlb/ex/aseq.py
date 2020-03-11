@@ -24,11 +24,11 @@ class LimitingCoroutineSequencer:
 
     def __init__(self, asyncio_loop: asyncio.AbstractEventLoop):
         self._asyncio_loop = asyncio_loop
-        self._tid_by_pending_task: Dict[asyncio.Task, int] = dict()
-        self._pending_task_by_tid: Dict[int, asyncio.Task] = dict()
+        self._tid_by_pending_task: Dict[asyncio.Task, int] = {}
+        self._pending_task_by_tid: Dict[int, asyncio.Task] = {}
         self._next_tid = 0
-        self._result_by_tid: Dict[int, Any] = dict()
-        self._exception_by_tid: Dict[int, Exception] = dict()
+        self._result_by_tid: Dict[int, Any] = {}
+        self._exception_by_tid: Dict[int, Exception] = {}
 
     def wait_then_start(self, _max_count: int, _timeout: Optional[float],
                         coro: Callable[[Any], Coroutine], *args, **kwargs) -> int:
@@ -90,8 +90,8 @@ class LimitingCoroutineSequencer:
         results = self._result_by_tid
         exceptions = self._exception_by_tid
 
-        self._result_by_tid = dict()
-        self._exception_by_tid = dict()
+        self._result_by_tid = {}
+        self._exception_by_tid = {}
 
         return results, exceptions
 
@@ -205,8 +205,8 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._proxy_by_uid: Dict[Hashable, _ResultProxy] = dict()
-        self._proxy_uid_by_tid: Dict[int, Hashable] = dict()
+        self._proxy_by_uid: Dict[Hashable, _ResultProxy] = {}
+        self._proxy_uid_by_tid: Dict[int, Hashable] = {}
 
     def get_result_proxy(self, uid: Hashable) -> Optional[_ResultProxy]:
         return self._proxy_by_uid.get(uid, None)

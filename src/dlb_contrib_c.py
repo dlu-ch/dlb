@@ -29,7 +29,7 @@ class CCompiler(dlb.ex.Tool):
     # Definition of object-like macros (like '#define VERSION 1.2.3') and function-like macros (like '#define V(x) #x').
     # If value is not None: define the definition with the value as the macro's replacement list.
     # If value is None: "undefine" the definition.
-    DEFINITIONS = dict()  # e.g. {'VERSION': '1.2.3', 'MAX(a, b)': '(((a) > (b)) ? (a) : (b))'}
+    DEFINITIONS = {}  # e.g. {'VERSION': '1.2.3', 'MAX(a, b)': '(((a) > (b)) ? (a) : (b))'}
 
     source_file = dlb.ex.Tool.Input.RegularFile()
     object_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
