@@ -25,17 +25,24 @@ class GetActionTest(unittest.TestCase):
 
 
 class RegisterTest(unittest.TestCase):
+    class DummyDependency(dlb.ex.depend.Dependency):
+        Value = int
+
     class DummyAction(dlb.ex.dependaction.Action):
         pass
 
     def test_fails_for_registered_action(self):
         with self.assertRaises(ValueError):
-            dlb.ex.dependaction.register_action(-1, dlb.ex.depend.RegularFileInput,
-                                                dlb.ex.dependaction.RegularFileInputAction)
+            dlb.ex.dependaction.register_action(0, dlb.ex.depend.RegularFileInput,
+                                                dlb.ex.dependaction.DirectoryInputAction)
 
     def test_fails_for_registered_dependency_id(self):
         with self.assertRaises(ValueError):
-            dlb.ex.dependaction.register_action(3, dlb.ex.depend.RegularFileInput, RegisterTest.DummyAction)
+            dlb.ex.dependaction.register_action(3, RegisterTest.DummyDependency, RegisterTest.DummyAction)
+
+        with self.assertRaises(ValueError):
+            dlb.ex.dependaction.register_action(3, dlb.ex.depend.RegularFileInput,
+                                                dlb.ex.dependaction.RegularFileInputAction)
 
     def test_fails_for_abstract_dependency_class(self):
         with self.assertRaises(TypeError):

@@ -7,7 +7,8 @@ This is an implementation detail - do not import it unless you know what you are
 
 import re
 import dataclasses
-from typing import Pattern, TypeVar, Type, Optional, Iterable, Dict, Hashable, Union, Tuple
+import copy
+from typing import Pattern, TypeVar, Type, Optional, Iterable, Any, Dict, Hashable, Union, Tuple
 from .. import fs
 from . import mult
 
@@ -240,7 +241,7 @@ class EnvVarInput(Input):
 
         return self.name == other.name and self.restriction == other.restriction  # ignore example
 
-    def validate_single(self, value) -> Union[str, Dict[str, str]]:
+    def validate_single(self, value) -> 'EnvVarInput.Value':
         # value is used to defined the content of a (future) environment variable
         value = super().validate_single(value)
 
@@ -252,6 +253,21 @@ class EnvVarInput(Input):
             raise ValueError(f"value is invalid with respect to restriction: {value!r}")
 
         return EnvVarInput.Value(name=self.name, raw=value, groups=m.groupdict())
+
+
+class ObjectOutput(Output):
+     Value = Any  # except None and NotImplemented
+
+     def __init__(self, **kwargs):
+         super().__init__(**kwargs)
+         if self.explicit:
+             raise ValueError("must not be explicit")
+
+     def validate_single(self, value) -> Any:
+         value = super().validate_single(value)
+         if value is NotImplemented:
+            raise ValueError(f"value is invalid: {value!r}")
+         return copy.deepcopy(value)
 
 
 def _inject_into(owner, owner_name, owner_module):
@@ -276,3 +292,4 @@ def _inject_into(owner, owner_name, owner_module):
     _inject_nested_class_into(owner.Output, RegularFileOutput, 'RegularFile')
     _inject_nested_class_into(owner.Output, NonRegularFileOutput, 'NonRegularFile')
     _inject_nested_class_into(owner.Output, DirectoryOutput, 'Directory')
+    _inject_nested_class_into(owner.Output, ObjectOutput, 'Object')

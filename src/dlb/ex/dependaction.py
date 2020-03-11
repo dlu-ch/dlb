@@ -194,6 +194,10 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
         return True
 
 
+class ObjectOutputAction(Action):
+    pass
+
+
 def register_action(dependency_id: int, dependency: Type[depend.Dependency], action: Type[Action]):
     # Registers the concrete dependency class 'dependency' and assigns it an action 'action' as well as the
     # dependency id 'dependency_id'.
@@ -207,11 +211,13 @@ def register_action(dependency_id: int, dependency: Type[depend.Dependency], act
     try:
         did, a = _action_by_dependency[dependency]
         if a is not action:
-            raise ValueError(f"dependency already registered with different action: {dependency!r}")
+            raise ValueError(f"'dependency' is already registered with different action: {dependency!r}")
         if did != dependency_id:
-            msg = f"'dependency_id'' is already registered with different dependency: {dependency_id}"
+            msg = f"'dependency' is already registered with different dependency id: {dependency_id}"
             raise ValueError(msg)
     except KeyError:
+        if dependency_id in _dependency_class_ids:
+            raise ValueError(f"'dependency_id' is already registered with different dependency") from None
         _dependency_class_ids.add(dependency_id)
         _action_by_dependency[dependency] = (dependency_id, action)
 
@@ -228,3 +234,4 @@ register_action(3, depend.EnvVarInput, EnvVarInputAction)
 register_action(4, depend.RegularFileOutput, RegularFileOutputAction)
 register_action(5, depend.NonRegularFileOutput, NonRegularFileOutputAction)
 register_action(6, depend.DirectoryOutput, DirectoryOutputAction)
+register_action(7, depend.ObjectOutput, ObjectOutputAction)

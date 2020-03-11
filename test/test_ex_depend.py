@@ -327,6 +327,38 @@ class SingleOutputValidationTest(unittest.TestCase):
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
 
+class ObjectOutputValidationTest(unittest.TestCase):
+
+    def test_validated_value_is_equal_to_value(self):
+        d = dlb.ex.depend.ObjectOutput(explicit=False)
+        values = ['iu', 123.0, ({}, [None, dlb.fs.Path('42')])]
+        for v in values:
+            self.assertEqual(v, d.validate(v), repr(v))
+
+    def test_validated_list_value_is_copy(self):
+        d = dlb.ex.depend.ObjectOutput(explicit=False)
+        l = [1, 2, 3]
+        v = d.validate(l)
+        l.append(4)
+        self.assertEqual([1, 2, 3], v)
+
+    def test_fails_for_none(self):
+        d = dlb.ex.depend.ObjectOutput(explicit=False)
+        with self.assertRaises(TypeError):
+            d.validate(None)
+
+    def test_fails_for_notimplemented(self):
+        d = dlb.ex.depend.ObjectOutput(explicit=False)
+        with self.assertRaises(ValueError) as cm:
+            d.validate(NotImplemented)
+        self.assertEqual(str(cm.exception), "value is invalid: NotImplemented")
+
+    def test_fails_with_explicit(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.ex.depend.ObjectOutput(explicit=True)
+        self.assertEqual(str(cm.exception), "must not be explicit")
+
+
 # noinspection PyPep8Naming
 class TupleFromValueTest(unittest.TestCase):
 
@@ -351,6 +383,10 @@ class CompatibilityTest(unittest.TestCase):
 
         d1 = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.*', example='')
         d2 = dlb.ex.depend.EnvVarInput(name='n', restriction=r'.*', example='')
+        self.assertTrue(d1.compatible_and_no_less_restrictive(d2))
+
+        d1 = dlb.ex.depend.ObjectOutput(explicit=False)
+        d2 = dlb.ex.depend.ObjectOutput(explicit=False)
         self.assertTrue(d1.compatible_and_no_less_restrictive(d2))
 
     def test_different_dependency_classes_are_not_compatible(self):
@@ -436,7 +472,8 @@ class CoverageTest(unittest.TestCase):
                v is not dlb.ex.depend.Dependency and not n.startswith('_')
         }
 
-        covered_concrete_dependencies = filesystem_dependency_classes + (dlb.ex.depend.EnvVarInput,)
+        covered_concrete_dependencies = filesystem_dependency_classes + (
+            dlb.ex.depend.EnvVarInput, dlb.ex.depend.ObjectOutput)
 
         covered_abstract_dependencies = (
             dlb.ex.depend.Input,

@@ -371,6 +371,22 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
+class ObjectRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_nonexplicit_object_is_assigned_on_result(self):
+        class BTool(dlb.ex.Tool):
+            calculated = dlb.ex.Tool.Output.Object(explicit=False)
+
+            async def redo(self, result, context):
+                result.calculated = 42
+
+        t = BTool()
+        with dlb.ex.Context():
+            r = t.run()
+            self.assertIsNotNone(r)
+            self.assertEqual(42, r.calculated)
+
+
 class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_if_source_has_changed(self):

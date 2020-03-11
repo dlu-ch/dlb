@@ -346,6 +346,7 @@ from :class:`Tool.Output`.
        "dlb.ex.Tool.Output.RegularFile" -> "dlb.ex.Tool.Output";
        "dlb.ex.Tool.Output.NonRegularFile" -> "dlb.ex.Tool.Output";
        "dlb.ex.Tool.Output.Directory" -> "dlb.ex.Tool.Output";
+       "dlb.ex.Tool.Output.Object" -> "dlb.ex.Tool.Output";
 
        "dlb.ex.Tool.Input" -> "dlb.ex.Tool.Dependency";
        "dlb.ex.Tool.Output" -> "dlb.ex.Tool.Dependency";
@@ -612,6 +613,8 @@ Concrete output dependency role classes
 +-------------------------------------+---------------------------+----------------------------+
 | :class:`Tool.Output.Directory`      | *cls*                     | :class:`dlb.fs.Path`       |
 +-------------------------------------+---------------------------+----------------------------+
+| :class:`Tool.Output.Object`         |                           |                            |
++-------------------------------------+---------------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
 keyword arguments of the constructor of :class:`Tool.Dependency`.
@@ -705,6 +708,18 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    .. class:: Value
 
       Is :class:`dlb.fs.Path`.
+
+.. class:: Tool.Output.Object()
+
+   Constructs a dependency role for any Python object other than ``None`` and ``NotImplemented``.
+   It must not be explicit.
+
+   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is a
+   :func:`deep copy <python:copy.deepcopy()>` of the value.
+
+   .. class:: Value
+
+      Is :class:`python:typing.Any`.
 
 
 Exceptions
