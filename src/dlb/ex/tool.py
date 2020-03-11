@@ -21,7 +21,7 @@ import collections
 import hashlib
 import logging
 import inspect
-from typing import Type, Optional, Union, Any, Dict, Tuple, Set, Iterable, Collection
+from typing import Type, Optional, Any, Dict, Tuple, Set, Iterable, Collection
 from .. import ut
 from .. import fs
 from .. import di
@@ -391,16 +391,6 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
     return dependency_action_by_path, obstructive_paths, needs_redo
 
 
-# TODO move to worktree (once temporary objects are created in worktree)
-def _remove_filesystem_objects(obstructive_paths: Iterable[fs.Path], context: context_.Context):
-    if obstructive_paths:
-        with context.temporary(is_dir=True) as tmp_dir:  # may raise OSError
-            for p in obstructive_paths:
-                worktree.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
-                                                  ignore_non_existent=True)  # may raise OSError
-            worktree.remove_filesystem_object(tmp_dir)
-
-
 class _RedoResult:
     # Attribute represent concrete dependencies of a tool instance.
     # Explicit dependencies are referred to the tool instance.
@@ -658,8 +648,10 @@ class _ToolBase:
 
         if obstructive_paths:
             with di.Cluster('remove obstructive filesystem objects that are explicit output dependencies',
-                            with_time=True, is_progress=True):
-                _remove_filesystem_objects(obstructive_paths, context)
+                            with_time=True, is_progress=True), context.temporary(is_dir=True) as tmp_dir:
+                for p in obstructive_paths:
+                    worktree.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
+                                                      ignore_non_existent=True)
 
         result = _RedoResult(self)
 
