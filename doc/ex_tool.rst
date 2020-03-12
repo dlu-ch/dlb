@@ -124,6 +124,9 @@ Tool objects
       A filesystem object that is an output dependencies is treated as modified be the redo if it is a non-explicit
       dependency or if it is a explicit dependency that was replaced with `context.replace_output()`.
 
+      Return ``True`` if the next run this :term:`tool instance` should perform a :term:`redo`, regardless of the
+      necessity according to its dependencies.
+
       Example::
 
          class ATool(dlb.ex.Tool):

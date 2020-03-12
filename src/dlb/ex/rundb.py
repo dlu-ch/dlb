@@ -230,6 +230,10 @@ class Domain(enum.Enum):
     EXECUTION_PARAMETERS = 'execparam'
     ENVIRONMENT_VARIABLES = 'envvar'
 
+    # redo request of last successful redo
+    # if present and not empty: redo
+    REDO_REQUEST = 'request'
+
 
 class Database:
 
@@ -292,9 +296,9 @@ class Database:
                 ");"
 
                 "CREATE TABLE IF NOT EXISTS ToolInstDomainInput("
-                    "tool_inst_dbid INTEGER, "         # tool instance
-                    "domain TEXT NOT NULL, "           # name of domain (one of Domain)
-                    "memo_digest_before BLOB, "        # memo of filesystem object before last redo of tool instance
+                    "tool_inst_dbid INTEGER, "             # tool instance
+                    "domain TEXT NOT NULL, "               # name of domain (one of Domain)
+                    "memo_digest_before BLOB NOT NULL, "   # memo of filesystem object before last redo of tool instance
                     "PRIMARY KEY(tool_inst_dbid, domain), "
                     "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"
                 ");"
@@ -437,7 +441,8 @@ class Database:
                 (tool_instance_dbid,)).fetchall()
         return {domain: memo_digest_before for domain, memo_digest_before in rows}
 
-    def replace_domain_inputs(self, tool_instance_dbid: int, memo_digest_before_by_domain: Dict[str, bytes]):
+    def replace_domain_inputs(self, tool_instance_dbid: int,
+                              memo_digest_before_by_domain: Dict[str, Optional[bytes]]):
         # Replace all information on domain input dependencies for a tool instance *tool_instance_dbid* by
         # *memo_digest_before_by_domain*.
         #
@@ -450,8 +455,9 @@ class Database:
                 cursor.execute("BEGIN")
                 cursor.execute("DELETE FROM ToolInstDomainInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
                 for domain, memo_digest_before in memo_digest_before_by_domain.items():
-                    cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?)",
-                                   (tool_instance_dbid, domain, memo_digest_before))
+                    if memo_digest_before is not None:
+                        cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?)",
+                                       (tool_instance_dbid, domain, memo_digest_before))
             except:
                 self._connection.rollback()
                 raise

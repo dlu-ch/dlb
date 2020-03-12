@@ -85,7 +85,6 @@ class _RedoContext(context_.ReadOnlyContext):
         self._dependency_action_by_path = dependency_action_by_path
         self._unchanged_paths = set()
 
-    # TODO use self.env
     async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
                              cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
                              stdin=None, stdout=None, stderr=None, limit: int = 2**16):
@@ -615,9 +614,15 @@ class _ToolBase:
 
                 if not needs_redo:
                     domain_inputs_in_db = db.get_domain_inputs(tool_instance_dbid)
+                    redo_request_in_db = domain_inputs_in_db.get(rundb.Domain.REDO_REQUEST.value)
+                    redo_request_in_db = None if redo_request_in_db is None else bool(redo_request_in_db)
+
                     execution_parameter_digest_in_db = domain_inputs_in_db.get(rundb.Domain.EXECUTION_PARAMETERS.value)
                     envvar_digest_in_db = domain_inputs_in_db.get(rundb.Domain.ENVIRONMENT_VARIABLES.value)
-                    if execution_parameter_digest != execution_parameter_digest_in_db:
+                    if redo_request_in_db is True:
+                        di.inform("redo necessary because last successful redo requested it")
+                        needs_redo = True
+                    elif execution_parameter_digest != execution_parameter_digest_in_db:
                         di.inform("redo necessary because of changed execution parameter")
                         needs_redo = True
                     elif envvar_digest != envvar_digest_in_db:
@@ -644,7 +649,7 @@ class _ToolBase:
                                 break
 
         if not needs_redo:
-            return None  # no redo
+            return  # no redo
 
         if obstructive_paths:
             with di.Cluster('remove obstructive filesystem objects that are explicit output dependencies',
@@ -685,7 +690,7 @@ class _ToolBase:
                                    db, tool_instance_dbid):
         # note: no db.commit() necessary as long as root context does commit on exception
         di.inform(f"start redo for tool instance dbid {tool_instance_dbid!r}", with_time=True)
-        await self.redo(result, context)
+        redo_request = bool(await self.redo(result, context))
 
         with di.Cluster(f"memorize successful redo for tool instance dbid {tool_instance_dbid!r}", with_time=True):
             # collect non-explicit input and output dependencies of this redo
@@ -753,8 +758,10 @@ class _ToolBase:
                 db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
 
                 db.replace_domain_inputs(tool_instance_dbid, {
+                    rundb.Domain.REDO_REQUEST.value: redo_request if redo_request else None,
                     rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest,
-                    rundb.Domain.ENVIRONMENT_VARIABLES.value: envvar_digest})
+                    rundb.Domain.ENVIRONMENT_VARIABLES.value: envvar_digest
+                })
 
             for p in context.modified_outputs:
                 encoded_paths_of_modified_output_dependencies.add(rundb.encode_path(p))
@@ -765,7 +772,7 @@ class _ToolBase:
 
         return result
 
-    async def redo(self, result: _RedoResult, context: _RedoContext):
+    async def redo(self, result: _RedoResult, context: _RedoContext) -> Optional[bool]:
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):

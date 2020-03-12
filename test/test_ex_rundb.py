@@ -545,7 +545,7 @@ class ReplaceAndGetDomainInputsTest(tools_for_test.TemporaryDirectoryTestCase):
 
             info_by_by_encoded_path = collections.OrderedDict([
                 ('a', b'A!'),  # valid
-                (None, None)   # invalid
+                (None, 1)   # invalid
             ])
             with self.assertRaises(dlb.ex.DatabaseError):
                 rundb.replace_domain_inputs(tool_dbid, info_by_by_encoded_path)

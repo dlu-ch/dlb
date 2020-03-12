@@ -576,7 +576,41 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
             self.assertIsNone(t.run())
 
 
-class RunRedoRemovesObstructionExplicitOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo_always(self):
+        class BTool(dlb.ex.Tool):
+            async def redo(self, result, context):
+                return True
+
+        t = BTool()
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNotNone(t.run())
+            self.assertIsNotNone(t.run())
+
+    def test_redo_cannot_forbid_next_redo(self):
+        a_list = ['a', 2]
+
+        class BTool(dlb.ex.Tool):
+            XYZ = a_list
+
+            async def redo(self, result, context):
+                return False  # like None
+
+        t = BTool()
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNone(t.run())
+
+        a_list.append(None)
+
+        with dlb.ex.Context():
+            self.assertIsNotNone(t.run())
+            self.assertIsNone(t.run())
+
+
+class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_ignores_nonexistent_output_file(self):
         os.mkdir('src')
