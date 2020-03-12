@@ -89,7 +89,7 @@ class IdentifierLikeFromStringTest(unittest.TestCase):
 
     def test_mixed(self):
         s = dlb_contrib_c.identifier_like_from_string('Säu\\li')
-        self.assertEqual('S_u_li_08V12I', s)
+        self.assertEqual('S_u_li_08V02I', s)
 
         s = dlb_contrib_c.identifier_like_from_string('test.h')
         self.assertEqual('test_h_06D', s)
@@ -111,7 +111,7 @@ class IdentifierFromPathTest(unittest.TestCase):
 
     def test_dotdot(self):
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('../'))
-        self.assertEqual('____06D16D', s)
+        self.assertEqual('____06D06D', s)
 
     def test_typical_source_file_path(self):
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('src'))
@@ -122,21 +122,22 @@ class IdentifierFromPathTest(unittest.TestCase):
 
     def test_typical_file_path(self):
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('s-rc/i_o/p+rint.h'))
-        self.assertEqual('S_RC_I_O_P_RINT_H_05D25I43D56D', s)
+        self.assertEqual('S_RC_I_O_P_RINT_H_05D15I13D06D', s)
 
     def test_untypical_file_path(self):
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('säü\\li'))
-        self.assertEqual('S___LI_06S10V22I', s)
+        self.assertEqual('S___LI_06S00V02I', s)
 
 
 class GenerateHeaderFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
     def test_scenario1(self):
 
         class GenerateVersionFile(dlb_contrib_c.GenerateHeaderFile):
             COMPONENT_ID = 42
             VERSION = '1.2.3c4-dev2+a2d66f1d?'
 
-            PATH_COMPONENT_TO_STRIP = 1
+            PATH_COMPONENTS_TO_STRIP = 1
 
             def write_content(self, open_file):
                 version = dlb_contrib_c.string_literal_from_bytes(self.VERSION.encode())
@@ -163,3 +164,48 @@ class GenerateHeaderFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             #endif  // GENERATED_VERSION_H_16D_
             """
         self.assertEqual(textwrap.dedent(expected_content).lstrip(), content)
+
+    def test_creates_include_guard(self):
+
+        with dlb.ex.Context():
+            dlb_contrib_c.GenerateHeaderFile(file='Version.h').run()
+
+        with open('Version.h', 'r') as f:
+            content = f.read()
+
+        expected_content = \
+            """
+            // This file was created automatically.
+            // Do not modify it manually.
+
+            #ifndef VERSION_H_06D_
+            #define VERSION_H_06D_
+
+
+            #endif  // VERSION_H_06D_
+            """
+        self.assertEqual(textwrap.dedent(expected_content).lstrip(), content)
+
+    def test_fails_for_nonidentifier_guard(self):
+
+        class GenerateVersionFile(dlb_contrib_c.GenerateHeaderFile):
+            INCLUDE_GUARD_PREFIX = '1'
+
+            def write_content(self, open_file):
+                pass
+
+        with self.assertRaises(ValueError):
+            with dlb.ex.Context():
+                GenerateVersionFile(file='empty.h').run()
+
+    def test_fails_for_too_many_stripped_components(self):
+
+        class GenerateVersionFile(dlb_contrib_c.GenerateHeaderFile):
+            PATH_COMPONENTS_TO_STRIP = 1
+
+            def write_content(self, open_file):
+                pass
+
+        with self.assertRaises(ValueError):
+            with dlb.ex.Context():
+                GenerateVersionFile(file='empty.h').run()

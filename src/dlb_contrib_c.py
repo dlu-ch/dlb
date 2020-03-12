@@ -83,17 +83,18 @@ def _encode_integer(n: int) -> str:
     while i > 0:
         i, d = divmod(i - 1, len(string.ascii_uppercase))
         s += string.ascii_uppercase[d]
-    return s
+    return s  # length is <= 2 for n <= 269
 
 
 def identifier_like_from_string(text: str, sep: str = '_') -> str:
     # Return an string that uniquely encodes *text* with the characters 'A' ... 'Z', 'a' ... 'z', '0' .. '9' and '_'.
-    # May start with a decimal digit.
+    # Note: May start with a decimal digit.
     #
-    # The character *sep* is treated as input separator (needs to encoding in the output).
+    # The character *sep* is treated as input separator and represented as '_' in the return value.
 
     # Idea similar to Punycode.
 
+    previous_replaced_underscore_index = -1
     underscore_index = 0
     replaced = []
 
@@ -106,7 +107,8 @@ def identifier_like_from_string(text: str, sep: str = '_') -> str:
             encoded_text += '_'
             underscore_index += 1
         else:
-            replaced.append((underscore_index, ord(c)))
+            replaced.append((underscore_index - previous_replaced_underscore_index - 1, ord(c)))
+            previous_replaced_underscore_index = underscore_index
             encoded_text += '_'
             underscore_index += 1
 
@@ -160,7 +162,7 @@ class GenerateHeaderFile(dlb.ex.Tool):
     INCLUDE_GUARD_PREFIX = ''
     INCLUDE_GUARD_SUFFIX = '_'
 
-    PATH_COMPONENT_TO_STRIP = 0  # number of leading path component to strip for include guard
+    PATH_COMPONENTS_TO_STRIP = 0  # number of leading path component to strip for include guard
 
     file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
 
@@ -173,11 +175,11 @@ class GenerateHeaderFile(dlb.ex.Tool):
     async def redo(self, result, context):
         if not IDENTIFIER.match(self.INCLUDE_GUARD_PREFIX + self.INCLUDE_GUARD_SUFFIX):
             raise ValueError("'INCLUDE_GUARD_PREFIX' and 'INCLUDE_GUARD_SUFFIX' do not form a valid identifier")
-        if self.PATH_COMPONENT_TO_STRIP > len(result.file.parts):
+        if self.PATH_COMPONENTS_TO_STRIP >= len(result.file.parts):
             raise ValueError("nothing left to strip after 'PATH_COMPONENT_TO_STRIP'")
 
         with context.temporary() as tmp_file:
-            include_guard = identifier_from_path(result.file[self.PATH_COMPONENT_TO_STRIP:])
+            include_guard = identifier_from_path(result.file[self.PATH_COMPONENTS_TO_STRIP:])
             include_guard = self.INCLUDE_GUARD_PREFIX + include_guard + self.INCLUDE_GUARD_SUFFIX
 
             with open(tmp_file.native, 'w', encoding='utf-8') as open_file:
