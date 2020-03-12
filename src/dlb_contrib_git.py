@@ -13,6 +13,7 @@ import dlb.fs
 import dlb.ex
 assert sys.version_info >= (3, 7)
 
+
 GIT_DESCRIPTION_REGEX = re.compile(
     r'^(?P<tag>.+)-(?P<commit_number>0|[1-9][0-9]*)-g(?P<latest_commit_hash>[0-9a-f]{40})(?P<dirty>\??)$')
 assert GIT_DESCRIPTION_REGEX.match('v1.2.3-0-ge08663af738857fcb4448d0fc00b95334bbfd500?')
