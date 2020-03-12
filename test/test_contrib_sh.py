@@ -27,16 +27,16 @@ class OutputTwoLines(dlb_contrib_sh.ShScriptlet):
 class ReadFile(dlb_contrib_sh.ShScriptlet):
     SCRIPTLET = """
         echo $0
-        echo "$@"
+        cat -- "$@"
         """
 
     source_files = dlb.ex.Tool.Input.RegularFile[:]()
 
-    def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+    def get_scriptlet_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return [s for s in self.source_files]
 
 
-@unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires SH')
+@unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')
 class ShTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
@@ -45,9 +45,12 @@ class ShTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertEqual('first\nsecond\n', output)
 
     def test_read_files(self):
-        open('a', 'xb').close()
-        open('b', 'xb').close()
+        with open('a', 'xb') as f:
+            f.write(b'aah... ')
+        with open('o', 'xb') as f:
+            f.write(b'ooh!')
 
         with dlb.di.Cluster('let sh output all parameters'), dlb.ex.Context(find_helpers=True):
-            output = ReadFile(source_files=['a', 'b']).run().output
+            output = ReadFile(source_files=['a', 'o']).run().output
             dlb.di.inform(f"scriptlet returned {output!r}")
+        self.assertEqual("scriptlet\naah... ooh!", output)

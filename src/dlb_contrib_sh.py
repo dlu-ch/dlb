@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of the Posix sh shell, the standard command language interpreter."""
+"""Support of the Posix sh shell - the standard command language interpreter."""
 
 import sys
 import asyncio
@@ -23,11 +23,11 @@ class ShScriptlet(dlb.ex.Tool):
     ENCODING = 'utf-8'
 
     NAME = 'scriptlet'
-    SCRIPTLET = ''  # this will be executed by sh
+    SCRIPTLET = ''  # this will be executed by sh - overwrite in subclass
 
     output = dlb.ex.Tool.Output.Object(explicit=False)
 
-    def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+    def get_scriptlet_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return []
 
     async def redo(self, result, context):
@@ -35,6 +35,6 @@ class ShScriptlet(dlb.ex.Tool):
         _, stdout, _ = \
             await context.execute_helper(
                 self.BINARY,
-                ['-c', '-', script, self.NAME] + [c for c in self.get_compile_arguments()],
+                ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()],
                 stdout=asyncio.subprocess.PIPE)
         result.output = stdout.decode(self.ENCODING)
