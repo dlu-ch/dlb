@@ -20,7 +20,10 @@ import tools_for_test
 
 class PrepareGitRepo(dlb_contrib_sh.ShScriptlet):
     SCRIPTLET = """
-        git init        
+        git init
+        git config user.email "dlu-ch@users.noreply.github.com"
+        git config user.name "dlu-ch"
+                
         git add .dlbroot/o
         echo .dlbroot/ > .gitignore
         
