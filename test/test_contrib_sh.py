@@ -40,7 +40,7 @@ class ReadFile(dlb_contrib_sh.ShScriptlet):
 class ShTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             output = OutputTwoLines().run().output
         self.assertEqual('first\nsecond\n', output)
 
@@ -50,7 +50,7 @@ class ShTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with open('o', 'xb') as f:
             f.write(b'ooh!')
 
-        with dlb.di.Cluster('let sh output all parameters'), dlb.ex.Context(find_helpers=True):
+        with dlb.di.Cluster('let sh output all parameters'), dlb.ex.Context():
             output = ReadFile(source_files=['a', 'o']).run().output
             dlb.di.inform(f"scriptlet returned {output!r}")
         self.assertEqual("scriptlet\naah... ooh!", output)

@@ -27,12 +27,12 @@ class CCompiler(dlb_contrib_c_gcc.CCompilerGcc):
     DIALECT = 'c11'
 
 
-with dlb.ex.Context(find_helpers=True):
+with dlb.ex.Context():
 
     output_path = Path('build/out/')
     output_path.native.raw.mkdir(parents=True, exist_ok=True)
 
-    with dlb.di.Cluster('Generate version file'), dlb.ex.Context(find_helpers=True):
+    with dlb.di.Cluster('Generate version file'), dlb.ex.Context():
 
         version_result = build.version_from_repo.GetVersion().run()
 
@@ -51,7 +51,7 @@ with dlb.ex.Context(find_helpers=True):
         generated_source_path = output_path / 'gsrc/'
         GenerateVersionFile(file=generated_source_path / 'Generated/Version.h').run()
 
-    with dlb.di.Cluster('Compile'), dlb.ex.Context(find_helpers=True):
+    with dlb.di.Cluster('Compile'), dlb.ex.Context():
 
         source_path = dlb.fs.Path('src/')
 

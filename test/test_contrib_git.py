@@ -54,7 +54,7 @@ class PrepareGitRepo(dlb_contrib_sh.ShScriptlet):
         """
 
 
-# each annotated tag starting with 'v' followed by a decimal digit must match this:
+# each annotated tag starting with 'v' followed by a decimal digit must match this (after 'v'):
 VERSION_REGEX = re.compile(
     r'^'
     r'(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)\.(?P<micro>0|[1-9][0-9]*)'
@@ -176,7 +176,7 @@ class ModificationsFromStatusTest(unittest.TestCase):
 class GitTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             PrepareGitRepo().run()
             result = DescribeWorkingDirectory().run()
 
@@ -194,7 +194,7 @@ class GitTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev2\+[0-9a-f]{8}\?$')
         self.assertEqual('refs/heads/master', result.branch_refname)
 
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             class CommitGitRepo(dlb_contrib_sh.ShScriptlet):
                 SCRIPTLET = 'git commit -a -m 0'
 
@@ -206,7 +206,7 @@ class GitTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertEqual((1, 2, 3, 'c', 4), result.version_components)
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
 
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             class CheckoutBranch(dlb_contrib_sh.ShScriptlet):
                 SCRIPTLET = 'git checkout -f -b "(detached)"'
 
@@ -216,7 +216,7 @@ class GitTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertEqual('refs/heads/(detached)', result.branch_refname)
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
 
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             class CheckoutDetached(dlb_contrib_sh.ShScriptlet):
                 SCRIPTLET = 'git checkout --detach'
 

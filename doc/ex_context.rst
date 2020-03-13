@@ -52,7 +52,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 Context objects
 ---------------
 
-.. class:: Context(path_cls=dlb.fs.Path, max_parallel_redo_count=1, find_helpers=False)
+.. class:: Context(path_cls=dlb.fs.Path, max_parallel_redo_count=1, find_helpers=None)
 
    An instance does nothing unless used as a :term:`python:context manager`.
 
@@ -68,13 +68,16 @@ Context objects
    When a context (root or not) is entered, the path of the :term:`working tree`'s root must be representable as
    as *path_cls*. This allows you to impose :ref:`restrictions <restricting_paths>` on the accepted paths.
 
+   If *find_helpers* is ``None`` for a :term:`root context`, ``True`` is used instead.
+   If *find_helpers* is ``None`` for an active context that is not the :term:`root context`, *find_helpers* of
+   the :term:`root context` is used.
+
    :param path_cls: the subclass of :class:`dlb.fs.Path` to be used to represent the :term:`working tree`'s root
    :type path_cls: dlb.fs.Path
    :param max_parallel_redo_count: maximum number of redos started in this context than can be pending at the same time
    :type max_parallel_redo_count: int
-   :param find_helpers:
-      if this is ``True``, dynamic helpers not defined explictly are searched for in :attr:`binary_search_paths`
-   :param find_helpers: bool
+   :param find_helpers: are dynamic helpers not defined explictly to be searched for in :attr:`binary_search_paths`?
+   :param find_helpers: None | bool
    :raises TypeError: if *path_cls* is not a subclass of :class:`dlb.fs.Path`
 
    Entering or exiting a context may raise the following exceptions:
@@ -133,7 +136,7 @@ Context objects
    .. attribute:: find_helpers
 
       Find dynamic helpers not defined explictly are in :attr:`binary_search_paths`?
-      This is defined defined in the constructor.
+      This is defined in the constructor.
 
       When called on class, it refers to the :term:`active context`.
 

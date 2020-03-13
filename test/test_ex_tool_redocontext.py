@@ -20,19 +20,19 @@ import tools_for_test
 class ConstructionTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_noncontext(self):
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             with self.assertRaises(TypeError):
                 # noinspection PyTypeChecker
                 dlb.ex.tool._RedoContext('c', dict())
 
     def test_fails_for_none(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             with self.assertRaises(TypeError):
                 # noinspection PyTypeChecker
                 dlb.ex.tool._RedoContext(c, None)
 
     def test_fails_for_sequence(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             with self.assertRaises(TypeError):
                 # noinspection PyTypeChecker
                 dlb.ex.tool._RedoContext(c, ['a'])
@@ -43,7 +43,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
     def test_accepts_path_in_arguments(self):
         os.mkdir('-l')
         open(os.path.join('-l', 'content'), 'xb').close()
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout=asyncio.subprocess.PIPE)
             returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
@@ -56,7 +56,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertRegex(stdout.decode(), regex)
 
     def test_fails_for_directory_helper(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             with self.assertRaises(ValueError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls/', expected_returncodes=[1, 3]))
@@ -64,7 +64,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_unexpected_return_code(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             with self.assertRaises(dlb.ex.HelperExecutionError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', expected_returncodes=[1, 3]))
@@ -74,7 +74,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
     def test_changes_cwd(self):
         os.mkdir('-l')
         open(os.path.join('-l', 'content'), 'xb').close()
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper('ls', ['-l'], cwd=dlb.fs.Path('-l'), stdout=asyncio.subprocess.PIPE)
             returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
@@ -94,13 +94,13 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertRegex(stdout.decode(), regex)
 
     def test_fails_for_cwd_not_in_working_tree(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             with self.assertRaises(dlb.ex.WorkingTreePathError):
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('..')))
 
     def test_fails_for_nonexistent_cwd(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('ups')))
@@ -115,7 +115,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             asyncio.get_event_loop().run_until_complete(rd.execute_helper(
                 'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/..'
@@ -130,7 +130,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         os.makedirs(os.path.join('a', 'b', 'c'))
         os.mkdir(os.path.join('a', 'x'))
 
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper(
                 'ls', ['-d', dlb.fs.Path('.'), dlb.fs.Path('a/x'), dlb.fs.Path('.dlbroot/t/')],
@@ -145,7 +145,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertRegex(output, stdout.decode())
 
     def test_fails_for_relative_path_not_in_working_tree(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper('ls', [dlb.fs.Path('..')])
             with self.assertRaises(dlb.ex.WorkingTreePathError):
@@ -155,7 +155,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonoutput_dependency(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
@@ -165,7 +165,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_isdir_discrepancy(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             file_action = dlb.ex.dependaction.RegularFileOutputAction(
                 dlb.ex.Tool.Output.RegularFile(), 'test_file')
             directory_action = dlb.ex.dependaction.RegularFileOutputAction(
@@ -186,7 +186,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_if_source_does_not_exist(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
@@ -200,7 +200,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertRegex(str(cm.exception), regex)
 
     def test_fails_if_source_is_destination(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
@@ -216,7 +216,7 @@ class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 class ReplaceRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_replaces(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
@@ -234,7 +234,7 @@ class ReplaceRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestC
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
 
     def test_replaces_if_different_size(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(
                 dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
                 'test_file')
@@ -254,7 +254,7 @@ class ReplaceRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestC
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
 
     def test_replaces_if_different_content_of_same_size(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(
                 dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
                 'test_file')
@@ -274,7 +274,7 @@ class ReplaceRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestC
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
 
     def test_replaces_if_nonexistent(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(
                 dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
                 'test_file')
@@ -292,7 +292,7 @@ class ReplaceRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestC
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
 
     def test_creates_nonexistent_destination_directory(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(
                 dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
                 'test_file')
@@ -307,7 +307,7 @@ class ReplaceRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestC
                 self.assertEqual(b'BB', f.read())
 
     def test_does_not_replace__if_same_content(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.RegularFileOutputAction(
                 dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
                 'test_file')
@@ -327,7 +327,7 @@ class ReplaceRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestC
 class ReplaceDirectoryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_replaces_nonempty(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.DirectoryOutputAction(dlb.ex.Tool.Output.Directory(), 'test_directory')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a/'): action})
 
@@ -342,7 +342,7 @@ class ReplaceDirectoryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCas
             self.assertIn(dlb.fs.Path('a/'), rd.modified_outputs)
 
     def test_creates_nonexistent_destination_directory(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.DirectoryOutputAction(dlb.ex.Tool.Output.Directory(), 'test_directory')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('x/y/a/'): action})
 
@@ -355,7 +355,7 @@ class ReplaceDirectoryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCas
 class ReplaceNonRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_replaces_symlink(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.NonRegularFileOutputAction(dlb.ex.Tool.Output.NonRegularFile(), 'test')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
@@ -374,7 +374,7 @@ class ReplaceNonRegularFileOutputTest(tools_for_test.TemporaryWorkingDirectoryTe
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
 
     def test_creates_nonexistent_destination_directory(self):
-        with dlb.ex.Context(find_helpers=True) as c:
+        with dlb.ex.Context() as c:
             action = dlb.ex.dependaction.NonRegularFileOutputAction(dlb.ex.Tool.Output.NonRegularFile(), 'test')
             rd = dlb.ex.tool._RedoContext(c, {dlb.fs.Path('x/y/a'): action})
 

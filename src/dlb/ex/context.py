@@ -493,13 +493,12 @@ class _BaseContext(metaclass=_ContextMeta):
     HelperDict = NotImplemented
     ReadOnlyHelperDictView = NotImplemented
 
-    def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1,
-                 find_helpers: bool = False):
+    def __init__(self, *, path_cls: Type[fs.Path], max_parallel_redo_count: int, find_helpers: Optional[bool]):
         if not (isinstance(path_cls, type) and issubclass(path_cls, fs.Path)):
             raise TypeError("'path_cls' must be a subclass of 'dlb.fs.Path'")
         self._path_cls = path_cls
         self._max_parallel_redo_count = max(1, int(max_parallel_redo_count))
-        self._find_helpers = bool(find_helpers)
+        self._find_helpers = None if find_helpers is None else bool(find_helpers)
 
     @property
     def path_cls(self) -> Type[fs.Path]:
@@ -510,7 +509,7 @@ class _BaseContext(metaclass=_ContextMeta):
         return self._max_parallel_redo_count
 
     @property
-    def find_helpers(self) -> bool:
+    def find_helpers(self) -> Optional[bool]:
         return self._find_helpers
 
     @property
@@ -632,7 +631,7 @@ class _BaseContext(metaclass=_ContextMeta):
 class Context(_BaseContext):
 
     def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1,
-                 find_helpers: bool = False):
+                 find_helpers: Optional[bool] = None):
         super().__init__(path_cls=path_cls, max_parallel_redo_count=max_parallel_redo_count, find_helpers=find_helpers)
 
         self._env: Optional[_EnvVarDict] = None
@@ -677,8 +676,11 @@ class Context(_BaseContext):
             raise e
 
     def __enter__(self):
+        find_helpers = self._find_helpers
         if _contexts:
-            if self._find_helpers and not _contexts[0]._find_helpers:
+            if find_helpers is None:
+                find_helpers = _contexts[0]._find_helpers
+            elif find_helpers and not _contexts[0]._find_helpers:
                 raise ValueError("'find_helpers' must be False if 'find_helpers' of root context is False")
             _contexts[-1].complete_pending_redos()
             try:
@@ -696,10 +698,14 @@ class Context(_BaseContext):
         else:
             self._root_specifics = _RootSpecifics(self._path_cls)
             self._env = _EnvVarDict(self, os.environ)
+        if find_helpers is None:
+            find_helpers = True
+
         _contexts.append(self)
+
         # noinspection PyProtectedMember
         implicit_abs_path_by_helper_path = \
-            _contexts[0]._root_specifics._implicit_abs_path_by_helper_path if self._find_helpers else None
+            _contexts[0]._root_specifics._implicit_abs_path_by_helper_path if find_helpers else None
         self._helper = _HelperDict(self, implicit_abs_path_by_helper_path)
         return self
 

@@ -158,28 +158,47 @@ class FindPathInTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertIsNone(p)
 
 
+@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+class HelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_find_helpers_of_none_for_root_mean_true(self):
+        with dlb.ex.Context(find_helpers=None):
+            self.assertIsNotNone(dlb.ex.Context.helper.get('ls'))
+
+    def test_find_helpers_of_none_for_nonroot_mean_value_of_root(self):
+        with dlb.ex.Context(find_helpers=True):
+            with dlb.ex.Context(find_helpers=None):
+                with dlb.ex.Context(find_helpers=None):
+                    self.assertIsNotNone(dlb.ex.Context.helper.get('ls'))
+
+        with dlb.ex.Context(find_helpers=False):
+            with dlb.ex.Context(find_helpers=None):
+                with dlb.ex.Context(find_helpers=None):
+                    self.assertIsNone(dlb.ex.Context.helper.get('ls'))
+
+
 class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_relative_path_is_relative_to_working_tree_root(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             dlb.ex.Context.helper['a/b'] = 'x'
             self.assertEqual(dlb.ex.Context.root_path / 'x', dlb.ex.Context.helper[dlb.fs.Path('a/b')])
 
     def test_assigned_can_be_modified_and_deleted(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             dlb.ex.Context.helper['a/b'] = '/x'
             self.assertEqual(dlb.fs.Path('/x'), dlb.ex.Context.helper[dlb.fs.Path('a/b')])
             dlb.ex.Context.helper['a/b'] = '/u/v'
             self.assertEqual(dlb.fs.Path('/u/v'), dlb.ex.Context.helper[dlb.fs.Path('a/b')])
 
     def test_fails_for_absolute_helper_path(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             with self.assertRaises(ValueError) as cm:
                 dlb.ex.Context.helper['/a/b'] = '/x'
             self.assertEqual("'helper_path' must not be absolute", str(cm.exception))
 
     def test_fails_for_non_matching_isdir(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             with self.assertRaises(ValueError) as cm:
                 dlb.ex.Context.helper['a/b/'] = '/x'
             msg = "when 'helper_path' is a directory, 'abs_path' must also be a directory"
@@ -190,7 +209,7 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
     def test_is_not_in_initially(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             self.assertNotIn('a', dlb.ex.Context.active.helper)
             self.assertIsNone(dlb.ex.Context.helper.get('a'))
             with self.assertRaises(KeyError):
@@ -199,19 +218,19 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertIn('a', dlb.ex.Context.active.helper)
 
     def test_inner_inherits_outer(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             self.assertNotIn('a', dlb.ex.Context.active.helper)
             dlb.ex.Context.helper['b'] = '/b'
-            with dlb.ex.Context():
+            with dlb.ex.Context(find_helpers=False):
                 dlb.ex.Context.helper['a'] = '/a'
                 self.assertIn('b', dlb.ex.Context.active.helper)
             self.assertIn('b', dlb.ex.Context.active.helper)
 
     def test_inner_does_not_change_outer(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             dlb.ex.Context.helper['b'] = '/b'
 
-            with dlb.ex.Context():
+            with dlb.ex.Context(find_helpers=False):
                 dlb.ex.Context.helper['a'] = '/a'
                 dlb.ex.Context.helper['b'] = '/B'
                 self.assertEqual(dlb.fs.Path('/B'), dlb.ex.Context.helper['b'])
@@ -220,7 +239,7 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(dlb.fs.Path('/b'), dlb.ex.Context.active.helper['b'])
 
     def test_is_dictionarylike(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             dlb.ex.Context.helper['ls'] = '/ls'
             dlb.ex.Context.helper['gcc'] = '/gcc'
             items = [i for i in dlb.ex.Context.helper.items()]
@@ -233,16 +252,16 @@ class ExplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertEqual([dlb.fs.Path('gcc'), dlb.fs.Path('ls')], sorted(keys))
 
     def test_has_repr(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             dlb.ex.Context.helper['ls'] = '/ls'
             dlb.ex.Context.helper['gcc'] = '/gcc'
             s = repr(dlb.ex.Context.helper)
             self.assertEqual("HelperDict({'gcc': '/gcc', 'ls': '/ls'})", s)
 
     def test_assignment_fails_on_inactive_context(self):
-        with dlb.ex.Context() as c0:
+        with dlb.ex.Context(find_helpers=False) as c0:
             helper0 = c0.helper
-            with dlb.ex.Context():
+            with dlb.ex.Context(find_helpers=False):
                 regex = (
                     r"(?m)\A"
                     r"'helper' of an inactive context must not be modified\n"
@@ -268,7 +287,7 @@ class ImplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertIn('ls', dlb.ex.Context.active.helper)
 
     def test_inner_fails_if_root_context_explicit_only(self):
-        with dlb.ex.Context():
+        with dlb.ex.Context(find_helpers=False):
             with self.assertRaises(ValueError) as cm:
                 with dlb.ex.Context(find_helpers=True):
                     pass
@@ -276,9 +295,9 @@ class ImplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
     def test_is_dictionarylike(self):
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             dlb.ex.Context.helper['ls']
-            with dlb.ex.Context(find_helpers=True):
+            with dlb.ex.Context():
                 dlb.ex.Context.helper['ls'] = dlb.ex.Context.helper['ls']
                 dlb.ex.Context.helper['gcc'] = '/gcc'
                 items = [i for i in dlb.ex.Context.helper.items()]
@@ -291,7 +310,7 @@ class ImplicitHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 self.assertEqual([dlb.fs.Path('gcc'), dlb.fs.Path('ls')], sorted(keys))
 
     def test_has_repr(self):
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             dlb.ex.Context.helper['ls'] = '/ls'
             dlb.ex.Context.helper['gcc'] = '/gcc'
             s = repr(dlb.ex.Context.helper)

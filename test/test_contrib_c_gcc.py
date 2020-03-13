@@ -72,7 +72,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_output_file(sys.stderr)
 
         t = CCompiler(source_file='a.c', object_file='a.o', include_search_directories=['i/'])
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             result = t.run()
 
         self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
@@ -82,7 +82,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertTrue(result.compiler_executable.is_absolute())
         self.assertTrue(os.path.isfile(result.compiler_executable.native))
 
-        with dlb.ex.Context(find_helpers=True):
+        with dlb.ex.Context():
             t.run()
             self.assertIsNone(t.run())
 
@@ -90,7 +90,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         open('./a:c', 'w').close()
         t = CCompiler(source_file='a:c', object_file='a.o')
         with self.assertRaises(Exception) as cm:
-            with dlb.ex.Context(find_helpers=True):
+            with dlb.ex.Context():
                 t.run()
         self.assertEqual("limitation of 'gcc -MMD' does not allow this file name: 'a:c'", str(cm.exception))
 
@@ -103,7 +103,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         t = C(source_file='a.c', object_file='a.o')
         with self.assertRaises(Exception):
-            with dlb.ex.Context(find_helpers=True):
+            with dlb.ex.Context():
                 t.run()
 
     def test_fails_for_invalid_warning(self):
@@ -114,7 +114,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         t = C(source_file='a.c', object_file='a.o')
         with self.assertRaises(Exception) as cm:
-            with dlb.ex.Context(find_helpers=True):
+            with dlb.ex.Context():
                 t.run()
         self.assertEqual("not a warning name: 'no-all'", str(cm.exception))
 
@@ -126,6 +126,6 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         t = C(source_file='a.c', object_file='a.o')
         with self.assertRaises(Exception) as cm:
-            with dlb.ex.Context(find_helpers=True):
+            with dlb.ex.Context():
                 t.run()
         self.assertEqual("not a macro: 'a('", str(cm.exception))
