@@ -82,7 +82,10 @@ class IdentifierLikeFromStringTest(unittest.TestCase):
 
     def test_only_basecharacters(self):
         s = dlb_contrib_c.identifier_like_from_string('')
-        self.assertEqual('_', s)
+        self.assertEqual('', s)
+
+        s = dlb_contrib_c.identifier_like_from_string('abc')
+        self.assertEqual('abc', s)
 
         s = dlb_contrib_c.identifier_like_from_string('abC_Def_')
         self.assertEqual('abC_Def__', s)
@@ -107,7 +110,7 @@ class IdentifierFromPathTest(unittest.TestCase):
 
     def test_dot(self):
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('.'))
-        self.assertEqual('_', s)
+        self.assertEqual('___06D', s)
 
     def test_dotdot(self):
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('../'))
@@ -115,7 +118,7 @@ class IdentifierFromPathTest(unittest.TestCase):
 
     def test_typical_source_file_path(self):
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('src'))
-        self.assertEqual('SRC_', s)
+        self.assertEqual('SRC', s)
 
         s = dlb_contrib_c.identifier_from_path(dlb.fs.Path('src/io/print.h'))
         self.assertEqual('SRC_IO_PRINT_H_26D', s)
@@ -139,9 +142,9 @@ class GenerateHeaderFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
             PATH_COMPONENTS_TO_STRIP = 1
 
-            def write_content(self, open_file):
+            def write_content(self, file):
                 version = dlb_contrib_c.string_literal_from_bytes(self.VERSION.encode())
-                open_file.write(f'#define COMPONENT_{self.COMPONENT_ID}_WD_VERSION {version}\n')
+                file.write(f'\n#define COMPONENT_{self.COMPONENT_ID}_WD_VERSION {version}\n')
 
         os.makedirs(os.path.join('src', 'Generated'))
 
@@ -181,7 +184,6 @@ class GenerateHeaderFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             #ifndef VERSION_H_06D_
             #define VERSION_H_06D_
 
-
             #endif  // VERSION_H_06D_
             """
         self.assertEqual(textwrap.dedent(expected_content).lstrip(), content)
@@ -191,7 +193,7 @@ class GenerateHeaderFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         class GenerateVersionFile(dlb_contrib_c.GenerateHeaderFile):
             INCLUDE_GUARD_PREFIX = '1'
 
-            def write_content(self, open_file):
+            def write_content(self, file):
                 pass
 
         with self.assertRaises(ValueError):
@@ -203,7 +205,7 @@ class GenerateHeaderFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         class GenerateVersionFile(dlb_contrib_c.GenerateHeaderFile):
             PATH_COMPONENTS_TO_STRIP = 1
 
-            def write_content(self, open_file):
+            def write_content(self, file):
                 pass
 
         with self.assertRaises(ValueError):
