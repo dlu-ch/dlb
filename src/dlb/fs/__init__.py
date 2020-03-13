@@ -289,7 +289,7 @@ class Path(metaclass=_PathMeta):
             if self.__class__.__bases__ != (object,):  # dlb.fs.Path() must be fast
                 self._check_constrains()
 
-    def _cast(self, other: PathLike):
+    def _cast(self, other: PathLike) -> 'Path':
         if other.__class__ is self.__class__:
             return other
         return self.__class__(other)
@@ -310,7 +310,7 @@ class Path(metaclass=_PathMeta):
                 msg = f'{msg} ({reason})'
             raise ValueError(msg) from None
 
-    def _with_components(self, components: Tuple[str, ...], *, is_dir: Optional[bool] = None):
+    def _with_components(self, components: Tuple[str, ...], *, is_dir: Optional[bool] = None) -> 'Path':
         p = self.__class__(self)  # fastest way of construction
         p._components = components
         if is_dir is not None:
@@ -329,7 +329,7 @@ class Path(metaclass=_PathMeta):
     def is_normalized(self) -> bool:
         return '..' not in self._components
 
-    def relative_to(self, other: PathLike, *, collapsable: bool = False):
+    def relative_to(self, other: PathLike, *, collapsable: bool = False) -> 'Path':
         other = self._cast(other)
         if not other.is_dir():
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
@@ -428,6 +428,15 @@ class Path(metaclass=_PathMeta):
         # first element: '/' or '//' if absolute, does not start with '/' otherwise
         return _parts_from_components(self._components)
 
+    def append_suffix(self, suffix: str) -> 'Path':
+        if not isinstance(suffix, str):
+            raise TypeError("'suffix' must be a str")
+        if not self._components[-1] or self._components[-1] == '..':
+            raise ValueError("cannot append suffix to '.' or '..' component")
+        if not suffix or '/' in suffix:
+            raise ValueError(f"invalid suffix: {suffix!r}")
+        return self._with_components(self._components[:-1] + (self._components[-1] + suffix,))
+
     @property
     def pure_posix(self) -> pathlib.PurePosixPath:
         return pathlib.PurePosixPath(self._as_string())
@@ -462,7 +471,7 @@ class Path(metaclass=_PathMeta):
             return s
         return s + '/'
 
-    def __truediv__(self, other: PathLike):
+    def __truediv__(self, other: PathLike) -> 'Path':
         if not self.is_dir():
             raise ValueError(f'cannot append to non-directory path: {self!r}')
         other = self._cast(other)
@@ -474,7 +483,7 @@ class Path(metaclass=_PathMeta):
         # TODO avoid unnecessary checking of constraints
         return self._with_components(self._components + o[1:], is_dir=other._is_dir)
 
-    def __rtruediv__(self, other: PathLike):
+    def __rtruediv__(self, other: PathLike) -> 'Path':
         return self._cast(other) / self
 
     def __eq__(self, other: PathLike) -> bool:
@@ -497,7 +506,7 @@ class Path(metaclass=_PathMeta):
         # (not to be implemented by subclasses, hence not NotImplementedError)
         raise AttributeError("use 'repr()' or 'native' instead")
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> 'Path':
         if not isinstance(item, slice):
             raise TypeError("slice of component indices expected (use 'parts' for single components)")
 

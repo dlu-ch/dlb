@@ -40,19 +40,20 @@ Example::
 
    with dlb.ex.Context():                                                        # (c)
 
-       Path('build/out/').native.raw.mkdir(parents=True, exist_ok=True)
+       output_path = Path('build/out/')
+       output_path.native.raw.mkdir(parents=True, exist_ok=True)
 
        object_files = [                                                          # (d)
           Compiler(
               source_file=p,
-              object_file=Path(f'build/out/{p.as_string()}.o')
+              object_file=output_path / p.append_suffix('.o')
           ).run().object_file
           for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
        ]
 
        application_file = Linker(
            object_files=object_files,
-           linked_file=Path('build/out/example')                                 # (e)
+           linked_file=output_path / 'example'                                   # (e)
        ).run().linked_file
 
        print('Size:', application_file.native.raw.stat().st_size, 'B')           # (f)
