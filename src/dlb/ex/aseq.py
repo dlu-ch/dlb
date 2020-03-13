@@ -165,9 +165,6 @@ class _ResultProxy:
         object.__setattr__(self, '_result', None)
         object.__setattr__(self, '_exception', None)
 
-    def __bool__(self):  # True if and only if redo complete
-        return self._result is not None or self._exception is not None
-
     def __setattr__(self, key, value):
         raise AttributeError
 
@@ -181,12 +178,16 @@ class _ResultProxy:
         pass
 
     def __repr__(self):
-        if self:
+        if self._is_complete:
             return f"<proxy object for {self._result!r} result>"
         cls = self._expected_class
         if cls is None:
             return f"<proxy object for future result>"
         return f"<proxy object for future {cls!r} result>"
+
+    @property
+    def _is_complete(self):
+        return self._result is not None or self._exception is not None
 
     def _get_or_wair_for_result(self):
         if self._result is None:
@@ -265,3 +266,9 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
         self._proxy_uid_by_tid[tid] = uid
 
         return proxy
+
+
+def is_complete(proxy):
+    if not isinstance(proxy, _ResultProxy):
+        raise TypeError
+    return proxy._is_complete

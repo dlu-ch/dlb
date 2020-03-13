@@ -24,7 +24,8 @@ class ImportTest(unittest.TestCase):
             'DependencyError',
             'ExecutionParameterError',
             'RedoError',
-            'HelperExecutionError'},
+            'HelperExecutionError',
+            'is_complete'},
             set(dlb.ex.tool.__all__))
         self.assertTrue('Tool' in dir(dlb.ex))
 

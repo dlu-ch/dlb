@@ -10,7 +10,8 @@ __all__ = (
     'DependencyError',
     'ExecutionParameterError',
     'RedoError',
-    'HelperExecutionError'
+    'HelperExecutionError',
+    'is_complete'
 )
 
 import sys
@@ -27,6 +28,7 @@ from .. import fs
 from .. import di
 from . import rundb
 from . import worktree
+from . import aseq
 from . import context as context_
 from . import depend
 from . import dependaction
@@ -1019,6 +1021,15 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
     _registered_info_by_tool[tool] = info
 
     return info
+
+
+def is_complete(result):
+    if isinstance(result, _RunResult) and not result:
+        return True  # TODO test
+    try:
+        return aseq.is_complete(result)
+    except TypeError:
+        raise TypeError("'result' is not a result of dlb.ex.Tool.run()") from None  # TODO test
 
 
 # noinspection PyCallByClass

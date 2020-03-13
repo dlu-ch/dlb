@@ -184,7 +184,7 @@ class LimitingResultSequencerTest(unittest.TestCase):
         tid2 = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.75)
 
         proxy = sequencer.create_result_proxy(tid1, uid=1)
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
 
         with self.assertRaises(dlb.ex.aseq.IdError) as cm:
             sequencer.create_result_proxy(tid1, uid=2)
@@ -212,14 +212,14 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
         uid = 1
         proxy = sequencer.create_result_proxy(tid, uid)
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
 
         p = sequencer.get_result_proxy(uid)
         self.assertIs(proxy, p)
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
 
         self.assertEqual(0.5, proxy.value)  # waits for completion
-        self.assertTrue(proxy)  # complete
+        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
 
         self.assertIsNone(sequencer.get_result_proxy(uid))
 
@@ -230,12 +230,12 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
         uid = 1
         proxy = sequencer.create_result_proxy(tid, uid)
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
 
         with proxy:
             pass
 
-        self.assertTrue(proxy)  # complete
+        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
         self.assertEqual(0.5, proxy.value)
 
     def test_consume_all_completes(self):
@@ -245,12 +245,12 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
 
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
         sequencer.cancel_all(timeout=None)
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
 
         sequencer.consume_all()
-        self.assertTrue(proxy)  # complete
+        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
 
     def test_attribute_before_completion_access_raises_exception(self):
 
@@ -259,7 +259,7 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
 
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
         with self.assertRaises(AssertionError):
             proxy.value
 
@@ -273,12 +273,12 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
 
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
         sequencer.complete_all(timeout=None)
-        self.assertFalse(proxy)  # not complete
+        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
 
         sequencer.consume_all()
-        self.assertTrue(proxy)  # complete
+        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
 
         with self.assertRaises(AssertionError):
             proxy.value

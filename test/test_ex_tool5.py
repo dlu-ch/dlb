@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb.ex.aseq
 import marshal
 import tempfile
 import zipfile
@@ -438,7 +439,7 @@ class ReprOfResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             r = t.run()
             self.assertIsNotNone(r)
-            self.assertFalse(r)
+            self.assertFalse(dlb.ex.aseq.is_complete(r))
             imcomplete_repr = repr(r)
         complete_repr = repr(r)
 
