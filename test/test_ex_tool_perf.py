@@ -14,6 +14,7 @@ import dlb.ex
 import logging
 import cProfile
 import pstats
+import unittest
 import tools_for_test
 
 
@@ -29,6 +30,21 @@ class ATool(dlb.ex.Tool):
         with (context.root_path / self.object_file).native.raw.open('wb'):
             pass
         result.included_files = included_files
+
+
+def dump_profile_stats(profile, test_case: unittest.TestCase, result_index: int):
+    stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
+    stats.print_stats(5)
+
+    assert os.path.isabs(__file__)
+    dir_path, file_name = os.path.split(__file__)
+
+    output_dir_path = os.path.join(dir_path, '..', 'out', 'prof')
+    file_name = '{}-{}-{}.prof'.format(file_name, test_case.__class__.__name__, result_index)
+
+    os.makedirs(output_dir_path, exist_ok=True)
+    stats.dump_stats(os.path.join(output_dir_path, file_name))
+    # e.g. for https://jiffyclub.github.io/snakeviz/
 
 
 class RunBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -55,12 +71,7 @@ class RunBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
             profile.disable()
 
-        stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats(5)
-
-        # e.g. for https://jiffyclub.github.io/snakeviz/
-        assert os.path.isabs(__file__)
-        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '1'))
+        dump_profile_stats(profile, self, 1)
 
 
 class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -95,12 +106,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
 
             profile.disable()
 
-        stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats(5)
-
-        # e.g. for https://jiffyclub.github.io/snakeviz/
-        assert os.path.isabs(__file__)
-        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '1'))
+        dump_profile_stats(profile, self, 1)
 
     def test_decode_encoded_path(self):
         profile = cProfile.Profile()
@@ -117,13 +123,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
             dlb.ex.rundb.decode_encoded_path('a/b2/c33/d42/')
 
         profile.disable()
-
-        stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats(5)
-
-        # e.g. for https://jiffyclub.github.io/snakeviz/
-        assert os.path.isabs(__file__)
-        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '2'))
+        dump_profile_stats(profile, self, 2)
 
     def test_inform(self):
         profile = cProfile.Profile()
@@ -138,10 +138,4 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
                 pass
 
         profile.disable()
-
-        stats = pstats.Stats(profile).sort_stats(pstats.SortKey.CUMULATIVE)
-        stats.print_stats(5)
-
-        # e.g. for https://jiffyclub.github.io/snakeviz/
-        assert os.path.isabs(__file__)
-        stats.dump_stats('{}-{}-{}.prof'.format(__file__, self.__class__.__name__, '3'))
+        dump_profile_stats(profile, self, 3)
