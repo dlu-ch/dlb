@@ -390,17 +390,21 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
     return dependency_action_by_path, obstructive_paths, needs_redo
 
 
-class _RedoResult:
+class _RunResult:
     # Attribute represent concrete dependencies of a tool instance.
     # Explicit dependencies are referred to the tool instance.
-    # Non-explicit dependencies can be set exactly once.
+    # Non-explicit dependencies can be set exactly once, if *redo* is True.
     #
-    # To be used by redo.
+    # To be used by run() and redo().
 
-    def __init__(self, tool):
+    def __init__(self, tool, redo: bool):
         super().__setattr__('_tool', tool)
+        super().__setattr__('_redone', bool(redo))
 
     def __setattr__(self, key, value):
+        if not self._redone:
+            raise AttributeError
+
         try:
             role = getattr(self._tool.__class__, key)
             if not isinstance(role, depend.Dependency):
@@ -436,9 +440,12 @@ class _RedoResult:
 
         return NotImplemented
 
+    def __bool__(self):
+        return self._redone
 
-_RedoResult.__name__ = 'RedoResult'
-_RedoResult.__qualname__ = 'Tool.{}'.format(_RedoResult.__name__)
+
+_RunResult.__name__ = 'RunResult'
+_RunResult.__qualname__ = 'Tool.{}'.format(_RunResult.__name__)
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -658,7 +665,7 @@ class _ToolBase:
                     worktree.remove_filesystem_object(context.root_path / p, abs_empty_dir_path=tmp_dir,
                                                       ignore_non_existent=True)
 
-        result = _RedoResult(self)
+        result = _RunResult(self, True)
 
         for action in dependency_actions:
             if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
@@ -681,7 +688,7 @@ class _ToolBase:
             execution_parameter_digest=execution_parameter_digest, envvar_digest=envvar_digest,
             db=db, tool_instance_dbid=tool_instance_dbid)
 
-        return context._redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_RedoResult)
+        return context._redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_RunResult)
 
     async def _redo_with_aftermath(self, result, context,
                                    dependency_actions, memo_by_encoded_path,
@@ -772,7 +779,7 @@ class _ToolBase:
 
         return result
 
-    async def redo(self, result: _RedoResult, context: _RedoContext) -> Optional[bool]:
+    async def redo(self, result: _RunResult, context: _RedoContext) -> Optional[bool]:
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):
@@ -1017,4 +1024,4 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
 # noinspection PyCallByClass
 type.__setattr__(Tool, '__module__', '.'.join(_ToolBase.__module__.split('.')[:-1]))
 ut.set_module_name_to_parent_by_name(vars(), [n for n in __all__ if n != 'Tool'])
-ut.set_module_name_to_parent(_RedoResult)
+ut.set_module_name_to_parent(_RunResult)

@@ -28,22 +28,39 @@ class ATool(dlb.ex.Tool):
         result.included_files = [dlb.fs.Path('src/a.h'), dlb.fs.Path('src/b.h')]
 
 
+class RunResultBeforeRedoTest(unittest.TestCase):
+
+    def test_is_true(self):
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        self.assertFalse(dlb.ex.tool._RunResult(t, False))
+
+    def test_assignment_fails(self):
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        result = dlb.ex.tool._RunResult(t, False)
+        with self.assertRaises(AttributeError):
+            result.source_file = 'b.cpp'
+
+
 class RedoResultBeforeRedoTest(unittest.TestCase):
+
+    def test_is_true(self):
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        self.assertTrue(dlb.ex.tool._RunResult(t, True))
 
     def test_refers_explicit_dependencies_of_tool_instance(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
-        result = dlb.ex.tool._RedoResult(t)
+        result = dlb.ex.tool._RunResult(t, True)
         self.assertEqual(t.source_file, result.source_file)
         self.assertEqual(t.object_file, result.object_file)
 
     def test_nonexplicit_dependencies_are_notimplemented(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
-        result = dlb.ex.tool._RedoResult(t)
+        result = dlb.ex.tool._RunResult(t, True)
         self.assertEqual(NotImplemented, result.included_files)
 
     def test_fails_on_nondependency(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
-        result = dlb.ex.tool._RedoResult(t)
+        result = dlb.ex.tool._RunResult(t, True)
 
         with self.assertRaises(AttributeError) as cm:
             result._xy
@@ -65,13 +82,13 @@ class RedoResultAssignmentTest(unittest.TestCase):
 
     def test_assignment_validates(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
-        result = dlb.ex.tool._RedoResult(t)
+        result = dlb.ex.tool._RunResult(t, True)
         result.included_files = ['c.h', 'd.h']
         self.assertEqual((dlb.fs.Path('c.h'), dlb.fs.Path('d.h')), result.included_files)
 
     def test_fails_to_nondependency(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
-        result = dlb.ex.tool._RedoResult(t)
+        result = dlb.ex.tool._RunResult(t, True)
         with self.assertRaises(AttributeError) as cm:
             result.redo = 42
         msg = "'redo' is not a dependency"
@@ -79,7 +96,7 @@ class RedoResultAssignmentTest(unittest.TestCase):
 
     def test_fails_to_already_assigned(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
-        result = dlb.ex.tool._RedoResult(t)
+        result = dlb.ex.tool._RunResult(t, True)
         result.included_files = ['c.h', 'd.h']
         with self.assertRaises(AttributeError) as cm:
             result.included_files = ['c.h', 'd.h']
@@ -88,7 +105,7 @@ class RedoResultAssignmentTest(unittest.TestCase):
 
     def test_fails_to_explicit(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
-        result = dlb.ex.tool._RedoResult(t)
+        result = dlb.ex.tool._RunResult(t, True)
         with self.assertRaises(AttributeError) as cm:
             result.source_file = 'b.cpp'
         msg = "'source_file' is not a non-explicit dependency"

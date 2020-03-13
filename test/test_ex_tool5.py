@@ -442,7 +442,7 @@ class ReprOfResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             imcomplete_repr = repr(r)
         complete_repr = repr(r)
 
-        self.assertEqual("<proxy object for future <class 'dlb.ex.Tool.RedoResult'> result>", imcomplete_repr)
+        self.assertEqual("<proxy object for future <class 'dlb.ex.Tool.RunResult'> result>", imcomplete_repr)
         self.assertRegex(
             complete_repr,
-            r"<proxy object for <dlb\.ex\.Tool\.RedoResult object at 0x[0-9a-f]+> result>")
+            r"<proxy object for <dlb\.ex\.Tool\.RunResult object at 0x[0-9a-f]+> result>")
