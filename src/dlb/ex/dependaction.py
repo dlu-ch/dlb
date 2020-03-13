@@ -171,7 +171,15 @@ class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action)
             os.remove(src)
             return False
 
-        os.replace(src=src, dst=dst)
+        try_again = False
+        try:
+            os.replace(src=src, dst=dst)
+        except FileNotFoundError:
+            try_again = True
+        if try_again:
+            os.makedirs((context.root_path / destination[:-1]).native, exist_ok=True)
+            os.replace(src=src, dst=dst)
+
         return True
 
 
@@ -179,7 +187,18 @@ class NonRegularFileOutputAction(_NonRegularFileMixin, _FilesystemObjectMixin, A
 
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
         r = context.root_path
-        os.replace(src=(r / source).native, dst=(r / destination).native)
+        src = str((r / source).native)
+        dst = str((r / destination).native)
+
+        try_again = False
+        try:
+            os.replace(src=src, dst=dst)
+        except FileNotFoundError:
+            try_again = True
+        if try_again:
+            os.makedirs((r / destination[:-1]).native, exist_ok=True)
+            os.replace(src=src, dst=dst)
+
         return True
 
 
@@ -187,10 +206,14 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
 
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
         r = context.root_path
-        dst = (r / destination).native
+        src = str((r / source).native)
+        dst = str((r / destination).native)
+
         with context.temporary(is_dir=True) as tmp_dir:
+            os.makedirs((r / destination[:-1]).native, exist_ok=True)
             worktree.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
-            os.replace(src=(r / source).native, dst=dst)
+            os.replace(src=src, dst=dst)
+
         return True
 
 

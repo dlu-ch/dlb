@@ -244,13 +244,14 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       *path* and *source* must be different filesystem objects.
 
       After successful completion, *path* exists and *source* does not exist.
+      If the parent directory of *path* does not exist, it is created (with all its parent directories).
 
       The actual operation depends on the corresponding dependency role.
       If is it a :class:`dlb.ex.Tool.Output.RegularFile` with
       :attr:`replace_by_same_content <dlb.ex.Tool.Output.RegularFile.replace_by_same_content>` = ``False`` and *path*
       and *source* both exist with the same content, *path* is no replaced and treated as unchanged.
 
-      If *path* is replaced, this is always done be an atomic operation. If it fails, *path* is either *source*
+      If *path* is replaced, this is always done by an atomic operation. If it fails, *path* is either *source*
       afterwards or it does not exist.
 
       :param path: a path of a future filesystem object in the managed tree
