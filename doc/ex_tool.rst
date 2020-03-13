@@ -130,7 +130,7 @@ Tool objects
       Example::
 
          class ATool(dlb.ex.Tool):
-            BINARY = 'atool'
+            EXECUTABLE = 'atool'
 
             source_file = dlb.ex.Tool.Input.RegularFile()
             output_file = dlb.ex.Tool.Output.RegularFile()
@@ -140,7 +140,7 @@ Tool objects
                 if ...:
                     raise Exception('invalid ...')
                 with context.temporary() as temp_file_
-                   await context.execute_helper(self.BINARY, ['-o', temp_file, result.source_file])
+                   await context.execute_helper(self.EXECUTABLE, ['-o', temp_file, result.source_file])
                    result.included_files = ...
                    context.replace_output(result.output_file, temp_file)
 

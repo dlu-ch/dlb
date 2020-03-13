@@ -21,7 +21,7 @@ def check_warning_name(name: str) -> str:
 
 class CCompilerGcc(dlb_contrib_c.CCompiler):
 
-    BINARY = 'gcc'  # helper file, looked-up in the context
+    EXECUTABLE = 'gcc'  # helper file, looked-up in the context
 
     DIALECT = 'c99'  # https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html#C-Dialect-Options
 
@@ -66,7 +66,7 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
         # compile
         with context.temporary() as make_rules_file, context.temporary() as object_file:
             await context.execute_helper(
-                self.BINARY,
+                self.EXECUTABLE,
                 compile_arguments + [
                     '-x', 'c', '-std=' + self.DIALECT, '-c', '-o', object_file,
                     '-MMD', '-MT', '_ ', '-MF', make_rules_file,
@@ -83,6 +83,6 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
                     except ValueError:
                         pass
 
-            result.compiler_executable = context.helper[self.BINARY]
+            result.compiler_executable = context.helper[self.EXECUTABLE]
             result.included_files = included_files
             context.replace_output(result.object_file, object_file)

@@ -43,7 +43,7 @@ Terms
 
       A dynamic helper is identified by a relative path (non-directory or directory).
 
-      Typical example: globally installed binary (e.g. compiler) with an absolute path determined by a search for
+      Typical example: globally installed executable (e.g. compiler) with an absolute path determined by a search for
       the first match in the environment variable :envvar:`PATH`.
 
    redo

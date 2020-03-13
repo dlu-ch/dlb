@@ -18,7 +18,7 @@ class ShScriptlet(dlb.ex.Tool):
     # Run a small sh script, wait for its completion and return its output to stdout as a string.
     # Do not use this for "big" scripts with a lot of output.
 
-    BINARY = 'sh'  # helper file, looked-up in the context
+    EXECUTABLE = 'sh'  # helper file, looked-up in the context
 
     ENCODING = 'utf-8'
 
@@ -34,7 +34,7 @@ class ShScriptlet(dlb.ex.Tool):
         script = '\n'.join(textwrap.dedent(self.SCRIPTLET).strip().splitlines())
         _, stdout, _ = \
             await context.execute_helper(
-                self.BINARY,
+                self.EXECUTABLE,
                 ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()],
                 stdout=asyncio.subprocess.PIPE)
         result.output = stdout.decode(self.ENCODING)

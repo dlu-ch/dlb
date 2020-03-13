@@ -113,7 +113,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     # This includes tag, commit and changed files.
     # Fails if the Git working directory contains not annotated tag match *TAG_PATTERN*.
 
-    BINARY = 'git'  # helper file, looked-up in the context
+    EXECUTABLE = 'git'  # helper file, looked-up in the context
 
     # consider only annotated tags with a name that matches this glob(7) pattern
     TAG_PATTERN = 'v[0-9]*'
@@ -153,7 +153,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
             '--long', '--abbrev=41', '--dirty=?',
             f'--candidates={self.MATCHING_TAG_CANDIDATE_COUNT}', '--match', self.TAG_PATTERN
         ]
-        _, stdout, _ = await context.execute_helper(self.BINARY, arguments, stdout=asyncio.subprocess.PIPE)
+        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=asyncio.subprocess.PIPE)
 
         m = GIT_DESCRIPTION_REGEX.match(stdout.strip().decode())
         result.tag = m.group('tag')
@@ -161,7 +161,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         result.commit_number_from_tag_to_latest_commit = int(m.group('commit_number'), 10)
 
         arguments = ['status', '--porcelain=v2', '--untracked-files', '--branch']
-        _, stdout, _ = await context.execute_helper(self.BINARY, arguments, stdout=asyncio.subprocess.PIPE)
+        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=asyncio.subprocess.PIPE)
 
         # https://github.com/git/git/blob/v2.20.1/Documentation/i18n.txt:
         # Path names are encoded in UTF-8 normalization form C
@@ -174,7 +174,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
 
         if potential_branch_refname == 'refs/heads/(detached)':  # detached?
             returncode, _, _ = \
-                await context.execute_helper(self.BINARY, ['symbolic-ref', '-q', 'HEAD'],
+                await context.execute_helper(self.EXECUTABLE, ['symbolic-ref', '-q', 'HEAD'],
                                              stdout=asyncio.subprocess.DEVNULL, expected_returncodes=[0, 1])
             if returncode == 1:
                 potential_branch_refname = None  # is detached
