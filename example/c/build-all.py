@@ -60,6 +60,6 @@ with dlb.ex.Context():
                 source_file=p,
                 object_file=output_path / p.append_suffix('.o'),
                 include_search_directories=[source_path, generated_source_path]  # TODO run in src
-            ).run(force_redo=True).object_file  # TODO let run always return a ResultProxy
+            ).run().object_file
             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
         ]

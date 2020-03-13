@@ -35,6 +35,41 @@ class ATool(dlb.ex.Tool):
         result.included_files = [dlb.fs.Path('a.h'), dlb.fs.Path('b.h')]
 
 
+class BTool(dlb.ex.Tool):
+    async def redo(self, result, context):
+        pass
+
+
+class IsCompleteTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails_for_non_result(self):
+        msg = "'result' is not a result of dlb.ex.Tool.run()"
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.is_complete(None)
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.ex.is_complete(27)
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_true_if_no_redo(self):
+
+        with dlb.ex.Context():
+            BTool().run()
+            r = BTool().run()
+            self.assertFalse(r)
+            self.assertTrue(dlb.ex.is_complete(r))
+
+    def test_false_if_incomplete_redo(self):
+
+        with dlb.ex.Context():
+            r = BTool().run()
+            self.assertTrue(r)
+            self.assertFalse(dlb.ex.is_complete(r))
+        self.assertTrue(dlb.ex.is_complete(r))
+
+
 class MultiplePendingRedosTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def setUp(self):

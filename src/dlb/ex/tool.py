@@ -658,7 +658,7 @@ class _ToolBase:
                                 break
 
         if not needs_redo:
-            return  # no redo
+            return _RunResult(self, False)  # no redo
 
         if obstructive_paths:
             with di.Cluster('remove obstructive filesystem objects that are explicit output dependencies',
@@ -1025,11 +1025,11 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
 
 def is_complete(result):
     if isinstance(result, _RunResult) and not result:
-        return True  # TODO test
+        return True
     try:
         return aseq.is_complete(result)
     except TypeError:
-        raise TypeError("'result' is not a result of dlb.ex.Tool.run()") from None  # TODO test
+        raise TypeError("'result' is not a result of dlb.ex.Tool.run()") from None
 
 
 # noinspection PyCallByClass

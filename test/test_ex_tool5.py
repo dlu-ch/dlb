@@ -42,45 +42,45 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
         t = ATool(source_file='a.cpp', object_file='a.o')
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())  # because new dependency
+            self.assertTrue(t.run())  # because new dependency
             regex = (
                 r"(?m)\b"
                 r"redo necessary because of filesystem object: 'a\.h' \n"
                 r" *  \| reason: was an new dependency or an output dependency of a redo\n"
             )
             self.assertRegex(output.getvalue(), regex)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         open('a.h', 'xb').close()
 
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())  # because new dependency
+            self.assertTrue(t.run())  # because new dependency
             regex = (
                 r"(?m)\b"
                 r"redo necessary because of filesystem object: 'a\.h' \n"
                 r" *  \| reason: existence has changed\n"
             )
             self.assertRegex(output.getvalue(), regex)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         os.remove('a.h')
 
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())  # because of new dependency
+            self.assertTrue(t.run())  # because of new dependency
             regex = (
                 r"(?m)\b"
                 r"redo necessary because of non-existent filesystem object: 'a.h'\n"
             )
             self.assertRegex(output.getvalue(), regex)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
     def test_invalid_dependency_causes_redo(self):
         open('a.cpp', 'xb').close()
@@ -89,9 +89,9 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
         t = ATool(source_file='a.cpp', object_file='a.o')
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNotNone(t.run())  # because of new dependency
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertTrue(t.run())  # because of new dependency
+            self.assertFalse(t.run())
 
         with dlb.ex.Context():
             # replace memo by invalid memo
@@ -100,14 +100,14 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())  # because new dependency
+            self.assertTrue(t.run())  # because new dependency
             regex = (
                 r"(?m)\b"
                 r"redo necessary because of filesystem object: 'a.h' \n"
                 r" *  \| reason: state before last successful redo is unknown\n"
             )
             self.assertRegex(output.getvalue(), regex)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         with dlb.ex.Context():
             # add dependency with invalid encoded path
@@ -117,7 +117,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             output = io.StringIO()
             dlb.di.set_output_file(output)
             r = t.run()
-            self.assertIsNotNone(r)
+            self.assertTrue(r)
             with r:
                 pass
 
@@ -125,7 +125,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             self.assertRegex(output.getvalue(), regex)
             self.assertNotIn('a/../', rundb.get_fsobject_inputs(1, is_explicit_filter=False))
 
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         with dlb.ex.Context():
             # add non-existent dependency with invalid memo
@@ -134,10 +134,10 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             regex = r"\b()redo necessary because of non-existent filesystem object: 'd\.h'\n"
             self.assertRegex(output.getvalue(), regex)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         os.mkdir('t')
         os.chmod('t', 0o000)
@@ -150,10 +150,10 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
 
                 output = io.StringIO()
                 dlb.di.set_output_file(output)
-                self.assertIsNotNone(t.run())
+                self.assertTrue(t.run())
                 regex = r"\b()redo necessary because of inaccessible filesystem object: 't/d\.h'\n"
                 self.assertRegex(output.getvalue(), regex)
-                self.assertIsNone(t.run())
+                self.assertFalse(t.run())
         finally:
             os.chmod('t', 0o700)
 
@@ -380,7 +380,7 @@ class ObjectRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         t = BTool()
         with dlb.ex.Context():
             r = t.run()
-            self.assertIsNotNone(r)
+            self.assertTrue(r)
             self.assertEqual(42, r.calculated)
 
 
@@ -413,10 +413,10 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             regex = r"\b()added 1 tool definition files as input dependency\n"
             self.assertRegex(output.getvalue(), regex)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         with zipfile.ZipFile(zip_file_path, 'w') as z:
             z.writestr('dummy', '')
@@ -424,7 +424,7 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             regex = r"\b()redo necessary because of filesystem object: 'abc.zip' \n"
             self.assertRegex(output.getvalue(), regex)
 
@@ -438,7 +438,7 @@ class ReprOfResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             r = t.run()
-            self.assertIsNotNone(r)
+            self.assertTrue(r)
             self.assertFalse(dlb.ex.aseq.is_complete(r))
             imcomplete_repr = repr(r)
         complete_repr = repr(r)

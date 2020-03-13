@@ -80,12 +80,12 @@ Tool objects
 
    .. method:: run()
 
-      Run the tool instance in the :term:`active context`.
+      Run the tool instance in the :term:`active context` and returns a result (proxy) object *result*.
 
-      Returns a result proxy object if a :term:`redo` was necessary and ``None`` otherwise.
+      ``bool(result)`` is ``True`` if a :term:`redo` is performed and ``False`` otherwise.
 
-      If a redo was necessary, this method returns before the (asynchronous) redo is complete.
-      After each of the following actions the redo is guaranteed to be completed (either successfully or
+      If a redo is performed, this method returns before the (asynchronous) redo is complete.
+      After each of the following actions the redo is guaranteed to be complete (either successfully or
       by raising an exception):
 
         - read of a "public" attribute of the result proxy object
@@ -95,14 +95,18 @@ Tool objects
           the context :meth:`run()` was called in
         - call of :meth:`run()` of the same tool instance
 
-      The result proxy object contains an attribute for every dependency role of the tool which contains the concrete
-      dependencies (not only the explicit dependencies as on the :term:`tool instance`, but also the non-explicit ones).
+      The result object contains an attribute for every dependency role of the tool which contains the concrete
+      dependencies.
+
+      If ``bool(result)`` is ``True``, all attributes for dependencies have an assigned value.
+      If ``bool(result)`` is ``False``, only the attributes for explicit dependencies have an assigned value;
+      the value of all attributes for non-explicit dependencies is ``NotImplemented``.
 
    .. method:: redo(result, context)
 
       Overwrite this method to implement a new :class:`Tool`.
 
-      *result* is the result proxy object that will by returned by the calling :meth:`run()`.
+      *result* is the result object that will by returned by the calling :meth:`run()`.
       *context* is the redo context (see :class:`Tool.RedoContext`).
 
       Use :meth:`context.execute_helper() <Tool.RedoContext.execute_helper()>` and

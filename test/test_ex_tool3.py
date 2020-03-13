@@ -255,15 +255,15 @@ class RunDoesNoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirecto
         t = ATool(source_file='src/a.cpp', object_file='a.o')
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
             t = ATool(source_file='src/a.cpp', object_file='a.o')
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         with dlb.ex.Context():
             t = ATool(source_file='src/a.cpp', object_file='a.o')
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
 
 class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -275,34 +275,34 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
         t = ATool(source_file='src/a.cpp', object_file='a.o')
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
         with open('src/a.cpp', 'wb') as f:
             f.write(b'')  # update mtime (outside root context!)
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()mtime has changed\b')
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         with dlb.ex.Context():
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
             with open('src/a.cpp', 'wb') as f:
                 f.write(b'1')  # change size
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()size has changed\b')
 
         with dlb.ex.Context():
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
             os.chmod(os.path.join('src', 'a.cpp'), 0o000)
             os.chmod(os.path.join('src', 'a.cpp'), 0o600)
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()permissions or owner have changed\b')
 
         with dlb.ex.Context():
@@ -314,7 +314,7 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()state before last successful redo is unknown\b')
 
         with dlb.ex.Context():
@@ -327,7 +327,7 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()filesystem object did not exist\b')
 
 
@@ -348,17 +348,17 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorki
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_file='src/n')
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
         os.remove(nonregular)
         os.symlink('a', nonregular, target_is_directory=False)
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()symbolic link target has changed\b')
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         os.remove(nonregular)
         try:
@@ -370,9 +370,9 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorki
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()type of filesystem object has changed\b')
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
 
 class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -386,18 +386,18 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTes
         t2 = ATool(source_file='src/b.cpp', object_file='src/a.cpp')
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t2.run())
+            self.assertTrue(t2.run())
 
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()was an output dependency of a redo\b')
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
 
 class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -408,13 +408,13 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryT
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
 
         os.remove('a.o')
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
 
         regex = r"\b()redo necessary because of filesystem object that is an output dependency: 'a\.o'"
         self.assertRegex(output.getvalue(), regex)
@@ -425,14 +425,14 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryT
 
         t = ATool(source_file='src/a.cpp', object_file='a.o')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
 
         os.remove('a.o')
         os.mkdir('a.o')
         with dlb.ex.Context():
             output = io.StringIO()
             dlb.di.set_output_file(output)
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
             regex = (
                 r"(?m)\b"
                 r"redo necessary because of filesystem object that is an output dependency: 'a\.o' \n"
@@ -461,14 +461,14 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
         t = BTool(object_file='a.o')
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
         a_list.append(None)
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
 
 class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -482,17 +482,17 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
 
         t = BTool(language='fr_FR')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
         t = BTool(language='fr_FR')
         with dlb.ex.Context():
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         t = BTool(language='it_IT')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
     def test_redo_for_nonexplicit(self):
         class BTool(dlb.ex.Tool):
@@ -508,13 +508,13 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
             r = t.run()
             self.assertIsNotNone(r)
             self.assertEqual('fr_FR', r.language.raw)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         t = BTool()
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
             dlb.ex.Context.active.env['LANG'] = 'fr_FR'
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         t = BTool()
         with dlb.ex.Context():
@@ -523,7 +523,7 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
             r = t.run()
             self.assertIsNotNone(r)
             self.assertEqual('it_IT', r.language.raw)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
     def test_fails_for_nonexplicit_with_invalid_envvar_value(self):
         class BTool(dlb.ex.Tool):
@@ -561,11 +561,11 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
             self.assertIsNotNone(r)
             self.assertEqual('it_IT', r.language.raw)
             self.assertEqual('it_IT', r.language2.raw)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         t = BTool(language2='it_IT')
         with dlb.ex.Context():
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         t = BTool(language2='fr_FR')
         with dlb.ex.Context():
@@ -573,7 +573,7 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
             self.assertIsNotNone(r)
             self.assertEqual('fr_FR', r.language.raw)
             self.assertEqual('fr_FR', r.language2.raw)
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
 
 class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -585,9 +585,9 @@ class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWo
 
         t = BTool()
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNotNone(t.run())
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
+            self.assertTrue(t.run())
+            self.assertTrue(t.run())
 
     def test_redo_cannot_forbid_next_redo(self):
         a_list = ['a', 2]
@@ -600,14 +600,14 @@ class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWo
 
         t = BTool()
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
         a_list.append(None)
 
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
-            self.assertIsNone(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
 
 
 class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -618,7 +618,7 @@ class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.Temporary
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
         self.assertFalse(os.path.exists('d'))
 
     def test_redo_does_not_remove_nonobstructing_outputs(self):
@@ -629,7 +629,7 @@ class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.Temporary
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
         self.assertTrue(os.path.exists('a.o'))
         self.assertTrue(os.path.exists('d'))
 
@@ -641,7 +641,7 @@ class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.Temporary
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
         self.assertTrue(os.path.isfile('a.o'))
         self.assertFalse(os.path.exists('d'))
 
@@ -651,12 +651,12 @@ class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.Temporary
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_dir='d/')
         with dlb.ex.Context():
-            self.assertIsNotNone(t.run())
+            self.assertTrue(t.run())
 
         os.mkdir('d')
 
         with dlb.ex.Context():
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
         self.assertTrue(os.path.isfile('a.o'))
         self.assertTrue(os.path.isdir('d'))

@@ -84,7 +84,7 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             t.run()
-            self.assertIsNone(t.run())
+            self.assertFalse(t.run())
 
     def test_fails_for_colon_in_name(self):
         open('./a:c', 'w').close()
