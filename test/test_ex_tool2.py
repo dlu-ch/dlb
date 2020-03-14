@@ -70,6 +70,15 @@ class ConstructionTest(unittest.TestCase):
         msg = "keyword argument for required dependency role must not be None: 'source_file'"
         self.assertEqual(msg, str(cm.exception))
 
+    def test_fails_duplicate(self):
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
+            ConstructionTest.DTool(include_directories=['i/', 'i/'])
+        msg = (
+            "keyword argument for dependency role 'include_directories' is invalid: ['i/', 'i/']\n"
+            "  | reason: iterable must be duplicate-free, but contains Path('i/') more than once"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
     def test_must_not_have_argument_for_undeclared_dependency(self):
         msg = (
             "keyword argument does not name a dependency role of 'ConstructionTest.BTool': 'temporary_file'\n"
@@ -160,7 +169,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 163  # of this line
+        lineno = 172  # of this line
 
         class A(Tool):
             pass

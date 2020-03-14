@@ -482,7 +482,14 @@ class _ToolBase:
                     msg = f"keyword argument for required dependency role must not be None: {name!r}"
                     raise DependencyError(msg)
             else:
-                validated_value = role.validate(value)
+                try:
+                    validated_value = role.validate(value)
+                except ValueError as e:
+                    msg = (
+                        f"keyword argument for dependency role {name!r} is invalid: {value!r}\n"
+                        f"  | reason: {ut.exception_to_line(e)}"
+                    )
+                    raise DependencyError(msg)
 
             object.__setattr__(self, name, validated_value)
             names_of_assigned.add(name)

@@ -86,7 +86,7 @@ class Dependency(mult.MultiplicityHolder):
         for v in value:
             v = self.validate_single(v)
             if v in values:
-                raise ValueError(f'sequence of dependencies must be duplicate-free, but contains {v!r} more than once')
+                raise ValueError(f'iterable must be duplicate-free, but contains {v!r} more than once')
             values.append(v)
 
         n = len(values)

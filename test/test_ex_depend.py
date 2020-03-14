@@ -86,7 +86,7 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
         paths = ['1', '2', '1']
         with self.assertRaises(ValueError) as cm:
             CommonOfConcreteValidationTest.D[:]().validate(paths)
-        msg = "sequence of dependencies must be duplicate-free, but contains Path('1') more than once"
+        msg = "iterable must be duplicate-free, but contains Path('1') more than once"
         self.assertEqual(str(cm.exception), msg)
 
     def test_value_must_be_iterable(self):
