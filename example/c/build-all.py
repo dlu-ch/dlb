@@ -58,7 +58,7 @@ with dlb.ex.Context():
         object_files = [
             CCompiler(
                 source_file=p,
-                object_file=output_path / p.append_suffix('.o'),
+                object_file=output_path / p.with_appended_suffix('.o'),
                 include_search_directories=[source_path, generated_source_path]  # TODO run in src
             ).run().object_file
             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()

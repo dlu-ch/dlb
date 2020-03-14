@@ -46,7 +46,7 @@ Example::
        object_files = [                                                          # (d)
           Compiler(
               source_file=p,
-              object_file=output_path / p.append_suffix('.o')
+              object_file=output_path / p.with_appended_suffix('.o')
           ).run().object_file
           for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
        ]

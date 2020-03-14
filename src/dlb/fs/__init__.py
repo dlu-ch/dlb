@@ -428,7 +428,7 @@ class Path(metaclass=_PathMeta):
         # first element: '/' or '//' if absolute, does not start with '/' otherwise
         return _parts_from_components(self._components)
 
-    def append_suffix(self, suffix: str) -> 'Path':
+    def with_appended_suffix(self, suffix: str) -> 'Path':
         if not isinstance(suffix, str):
             raise TypeError("'suffix' must be a str")
         if not self._components[-1] or self._components[-1] == '..':
