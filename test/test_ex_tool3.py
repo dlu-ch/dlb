@@ -156,7 +156,7 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
     class BTool(dlb.ex.Tool):
         object_file = dlb.ex.Tool.Output.RegularFile(required=False)
         temp_dir = dlb.ex.Tool.Output.Directory(required=False)
-        log_files = dlb.ex.Tool.Output.RegularFile[:](required=False, unique=False)
+        log_files = dlb.ex.Tool.Output.RegularFile[:](required=False)
 
     def test_fails_for_two_files(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -164,14 +164,6 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
                 t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(object_file='o', log_files=['o'])
                 t.run()
         msg = "output dependencies 'object_file' and 'log_files' both contain the same path: 'o'"
-        self.assertEqual(msg, str(cm.exception))
-
-    def test_fails_for_two_files_in_same_dependency(self):
-        with self.assertRaises(dlb.ex.DependencyError) as cm:
-            with dlb.ex.Context():
-                t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(log_files=['o', 'o'])
-                t.run()
-        msg = "output dependency 'log_files' contains the same path more than once: 'o'"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_file_and_directory(self):

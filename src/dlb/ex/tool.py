@@ -359,16 +359,10 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                     raise DependencyError(msg)
                 a = dependency_action_by_encoded_path.get(encoded_path)
                 if a is not None:
-                    if a is action:
-                        msg = (
-                            f"output dependency {action.name!r} contains the same path more than once: "
-                            f"{p.as_string()!r}"
-                        )
-                    else:
-                        msg = (
-                            f"output dependencies {action.name!r} and {a.name!r} both contain the same path: "
-                            f"{p.as_string()!r}"
-                        )
+                    msg = (
+                        f"output dependencies {action.name!r} and {a.name!r} both contain the same path: "
+                        f"{p.as_string()!r}"
+                    )
                     raise DependencyError(msg)
                 dependency_action_by_encoded_path[encoded_path] = action
                 dependency_action_by_path[p] = action

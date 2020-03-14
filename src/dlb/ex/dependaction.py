@@ -70,7 +70,7 @@ class Action:
         # Raises KeyError if this class is not registered for 'self.dependency'.
         dependency_id, _ = _action_by_dependency[self._dependency.__class__]
         d = self.dependency
-        # note: required and unique do _not_ affect the meaning or treatment of a the _validated_ value.
+        # note: *required* does _not_ affect the meaning or treatment of a the _validated_ value.
         return ut.to_permanent_local_bytes((dependency_id, d.explicit))
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency

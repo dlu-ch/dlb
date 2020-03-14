@@ -22,11 +22,10 @@ class Dependency(mult.MultiplicityHolder):
     # The return value of d.validate() is a concrete dependency, if d.multiplicity is None and
     # a tuple of concrete dependencies otherwise.
 
-    def __init__(self, *, required: bool = True, explicit: bool = True, unique: bool = True):
+    def __init__(self, *, required: bool = True, explicit: bool = True):
         super().__init__()
         self._required = bool(required)  # not checked by validate(), only for the caller
         self._explicit = bool(explicit)  # not checked by validate(), only for the caller
-        self._unique = bool(unique)
 
     @property
     def required(self) -> bool:
@@ -35,10 +34,6 @@ class Dependency(mult.MultiplicityHolder):
     @property
     def explicit(self) -> bool:
         return self._explicit
-
-    @property
-    def unique(self) -> bool:
-        return self._unique
 
     def compatible_and_no_less_restrictive(self, other) -> bool:
         if not isinstance(self, other.__class__):
@@ -52,8 +47,6 @@ class Dependency(mult.MultiplicityHolder):
             if ss.step != so.step or ss.start < so.start or ss.stop > so.stop:
                 return False
 
-        if other.unique and not self.unique:
-            return False
         if other.required and not self.required:
             return False
         if self.explicit != other.explicit:
@@ -92,7 +85,7 @@ class Dependency(mult.MultiplicityHolder):
         # noinspection PyTypeChecker
         for v in value:
             v = self.validate_single(v)
-            if self.unique and v in values:
+            if v in values:
                 raise ValueError(f'sequence of dependencies must be duplicate-free, but contains {v!r} more than once')
             values.append(v)
 

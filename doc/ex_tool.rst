@@ -374,12 +374,9 @@ from :class:`Tool.Output`.
 
 Concrete dependency role classes support the following methods and attributes:
 
-.. class:: Tool.Dependency(required=True, explicit=True, unique=True)
+.. class:: Tool.Dependency(required=True, explicit=True)
 
    If *required* is ``True``, a concrete dependency of this dependency role will never be ``None``.
-
-   If *unique* is ``True``, concrete dependency whose :attr:`multiplicity` is not ``None`` will never contain
-   the the same member more than once (this is ignored if :attr:`multiplicity` is ``None``).
 
    If *explicit* is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
    is created. Otherwise, it cannot and must not be, but automatically assigned by :meth:`Tool.run()`.
@@ -388,8 +385,6 @@ Concrete dependency role classes support the following methods and attributes:
    .. type required: bool
    .. param explicit: explicit dependency?
    .. type explicit: bool
-   .. param unique: duplicate-free?
-   .. type unique: bool
 
    Each supported constructor argument is available as a property of the same name.
 

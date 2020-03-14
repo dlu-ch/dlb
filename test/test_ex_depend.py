@@ -84,9 +84,8 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
 
     def test_duplicate_free_cannot_contain_duplicates(self):
         paths = ['1', '2', '1']
-        CommonOfConcreteValidationTest.D[:](unique=False).validate(paths)
         with self.assertRaises(ValueError) as cm:
-            CommonOfConcreteValidationTest.D[:](unique=True).validate(paths)
+            CommonOfConcreteValidationTest.D[:]().validate(paths)
         msg = "sequence of dependencies must be duplicate-free, but contains Path('1') more than once"
         self.assertEqual(str(cm.exception), msg)
 
@@ -422,11 +421,6 @@ class CompatibilityTest(unittest.TestCase):
         C = dlb.ex.depend.RegularFileInput
         self.assertTrue(C().compatible_and_no_less_restrictive(C(required=False)))
         self.assertFalse(C(required=False).compatible_and_no_less_restrictive(C()))
-
-    def test_unique_is_more_restrictive_than_notunique(self):
-        C = dlb.ex.depend.RegularFileInput
-        self.assertTrue(C().compatible_and_no_less_restrictive(C(unique=False)))
-        self.assertFalse(C(unique=False).compatible_and_no_less_restrictive(C()))
 
     def test_envvar_and_file_are_not_compatible(self):
         d1 = dlb.ex.depend.RegularFileInput()
