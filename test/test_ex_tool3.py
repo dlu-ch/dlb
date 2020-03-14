@@ -602,6 +602,21 @@ class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWo
             self.assertFalse(t.run())
 
 
+class RunDoesRedoWhenForced(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo_when_forced(self):
+        class BTool(dlb.ex.Tool):
+            async def redo(self, result, context):
+                pass
+
+        t = BTool()
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
+            self.assertTrue(t.run(force_redo=True))
+            self.assertTrue(t.run(force_redo=True))
+
+
 class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_ignores_nonexistent_output_file(self):

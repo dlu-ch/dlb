@@ -532,7 +532,7 @@ class _ToolBase:
         object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
 
     # final
-    def run(self):
+    def run(self, *, force_redo: bool = False):
         with di.Cluster('run tool instance', with_time=True, is_progress=True):
             # noinspection PyTypeChecker
             context: context_.Context = context_.Context.active
@@ -621,6 +621,10 @@ class _ToolBase:
                         envvar_digest += ut.to_permanent_local_bytes((name, envvar_value_by_name[name]))
                     if len(envvar_digest) >= 20:
                         envvar_digest = hashlib.sha1(envvar_digest).digest()
+
+                if not needs_redo and force_redo:
+                    di.inform("redo necessary because run() requested it")
+                    needs_redo = True
 
                 if not needs_redo:
                     domain_inputs_in_db = db.get_domain_inputs(tool_instance_dbid)

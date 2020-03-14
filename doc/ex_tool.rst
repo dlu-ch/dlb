@@ -78,11 +78,13 @@ Tool objects
       >>> compiler.object_file  # dependency
       Path('main.cpp.o')
 
-   .. method:: run()
+   .. method:: run(force_redo=False)
 
       Run the tool instance in the :term:`active context` and returns a result (proxy) object *result*.
 
       ``bool(result)`` is ``True`` if a :term:`redo` is performed and ``False`` otherwise.
+
+      A redo is performed if *force_redo* is ``True`` or if it is necessary.
 
       If a redo is performed, this method returns before the (asynchronous) redo is complete.
       After each of the following actions the redo is guaranteed to be complete (either successfully or
@@ -142,7 +144,7 @@ Tool objects
 
             async def redo(self, result, context):
                 if ...:
-                    raise Exception('invalid ...')
+                    raise ValueException('invalid ...')
                 with context.temporary() as temp_file_
                    await context.execute_helper(self.EXECUTABLE, ['-o', temp_file, result.source_file])
                    result.included_files = ...
