@@ -304,6 +304,7 @@ class AppendSuffixTest(unittest.TestCase):
 
     def test_fails_for_bytes(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.fs.Path('a').with_appended_suffix(b'.o')
         self.assertEqual("'suffix' must be a str", str(cm.exception))
 

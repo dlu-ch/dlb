@@ -271,4 +271,5 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
 def is_complete(proxy):
     if not isinstance(proxy, _ResultProxy):
         raise TypeError
+    # noinspection PyProtectedMember
     return proxy._is_complete
