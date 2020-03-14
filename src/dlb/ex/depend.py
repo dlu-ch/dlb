@@ -41,11 +41,19 @@ class Dependency(mult.MultiplicityHolder):
 
         if (self.multiplicity is None) != (other.multiplicity is None):
             return False
+
         if self.multiplicity is not None:
             ss = self.multiplicity.as_slice
             so = other.multiplicity.as_slice
-            if ss.step != so.step or ss.start < so.start or ss.stop > so.stop:
+            if ss.step != so.step or ss.start < so.start:
                 return False
+
+            if ss.stop is None:
+                if so.stop is not None:
+                    return False
+            else:
+                if so.stop is not None and ss.stop > so.stop:
+                    return False
 
         if other.required and not self.required:
             return False

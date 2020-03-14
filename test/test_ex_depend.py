@@ -412,6 +412,18 @@ class CompatibilityTest(unittest.TestCase):
         self.assertFalse(A().compatible_and_no_less_restrictive(B()))
         self.assertFalse(B().compatible_and_no_less_restrictive(A()))
 
+    def test_multiplicity_without_stop_less_restrictive_than_with_stop(self):
+        A = dlb.ex.depend.RegularFileInput[1:5]
+        B = dlb.ex.depend.RegularFileInput[1:]
+        self.assertTrue(A().compatible_and_no_less_restrictive(B()))
+        self.assertFalse(B().compatible_and_no_less_restrictive(A()))
+
+    def test_multiplicity_with_larger_stop_less_restrictive(self):
+        A = dlb.ex.depend.RegularFileInput[1:5]
+        B = dlb.ex.depend.RegularFileInput[1:6]
+        self.assertTrue(A().compatible_and_no_less_restrictive(B()))
+        self.assertFalse(B().compatible_and_no_less_restrictive(A()))
+
     def test_different_explicit_are_not_compatible(self):
         C = dlb.ex.depend.RegularFileInput
         self.assertFalse(C().compatible_and_no_less_restrictive(C(explicit=False)))
