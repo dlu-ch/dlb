@@ -23,23 +23,19 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
     pass
 
 
-class CCompiler(dlb_contrib_gcc.CCompilerGcc):
-    DIALECT = 'c11'
+def build_application(*, source_path: Path, output_path: Path, application_name: str):
+    class CCompiler(dlb_contrib_gcc.CCompilerGcc):
+        DIALECT = 'c11'
 
-
-class CLinker(dlb_contrib_gcc.CLinkerGcc):
-    pass
-
-
-with dlb.ex.Context():
-    output_path = Path('build/out/')
+    class CLinker(dlb_contrib_gcc.CLinkerGcc):
+        pass
 
     with dlb.di.Cluster('Generate version file'), dlb.ex.Context():
         version_result = build.version_from_repo.GetVersion().run()
 
         class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
             WD_VERSION = version_result.wd_version
-            PATH_COMPONENTS_TO_STRIP = 1
+            PATH_COMPONENTS_TO_STRIP = len(output_path.components)
 
             def write_content(self, file):
                 wd_version = dlb_contrib_clike.string_literal_from_bytes(self.WD_VERSION.encode())
@@ -53,7 +49,6 @@ with dlb.ex.Context():
         GenerateVersionFile(file=generated_source_path / 'Generated/Version.h').run()
 
     with dlb.di.Cluster('Compile'), dlb.ex.Context(max_parallel_redo_count=4):
-        source_path = dlb.fs.Path('src/')
         object_files = [
             CCompiler(
                 source_file=p,
@@ -66,5 +61,9 @@ with dlb.ex.Context():
     with dlb.di.Cluster('Link'), dlb.ex.Context():
         application_file = CLinker(
             object_and_archive_files=object_files,
-            linked_file=output_path / 'application').run().linked_file
+            linked_file=output_path / application_name).run().linked_file
         dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')
+
+
+with dlb.ex.Context():
+    build_application(source_path=Path('src/'), output_path=Path('build/out/'), application_name='application')
