@@ -35,13 +35,11 @@ Example::
 
    class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
 
-   class Compiler(CppCompilerGcc): DIALECT = 'c++11'                             # (b)
-   class Linker(StaticLinkerGcc): pass
+   class Compiler(CplusplusCompilerGcc): DIALECT = 'c++14'                       # (b)
+   class Linker(CplusplusLinkerGcc): pass
 
    with dlb.ex.Context():                                                        # (c)
-
        output_path = Path('build/out/')
-       output_path.native.raw.mkdir(parents=True, exist_ok=True)
 
        object_files = [                                                          # (d)
           Compiler(
@@ -52,11 +50,11 @@ Example::
        ]
 
        application_file = Linker(
-           object_files=object_files,
+           object_and_archive_files=object_files,
            linked_file=output_path / 'example'                                   # (e)
        ).run().linked_file
 
-       print('Size:', application_file.native.raw.stat().st_size, 'B')           # (f)
+       dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')    # (f)
 
 Explanation:
 

@@ -27,13 +27,14 @@ class CCompiler(dlb_contrib_gcc.CCompilerGcc):
     DIALECT = 'c11'
 
 
-with dlb.ex.Context():
+class CLinker(dlb_contrib_gcc.CLinkerGcc):
+    pass
 
+
+with dlb.ex.Context():
     output_path = Path('build/out/')
-    output_path.native.raw.mkdir(parents=True, exist_ok=True)
 
     with dlb.di.Cluster('Generate version file'), dlb.ex.Context():
-
         version_result = build.version_from_repo.GetVersion().run()
 
         class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
@@ -51,10 +52,8 @@ with dlb.ex.Context():
         generated_source_path = output_path / 'gsrc/'
         GenerateVersionFile(file=generated_source_path / 'Generated/Version.h').run()
 
-    with dlb.di.Cluster('Compile'), dlb.ex.Context():
-
+    with dlb.di.Cluster('Compile'), dlb.ex.Context(max_parallel_redo_count=4):
         source_path = dlb.fs.Path('src/')
-
         object_files = [
             CCompiler(
                 source_file=p,
@@ -63,3 +62,9 @@ with dlb.ex.Context():
             ).run().object_file
             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
         ]
+
+    with dlb.di.Cluster('Link'), dlb.ex.Context():
+        application_file = CLinker(
+            object_and_archive_files=object_files,
+            linked_file=output_path / 'application').run().linked_file
+        dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')
