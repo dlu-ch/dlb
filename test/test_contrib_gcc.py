@@ -11,14 +11,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import dlb_contrib_c_gcc
+import dlb_contrib_gcc
 import textwrap
 import unittest
 from typing import Iterable, Union
 import tools_for_test
 
 
-class CCompiler(dlb_contrib_c_gcc.CCompilerGcc):
+class CCompiler(dlb_contrib_gcc.CCompilerGcc):
     DEFINITIONS = {
         '__GNUC__': None,  # predefined
         'ONE': 1,
@@ -28,8 +28,8 @@ class CCompiler(dlb_contrib_c_gcc.CCompilerGcc):
     DIALECT = 'c11'
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires GCC')
-class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+@unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
+class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
         os.mkdir('i')
@@ -129,3 +129,55 @@ class GccTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with dlb.ex.Context():
                 t.run()
         self.assertEqual("not a macro: 'a('", str(cm.exception))
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/g++'), 'requires g++')
+class CplusplusTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_example(self):
+        os.mkdir('i')
+
+        with open('a.c', 'w', encoding='utf-8') as f:
+            f.write(textwrap.dedent(
+                '''
+                #include "a.h"
+
+                int main() {
+                    std::cout << GREETING;
+                    return 0;
+                }
+                '''
+            ))
+
+        with open('a.h', 'w', encoding='utf-8') as f:
+            f.write(textwrap.dedent(
+                '''
+                #include <iostream>
+                  # include "a greeting.inc"
+                '''
+            ))
+
+        with open(os.path.join('i', 'a greeting.inc'), 'w', encoding='utf-8') as f:
+            f.write(textwrap.dedent(
+                '''
+                #define GREETING "tschou tzaeme"
+                '''
+            ))
+
+        dlb.di.set_output_file(sys.stderr)
+
+        t = dlb_contrib_gcc.CplusplusCompilerGcc(
+            source_file='a.c', object_file='a.o', include_search_directories=['i/'])
+        with dlb.ex.Context():
+            result = t.run()
+
+        self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
+        self.assertTrue(os.path.isfile(result.object_file.native))
+        self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
+
+        self.assertTrue(result.compiler_executable.is_absolute())
+        self.assertTrue(os.path.isfile(result.compiler_executable.native))
+
+        with dlb.ex.Context():
+            t.run()
+            self.assertFalse(t.run())

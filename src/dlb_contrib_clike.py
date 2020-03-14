@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""The language C and its tools."""
+"""The C language family and its tools."""
 
 import sys
 import string
@@ -12,18 +12,33 @@ import dlb.ex
 from typing import Optional
 assert sys.version_info >= (3, 7)
 
+# Identifier of unrestricted length without universal characters.
+#
+# C - ISO/IEC 9899:1999 (E), section 6.4.2.1, 5.2.4.1:
+# For internal identifiers longer than 63 characters and external identifiers longer than 31 characters, the compiler
+# behaviour is undefined.
+#
+# C++ - ISO/IEC 14882:1998 (E), section 2.10:
+# An identifier is an arbitrarily long sequence [...].
+# All characters are significant.
+#
+# Note: not each string matching this regular expression is a valid identifier (could by keyword).
+SIMPLE_IDENTIFIER = re.compile(r'^[_A-Za-z][_A-Za-z0-9]*$')
 
-# ISO/IEC 9899:1999 (E), section 6.4.2.1, 5.2.4.1:
-# for internal identifiers longer than 63 characters, the compiler behaviour is undefined
-# for external identifiers longer than 31 characters, the compiler behaviour is undefined
-IDENTIFIER = re.compile(r'^[_A-Za-z][_A-Za-z0-9]{0,62}$')  # without universal characters
+# Identifier of unrestricted length without universal characters.
+# Note: not each string matching this regular expression is a valid identifier (could by keyword or invalid
+# universal characters),
+IDENTIFIER = re.compile(r'^[_A-Za-z]([_A-Za-z0-9]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8})*$')
+
+# Simple internal or external identifier with only significant characters for a compliant C compiler
+PORTABLE_C_IDENTIFIER = re.compile(r'^[_A-Za-z][_A-Za-z0-9]{0,30}$')
 
 # Indentifier part of function-like macro (for object-like macro: use IDENTIFIER).
 # Example: 'V(a, ...)'
 FUNCTIONLIKE_MACRO = re.compile((
     r'^(?P<name>{identifier})'  # without universal characters
     r'\((?P<arguments>(( *{identifier} *,)* *({identifier}|\.\.\.))? *)\)$'
-).format(identifier='[_A-Za-z][_A-Za-z0-9]{0,62}'))
+).format(identifier='[_A-Za-z][_A-Za-z0-9]*'))
 
 
 def string_literal_from_bytes(text: bytes, max_line_length: Optional[int] = None) -> str:
@@ -130,7 +145,7 @@ def identifier_from_path(path: dlb.fs.PathLike, *, to_upper_case: bool = True) -
 
 
 # noinspection PyAbstractClass
-class CCompiler(dlb.ex.Tool):
+class ClikeCompiler(dlb.ex.Tool):
 
     # Definition of object-like macros (like '#define VERSION 1.2.3') and function-like macros (like '#define V(x) #x').
     # If value is not None: define the definition with the value as the macro's replacement list.
@@ -168,7 +183,7 @@ class GenerateHeaderFile(dlb.ex.Tool):
         pass
 
     async def redo(self, result, context):
-        if not IDENTIFIER.match(self.INCLUDE_GUARD_PREFIX + self.INCLUDE_GUARD_SUFFIX):
+        if not SIMPLE_IDENTIFIER.match(self.INCLUDE_GUARD_PREFIX + self.INCLUDE_GUARD_SUFFIX):
             raise ValueError("'INCLUDE_GUARD_PREFIX' and 'INCLUDE_GUARD_SUFFIX' do not form a valid identifier")
         if self.PATH_COMPONENTS_TO_STRIP >= len(result.file.parts):
             raise ValueError("nothing left to strip after 'PATH_COMPONENTS_TO_STRIP'")

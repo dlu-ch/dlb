@@ -14,8 +14,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '..', '..', 'src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import dlb_contrib_c
-import dlb_contrib_c_gcc
+import dlb_contrib_clike
+import dlb_contrib_gcc
 import build.version_from_repo
 
 
@@ -23,7 +23,7 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
     pass
 
 
-class CCompiler(dlb_contrib_c_gcc.CCompilerGcc):
+class CCompiler(dlb_contrib_gcc.CCompilerGcc):
     DIALECT = 'c11'
 
 
@@ -36,12 +36,12 @@ with dlb.ex.Context():
 
         version_result = build.version_from_repo.GetVersion().run()
 
-        class GenerateVersionFile(dlb_contrib_c.GenerateHeaderFile):
+        class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
             WD_VERSION = version_result.wd_version
             PATH_COMPONENTS_TO_STRIP = 1
 
             def write_content(self, file):
-                wd_version = dlb_contrib_c.string_literal_from_bytes(self.WD_VERSION.encode())
+                wd_version = dlb_contrib_clike.string_literal_from_bytes(self.WD_VERSION.encode())
                 file.write(f'\n')
                 file.write(f'#define APPLICATION_VERSION {wd_version}\n')
                 file.write(f'#define APPLICATION_VERSION_MAJOR {version_result.version_components[0]}\n')

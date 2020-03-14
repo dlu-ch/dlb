@@ -2,13 +2,13 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of the language C by the GNU Compiler Collection."""
+"""Support of languages of the C family by the GNU Compiler Collection."""
 
 import sys
 from typing import Iterable, Union
 import dlb.fs
 import dlb_contrib_make
-import dlb_contrib_c
+import dlb_contrib_clike
 assert sys.version_info >= (3, 7)
 
 
@@ -19,12 +19,8 @@ def check_warning_name(name: str) -> str:
     return name
 
 
-class CCompilerGcc(dlb_contrib_c.CCompiler):
-
-    EXECUTABLE = 'gcc'  # helper file, looked-up in the context
-
-    DIALECT = 'c99'  # https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html#C-Dialect-Options
-
+# noinspection PyUnresolvedReferences
+class _CompilerGcc(dlb_contrib_clike.ClikeCompiler):
     SUPPRESSED_WARNINGS = ()  # names of warnings to be suppressed (e.g. 'unused-value')
     FATAL_WARNINGS = ('all',)  # names of warnings that should make the the compilation unsuccessful
 
@@ -51,7 +47,8 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
         compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
 
         for macro, replacement in self.DEFINITIONS.items():
-            if not dlb_contrib_c.IDENTIFIER.match(macro) and not dlb_contrib_c.FUNCTIONLIKE_MACRO.match(macro):
+            if not dlb_contrib_clike.SIMPLE_IDENTIFIER.match(macro) and \
+                    not dlb_contrib_clike.FUNCTIONLIKE_MACRO.match(macro):
                 raise Exception(f"not a macro: {macro!r}")
             # *macro* is a string that does not start with '-' and does not contain '='
             if replacement is None:
@@ -68,7 +65,7 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
             await context.execute_helper(
                 self.EXECUTABLE,
                 compile_arguments + [
-                    '-x', 'c', '-std=' + self.DIALECT, '-c', '-o', object_file,
+                    '-x', self.LANGUAGE, '-std=' + self.DIALECT, '-c', '-o', object_file,
                     '-MMD', '-MT', '_ ', '-MF', make_rules_file,
                     result.source_file
                 ]
@@ -86,3 +83,15 @@ class CCompilerGcc(dlb_contrib_c.CCompiler):
             result.compiler_executable = context.helper[self.EXECUTABLE]
             result.included_files = included_files
             context.replace_output(result.object_file, object_file)
+
+
+class CCompilerGcc(_CompilerGcc):
+    EXECUTABLE = 'gcc'  # dynamic helper, looked-up in the context
+    LANGUAGE = 'c'
+    DIALECT = 'c99'  # https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html#C-Dialect-Options
+
+
+class CplusplusCompilerGcc(_CompilerGcc):
+    EXECUTABLE = 'g++'  # dynamic helper, looked-up in the context
+    LANGUAGE = 'c++'
+    DIALECT = 'c++11'  # https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html#C-Dialect-Options
