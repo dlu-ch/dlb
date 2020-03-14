@@ -16,6 +16,7 @@ import dlb.di
 import dlb.ex
 import dlb_contrib_clike
 import dlb_contrib_gcc
+import dlb_contrib_doxygen
 import build.version_from_repo
 
 
@@ -23,7 +24,7 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
     pass
 
 
-def build_application(*, source_path: Path, output_path: Path, application_name: str):
+def build_application(*, version_result, source_path: Path, output_path: Path, application_name: str):
     class CCompiler(dlb_contrib_gcc.CCompilerGcc):
         DIALECT = 'c11'
 
@@ -31,8 +32,6 @@ def build_application(*, source_path: Path, output_path: Path, application_name:
         pass
 
     with dlb.di.Cluster('Generate version file'), dlb.ex.Context():
-        version_result = build.version_from_repo.GetVersion().run()
-
         class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
             WD_VERSION = version_result.wd_version
             PATH_COMPONENTS_TO_STRIP = len(output_path.components)
@@ -49,21 +48,54 @@ def build_application(*, source_path: Path, output_path: Path, application_name:
         GenerateVersionFile(file=generated_source_path / 'Generated/Version.h').run()
 
     with dlb.di.Cluster('Compile'), dlb.ex.Context(max_parallel_redo_count=4):
-        object_files = [
+        compile_results = [
             CCompiler(
                 source_file=p,
                 object_file=output_path / p.with_appended_suffix('.o'),
                 include_search_directories=[source_path, generated_source_path]  # TODO run in src
-            ).run().object_file
+            ).run()
             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
         ]
 
     with dlb.di.Cluster('Link'), dlb.ex.Context():
         application_file = CLinker(
-            object_and_archive_files=object_files,
+            object_and_archive_files=[r.object_file for r in compile_results],
             linked_file=output_path / application_name).run().linked_file
         dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')
 
+    return any(compile_results)
+
+
+def build_documentation(*, version_result, source_path: Path, output_path: Path, sources_changed: bool):
+    with dlb.di.Cluster('Document'):
+
+        class Doxygen(dlb_contrib_doxygen.Doxygen):
+            TEXTUAL_REPLACEMENTS = {
+                'project_version': f'version {version_result.wd_version}',
+                'source_paths_to_strip': [str(source_path.native), str((output_path / 'gsrc/').native)]
+            }
+
+        # redo if sources_changed is True or any of the regular files in doc/doxygen/ changed
+        Doxygen(configuration_template_file='doc/doxygen/Doxyfile.tmpl',
+                source_directories=[source_path, output_path / 'gsrc/', 'doc/doxygen/'],
+                output_directory=output_path / 'doxygen/',
+                source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=sources_changed)
+
 
 with dlb.ex.Context():
-    build_application(source_path=Path('src/'), output_path=Path('build/out/'), application_name='application')
+    source_path = Path('src/')
+    output_path = Path('build/out/')
+
+    version_result = build.version_from_repo.GetVersion().run()
+
+    sources_changed = build_application(
+        version_result=version_result,
+        source_path=source_path,
+        output_path=output_path,
+        application_name='application')
+
+    build_documentation(
+        version_result=version_result,
+        source_path=source_path,
+        output_path=output_path,
+        sources_changed=sources_changed)
