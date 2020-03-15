@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of languages of the C family by the GNU Compiler Collection."""
+"""Document generation from source code with Doxygen."""
 
 import sys
 import re

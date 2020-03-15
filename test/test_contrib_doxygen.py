@@ -56,8 +56,7 @@ class StringifyTest(unittest.TestCase):
         self.assertEqual('\\\n    "a" \\\n    "b"', dlb_contrib_doxygen._stringify_value(['a', 'b']))
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/doxygen'), 'requires doxygen')
-class DoxygenTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class DoxygenWithoutActualExecutionTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_backslashquote_in_path(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -76,15 +75,6 @@ class DoxygenTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             "  | reason: invalid path for 'Path': 'a\\nb' (must not contain these characters: '\\n','\\r')"
         )
         self.assertEqual(msg, str(cm.exception))
-
-    def test_empty_doxyfile(self):
-        open('Doxyfile', 'xb').close()
-
-        with dlb.ex.Context():
-            dlb_contrib_doxygen.Doxygen(
-                configuration_template_file='Doxyfile',
-                source_directories=['.'],
-                output_directory='d/').run()
 
     def test_fails_for_invalid_placeholder_name_type(self):
         class Doxygen(dlb_contrib_doxygen.Doxygen):
@@ -132,3 +122,16 @@ class DoxygenTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             "  | file contains '${{xyz}}' but 'TEXTUAL_REPLACEMENTS' does not define a replacement"
         )
         self.assertEqual(msg, str(cm.exception))
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/doxygen'), 'requires doxygen')
+class Doxygen2Test(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_empty_doxyfile(self):
+        open('Doxyfile', 'xb').close()
+
+        with dlb.ex.Context():
+            dlb_contrib_doxygen.Doxygen(
+                configuration_template_file='Doxyfile',
+                source_directories=['.'],
+                output_directory='d/').run()
