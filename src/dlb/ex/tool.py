@@ -484,7 +484,7 @@ class _ToolBase:
             else:
                 try:
                     validated_value = role.validate(value)
-                except ValueError as e:
+                except (TypeError, ValueError) as e:
                     msg = (
                         f"keyword argument for dependency role {name!r} is invalid: {value!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"
@@ -679,7 +679,7 @@ class _ToolBase:
                 try:
                     value = envvar_value_by_name.get(action.dependency.name)
                     setattr(result, action.name, value)  # validates on assignment
-                except ValueError as e:
+                except (TypeError, ValueError) as e:
                     msg = (
                         f"input dependency {action.name!r} cannot use environment variable {action.dependency.name!r}\n"
                         f"  | reason: {ut.exception_to_line(e)}"

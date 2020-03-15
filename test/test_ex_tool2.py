@@ -70,7 +70,16 @@ class ConstructionTest(unittest.TestCase):
         msg = "keyword argument for required dependency role must not be None: 'source_file'"
         self.assertEqual(msg, str(cm.exception))
 
-    def test_fails_duplicate(self):
+    def test_fails_for_string_when_multiplicity(self):
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
+            ConstructionTest.DTool(include_directories='abc')
+        msg = (
+            "keyword argument for dependency role 'include_directories' is invalid: 'abc'\n"
+            "  | reason: since dependency has a multiplicity, value must be iterable (other than 'str' or 'bytes')"
+        )
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_duplicate(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             ConstructionTest.DTool(include_directories=['i/', 'i/'])
         msg = (
@@ -169,7 +178,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 172  # of this line
+        lineno = 181  # of this line
 
         class A(Tool):
             pass
