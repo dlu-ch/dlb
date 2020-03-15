@@ -61,11 +61,13 @@ class _NativeComponents:
         return s + self._sep.join(c[1:])
 
 
+# TODO make sure *components* do not contain NUL
 def _native_components_for_posix(components: Tuple[str, ...]) -> _NativeComponents:
     # first element of components is '', '/', or '//'
     return _NativeComponents(components, '/')
 
 
+# TODO make sure *components* do not contain NUL
 def _native_components_for_windows(components: Tuple[str, ...]) -> _NativeComponents:
     # first element of components is '', '/', or '//'
     if any('\\' in c for c in components):
@@ -554,6 +556,7 @@ class NoSpacePath(Path):
             raise ValueError('must not contain space')
 
 
+# TODO disallow NUL in Path?
 class PosixPath(Path):
     def check_restriction_to_base(self):
         if any('\0' in c for c in self.parts):
