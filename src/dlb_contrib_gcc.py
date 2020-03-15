@@ -117,9 +117,13 @@ class _LinkerGcc(dlb.ex.Tool):
     # Link with with gcc, gcc subprograms and the GNU linker
 
     # tuple of library name to be search in the library search directories and linked against
+    # order matters; if library *b* depends on *a*, *b* should precede *a* in the sequence
     LIBRARY_FILENAMES = ()  # e.g. 'libxy.a'
 
+    # object files and static libraries to link
+    # order matters; if file *b* depends on *a*, *b* should precede *a* in the sequence
     object_and_archive_files = dlb.ex.Tool.Input.RegularFile[1:](cls=ObjectOrArchivePath)
+
     linked_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
 
     # tuple of paths of directories that are to be searched for libraries in addition to the standard system directories
@@ -142,12 +146,8 @@ class _LinkerGcc(dlb.ex.Tool):
         link_arguments = [c for c in self.get_link_arguments()]
 
         if self.library_search_directories:
-            for p in self.library_search_directories:  # TODO test
+            for p in self.library_search_directories:
                 link_arguments.extend(['-L', p])  # looked up for -lxxx
-
-        # https://linux.die.net/man/1/ld
-        for l in self.LIBRARY_FILENAMES:
-            link_arguments += ['-l:' + l]  # if l is empty: '/usr/bin/ld: cannot find -l:'
 
         # https://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html#Directory-Options
         # absolute path prevents the mentioned "special cludge"
@@ -160,14 +160,17 @@ class _LinkerGcc(dlb.ex.Tool):
 
         # link
         with context.temporary() as linked_file:
-            await context.execute_helper(
-                self.EXECUTABLE,
-                link_arguments + [
-                    '-B' + abs_subprogram_directory.as_string(),
-                    '-o', linked_file,
-                    *result.object_and_archive_files  # note: type detection by suffix of path cannot be disabled
-                ]
-            )
+            link_arguments += [
+                '-B' + abs_subprogram_directory.as_string(),
+                '-o', linked_file,
+                *result.object_and_archive_files  # note: type detection by suffix of path cannot be disabled
+            ]
+
+            # https://linux.die.net/man/1/ld
+            for lib in self.LIBRARY_FILENAMES:
+                link_arguments += ['-l:' + lib]  # if l is empty: '/usr/bin/ld: cannot find -l:'
+
+            await context.execute_helper(self.EXECUTABLE, link_arguments)
 
             result.linker_executable = context.helper[self.EXECUTABLE]
             context.replace_output(result.linked_file, linked_file)

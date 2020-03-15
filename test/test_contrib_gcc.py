@@ -257,7 +257,6 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             dlb_contrib_gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
                                        subprogram_directory='u/bin/').run()
 
-    @unittest.expectedFailure
     def test_finds_shared_library(self):
         class CSharedLibraryLinkerGcc(dlb_contrib_gcc.CLinkerGcc):
             def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
