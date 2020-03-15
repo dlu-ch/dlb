@@ -17,6 +17,7 @@ import dlb.ex
 import dlb_contrib_clike
 import dlb_contrib_gcc
 import dlb_contrib_doxygen
+import dlb_contrib_zip
 import build.version_from_repo
 
 
@@ -24,6 +25,7 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
     pass
 
 
+# compile and link application written in C
 def build_application(*, version_result, source_path: Path, output_path: Path, application_name: str):
     class CCompiler(dlb_contrib_gcc.CCompilerGcc):
         DIALECT = 'c11'
@@ -66,7 +68,9 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
     return any(compile_results)
 
 
-def build_documentation(*, version_result, source_path: Path, output_path: Path, sources_changed: bool):
+# generate zipped HTML documentation from markup in source code comments and from "free" pages
+def build_documentation(*, version_result, source_path: Path, output_path: Path, application_name: str,
+                        sources_changed: bool):
     with dlb.di.Cluster('Document'):
 
         class Doxygen(dlb_contrib_doxygen.Doxygen):
@@ -76,13 +80,19 @@ def build_documentation(*, version_result, source_path: Path, output_path: Path,
             }
 
         # redo if sources_changed is True or any of the regular files in doc/doxygen/ changed
-        Doxygen(configuration_template_file='doc/doxygen/Doxyfile.tmpl',
-                source_directories=[source_path, output_path / 'gsrc/', 'doc/doxygen/'],
-                output_directory=output_path / 'doxygen/',
-                source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=sources_changed)
+        output_directory = Doxygen(
+            configuration_template_file='doc/doxygen/Doxyfile.tmpl',
+            source_directories=[source_path, output_path / 'gsrc/', 'doc/doxygen/'],
+            output_directory=output_path / 'doxygen/',
+            source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=sources_changed).output_directory
+
+        doc_archive_file = \
+            output_path / '{}_{}.html.bzip'.format(application_name, version_result.wd_version.replace('?', '@'))
+        dlb_contrib_zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run(force_redo=True)
 
 
 with dlb.ex.Context():
+    application_name = 'application'
     source_path = Path('src/')
     output_path = Path('build/out/')
 
@@ -92,10 +102,13 @@ with dlb.ex.Context():
         version_result=version_result,
         source_path=source_path,
         output_path=output_path,
-        application_name='application')
+        application_name=application_name)
 
-    build_documentation(
-        version_result=version_result,
-        source_path=source_path,
-        output_path=output_path,
-        sources_changed=sources_changed)
+    # build documentaton if Doxygen is installed
+    if dlb.ex.Context.helper.get(dlb_contrib_doxygen.Doxygen.EXECUTABLE):
+        build_documentation(
+            version_result=version_result,
+            source_path=source_path,
+            output_path=output_path,
+            application_name=application_name,
+            sources_changed=sources_changed)
