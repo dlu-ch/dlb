@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb_contrib_sh
 import dlb_contrib_gcc
 import textwrap
 import unittest
@@ -256,6 +257,7 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             dlb_contrib_gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
                                        subprogram_directory='u/bin/').run()
 
+    @unittest.expectedFailure
     def test_finds_shared_library(self):
         class CSharedLibraryLinkerGcc(dlb_contrib_gcc.CLinkerGcc):
             def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
@@ -264,7 +266,11 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         class CLinkerGcc(dlb_contrib_gcc.CLinkerGcc):
             LIBRARY_FILENAMES = ('libbc.so',)
 
+        class ShowGccVersion(dlb_contrib_sh.ShScriptlet):
+            SCRIPTLET = 'gcc -v'
+
         with dlb.ex.Context():
+            ShowGccVersion().run()
             CSharedLibraryLinkerGcc(object_and_archive_files=['b.o', 'c.o'], linked_file='lib/libbc.so').run()
 
         with dlb.ex.Context():
