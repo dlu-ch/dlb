@@ -2,8 +2,11 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-# Run 'python3 -m build-all' in the directory of this file.
-# TODO allow start with relative path: python3 build-all.py
+# Run this script by one of the following shell commands:
+#
+#    dlb build-all                  # from anywhere in the working tree (with directory of 'dlb' in $PATH)
+#    python3 -m build-all           # in the directory of this file.
+#    python3 "$PWD"/build-all.py'   # in the directory of this file.
 
 import sys
 import os.path

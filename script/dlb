@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# Run a dlb script in the root of the working tree that contains the current directory.
+#
+# When called with a least one parameter, the parameter must be a dlb script as a path relative to the root of the
+# working tree. '.py' is appended if it does not end with '.py'.
+# All additional parameters are forwarded to the dlb script.
+#
+# When called without parameters, the parameters from the last successul call of dlb by this script are used.
+#
+# Example:
+#
+#    dlb build/all
+#    dlb
+
+PYTHON=python3
+DLBROOT=.dlbroot
+LAST="${DLBROOT:?}/last.bash"
+
+set -e
+
+# find root
+last_cwd=''
+while [ ! -d "./${DLBROOT:?}" ]; do
+    last_cwd="$PWD"
+    cd ..
+    if [ "${last_cwd}" == "$PWD" ]; then
+        printf "current working directory not in a dlb working tree (no '.dlbroot' found)\n" >&2
+        exit 1
+    fi
+done
+
+# script and script parameters
+if [ $# -ge 1 ]; then
+    script="$1"
+    if [ -z "${script}" ] || [ "${script:0:1}" == / ]; then
+        printf "not a script name: %q\n" "${script}" >&2
+        exit 2
+    fi
+    script="${script%.py}.py"
+    shift
+    arguments=("${script:?}" "$@")
+elif [ -f "./${LAST:?}" ]; then
+    arguments=()
+    while IFS=$'\n' read -r a; do  # do not allow code execution like 'source' would
+        printf -v a %b "$a"
+        arguments+=("$a")
+    done < "./${LAST:?}"
+    if [ ${#arguments[@]} -lt 1 ]; then
+        printf "invalid dlb history (remove it manually): %q\n" "./${LAST:?}" >&2
+        exit 2
+    fi
+    printf -v argument_line ' %q' "${arguments[@]}"  # starts with ' '
+    printf "use arguments of last successful run:%s\n" "${argument_line}" >&2
+else
+    printf "usage: %q [ <script-name> [ <script-parameters> ... ] ]\n" "${0##*/}" >&2
+    exit 2
+fi
+
+# execute script
+"${PYTHON:?}" -- "${PWD}/${arguments[0]}" "${arguments[@]:1}"
+
+# successful; write parameters to $LAST, suppressing errors
+(
+    printf '' > "./${LAST:?}"
+    for a in "${arguments[@]}"; do
+        a="${a//\\/\\\\}"     # '\'   -> '\\'
+        a="${a//$'\n'/\\n}"   # $'\n' -> '\t'
+        printf "%s\n" "$a" >> "./${LAST:?}"
+    done
+) 2> /dev/null
