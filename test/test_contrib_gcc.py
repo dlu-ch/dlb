@@ -13,6 +13,7 @@ import dlb.di
 import dlb.ex
 import dlb_contrib_sh
 import dlb_contrib_gcc
+import logging
 import textwrap
 import unittest
 from typing import Iterable, Union
@@ -70,6 +71,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 '''
             ))
 
+        dlb.di.set_threshold_level(logging.DEBUG)
         dlb.di.set_output_file(sys.stderr)
 
         t = CCompiler(source_file='a.c', object_file='a.o', include_search_directories=['i/'])
@@ -169,6 +171,7 @@ class CplusplusTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 '''
             ))
 
+        dlb.di.set_threshold_level(logging.DEBUG)
         dlb.di.set_output_file(sys.stderr)
 
         t = dlb_contrib_gcc.CplusplusCompilerGcc(
@@ -265,11 +268,7 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         class CLinkerGcc(dlb_contrib_gcc.CLinkerGcc):
             LIBRARY_FILENAMES = ('libbc.so',)
 
-        class ShowGccVersion(dlb_contrib_sh.ShScriptlet):
-            SCRIPTLET = 'gcc -v'
-
         with dlb.ex.Context():
-            ShowGccVersion().run()
             CSharedLibraryLinkerGcc(object_and_archive_files=['b.o', 'c.o'], linked_file='lib/libbc.so').run()
 
         with dlb.ex.Context():
