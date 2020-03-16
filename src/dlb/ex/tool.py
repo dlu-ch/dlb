@@ -47,18 +47,18 @@ assert not LOWERCASE_WORD_NAME_REGEX.match('Object_file_')
 
 
 class Level:
-    RUN_PREPARATION = logging.INFO
+    RUN_PREPARATION = logging.DEBUG + 3
     RUN_SERIALIZATION = logging.INFO
 
-    REDO_NECESSITY_CHECK = logging.INFO
+    REDO_NECESSITY_CHECK = logging.DEBUG + 3
     REDO_REASON = logging.INFO
     REDO_SUSPICIOUS_REASON = logging.WARNING
 
-    REDO_PREPARATION = logging.INFO
+    REDO_PREPARATION = logging.DEBUG + 5
     REDO_START = logging.INFO
-    REDO_AFTERMATH = logging.INFO
+    REDO_AFTERMATH = logging.DEBUG + 5
 
-    HELPER_EXECUTION = logging.DEBUG
+    HELPER_EXECUTION = logging.DEBUG + 7
 
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
@@ -568,7 +568,7 @@ class _ToolBase:
 
     # final
     def run(self, *, force_redo: bool = False):
-        with di.Cluster('run tool instance', level=Level.RUN_PREPARATION, with_time=True, is_progress=True):
+        with di.Cluster('prepare tool instance', level=Level.RUN_PREPARATION, with_time=True, is_progress=True):
             # noinspection PyTypeChecker
             context: context_.Context = context_.Context.active
 
@@ -607,99 +607,100 @@ class _ToolBase:
                     with result_proxy_of_last_run:
                         pass
 
-            with di.Cluster('check redo necessity', level=Level.REDO_NECESSITY_CHECK, with_time=True, is_progress=True):
+        with di.Cluster(f'check redo necessity for tool instance with dbid {tool_instance_dbid!r}',
+                        level=Level.REDO_NECESSITY_CHECK, with_time=True, is_progress=True):
 
-                with di.Cluster('explicit input dependencies', level=Level.REDO_NECESSITY_CHECK,
-                                with_time=True, is_progress=True):
-                    memo_by_encoded_path, envvar_value_by_name = \
-                        _check_and_memorize_explicit_input_dependencies(self, dependency_actions, context)
+            with di.Cluster('explicit input dependencies', level=Level.REDO_NECESSITY_CHECK,
+                            with_time=True, is_progress=True):
+                memo_by_encoded_path, envvar_value_by_name = \
+                    _check_and_memorize_explicit_input_dependencies(self, dependency_actions, context)
 
-                # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
-                # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
-                # last successful redo of the same tool instance according to the run-database
+            # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
+            # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
+            # last successful redo of the same tool instance according to the run-database
 
-                with di.Cluster('explicit output dependencies', level=Level.REDO_NECESSITY_CHECK,
-                                with_time=True, is_progress=True):
-                    encoded_paths_of_explicit_input_dependencies = set(memo_by_encoded_path.keys())
-                    dependency_action_by_path, obstructive_paths, needs_redo = _check_explicit_output_dependencies(
-                        self, dependency_actions, encoded_paths_of_explicit_input_dependencies, False, context)
+            with di.Cluster('explicit output dependencies', level=Level.REDO_NECESSITY_CHECK,
+                            with_time=True, is_progress=True):
+                encoded_paths_of_explicit_input_dependencies = set(memo_by_encoded_path.keys())
+                dependency_action_by_path, obstructive_paths, needs_redo = _check_explicit_output_dependencies(
+                    self, dependency_actions, encoded_paths_of_explicit_input_dependencies, False, context)
 
-                with di.Cluster('input dependencies of the last redo', level=Level.REDO_NECESSITY_CHECK,
-                                with_time=True, is_progress=True):
-                    db = context_._get_rundb()
-                    inputs_from_last_redo = db.get_fsobject_inputs(tool_instance_dbid)
-                    for encoded_path, (is_explicit, last_encoded_memo) in inputs_from_last_redo.items():
-                        if not is_explicit and encoded_path not in memo_by_encoded_path:
-                            memo, needs_redo = _get_memo_for_fs_input_dependency_from_rundb(
-                                encoded_path, last_encoded_memo, needs_redo, context.root_path)
-                            memo_by_encoded_path[encoded_path] = memo  # memo.state may be None
+            with di.Cluster('input dependencies of the last redo', level=Level.REDO_NECESSITY_CHECK,
+                            with_time=True, is_progress=True):
+                db = context_._get_rundb()
+                inputs_from_last_redo = db.get_fsobject_inputs(tool_instance_dbid)
+                for encoded_path, (is_explicit, last_encoded_memo) in inputs_from_last_redo.items():
+                    if not is_explicit and encoded_path not in memo_by_encoded_path:
+                        memo, needs_redo = _get_memo_for_fs_input_dependency_from_rundb(
+                            encoded_path, last_encoded_memo, needs_redo, context.root_path)
+                        memo_by_encoded_path[encoded_path] = memo  # memo.state may be None
 
-                # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
-                # is an explicit or non-explicit input dependency of this call of 'run()' or an non-explicit input
-                # dependency of the last successful redo of the same tool instance according to the run-database
+            # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
+            # is an explicit or non-explicit input dependency of this call of 'run()' or an non-explicit input
+            # dependency of the last successful redo of the same tool instance according to the run-database
 
-                with di.Cluster('environment variables', level=Level.REDO_NECESSITY_CHECK,
-                                with_time=True, is_progress=True):
-                    for action in dependency_actions:
-                        if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
-                            d = action.dependency
-                            value = envvar_value_by_name.get(d.name)
-                            if value is None:
-                                if d.required:
-                                    try:
-                                        value = context.env[d.name]
-                                    except KeyError as e:
-                                        raise RedoError(*e.args) from None
-                                else:
-                                    value = context.env.get(d.name)
-                            if value is not None:
-                                envvar_value_by_name[d.name] = value  # validate at redo
+            with di.Cluster('environment variables', level=Level.REDO_NECESSITY_CHECK,
+                            with_time=True, is_progress=True):
+                for action in dependency_actions:
+                    if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
+                        d = action.dependency
+                        value = envvar_value_by_name.get(d.name)
+                        if value is None:
+                            if d.required:
+                                try:
+                                    value = context.env[d.name]
+                                except KeyError as e:
+                                    raise RedoError(*e.args) from None
+                            else:
+                                value = context.env.get(d.name)
+                        if value is not None:
+                            envvar_value_by_name[d.name] = value  # validate at redo
 
-                    envvar_digest = b''
-                    for name in sorted(envvar_value_by_name):
-                        envvar_digest += ut.to_permanent_local_bytes((name, envvar_value_by_name[name]))
-                    if len(envvar_digest) >= 20:
-                        envvar_digest = hashlib.sha1(envvar_digest).digest()
+                envvar_digest = b''
+                for name in sorted(envvar_value_by_name):
+                    envvar_digest += ut.to_permanent_local_bytes((name, envvar_value_by_name[name]))
+                if len(envvar_digest) >= 20:
+                    envvar_digest = hashlib.sha1(envvar_digest).digest()
 
-                if not needs_redo and force_redo:
-                    di.inform("redo necessary because run() requested it", level=Level.REDO_REASON)
+            if not needs_redo and force_redo:
+                di.inform("redo requested by run()", level=Level.REDO_REASON)
+                needs_redo = True
+
+            if not needs_redo:
+                domain_inputs_in_db = db.get_domain_inputs(tool_instance_dbid)
+                redo_request_in_db = domain_inputs_in_db.get(rundb.Domain.REDO_REQUEST.value)
+                redo_request_in_db = None if redo_request_in_db is None else bool(redo_request_in_db)
+
+                execution_parameter_digest_in_db = domain_inputs_in_db.get(rundb.Domain.EXECUTION_PARAMETERS.value)
+                envvar_digest_in_db = domain_inputs_in_db.get(rundb.Domain.ENVIRONMENT_VARIABLES.value)
+                if redo_request_in_db is True:
+                    di.inform("redo requested by last successful redo", level=Level.REDO_REASON)
+                    needs_redo = True
+                elif execution_parameter_digest != execution_parameter_digest_in_db:
+                    di.inform("redo necessary because of changed execution parameter", level=Level.REDO_REASON)
+                    needs_redo = True
+                elif envvar_digest != envvar_digest_in_db:
+                    di.inform("redo necessary because of changed environment variable", level=Level.REDO_REASON)
                     needs_redo = True
 
-                if not needs_redo:
-                    domain_inputs_in_db = db.get_domain_inputs(tool_instance_dbid)
-                    redo_request_in_db = domain_inputs_in_db.get(rundb.Domain.REDO_REQUEST.value)
-                    redo_request_in_db = None if redo_request_in_db is None else bool(redo_request_in_db)
-
-                    execution_parameter_digest_in_db = domain_inputs_in_db.get(rundb.Domain.EXECUTION_PARAMETERS.value)
-                    envvar_digest_in_db = domain_inputs_in_db.get(rundb.Domain.ENVIRONMENT_VARIABLES.value)
-                    if redo_request_in_db is True:
-                        di.inform("redo necessary because last successful redo requested it", level=Level.REDO_REASON)
-                        needs_redo = True
-                    elif execution_parameter_digest != execution_parameter_digest_in_db:
-                        di.inform("redo necessary because of changed execution parameter", level=Level.REDO_REASON)
-                        needs_redo = True
-                    elif envvar_digest != envvar_digest_in_db:
-                        di.inform("redo necessary because of changed environment variable", level=Level.REDO_REASON)
-                        needs_redo = True
-
-                if not needs_redo:
-                    with di.Cluster('compare input dependencies with state before last successful redo',
-                                    level=Level.REDO_NECESSITY_CHECK, with_time=True, is_progress=True):
-                        # sorting not necessary for repeatability
-                        for encoded_path, memo in memo_by_encoded_path.items():
-                            is_explicit, last_encoded_memo = inputs_from_last_redo.get(encoded_path, (True, None))
-                            assert memo.stat is not None or not is_explicit
-                            redo_reason = rundb.compare_fsobject_memo_to_encoded_from_last_redo(
-                                memo, last_encoded_memo, encoded_path in encoded_paths_of_explicit_input_dependencies)
-                            if redo_reason is not None:
-                                path = rundb.decode_encoded_path(encoded_path)
-                                msg = (
-                                    f"redo necessary because of filesystem object: {path.as_string()!r}\n"
-                                    f"    reason: {redo_reason}"
-                                )
-                                di.inform(msg, level=Level.REDO_REASON)
-                                needs_redo = True
-                                break
+            if not needs_redo:
+                with di.Cluster('compare input dependencies with state before last successful redo',
+                                level=Level.REDO_NECESSITY_CHECK, with_time=True, is_progress=True):
+                    # sorting not necessary for repeatability
+                    for encoded_path, memo in memo_by_encoded_path.items():
+                        is_explicit, last_encoded_memo = inputs_from_last_redo.get(encoded_path, (True, None))
+                        assert memo.stat is not None or not is_explicit
+                        redo_reason = rundb.compare_fsobject_memo_to_encoded_from_last_redo(
+                            memo, last_encoded_memo, encoded_path in encoded_paths_of_explicit_input_dependencies)
+                        if redo_reason is not None:
+                            path = rundb.decode_encoded_path(encoded_path)
+                            msg = (
+                                f"redo necessary because of filesystem object: {path.as_string()!r}\n"
+                                f"    reason: {redo_reason}"
+                            )
+                            di.inform(msg, level=Level.REDO_REASON)
+                            needs_redo = True
+                            break
 
         if not needs_redo:
             return _RunResult(self, False)  # no redo

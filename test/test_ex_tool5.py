@@ -12,6 +12,7 @@ import dlb.fs
 import dlb.di
 import dlb.ex
 import dlb.ex.aseq
+import logging
 import marshal
 import tempfile
 import zipfile
@@ -50,7 +51,7 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             regex = (
                 r"(?m)\b"
                 r"redo necessary because of filesystem object: 'a\.h' \n"
-                r" *  \| reason: was an new dependency or an output dependency of a redo\n"
+                r" *  \| reason: was a new dependency or was potentially changed by a redo\n"
             )
             self.assertRegex(output.getvalue(), regex)
             self.assertFalse(t.run())
@@ -412,6 +413,7 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase
 
         with dlb.ex.Context():
             output = io.StringIO()
+            dlb.di.set_threshold_level(logging.DEBUG)
             dlb.di.set_output_file(output)
             self.assertTrue(t.run())
             regex = r"\b()added 1 tool definition files as input dependency\n"

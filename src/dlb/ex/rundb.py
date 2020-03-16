@@ -159,8 +159,8 @@ def compare_fsobject_memo_to_encoded_from_last_redo(memo: FilesystemObjectMemo, 
 
     if last_encoded_memo is None:
         if is_explicit:
-            return 'was an output dependency of a redo'
-        return 'was an new dependency or an output dependency of a redo'
+            return 'output dependency of a tool instance potentially changed by a redo'
+        return 'was a new dependency or was potentially changed by a redo'
 
     try:
         last_memo = decode_encoded_fsobject_memo(last_encoded_memo)

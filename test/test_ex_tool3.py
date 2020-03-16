@@ -388,7 +388,8 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTes
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertTrue(t.run())
-            self.assertRegex(output.getvalue(), r'\b()was an output dependency of a redo\b')
+            self.assertRegex(output.getvalue(),
+                             r'\b()output dependency of a tool instance potentially changed by a redo\b')
             self.assertFalse(t.run())
 
 
