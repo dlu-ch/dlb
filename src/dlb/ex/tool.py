@@ -395,10 +395,10 @@ class _RunResult:
 
     def __init__(self, tool, redo: bool):
         super().__setattr__('_tool', tool)
-        super().__setattr__('_redone', bool(redo))
+        super().__setattr__('_redo', bool(redo))
 
     def __setattr__(self, key, value):
-        if not self._redone:
+        if not self._redo:
             raise AttributeError
 
         try:
@@ -436,8 +436,14 @@ class _RunResult:
 
         return NotImplemented
 
-    def __bool__(self):
-        return self._redone
+    def __bool__(self) -> bool:
+        return self._redo
+
+    def __repr__(self) -> str:
+        # noinspection PyProtectedMember
+        dependencies = [(n, getattr(self, n)) for n in self._tool.__class__._dependency_names]
+        args = ', '.join('{}={}'.format(k, repr(v)) for k, v in dependencies if v is not NotImplemented)
+        return f"{self.__class__.__name__}({args})"
 
 
 _RunResult.__name__ = 'RunResult'

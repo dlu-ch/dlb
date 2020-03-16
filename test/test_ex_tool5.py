@@ -444,6 +444,8 @@ class ReprOfResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         complete_repr = repr(r)
 
         self.assertEqual("<proxy object for future <class 'dlb.ex.Tool.RunResult'> result>", imcomplete_repr)
-        self.assertRegex(
-            complete_repr,
-            r"<proxy object for <dlb\.ex\.Tool\.RunResult object at 0x[0-9a-f]+> result>")
+        s = (
+            "<proxy object for RunResult(included_files=(Path('a.h'), Path('b.h')), source_file=Path('a.cpp'), "
+            "object_file=Path('a.o')) result>"
+        )
+        self.assertEqual(s, complete_repr)

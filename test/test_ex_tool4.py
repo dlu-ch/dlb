@@ -110,3 +110,22 @@ class RedoResultAssignmentTest(unittest.TestCase):
             result.source_file = 'b.cpp'
         msg = "'source_file' is not a non-explicit dependency"
         self.assertEqual(msg, str(cm.exception))
+
+
+class RedoResultRepr(unittest.TestCase):
+
+    def test_shows_explicit_without_redo(self):
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        result = dlb.ex.tool._RunResult(t, False)
+        self.assertEqual("RunResult(source_file=Path('a.cpp'), object_file=Path('a.o'))", repr(result))
+
+    def test_shows_explicit_and_assigned_with_redo(self):
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        result = dlb.ex.tool._RunResult(t, True)
+        self.assertEqual("RunResult(source_file=Path('a.cpp'), object_file=Path('a.o'))", repr(result))
+
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        result = dlb.ex.tool._RunResult(t, True)
+        result.included_files = ['i.h']
+        s = "RunResult(included_files=(Path('i.h'),), source_file=Path('a.cpp'), object_file=Path('a.o'))"
+        self.assertEqual(s, repr(result))
