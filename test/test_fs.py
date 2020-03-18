@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import pathlib
+import copy
 import unittest
 
 
@@ -684,6 +685,17 @@ class NativeWindowsTest(unittest.TestCase):
 
         p = pathlib.Path('a') / "*" / ":"
         self.assertEqual(('a', '*', ':'), dlb.fs.Path.Native(p).parts)
+
+
+class CopyTest(unittest.TestCase):
+
+    def test_can_copy(self):
+        for p in [dlb.fs.Path('a'), dlb.fs.Path.Native('a'), dlb.fs.Path(dlb.fs.Path.Native('a'))]:
+            copy.copy(p)
+
+    def test_can_deepcopy(self):
+        for p in [dlb.fs.Path('a'), dlb.fs.Path.Native('a'), dlb.fs.Path(dlb.fs.Path.Native('a'))]:
+            copy.deepcopy(p)
 
 
 class RelativeRestrictionsTest(unittest.TestCase):

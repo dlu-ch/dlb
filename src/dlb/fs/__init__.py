@@ -160,6 +160,12 @@ class _Native:
     def __getattr__(self, item):
         return getattr(self.raw, item)
 
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memodict={}):
+        return self
+
 
 # http://stackoverflow.com/questions/13762231/python-metaclass-arguments
 # noinspection PyMethodParameters,PyProtectedMember,PyUnresolvedReferences
