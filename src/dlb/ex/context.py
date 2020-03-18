@@ -380,7 +380,7 @@ class _RootSpecifics:
         # TODO make sure the "calling" source file is in the managed tree
 
         # path of all existing directories in os.get_exec_path(), that can be represented as dlb.fs.Path
-        binary_search_paths = []
+        executable_search_paths = []
         for p in os.get_exec_path():  # do _not_ expand a leading '~'
             try:
                 pn = fs.Path.Native(p)
@@ -388,11 +388,11 @@ class _RootSpecifics:
                     p = fs.Path(pn, is_dir=True)
                     if not p.is_absolute():
                         p = self._root_path / p
-                    if p not in binary_search_paths:
-                        binary_search_paths.append(p)
+                    if p not in executable_search_paths:
+                        executable_search_paths.append(p)
             except (OSError, ValueError):
                 pass
-        self._binary_search_paths = tuple(binary_search_paths)
+        self._executable_search_paths = tuple(executable_search_paths)
 
         # 2. if yes: lock it
 
@@ -518,9 +518,9 @@ class _BaseContext(metaclass=_ContextMeta):
         return _get_root_specifics()._root_path
 
     @property
-    def binary_search_paths(self) -> Tuple[fs.Path, ...]:
+    def executable_search_paths(self) -> Tuple[fs.Path, ...]:
         # noinspection PyProtectedMember
-        return _get_root_specifics()._binary_search_paths
+        return _get_root_specifics()._executable_search_paths
 
     @property
     def working_tree_time_ns(self) -> int:
@@ -536,7 +536,7 @@ class _BaseContext(metaclass=_ContextMeta):
             raise ValueError("'path' must not be absolute")
 
         if search_prefixes is None:
-            prefixes = self._binary_search_paths
+            prefixes = self._executable_search_paths
         else:
             prefixes = []
             if isinstance(search_prefixes, (str, bytes)):

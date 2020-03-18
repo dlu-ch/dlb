@@ -76,7 +76,7 @@ Context objects
    :type path_cls: dlb.fs.Path
    :param max_parallel_redo_count: maximum number of redos started in this context than can be pending at the same time
    :type max_parallel_redo_count: int
-   :param find_helpers: are dynamic helpers not defined explictly to be searched for in :attr:`binary_search_paths`?
+   :param find_helpers: are dynamic helpers not defined explictly to be searched for in :attr:`executable_search_paths`?
    :param find_helpers: None | bool
    :raises TypeError: if *path_cls* is not a subclass of :class:`dlb.fs.Path`
 
@@ -135,7 +135,7 @@ Context objects
 
    .. attribute:: find_helpers
 
-      Find dynamic helpers not defined explictly are in :attr:`binary_search_paths`?
+      Find dynamic helpers not defined explictly are in :attr:`executable_search_paths`?
       This is defined in the constructor.
 
       When called on class, it refers to the :term:`active context`.
@@ -154,7 +154,7 @@ Context objects
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. attribute:: binary_search_paths
+   .. attribute:: executable_search_paths
 
       A duplicate-free tuple of absolute directory paths where this process should look for binaries according to
       the operating system.
@@ -177,7 +177,7 @@ Context objects
 
       Relative paths in *search_prefixes* are treated as relative to :attr:`root_path`.
 
-      If *search_prefixes* is ``None``, :attr:`binary_search_paths` is used instead.
+      If *search_prefixes* is ``None``, :attr:`executable_search_paths` is used instead.
 
       Does not raise :exc:`OSError`.
 

@@ -14,19 +14,19 @@ import unittest
 import tools_for_test
 
 
-class BinarySearchPathNotRunningTest(unittest.TestCase):
+class ExecutableSearchPathNotRunningTest(unittest.TestCase):
 
     def test_fails_if_not_running(self):
         c = dlb.ex.Context()
         with self.assertRaises(dlb.ex.NotRunningError):
-            c.binary_search_paths
+            c.executable_search_paths
 
 
-class BinarySearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class ExecutableSearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_is_nonempty_tuple_of_absolute_paths(self):
         with dlb.ex.Context():
-            paths = dlb.ex.Context.binary_search_paths
+            paths = dlb.ex.Context.executable_search_paths
 
         self.assertIsInstance(paths, tuple)
         self.assertGreater(len(paths), 0)
@@ -44,7 +44,7 @@ class BinarySearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         os.environ['PATH'] = os.pathsep.join(
             [os.getcwd(), os.path.join(os.getcwd(), 'd'), os.path.join(os.getcwd(), 'f')])
         with dlb.ex.Context():
-            paths = dlb.ex.Context.binary_search_paths
+            paths = dlb.ex.Context.executable_search_paths
         os.environ['PATH'] = orig_path
 
         cwd = dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
@@ -56,7 +56,7 @@ class BinarySearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         orig_path = os.environ['PATH']
         os.environ['PATH'] = 'd'
         with dlb.ex.Context():
-            paths = dlb.ex.Context.binary_search_paths
+            paths = dlb.ex.Context.executable_search_paths
         os.environ['PATH'] = orig_path
 
         cwd = dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
@@ -68,7 +68,7 @@ class BinarySearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         orig_path = os.environ['PATH']
         os.environ['PATH'] = '~'
         with dlb.ex.Context():
-            paths = dlb.ex.Context.binary_search_paths
+            paths = dlb.ex.Context.executable_search_paths
         os.environ['PATH'] = orig_path
 
         self.assertEqual((), paths)
@@ -79,7 +79,7 @@ class BinarySearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         orig_path = os.environ['PATH']
         os.environ['PATH'] = os.pathsep
         with dlb.ex.Context():
-            paths = dlb.ex.Context.binary_search_paths
+            paths = dlb.ex.Context.executable_search_paths
         os.environ['PATH'] = orig_path
 
         self.assertEqual((), paths)
