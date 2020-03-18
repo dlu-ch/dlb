@@ -195,7 +195,7 @@ Context objects
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: temporary(self, suffix='', is_dir=False)
+   .. method:: temporary(suffix='', is_dir=False)
 
       Return a :class:`dlb.ex.Temporary` object, representing a temporary regular file (for *is_dir* = ``False``) or a
       temporary directory (for *is_dir* = ``True``) in the :term:`management tree` with a unique path.

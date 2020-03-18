@@ -142,7 +142,7 @@ Path objects
       If *collapsable* is ``True``, *other* is treated as a :term:`collapsable path` and the minimum of necessary
       :file:`..` components is prepended.
 
-      :rtype: ``self.__class__``
+      :rtype: class of this object
 
       :raises ValueError: if this is a non-directory path
       :raises ValueError: if *other* is not a prefix of this
@@ -152,7 +152,7 @@ Path objects
       Yields all path objects of the directory contents denoted by this path and matched by the
       name filters.
       The paths are duplicate-free and in a defined and repeatable order, but not necessarily sorted.
-      They are of type ``self.__class__`` if *cls* is ``None`` and of type *cls* if it is not.
+      Their class is the class of this object if *cls* is ``None`` and *cls* otherwise.
 
       The path of an existing filesystem object is eventually yielded iff
 
@@ -182,7 +182,7 @@ Path objects
           for p in dlb.fs.Path('src/').iterdir(name_filter=r'(?i).+\.cpp', recurse_name_filter=lambda n: '.' not in n):
               ...
 
-      :rtype: *cls* | ``self.__class__``
+      :rtype: *cls* | class of this object
 
       :raises TypeError: if *cls* is neither ``None`` nor a subclass of :class:`dlb.fs.Path`
       :raises TypeError: if *name_filter* or *recurse_name_filter* are not both name filters
@@ -230,7 +230,7 @@ Path objects
 
       :param key: slice of components (indices into :attr:`parts`)
       :type key: :class:`slice`
-      :rtype: ``self.__class__``
+      :rtype: class of this object
       :return: subpath
 
       :raises TypeError: if *key* is not a slice
