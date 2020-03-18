@@ -9,8 +9,10 @@ __all__ = ('DatabaseError',)
 
 import os.path
 import enum
+import time
 import stat
 import dataclasses
+import datetime
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
 import sqlite3
 from typing import Optional, Union, Dict, Tuple
@@ -63,6 +65,11 @@ class FilesystemObjectMemo:
     symlink_target: Optional[str] = None
 
 
+# note: without trailing 'Z'
+# reason: comparable with different number of decimal places
+_DATETIME_FORMAT = '%Y%m%dT%H%M%S.%f'
+
+
 def is_encoded_path(encoded_path: str) -> bool:
     if not isinstance(encoded_path, str):
         return False
@@ -97,6 +104,17 @@ def decode_encoded_path(encoded_path: str, is_dir: bool = False) -> fs.Path:
     # must be fast
     s = decode_encoded_path_as_str(encoded_path)
     return fs.Path(s, is_dir=is_dir or s == '.')  # path from string is faster than from components
+
+
+def encode_datetime(utc: datetime.datetime) -> str:
+    s = utc.strftime(_DATETIME_FORMAT)
+    while s[-1] == '0' and s[-2] != '.':
+        s = s[:-1]  # remove trailing '0'
+    return s
+
+
+def decode_datetime(encoded_utc: str) -> datetime.datetime:
+    return datetime.datetime.strptime(encoded_utc, _DATETIME_FORMAT)
 
 
 def encode_fsobject_memo(memo: FilesystemObjectMemo) -> bytes:
@@ -268,21 +286,34 @@ class Database:
         )
         with cursor_with_exception_mapping as cursor:
             cursor.executescript(  # includes a "BEGIN" according to the 'isolation_level'
+                "CREATE TABLE IF NOT EXISTS Run("
+                    "run_dbid INTEGER NOT NULL, "   # unique id of dlb run among dlb run with this run-database
+                    "start_time TEXT NOT NULL, "    # start UTC date/time of dlb run in ISO 8601 basic format 
+                                                    # like this "20200318T153032.001Z"
+                    "duration_ns INTEGER, "         # duration since start (clipped at 2**63 - 1) or
+                                                    # NULL if not successful
+                    "nonredo_count INTEGER, "       # number of non-redo runs of any tool instance
+                                                    # (clipped at 2**63 - 1) or NULL if not successful
+                    "redo_count INTEGER, "          # number of redo runs of any tool instance 
+                                                    # (clipped at 2**63 - 1) or NULL if not successful
+                    "PRIMARY KEY(run_dbid)"         # makes run_dbid an AUTOINCREMENT field
+                "); "
+
                 "CREATE TABLE IF NOT EXISTS ToolInst("
                     "tool_inst_dbid INTEGER NOT NULL, "   # unique id of tool instance across dlb run and platforms
                                                           # (until next cleanup)
-        
+
                     "pl_platform_id BLOB NOT NULL, "      # permanent local platform id
                     "pl_tool_id BLOB NOT NULL, "          # permanent local tool id (unique among all tool with
                                                           # same pl_platform_id)
                     "pl_tool_inst_fp BLOB NOT NULL, "     # permanent local tool instance fingerprint
                                                           # ("almost unique" among all tool instances with
                                                           # same pl_platform_id and pl_tool_id)
-        
-                    "PRIMARY KEY(tool_inst_dbid)"         # makes 'tool_inst_dbid an AUTOINCREMENT field
+
+                    "PRIMARY KEY(tool_inst_dbid)"         # makes tool_inst_dbid an AUTOINCREMENT field
                     "UNIQUE(pl_platform_id, pl_tool_id, pl_tool_inst_fp)"
-                ");"
-                                
+                "); "
+
                 "CREATE TABLE IF NOT EXISTS ToolInstFsInput("
                     "tool_inst_dbid INTEGER, "         # tool instance
                     "path TEXT NOT NULL, "             # path of filesystem object in managed tree,
@@ -291,23 +322,45 @@ class Database:
                     "memo_before BLOB, "               # memo of filesystem object before last redo of tool instance,
                                                        # encoded by encode_fsobject_memo(), or NULL if
                                                        # filesystem object was modified since last redo
+                    "run_dbid INTEGER, "               # run_dbid of last update
                     "PRIMARY KEY(tool_inst_dbid, path), "
-                    "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"
-                ");"
+                    "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid), "
+                    "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
+                "); "
 
                 "CREATE TABLE IF NOT EXISTS ToolInstDomainInput("
                     "tool_inst_dbid INTEGER, "             # tool instance
                     "domain TEXT NOT NULL, "               # name of domain (one of Domain)
                     "memo_digest_before BLOB NOT NULL, "   # memo of filesystem object before last redo of tool instance
+                    "run_dbid INTEGER, "                   # run_dbid of last update
                     "PRIMARY KEY(tool_inst_dbid, domain), "
-                    "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid)"
-                ");"
-        
+                    "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid), "
+                    "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
+                "); "
+
+                "CREATE TRIGGER IF NOT EXISTS delete_obsolete_toolinst "
+                    "AFTER DELETE ON Run FOR EACH ROW BEGIN "
+                        "DELETE FROM ToolInstFsInput WHERE run_dbid = OLD.run_dbid; "
+                        "DELETE FROM ToolInstDomainInput WHERE run_dbid = OLD.run_dbid; "
+                    "END; "
+
                 "PRAGMA foreign_keys = ON;"            # https://www.sqlite.org/foreignkeys.html
             )
+
+            # assign tool_inst_dbid by AUTOINCREMENT:
+            start_datetime = encode_datetime(datetime.datetime.utcnow())
+            cursor.execute("INSERT INTO Run VALUES (NULL, ?, NULL, NULL, NULL)", (start_datetime,))
+            cursor.execute("SELECT last_insert_rowid()")  # https://www.sqlite.org/c3ref/last_insert_rowid.html
+            self._run_dbid = cursor.fetchone()[0]
+            self._start_time_ns = time.monotonic_ns()  # since Python 3.7
+
             connection.commit()
 
         self._connection = connection
+
+    @property
+    def run_dbid(self) -> int:
+        return self._run_dbid
 
     def get_and_register_tool_instance_dbid(self, permanent_local_tool_id: bytes,
                                             permanent_local_tool_instance_fingerprint: bytes) -> int:
@@ -356,8 +409,8 @@ class Database:
             raise TypeError(f"not a valid 'encoded_memo_before': {encoded_memo_before!r}")
 
         with self._cursor_with_exception_mapping() as cursor:
-            cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?)",
-                           (tool_instance_dbid, encoded_path, 1 if is_explicit else 0, encoded_memo_before))
+            cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?, ?)", (
+                tool_instance_dbid, encoded_path, 1 if is_explicit else 0, encoded_memo_before, self.run_dbid))
 
     def replace_fsobject_inputs(self, tool_instance_dbid: int,
                                 info_by_by_fsobject_dbid: Dict[str, Tuple[bool, bytes]]):
@@ -456,11 +509,47 @@ class Database:
                 cursor.execute("DELETE FROM ToolInstDomainInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
                 for domain, memo_digest_before in memo_digest_before_by_domain.items():
                     if memo_digest_before is not None:
-                        cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?)",
-                                       (tool_instance_dbid, domain, memo_digest_before))
+                        cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?, ?)",
+                                       (tool_instance_dbid, domain, memo_digest_before, self.run_dbid))
             except:
                 self._connection.rollback()
                 raise
+
+    def get_latest_successful_run_summaries(self, max_count: int):
+        # Without the run that opened this run-database.
+        # Note: There is no guaranteed that all the datetimes differ.
+
+        max_count = max(0, int(max_count))
+
+        summaries = []
+        with self._cursor_with_exception_mapping() as cursor:
+            for start_time, duration_ns, nonredo_count, redo_count in cursor.execute(
+                    "SELECT start_time, duration_ns, nonredo_count, redo_count FROM Run "
+                    "WHERE run_dbid != ? AND duration_ns >= 0 AND nonredo_count >= 0 AND redo_count >= 0 "
+                    "ORDER BY start_time DESC LIMIT ?", (self.run_dbid, max_count)).fetchall():
+                summaries.append((decode_datetime(start_time), duration_ns, nonredo_count + redo_count, redo_count))
+
+        summaries.reverse()
+        return summaries
+
+    def update_run_summary(self, successful_nonredo_run_count: int, successful_redo_run_count: int):
+        # Consider the dlb run as successfully completed.
+        duration_ns = time.monotonic_ns() - self._start_time_ns  # since Python 3.7
+        duration_ns = max(0, min(2**63 - 1, duration_ns))
+        successful_nonredo_run_count = max(0, min(2**63 - 1, successful_nonredo_run_count))
+        successful_redo_run_count = max(0, min(2**63 - 1, successful_redo_run_count))
+        with self._cursor_with_exception_mapping() as cursor:
+            # https://www.sqlite.org/datatype3.html
+            cursor.execute(
+                "UPDATE Run SET duration_ns = ?, nonredo_count = ?, redo_count = ? WHERE run_dbid = ?",
+                (duration_ns, successful_nonredo_run_count, successful_redo_run_count, self.run_dbid))
+
+    def forget_runs_before(self, utc: datetime.datetime):
+        # Remove information on run started before *utc* an all dependency information last updated by such
+        # a run.
+        encoded_utc = encode_datetime(utc)
+        with self._cursor_with_exception_mapping() as cursor:
+            cursor.execute("DELETE FROM Run WHERE start_time < ?", (encoded_utc,))
 
     def commit(self):
         with self._cursor_with_exception_mapping('commit failed'):

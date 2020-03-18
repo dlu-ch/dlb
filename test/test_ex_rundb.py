@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex.rundb
 import dlb.ex.worktree
+import datetime
 import stat
 import collections
 import contextlib
@@ -77,6 +78,16 @@ class ToolInstanceDbidTest(tools_for_test.TemporaryDirectoryTestCase):
             tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't1', b'ti1')
             tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't1', b'ti1')
             self.assertEqual(tool_dbid2, tool_dbid1)
+
+
+class RunDbidTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_changes_between_runs(self):
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            run_dbid1 = rundb.run_dbid
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            run_dbid2 = rundb.run_dbid
+        self.assertNotEqual(run_dbid1, run_dbid2)
 
 
 class EncodePathTest(unittest.TestCase):
@@ -279,6 +290,47 @@ class DecodeEncodedFsobjectMemoTest(unittest.TestCase):
         b = marshal.dumps(t)
         with self.assertRaises(ValueError):
             dlb.ex.rundb.decode_encoded_fsobject_memo(b)  # non symlink target for symlink
+
+
+class EncodeDatetimeTest(tools_for_test.TemporaryDirectoryTestCase):
+    def test_is_correct_for_typical(self):
+        d = datetime.datetime(year=2020, month=3, day=19, hour=11, minute=20, second=25, microsecond=10000)
+        self.assertEqual('20200319T112025.01', dlb.ex.rundb.encode_datetime(d))
+
+        # rationale:
+        assert '20200319T112025.01' < '20200319T112025.010'
+        assert '20200319T112025.01' < '20200319T112025.0101'
+
+    def test_now_is_correct(self):
+        t = datetime.datetime.utcnow()
+        s = dlb.ex.rundb.encode_datetime(t)
+        self.assertRegex(s, r'^[0-9]{8}T[0-9]{6}\.[0-9]+$')
+
+
+class DecodeDatetimeTest(tools_for_test.TemporaryDirectoryTestCase):
+    def test_is_correct_for_typical(self):
+        d = datetime.datetime(year=2020, month=3, day=19, hour=11, minute=20, second=25, microsecond=10000)
+        self.assertEqual(d, dlb.ex.rundb.decode_datetime('20200319T112025.01'))
+
+    def test_roundtrip_is_lossless(self):
+        t0 = datetime.datetime.utcnow()
+        s = dlb.ex.rundb.encode_datetime(t0)
+        t1 = dlb.ex.rundb.decode_datetime(s)
+        self.assertEqual(t1, t0)
+
+    def test_fails_for_empty(self):
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_datetime('')
+
+    def test_fails_with_utc_suffix(self):
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_datetime('20200319T112025Z')
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_datetime('20200319T112025+00:00')
+
+    def test_fails_without_time_separator(self):
+        with self.assertRaises(ValueError):
+            dlb.ex.rundb.decode_datetime('20200319112025')
 
 
 class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -600,3 +652,82 @@ class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
 
             self.assertEqual(3 - 1, rundb.get_tool_instance_dbid_count())
+
+
+class ForgetRunsBeforeTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_forgets_run_and_dependencies(self):
+        t0 = datetime.datetime.utcnow()
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.get_and_register_tool_instance_dbid(b't', b'i0')
+
+            tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
+            rundb.update_fsobject_input(tool_dbid1, dlb.ex.rundb.encode_path(dlb.fs.Path('a')), False, b'1')
+
+            tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i2')
+            rundb.replace_domain_inputs(tool_dbid2, {'a': b'A'})
+            rundb.commit()
+
+            self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
+            self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
+
+        t1 = datetime.datetime.utcnow()
+        self.assertNotEqual(t0, t1)
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.forget_runs_before(t0)
+            self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
+            self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.forget_runs_before(t1)
+            self.assertEqual(0, len(rundb.get_fsobject_inputs(tool_dbid1)))
+            self.assertEqual(0, len(rundb.get_domain_inputs(tool_dbid2)))
+
+
+class RunSummaryTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_scenario1(self):
+
+        t0 = datetime.datetime.utcnow()
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.update_run_summary(0, 0)
+            self.assertEqual([], rundb.get_latest_successful_run_summaries(10))
+            rundb.commit()
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.update_run_summary(1, 0)
+            rundb.commit()
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.commit()
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.update_run_summary(2, 3)
+            rundb.commit()
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            summaries10 = rundb.get_latest_successful_run_summaries(10)
+            self.assertEqual(3, len(summaries10))
+
+        self.assertEqual([(0, 0), (1, 0), (5, 3)], [t[2:] for t in summaries10])
+        for t, _, _, _ in summaries10:
+            self.assertGreaterEqual(t, t0, repr(t))
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            summaries1 = rundb.get_latest_successful_run_summaries(1)
+            self.assertEqual(1, len(summaries1))
+            self.assertEqual(summaries10[-1], summaries1[0])
+
+    def test_too_large_counts_are_limited(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            rundb.update_run_summary(2**100, 2**100)
+            rundb.commit()
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            summary = rundb.get_latest_successful_run_summaries(1)[0]
+            self.assertEqual(2 * (2**63 - 1), summary[2])
+            self.assertEqual(2**63 - 1, summary[3])
