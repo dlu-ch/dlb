@@ -325,9 +325,9 @@ def _check_and_memorize_explicit_fs_input_dependencies(tool, dependency_actions:
     # treat all files used for definition of self.__class__ like explicit input dependencies if they
     # have a managed tree path.
     definition_file_count = 0
-    for p in get_and_register_tool_info(tool.__class__).definition_paths:
+    for pn in get_and_register_tool_info(tool.__class__).definition_paths:
         try:
-            p = context.working_tree_path_of(p, existing=True, collapsable=False)
+            p = context.working_tree_path_of(fs.Path.Native(pn), existing=True, collapsable=False)
             encoded_path = rundb.encode_path(p)
             memo = memo_by_encoded_path.get(encoded_path)
             if memo is None:
