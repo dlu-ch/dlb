@@ -606,16 +606,19 @@ class WindowsPath(Path):
     RESERVED_CHARACTERS = frozenset('\\"|?*<>:')  # besides: '/'
 
     def check_restriction_to_base(self):
-        # TODO remove construction of PureWindowsPath
-        p = pathlib.PureWindowsPath(str(_native_components_for_windows(self.components)))
-        if p.is_reserved():
+        # unfortunately, there is not official way to access flaviour specifics without contructing a path object
+
+        parts = _native_components_for_windows(self.components).components
+        if not parts[0]:
+            parts = parts[1:]
+        if parts and pathlib.PureWindowsPath(parts[-1]).is_reserved():
             # not actually reserved for directory path, but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
 
         # without already checked in _native_components_for_windows()
         reserved = self.RESERVED_CHARACTERS - frozenset('\\:')
 
-        for c in p.parts:
+        for c in parts:
             invalid_characters = set(c) & reserved
             if invalid_characters:
                 raise ValueError("must not contain reserved characters: {0}".format(
@@ -638,9 +641,6 @@ class PortableWindowsPath(WindowsPath):
     MAX_PATH_LENGTH = 259  # MAX_PATH - 1
 
     def check_restriction_to_base(self):
-        # noinspection PyStatementEffect
-        self.pure_windows  # TODO avoid
-
         components = self.components
         for c in components[1:]:
             if len(c) > self.MAX_COMPONENT_LENGTH:
