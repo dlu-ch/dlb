@@ -12,9 +12,9 @@ import pathlib
 import unittest
 
 
-class ConstructionTest(unittest.TestCase):
+class PathFromStrTest(unittest.TestCase):
 
-    def test_from_absolute_as_string(self):
+    def test_absolute(self):
         p = dlb.fs.Path('/x//../yz/.////u')
         self.assertEqual(repr(p), "Path('/x/../yz/u')")
         self.assertTrue(p.is_absolute())
@@ -28,7 +28,7 @@ class ConstructionTest(unittest.TestCase):
         self.assertEqual(repr(p), "Path('/x/y/../u')")
         self.assertTrue(p.is_absolute())
 
-    def test_from_relative_as_string(self):
+    def test_relative(self):
         p = dlb.fs.Path('./x')
         self.assertEqual(repr(p), "Path('x')")
         self.assertTrue(not p.is_absolute())
@@ -41,7 +41,7 @@ class ConstructionTest(unittest.TestCase):
         self.assertEqual(repr(p), "Path('x/../yz/u')")
         self.assertTrue(not p.is_absolute())
 
-    def test_from_relative_as_string_forced_as_dir(self):
+    def test_relative_as_dir(self):
         p = dlb.fs.Path('./x', is_dir=True)
         self.assertEqual(repr(p), "Path('x/')")
         p = dlb.fs.Path('./x/', is_dir=True)
@@ -53,7 +53,7 @@ class ConstructionTest(unittest.TestCase):
         p = dlb.fs.Path('a/..', is_dir=True)
         self.assertEqual(repr(p), "Path('a/../')")
 
-    def test_from_relative_as_string_forced_as_nondir(self):
+    def test_relative_as_nondir(self):
         p = dlb.fs.Path('./x/', is_dir=False)
         self.assertEqual(repr(p), "Path('x')")
         p = dlb.fs.Path('./x', is_dir=False)
@@ -72,16 +72,22 @@ class ConstructionTest(unittest.TestCase):
         self.assertEqual(repr(p), "Path('a\\\\b')")
         self.assertEqual(len(p.parts), 1)
 
-    def test_from_empty_string(self):
+    def test_fails_for_empty(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('')
         self.assertEqual("invalid path: ''", str(cm.exception))
+
+
+class PathFromPathTest(unittest.TestCase):
 
     def test_from_path(self):
         p = dlb.fs.Path('a/b/c')
         p2 = dlb.fs.Path(p)
         self.assertEqual(repr(p), "Path('a/b/c')")
         self.assertEqual(repr(p2), "Path('a/b/c')")
+
+
+class PathFromPathlibTest(unittest.TestCase):
 
     def test_from_pathlib(self):
         p = dlb.fs.Path(pathlib.PurePosixPath('/a/b/c'))
@@ -96,7 +102,7 @@ class ConstructionTest(unittest.TestCase):
         p = dlb.fs.Path(pathlib.PureWindowsPath('\\\\name\\r\\a\\b\\c'))
         self.assertEqual(repr(p), "Path('//name/r/a/b/c')")
 
-    def test_from_pathlib_incomplete(self):
+    def test_fails_for_incomplete(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(pathlib.PureWindowsPath('C:'))
         self.assertEqual("neither absolute nor relative: root is missing", str(cm.exception))
@@ -108,6 +114,9 @@ class ConstructionTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(pathlib.PureWindowsPath('\\\\name'))
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
+
+
+class PathFromSequenceTest(unittest.TestCase):
 
     def test_from_tuple(self):
         self.assertEqual(dlb.fs.Path('.'), dlb.fs.Path(()))
@@ -129,13 +138,16 @@ class ConstructionTest(unittest.TestCase):
             dlb.fs.Path(('', '/a'))
         self.assertEqual("if 'path' is a parts tuple, none except its first element must contain '/'", str(cm.exception))
 
-    def test_from_none(self):
+
+class PathFromOtherTest(unittest.TestCase):
+
+    def test_fails_for_none(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.Path(None)
         self.assertEqual("'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence", str(cm.exception))
 
-    def test_from_int(self):
+    def test_fails_for_int(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.Path(1)
@@ -156,7 +168,7 @@ class StringRepresentationTest(unittest.TestCase):
         self.assertEqual("use 'repr()' or 'native' instead", str(cm.exception))
 
 
-class ConversionFromAnToPurePathTest(unittest.TestCase):
+class ConversionFromAndToPurePathTest(unittest.TestCase):
 
     def test_posix_roundtrip_is_lossless(self):
         pp = pathlib.PurePosixPath('/a/b/../c/')
@@ -181,7 +193,7 @@ class ConversionFromAnToPurePathTest(unittest.TestCase):
         pw = pathlib.PureWindowsPath('\\\\name\\r')
         self.assertEqual(dlb.fs.Path(pw).pure_windows, pw)
 
-    def test_incomplete_windowspath_is_not_permitted(self):
+    def test_fails_for_incomplete_windowspath(self):
         self.assertEqual(pathlib.PureWindowsPath(r'C:\\'), dlb.fs.Path('/c:').pure_windows)  # add root
 
         with self.assertRaises(ValueError) as cm:
@@ -192,7 +204,7 @@ class ConversionFromAnToPurePathTest(unittest.TestCase):
             dlb.fs.Path('//name').pure_windows
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
-    def test_reserved_is_not_permitted(self):
+    def test_fails_for_reserved(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('com2').pure_windows
         self.assertEqual("path is reserved", str(cm.exception))
@@ -679,7 +691,7 @@ class RelativeRestrictionsTest(unittest.TestCase):
     def test_relative_permitted(self):
         dlb.fs.RelativePath('a/b/c')
 
-    def test_absolute_not_permitted(self):
+    def test_fails_for_absolute(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.RelativePath('/a/b/c')
         self.assertEqual("invalid path for 'RelativePath': '/a/b/c' (must be relative)", str(cm.exception))
@@ -690,7 +702,7 @@ class AbsoluteRestrictionsTest(unittest.TestCase):
     def test_absolute_permitted(self):
         dlb.fs.AbsolutePath('/a/b/c')
 
-    def test_absolute_not_permitted(self):
+    def test_fails_for_absolute(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.AbsolutePath('a/b/c')
         self.assertEqual("invalid path for 'AbsolutePath': 'a/b/c' (must be absolute)", str(cm.exception))
@@ -704,7 +716,7 @@ class NormalizedRestrictionsTest(unittest.TestCase):
     def test_absolute_permitted(self):
         dlb.fs.NormalizedPath('/a/b/c')
 
-    def test_absolute_not_permitted(self):
+    def test_fails_for_absolute(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.NormalizedPath('a/../b')
         self.assertEqual("invalid path for 'NormalizedPath': 'a/../b' (must be normalized)", str(cm.exception))
@@ -712,7 +724,7 @@ class NormalizedRestrictionsTest(unittest.TestCase):
 
 class NoSpaceRestrictionsTest(unittest.TestCase):
 
-    def test_space_not_permitted(self):
+    def test_fails_for_space(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.NoSpacePath('a b')
         self.assertEqual("invalid path for 'NoSpacePath': 'a b' (must not contain space)", str(cm.exception))
@@ -720,7 +732,7 @@ class NoSpaceRestrictionsTest(unittest.TestCase):
 
 class PosixRestrictionsTest(unittest.TestCase):
 
-    def test_null_not_permitted(self):
+    def test_fails_for_nul(self):
         # IEEE Std 1003.1-2008, §3.170
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PosixPath('a\x00b')
@@ -729,7 +741,7 @@ class PosixRestrictionsTest(unittest.TestCase):
 
 class PortablePosixRestrictionsTest(unittest.TestCase):
 
-    def test_slashslash_not_permitted(self):
+    def test_fails_for_slashslash(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortablePosixPath('//unc/root/d')
         msg = (
@@ -738,19 +750,19 @@ class PortablePosixRestrictionsTest(unittest.TestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-    def test_leadingdash_not_permitted(self):
+    def test_fails_for_leading_dash(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortablePosixPath('/a/-b')
         msg = "invalid path for 'PortablePosixPath': '/a/-b' (component must not start with '-')"
         self.assertEqual(msg, str(cm.exception))
 
-    def test_backslash_not_permitted(self):
+    def test_fails_for_backslash(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortablePosixPath('a\\b')
         msg = r"invalid path for 'PortablePosixPath': 'a\\b' (must not contain these characters: '\\')"
         self.assertEqual(msg, str(cm.exception))
 
-    def test_too_long_component_not_permitted(self):
+    def test_fails_for_too_long_component(self):
         dlb.fs.PortablePosixPath('a' * dlb.fs.PortablePosixPath.MAX_COMPONENT_LENGTH)
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortablePosixPath('a' * (dlb.fs.PortablePosixPath.MAX_COMPONENT_LENGTH + 1))
@@ -760,7 +772,7 @@ class PortablePosixRestrictionsTest(unittest.TestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-    def test_too_long_not_permitted(self):
+    def test_fails_for_too_long(self):
         dlb.fs.PortablePosixPath('a/' * (dlb.fs.PortablePosixPath.MAX_PATH_LENGTH // 2) + 'b')
 
         with self.assertRaises(ValueError) as cm:
@@ -774,18 +786,18 @@ class PortablePosixRestrictionsTest(unittest.TestCase):
 
 class WindowsRestrictionsTest(unittest.TestCase):
 
-    def test_backslash_not_permitted(self):
+    def test_fails_for_backslash(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a\\b')
         self.assertEqual("invalid path for 'WindowsPath': 'a\\\\b' (must not contain reserved characters: '\\\\')",
                          str(cm.exception))
 
-    def test_null_not_permitted(self):
+    def test_fails_for_nul(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a\x00b')
         self.assertEqual("invalid path: 'a\\x00b' (must not contain NUL)", str(cm.exception))
 
-    def test_control_character_not_permitted(self):
+    def test_fails_for_control_character(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a\nb')
         self.assertEqual(
@@ -793,7 +805,7 @@ class WindowsRestrictionsTest(unittest.TestCase):
             "(must not contain characters with codepoint lower than U+0020: U+000A)",
             str(cm.exception))
 
-    def test_non_bmp_character_not_permitted(self):
+    def test_fails_for_non_bmp_character(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a\U00010000b')
         self.assertEqual(
@@ -801,7 +813,7 @@ class WindowsRestrictionsTest(unittest.TestCase):
             "(must not contain characters with codepoint higher than U+FFFF: U+10000)",
             str(cm.exception))
 
-    def test_colon_not_permitted_except_in_drive(self):
+    def test_fails_for_nondrive_colon(self):
         dlb.fs.WindowsPath('/a:/b/c')
 
         with self.assertRaises(ValueError) as cm:
@@ -824,7 +836,7 @@ class WindowsRestrictionsTest(unittest.TestCase):
         self.assertEqual("invalid path for 'WindowsPath': '/:a/b/c' (neither absolute nor relative: drive is missing)",
                          str(cm.exception))
 
-    def test_start_not_permitted(self):
+    def test_fails_for_star(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('/*:')
         self.assertEqual("invalid path for 'WindowsPath': '/*:' (must not contain reserved characters: '*')",
@@ -840,7 +852,7 @@ class WindowsRestrictionsTest(unittest.TestCase):
         self.assertEqual("invalid path for 'WindowsPath': 'r/*d' (must not contain reserved characters: '*')",
                          str(cm.exception))
 
-    def test_nonrelative_without_root_not_permitted(self):
+    def test_fails_for_nonrelative_without_root(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('/')
         self.assertEqual("invalid path for 'WindowsPath': '/' (neither absolute nor relative: root is missing)",
@@ -851,7 +863,7 @@ class WindowsRestrictionsTest(unittest.TestCase):
         self.assertEqual("invalid path for 'WindowsPath': '/a:b' (neither absolute nor relative: drive is missing)",
                          str(cm.exception))
 
-    def test_reserved_file_not_permitted(self):
+    def test_fails_for_reserved_file(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a/coM9')
         self.assertEqual("invalid path for 'WindowsPath': 'a/coM9' (path is reserved)", str(cm.exception))
@@ -867,20 +879,20 @@ class WindowsRestrictionsTest(unittest.TestCase):
 
 class PortableWindowsRestrictionsTest(unittest.TestCase):
 
-    def test_space_at_end_of_component_not_permitted(self):
+    def test_fails_for_space_at_end_of_component(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortableWindowsPath('a/b /c')
         self.assertEqual("invalid path for 'PortableWindowsPath': 'a/b /c' (component must not end with ' ' or '.')",
                          str(cm.exception))
 
-    def test_dot_at_end_of_component_not_permitted(self):
+    def test_fails_for_dot_at_end_of_component(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortableWindowsPath('a/b./c')
         self.assertEqual("invalid path for 'PortableWindowsPath': 'a/b./c' (component must not end with ' ' or '.')",
                          str(cm.exception))
         dlb.fs.PortablePath('a/../c')
 
-    def test_too_long_component_not_permitted(self):
+    def test_fails_for_too_long_component(self):
         dlb.fs.PortableWindowsPath('a' * dlb.fs.PortableWindowsPath.MAX_COMPONENT_LENGTH)
 
         with self.assertRaises(ValueError) as cm:
@@ -888,7 +900,7 @@ class PortableWindowsRestrictionsTest(unittest.TestCase):
 
         self.assertTrue(str(cm.exception).endswith(" (component must not contain more than 255 characters)"))
 
-    def test_too_long_not_permitted(self):
+    def test_fails_for_too_long(self):
         dlb.fs.PortableWindowsPath('a/' * (dlb.fs.PortableWindowsPath.MAX_PATH_LENGTH // 2) + 'b')
 
         with self.assertRaises(ValueError) as cm:
