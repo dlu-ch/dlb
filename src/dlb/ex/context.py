@@ -384,8 +384,8 @@ class _RootSpecifics:
         for p in os.get_exec_path():  # do _not_ expand a leading '~'
             try:
                 pn = fs.Path.Native(p)
-                if os.path.isdir(pn):
-                    p = fs.Path(p, is_dir=True)
+                if p and os.path.isdir(pn):
+                    p = fs.Path(pn, is_dir=True)
                     if not p.is_absolute():
                         p = self._root_path / p
                     if p not in binary_search_paths:
@@ -555,7 +555,7 @@ class _BaseContext(metaclass=_ContextMeta):
             try:
                 if path.is_dir() == stat.S_ISDIR(os.stat(p.native).st_mode):
                     return p  # absolute
-            except OSError:
+            except (ValueError, OSError):
                 pass
 
     @staticmethod
