@@ -221,8 +221,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :type cwd: ``None`` or a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
       :param expected_returncodes: expected return codes of the :term:`dynamic helper` *helper_file*
       :type expected_returncodes: collection of integers
-      :param forced_env: dictionary of values to override in :attr:`env <dlb.ex.context.Context.env>`
-      :type forced_env: Dict[str, str]
+      :param forced_env: dictionary of values to override in :attr:`env <dlb.ex.context.Context.env>` or ``None``
+      :type forced_env: None | Dict[str, str]
       :param stdin:
          If not ``None``:
          either a file-like object representing a pipe to be connected to the subprocess’s standard input stream using

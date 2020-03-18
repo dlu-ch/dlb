@@ -103,7 +103,8 @@ class _RedoContext(context_.ReadOnlyContext):
 
     async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
                              cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
-                             forced_env={}, stdin=None, stdout=None, stderr=None, limit: int = 2**16):
+                             forced_env: Optional[Dict[str, str]] = None,
+                             stdin=None, stdout=None, stderr=None, limit: int = 2**16):
         if not isinstance(helper_file, fs.Path):
             helper_file = fs.Path(helper_file)
 
@@ -131,6 +132,8 @@ class _RedoContext(context_.ReadOnlyContext):
             worktree.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
                                                         ref_dir_path=str(self.root_path.native))
 
+        if forced_env is None:
+            forced_env = {}
         env = {k: v for k, v in self.env.items()}
         env.update(forced_env)
 
@@ -259,9 +262,9 @@ def _get_memo_for_fs_input_dependency_from_rundb(encoded_path: str, last_encoded
     return memo, needs_redo  # memo.state may be None
 
 
-def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
-                                                    context: context_.Context) \
-        -> Tuple[Dict[str, rundb.FilesystemObjectMemo], Dict[str, str]]:
+def _check_and_memorize_explicit_fs_input_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
+                                                       context: context_.Context) \
+        -> Dict[str, rundb.FilesystemObjectMemo]:
 
     # For all explicit input dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.
@@ -272,56 +275,52 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     # FilesystemObjectMemo m with ``m.stat is not None``.
 
     memo_by_encoded_path: Dict[str, rundb.FilesystemObjectMemo] = {}
-    envvar_value_by_name: Dict[str, str] = {}
 
     for action in dependency_actions:
         # read memo of each filesystem object of a explicit input dependency in a repeatable order
-        if action.dependency.explicit and isinstance(action.dependency, depend.Input):
-            if action.dependency.Value is fs.Path:
-                validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
-                for p in validated_value_tuple:  # p is a dlb.fs.Path
+        if action.dependency.explicit and isinstance(action.dependency, depend.Input) \
+                and action.dependency.Value is fs.Path:
+            validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
+            for p in validated_value_tuple:  # p is a dlb.fs.Path
+                try:
                     try:
-                        try:
-                            p = context.working_tree_path_of(p, existing=True, collapsable=False)
-                        except ValueError as e:
-                            if isinstance(e, worktree.WorkingTreePathError) and e.oserror is not None:
-                                raise e.oserror
-                            if not p.is_absolute():
-                                raise ValueError('not a managed tree path') from None
-                            # absolute paths to the management tree are ok
-
-                        # p is a relative path of a filesystem object in the managed tree or an absolute path
-                        # of filesystem object outside the managed tree
-                        if not p.is_absolute():
-                            encoded_path = rundb.encode_path(p)
-                            memo = memo_by_encoded_path.get(encoded_path)
-                            if memo is None:
-                                memo = worktree.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
-                            action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
-                            memo_by_encoded_path[encoded_path] = memo
-                            assert memo.stat is not None
+                        p = context.working_tree_path_of(p, existing=True, collapsable=False)
                     except ValueError as e:
-                        msg = (
-                            f"input dependency {action.name!r} contains an invalid path: {p.as_string()!r}\n"
-                            f"  | reason: {ut.exception_to_line(e)}"
-                        )
-                        raise DependencyError(msg) from None
-                    except FileNotFoundError:
-                        msg = (
-                            f"input dependency {action.name!r} contains a path of a "
-                            f"non-existent filesystem object: {p.as_string()!r}"
-                        )
-                        raise DependencyError(msg) from None
-                    except OSError as e:
-                        msg = (
-                            f"input dependency {action.name!r} contains a path of an "
-                            f"inaccessible filesystem object: {p.as_string()!r}\n"
-                            f"  | reason: {ut.exception_to_line(e)}"
-                        )
-                        raise DependencyError(msg) from None
-            elif action.dependency.Value is depend.EnvVarInput.Value:
-                for ev in action.dependency.tuple_from_value(getattr(tool, action.name)):
-                    envvar_value_by_name[ev.name] = ev.raw  # ev is a depend.EnvVarInput.Value
+                        if isinstance(e, worktree.WorkingTreePathError) and e.oserror is not None:
+                            raise e.oserror
+                        if not p.is_absolute():
+                            raise ValueError('not a managed tree path') from None
+                        # absolute paths to the management tree are ok
+
+                    # p is a relative path of a filesystem object in the managed tree or an absolute path
+                    # of filesystem object outside the managed tree
+                    if not p.is_absolute():
+                        encoded_path = rundb.encode_path(p)
+                        memo = memo_by_encoded_path.get(encoded_path)
+                        if memo is None:
+                            memo = worktree.read_filesystem_object_memo(context.root_path / p)  # may raise OSError
+                        action.check_filesystem_object_memo(memo)  # raise ValueError if memo is not as expected
+                        memo_by_encoded_path[encoded_path] = memo
+                        assert memo.stat is not None
+                except ValueError as e:
+                    msg = (
+                        f"input dependency {action.name!r} contains an invalid path: {p.as_string()!r}\n"
+                        f"  | reason: {ut.exception_to_line(e)}"
+                    )
+                    raise DependencyError(msg) from None
+                except FileNotFoundError:
+                    msg = (
+                        f"input dependency {action.name!r} contains a path of a "
+                        f"non-existent filesystem object: {p.as_string()!r}"
+                    )
+                    raise DependencyError(msg) from None
+                except OSError as e:
+                    msg = (
+                        f"input dependency {action.name!r} contains a path of an "
+                        f"inaccessible filesystem object: {p.as_string()!r}\n"
+                        f"  | reason: {ut.exception_to_line(e)}"
+                    )
+                    raise DependencyError(msg) from None
 
     # treat all files used for definition of self.__class__ like explicit input dependencies if they
     # have a managed tree path.
@@ -343,13 +342,13 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
     di.inform(f"added {definition_file_count} tool definition files as input dependency",
               level=Level.REDO_NECESSITY_CHECK)
 
-    return memo_by_encoded_path, envvar_value_by_name
+    return memo_by_encoded_path
 
 
-def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
-                                        encoded_paths_of_explicit_input_dependencies: Set[str],
-                                        needs_redo: bool,
-                                        context: context_.Context) \
+def _check_explicit_fs_output_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...],
+                                           encoded_paths_of_explicit_input_dependencies: Set[str],
+                                           needs_redo: bool,
+                                           context: context_.Context) \
         -> Tuple[Dict[fs.Path, dependaction.Action], Set[fs.Path], bool]:
     # For all explicit output dependencies of *tool* in *dependency_actions* for filesystem objects:
     # Checks existence, reads and checks its FilesystemObjectMemo.
@@ -413,6 +412,46 @@ def _check_explicit_output_dependencies(tool, dependency_actions: Tuple[dependac
                         needs_redo = True
 
     return dependency_action_by_path, obstructive_paths, needs_redo
+
+
+def _check_envvar_dependencies(tool, dependency_actions: Tuple[dependaction.Action, ...], context: context_.Context):
+    envvar_value_by_name = {}
+    action_by_envvar_name = {}
+
+    for action in dependency_actions:
+        d = action.dependency
+        if d.Value is depend.EnvVarInput.Value:
+            a = action_by_envvar_name.get(d.name)
+            if a is not None:
+                msg = (
+                    f"input dependencies {action.name!r} and {a.name!r} both define the same "
+                    f"environment variable: {d.name!r}"
+                )
+                raise DependencyError(msg)
+            if action.dependency.explicit:
+                for ev in action.dependency.tuple_from_value(getattr(tool, action.name)):
+                    envvar_value_by_name[ev.name] = ev.raw  # ev is a depend.EnvVarInput.Value
+            else:
+                value = envvar_value_by_name.get(d.name)
+                if value is None:
+                    if d.required:
+                        try:
+                            value = context.env[d.name]
+                        except KeyError as e:
+                            raise RedoError(*e.args) from None
+                    else:
+                        value = context.env.get(d.name)
+                if value is not None:
+                    envvar_value_by_name[d.name] = value  # validate at redo
+            action_by_envvar_name[d.name] = action
+
+    envvar_digest = b''
+    for name in sorted(envvar_value_by_name):
+        envvar_digest += ut.to_permanent_local_bytes((name, envvar_value_by_name[name]))
+    if len(envvar_digest) >= 20:
+        envvar_digest = hashlib.sha1(envvar_digest).digest()
+
+    return envvar_value_by_name, envvar_digest
 
 
 class _RunResult:
@@ -612,8 +651,8 @@ class _ToolBase:
 
             with di.Cluster('explicit input dependencies', level=Level.REDO_NECESSITY_CHECK,
                             with_time=True, is_progress=True):
-                memo_by_encoded_path, envvar_value_by_name = \
-                    _check_and_memorize_explicit_input_dependencies(self, dependency_actions, context)
+                memo_by_encoded_path = \
+                    _check_and_memorize_explicit_fs_input_dependencies(self, dependency_actions, context)
 
             # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
             # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
@@ -622,7 +661,7 @@ class _ToolBase:
             with di.Cluster('explicit output dependencies', level=Level.REDO_NECESSITY_CHECK,
                             with_time=True, is_progress=True):
                 encoded_paths_of_explicit_input_dependencies = set(memo_by_encoded_path.keys())
-                dependency_action_by_path, obstructive_paths, needs_redo = _check_explicit_output_dependencies(
+                dependency_action_by_path, obstructive_paths, needs_redo = _check_explicit_fs_output_dependencies(
                     self, dependency_actions, encoded_paths_of_explicit_input_dependencies, False, context)
 
             with di.Cluster('input dependencies of the last redo', level=Level.REDO_NECESSITY_CHECK,
@@ -641,36 +680,7 @@ class _ToolBase:
 
             with di.Cluster('environment variables', level=Level.REDO_NECESSITY_CHECK,
                             with_time=True, is_progress=True):
-                action_by_envvar_name = {}
-                for action in dependency_actions:
-                    d = action.dependency
-                    if d.Value is depend.EnvVarInput.Value:
-                        a = action_by_envvar_name.get(d.name)
-                        if a is not None:
-                            msg = (
-                                f"input dependencies {action.name!r} and {a.name!r} both define the same "
-                                f"environment variable: {d.name!r}"
-                            )
-                            raise DependencyError(msg)
-                        if not action.dependency.explicit:
-                            value = envvar_value_by_name.get(d.name)
-                            if value is None:
-                                if d.required:
-                                    try:
-                                        value = context.env[d.name]
-                                    except KeyError as e:
-                                        raise RedoError(*e.args) from None
-                                else:
-                                    value = context.env.get(d.name)
-                            if value is not None:
-                                envvar_value_by_name[d.name] = value  # validate at redo
-                        action_by_envvar_name[d.name] = action
-
-                envvar_digest = b''
-                for name in sorted(envvar_value_by_name):
-                    envvar_digest += ut.to_permanent_local_bytes((name, envvar_value_by_name[name]))
-                if len(envvar_digest) >= 20:
-                    envvar_digest = hashlib.sha1(envvar_digest).digest()
+                envvar_value_by_name, envvar_digest = _check_envvar_dependencies(self, dependency_actions, context)
 
             if not needs_redo and force_redo:
                 di.inform("redo requested by run()", level=Level.REDO_REASON)
@@ -724,7 +734,6 @@ class _ToolBase:
                                                           ignore_non_existent=True)
 
         result = _RunResult(self, True)
-
         for action in dependency_actions:
             if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
                 try:
