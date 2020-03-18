@@ -637,7 +637,7 @@ class _ToolBase:
             tool_instance_dbid = db.get_and_register_tool_instance_dbid(
                 get_and_register_tool_info(self.__class__).permanent_local_tool_id,
                 self.fingerprint)
-            di.inform(f"tool instance dbid is {tool_instance_dbid!r}", level=Level.RUN_PREPARATION)
+            di.inform(f"tool instance is {tool_instance_dbid!r}", level=Level.RUN_PREPARATION)
 
             result_proxy_of_last_run = context._redo_sequencer.get_result_proxy(tool_instance_dbid)
             if result_proxy_of_last_run is not None:
@@ -646,7 +646,7 @@ class _ToolBase:
                     with result_proxy_of_last_run:
                         pass
 
-        with di.Cluster(f'check redo necessity for tool instance with dbid {tool_instance_dbid!r}',
+        with di.Cluster(f'check redo necessity for tool instance {tool_instance_dbid!r}',
                         level=Level.REDO_NECESSITY_CHECK, with_time=True, is_progress=True):
 
             with di.Cluster('explicit input dependencies', level=Level.REDO_NECESSITY_CHECK,
@@ -763,10 +763,10 @@ class _ToolBase:
                                    execution_parameter_digest, envvar_digest,
                                    db, tool_instance_dbid):
         # note: no db.commit() necessary as long as root context does commit on exception
-        di.inform(f"start redo for tool instance dbid {tool_instance_dbid!r}", level=Level.REDO_START, with_time=True)
+        di.inform(f"start redo for tool instance {tool_instance_dbid!r}", level=Level.REDO_START, with_time=True)
         redo_request = bool(await self.redo(result, context))
 
-        with di.Cluster(f"memorize successful redo for tool instance dbid {tool_instance_dbid!r}",
+        with di.Cluster(f"memorize successful redo for tool instance {tool_instance_dbid!r}",
                         level=Level.REDO_AFTERMATH, with_time=True):
             # collect non-explicit input and output dependencies of this redo
             encoded_paths_of_nonexplicit_input_dependencies = set()

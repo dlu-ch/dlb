@@ -30,7 +30,7 @@ while [ ! -d "./${DLBROOT:?}" ]; do
     fi
 done
 
-# script and script parameters
+# collect script and script parameters
 if [ $# -ge 1 ]; then
     script="$1"
     if [ -z "${script}" ] || [ "${script:0:1}" == / ]; then
@@ -47,13 +47,13 @@ elif [ -f "./${LAST:?}" ]; then
         arguments+=("$a")
     done < "./${LAST:?}"
     if [ ${#arguments[@]} -lt 1 ]; then
-        printf "invalid dlb history (remove it manually): %q\n" "./${LAST:?}" >&2
+        printf "invalid dlb history file (remove it manually): %q\n" "./${LAST:?}" >&2
         exit 2
     fi
     printf -v argument_line ' %q' "${arguments[@]}"  # starts with ' '
-    printf "use arguments of last successful run:%s\n" "${argument_line}" >&2
+    printf "use arguments of last successful run: %s\n" "${argument_line:1}" >&2
 else
-    printf "usage: %q [ <script-name> [ <script-parameters> ... ] ]\n" "${0##*/}" >&2
+    printf "usage: %q [ <script-name> [ <script-parameter> ... ] ]\n" "${0##*/}" >&2
     exit 2
 fi
 
