@@ -41,11 +41,13 @@ class ExecutableSearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
         open('f', 'xb').close()
 
         orig_path = os.environ['PATH']
-        os.environ['PATH'] = os.pathsep.join(
-            [os.getcwd(), os.path.join(os.getcwd(), 'd'), os.path.join(os.getcwd(), 'f')])
-        with dlb.ex.Context():
-            paths = dlb.ex.Context.executable_search_paths
-        os.environ['PATH'] = orig_path
+        try:
+            os.environ['PATH'] = os.pathsep.join(
+                [os.getcwd(), os.path.join(os.getcwd(), 'd'), os.path.join(os.getcwd(), 'f')])
+            with dlb.ex.Context():
+                paths = dlb.ex.Context.executable_search_paths
+        finally:
+            os.environ['PATH'] = orig_path
 
         cwd = dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
         self.assertEqual((cwd, cwd / 'd/'), paths)  # same order
@@ -54,10 +56,12 @@ class ExecutableSearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
         os.mkdir('d')
 
         orig_path = os.environ['PATH']
-        os.environ['PATH'] = 'd'
-        with dlb.ex.Context():
-            paths = dlb.ex.Context.executable_search_paths
-        os.environ['PATH'] = orig_path
+        try:
+            os.environ['PATH'] = 'd'
+            with dlb.ex.Context():
+                paths = dlb.ex.Context.executable_search_paths
+        finally:
+            os.environ['PATH'] = orig_path
 
         cwd = dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
         self.assertEqual((cwd / 'd/',), paths)
@@ -66,10 +70,12 @@ class ExecutableSearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
         os.mkdir('d')
 
         orig_path = os.environ['PATH']
-        os.environ['PATH'] = '~'
-        with dlb.ex.Context():
-            paths = dlb.ex.Context.executable_search_paths
-        os.environ['PATH'] = orig_path
+        try:
+            os.environ['PATH'] = '~'
+            with dlb.ex.Context():
+                paths = dlb.ex.Context.executable_search_paths
+        finally:
+            os.environ['PATH'] = orig_path
 
         self.assertEqual((), paths)
 
@@ -77,12 +83,13 @@ class ExecutableSearchPathTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
         os.mkdir('d')
 
         orig_path = os.environ['PATH']
-        os.environ['PATH'] = os.pathsep
-        with dlb.ex.Context():
-            paths = dlb.ex.Context.executable_search_paths
-        os.environ['PATH'] = orig_path
-
-        self.assertEqual((), paths)
+        try:
+            os.environ['PATH'] = os.pathsep
+            with dlb.ex.Context():
+                paths = dlb.ex.Context.executable_search_paths
+            self.assertEqual((), paths)
+        finally:
+            os.environ['PATH'] = orig_path
 
 
 class FindPathInNotRunningTest(unittest.TestCase):
