@@ -91,7 +91,6 @@ class HelperExecutionError(Exception):
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
-# TODO modify self.env according to explicit dlb.ex.Tool.Input.EnvVar dependencies
 class _RedoContext(context_.ReadOnlyContext):
 
     def __init__(self, context: context_.Context, dependency_action_by_path: Dict[fs.Path, dependaction.Action]):
@@ -104,7 +103,7 @@ class _RedoContext(context_.ReadOnlyContext):
 
     async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
                              cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
-                             stdin=None, stdout=None, stderr=None, limit: int = 2**16):
+                             forced_env={}, stdin=None, stdout=None, stderr=None, limit: int = 2**16):
         if not isinstance(helper_file, fs.Path):
             helper_file = fs.Path(helper_file)
 
@@ -132,9 +131,12 @@ class _RedoContext(context_.ReadOnlyContext):
             worktree.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
                                                         ref_dir_path=str(self.root_path.native))
 
+        env = {k: v for k, v in self.env.items()}
+        env.update(forced_env)
+
         if di.is_unsuppressed_level(logging.DEBUG):
             argument_list_str = ', '.join([repr(t) for t in commandline_tokens[1:]])
-            env_str = repr({k: v for k, v in self.env.items()})
+            env_str = repr(env)
             msg = (
                 f'execute helper {helper_file.as_string()!r}\n'
                 f'    path: \t{helper_file_path.as_string()!r}\n'
@@ -146,7 +148,7 @@ class _RedoContext(context_.ReadOnlyContext):
 
         proc = await asyncio.create_subprocess_exec(
             *commandline_tokens,  # must all by str
-            cwd=(self.root_path / cwd).native, env=self.env,
+            cwd=(self.root_path / cwd).native, env=env,
             stdin=stdin, stdout=stdout, stderr=stderr, limit=limit)
         stdout, stderr = await proc.communicate()
         returncode = proc.returncode
@@ -801,7 +803,6 @@ class _ToolBase:
                                     )
                                     raise RedoError(msg) from None
                                 encoded_paths_of_modified_output_dependencies.add(rundb.encode_path(p))
-                            # TODO test if unique
 
             encoded_paths_of_input_dependencies = \
                 encoded_paths_of_explicit_input_dependencies | encoded_paths_of_nonexplicit_input_dependencies

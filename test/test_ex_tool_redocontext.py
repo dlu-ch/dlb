@@ -38,6 +38,7 @@ class ConstructionTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.tool._RedoContext(c, ['a'])
 
 
+@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
 class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_accepts_path_in_arguments(self):
@@ -150,6 +151,22 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             e = rd.execute_helper('ls', [dlb.fs.Path('..')])
             with self.assertRaises(dlb.ex.WorkingTreePathError):
                 asyncio.get_event_loop().run_until_complete(e)
+
+
+@unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')
+class ExecuteHelperEnvVarTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_can_override_envvar(self):
+        with dlb.ex.Context() as c:
+            c.env.import_from_outer('X', restriction='.*', example='')
+            c.env.import_from_outer('Y', restriction='.*', example='')
+            c.env['X'] = 'x'
+            c.env['Y'] = 'z'
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            e = rd.execute_helper('sh', ['-c', 'echo $X-$Y'], forced_env={'Y': 'zzz...'},
+                                  stdout=asyncio.subprocess.PIPE)
+            _, stdout, _ = asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual('x-zzz...', stdout.decode().strip())
 
 
 class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):

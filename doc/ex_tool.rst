@@ -193,7 +193,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
    A redo context is constructed automatically by :meth:`Tool.run()`.
 
    .. method:: execute_helper(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]),
-                              stdin=None, stdout=None, stderr=None, limit=2**16)
+                              forced_env={}, stdin=None, stdout=None, stderr=None, limit=2**16)
 
       Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
       its working directory and wait for it to complete.
@@ -211,6 +211,9 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory. Is must denote
       a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of the :term:`management tree`.
 
+      :attr:`env <dlb.ex.context.Context.env>` of this object, modified by *forced_env*, forms the environment for the
+      subprocess.
+
       :param helper_file: :term:`dynamic helper` to be executed as a relative path
       :param arguments: commant-line arguments
       :type arguments: iterable of objects that can be converted to str
@@ -218,6 +221,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :type cwd: ``None`` or a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
       :param expected_returncodes: expected return codes of the :term:`dynamic helper` *helper_file*
       :type expected_returncodes: collection of integers
+      :param forced_env: dictionary of values to override in :attr:`env <dlb.ex.context.Context.env>`
+      :type forced_env: Dict[str, str]
       :param stdin:
          If not ``None``:
          either a file-like object representing a pipe to be connected to the subprocess’s standard input stream using
