@@ -15,7 +15,7 @@ VERSION_REGEX = re.compile(
     r'$')
 
 
-class GetVersion(dlb_contrib_git.GitDescribeWorkingDirectory):
+class VersionQuery(dlb_contrib_git.GitDescribeWorkingDirectory):
     SHORTENED_COMMIT_HASH_LENGTH = 8  # number of characters of the SHA1 commit hash in the *wd_version*
 
     # working directory version
@@ -40,7 +40,7 @@ class GetVersion(dlb_contrib_git.GitDescribeWorkingDirectory):
             wd_version += f'-dev{result.commit_number_from_tag_to_latest_commit}' \
                           f'+{result.latest_commit_hash[:shortened_commit_hash_length]}'
         if result.has_changes_in_tracked_files:
-            wd_version += '?'
+            wd_version += '@'
 
         result.wd_version = wd_version
         result.version_components = (

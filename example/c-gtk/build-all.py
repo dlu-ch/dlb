@@ -29,9 +29,9 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
     pass
 
 
-# compile and link application written in C
+# compile and link GTK+ application written in C
 def build_application(*, version_result, source_path: Path, output_path: Path, application_name: str):
-    with dlb.di.Cluster('Generate version file'), dlb.ex.Context():
+    with dlb.di.Cluster('generate version file'), dlb.ex.Context():
         class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
             WD_VERSION = version_result.wd_version
             PATH_COMPONENTS_TO_STRIP = len(output_path.components)
@@ -47,7 +47,7 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
         generated_source_path = output_path / 'gsrc/'
         GenerateVersionFile(file=generated_source_path / 'Generated/Version.h').run()
 
-    with dlb.di.Cluster('Find libraries'), dlb.ex.Context():
+    with dlb.di.Cluster('find libraries'), dlb.ex.Context():
         class PkgConfig(dlb_contrib_pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('gtk+-3.0',)
         pkgconfig_result = PkgConfig().run()
@@ -58,7 +58,7 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
     class CLinker(dlb_contrib_gcc.CLinkerGcc):
         LIBRARY_FILENAMES = pkgconfig_result.library_filenames
 
-    with dlb.di.Cluster('Compile'), dlb.ex.Context(max_parallel_redo_count=4):
+    with dlb.di.Cluster('compile'), dlb.ex.Context(max_parallel_redo_count=4):
         compile_results = [
             CCompiler(  # TODO run in src
                 source_file=p,
@@ -69,19 +69,19 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
         ]
 
-    with dlb.di.Cluster('Link'), dlb.ex.Context():
+    with dlb.di.Cluster('link'), dlb.ex.Context():
         application_file = CLinker(
             object_and_archive_files=[r.object_file for r in compile_results],
             linked_file=output_path / application_name).run().linked_file
         dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')
 
-    return any(compile_results)
+    return any(compile_results)  # True if any source was compiled (redo)
 
 
 # generate zipped HTML documentation from markup in source code comments and from "free" pages
 def build_documentation(*, version_result, source_path: Path, output_path: Path, application_name: str,
                         sources_changed: bool):
-    with dlb.di.Cluster('Document'):
+    with dlb.di.Cluster('compile documentation'):
 
         class Doxygen(dlb_contrib_doxygen.Doxygen):
             TEXTUAL_REPLACEMENTS = {
@@ -97,8 +97,8 @@ def build_documentation(*, version_result, source_path: Path, output_path: Path,
             source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=sources_changed).output_directory
 
         doc_archive_file = \
-            output_path / '{}_{}.html.bzip'.format(application_name, version_result.wd_version.replace('?', '@'))
-        dlb_contrib_zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run(force_redo=True)
+            output_path / '{}_{}.html.bzip'.format(application_name, version_result.wd_version)
+        dlb_contrib_zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run()
 
 
 with dlb.ex.Context():
@@ -106,7 +106,7 @@ with dlb.ex.Context():
     source_path = Path('src/')
     output_path = Path('build/out/')
 
-    version_result = build.version_from_repo.GetVersion().run()
+    version_result = build.version_from_repo.VersionQuery().run()
 
     sources_changed = build_application(
         version_result=version_result,
