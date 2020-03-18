@@ -328,6 +328,11 @@ class AppendSuffixTest(unittest.TestCase):
             dlb.fs.Path('a').with_appended_suffix('a/b')
         self.assertEqual("invalid suffix: 'a/b'", str(cm.exception))
 
+    def test_fails_for_nul(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('a').with_appended_suffix('a\0b')
+        self.assertEqual("invalid suffix: 'a\\x00b'", str(cm.exception))
+
 
 class RelativeToTest(unittest.TestCase):
 
@@ -585,6 +590,11 @@ class NativeTest(unittest.TestCase):
         p = dlb.fs.Path(pn)
         self.assertIs(p.native, pn)
 
+    def test_construction_fails_for_nul(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path.Native('x\0y')
+        self.assertEqual("invalid path: ('', 'x\\x00y') (must not contain NUL)", str(cm.exception))
+
     def test_str_prefixes_relative_with_dot(self):
         s = str(dlb.fs.Path('x').native)
         self.assertEqual(s.replace('\\', '/'), './x')
@@ -714,7 +724,7 @@ class PosixRestrictionsTest(unittest.TestCase):
         # IEEE Std 1003.1-2008, §3.170
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PosixPath('a\x00b')
-        self.assertEqual("invalid path for 'PosixPath': 'a\\x00b' (must not contain NUL)", str(cm.exception))
+        self.assertEqual("invalid path: 'a\\x00b' (must not contain NUL)", str(cm.exception))
 
 
 class PortablePosixRestrictionsTest(unittest.TestCase):
@@ -773,10 +783,7 @@ class WindowsRestrictionsTest(unittest.TestCase):
     def test_null_not_permitted(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.WindowsPath('a\x00b')
-        self.assertEqual(
-            "invalid path for 'WindowsPath': 'a\\x00b' "
-            "(must not contain characters with codepoint lower than U+0020: U+0000)",
-            str(cm.exception))
+        self.assertEqual("invalid path: 'a\\x00b' (must not contain NUL)", str(cm.exception))
 
     def test_control_character_not_permitted(self):
         with self.assertRaises(ValueError) as cm:

@@ -32,7 +32,8 @@ Path objects
    On all platform the following properties hold:
 
    - ``'/'`` is used as a path component separator.
-   - A path is absolute iff it starts with ``'/'``; it is relative iff it is not absolute.
+   - A path does not contain ``'\0'``.
+   - A path is absolute if and only if it starts with ``'/'``; it is relative if and only if it is not absolute.
    - A component ``'..'`` means the parent directory of the path before it.
    - A component ``'.'`` means the directory of the path before it;
      a non-empty path with all such components removed is equivalent to the original one.
@@ -116,12 +117,12 @@ Path objects
 
    .. method:: is_dir()
 
-      :return: ``True`` iff this represents the path of a directory.
+      :return: ``True`` if and only if this represents the path of a directory.
       :rtype: bool
 
    .. method:: is_absolute()
 
-      :return: ``True`` iff this represents an absolute path.
+      :return: ``True`` if and only if this represents an absolute path.
       :rtype: bool
 
       .. note::
@@ -130,7 +131,7 @@ Path objects
 
    .. method:: is_normalized()
 
-      :return: ``True`` iff this represents a normalized path
+      :return: ``True`` if and only if this represents a normalized path
                (i.e. it contains no ``'..'`` components)
       :rtype: bool
 
@@ -154,13 +155,13 @@ Path objects
       The paths are duplicate-free and in a defined and repeatable order, but not necessarily sorted.
       Their class is the class of this object if *cls* is ``None`` and *cls* otherwise.
 
-      The path of an existing filesystem object is eventually yielded iff
+      The path of an existing filesystem object is eventually yielded if and only if
 
         - its name matches the name filter *name_filter* and
         - it is contained in a matched directory.
 
-      A directory is a matched directory iff it is the directory *d* denoted by this path or a direct subdirectory
-      of a matched directory whose name matches the name filter *recurse_name_filter*.
+      A directory is a matched directory if and only if it is the directory *d* denoted by this path or a direct
+      subdirectory of a matched directory whose name matches the name filter *recurse_name_filter*.
       If *follow_symlinks* is ``True``, a symbolic link to an existing directory is considered a direct subdirectory
       of the director containing the symbolic link.
       If *follow_symlinks* is ``False`` or the target of the symbolic link does not exist,
@@ -170,10 +171,11 @@ Path objects
       A name filter can be
 
         - ``None`` --- no name matches this filter
-        - a callable *c* accepting exactly one argument --- a name *n* matches this filter iff ``bool(c(n))``
-          is ``True``
-        - a compiled regular expression *r* --- a name *n* matches this filter iff ``r.fullmatch(n))`` is not ``None``
-        - a non-empty regular expression string ``s``--- a name *n* matches this filter iff
+        - a callable *c* accepting exactly one argument --- a name *n* matches this filter if and only if
+          ``bool(c(n))`` is ``True``
+        - a compiled regular expression *r* --- a name *n* matches this filter if and only if ``r.fullmatch(n))``
+          is not ``None``
+        - a non-empty regular expression string ``s``--- a name *n* matches this filter if and only if
           ``re.compile(s).fullmatch(n))`` is not ``None``
         - an empty string --- every name matches this filter
 
@@ -214,8 +216,8 @@ Path objects
 
       A subpath (a slice of the path).
 
-      The resulting path is absolute (with the same anchor) iff the slice starts at 0.
-      The resulting path is a non-directory path iff it contains the last component and if
+      The resulting path is absolute (with the same anchor) if and only if the slice starts at 0.
+      The resulting path is a non-directory path if and only if it contains the last component and if
       this path is a non-directory path.
 
       The slice step must be positive.

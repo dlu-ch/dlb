@@ -25,6 +25,8 @@ assert sys.version_info >= (3, 7)
 class _NativeComponents:
 
     def __init__(self, components: Tuple[str, ...], sep: str):
+        # note: the caller has to guarantee that *components* does not contain NUL
+
         # - *components* has at least one element
         # - the first element is '' if and only if it represents a relative path
         # - if the first element is not '' it represents an absolute path (e.g. 'C:\\')
@@ -61,13 +63,11 @@ class _NativeComponents:
         return s + self._sep.join(c[1:])
 
 
-# TODO make sure *components* do not contain NUL
 def _native_components_for_posix(components: Tuple[str, ...]) -> _NativeComponents:
     # first element of components is '', '/', or '//'
     return _NativeComponents(components, '/')
 
 
-# TODO make sure *components* do not contain NUL
 def _native_components_for_windows(components: Tuple[str, ...]) -> _NativeComponents:
     # first element of components is '', '/', or '//'
     if any('\\' in c for c in components):
@@ -218,7 +218,7 @@ class Path(metaclass=_PathMeta):
         elif isinstance(path, str):  # must be very fast
 
             if not path:
-                raise ValueError("invalid path: ''")
+                raise ValueError(f"invalid path: {path!r}")
 
             anchor = ''
             if path[0] == '/':
@@ -286,6 +286,8 @@ class Path(metaclass=_PathMeta):
             self._is_dir = is_dir
 
         if check:
+            if any('\0' in c for c in self._components):
+                raise ValueError(f"invalid path: {path!r} (must not contain NUL)")
             if is_dir is None:
                 self._sanitize_is_dir()
             if self.__class__.__bases__ != (object,):  # dlb.fs.Path() must be fast
@@ -313,6 +315,7 @@ class Path(metaclass=_PathMeta):
             raise ValueError(msg) from None
 
     def _with_components(self, components: Tuple[str, ...], *, is_dir: Optional[bool] = None) -> 'Path':
+        # note: the caller has to guarantee that *components* does not contain NUL
         p = self.__class__(self)  # fastest way of construction
         p._components = components
         if is_dir is not None:
@@ -435,7 +438,7 @@ class Path(metaclass=_PathMeta):
             raise TypeError("'suffix' must be a str")
         if not self._components[-1] or self._components[-1] == '..':
             raise ValueError("cannot append suffix to '.' or '..' component")
-        if not suffix or '/' in suffix:
+        if not suffix or '/' in suffix or '\0' in suffix:
             raise ValueError(f"invalid suffix: {suffix!r}")
         return self._with_components(self._components[:-1] + (self._components[-1] + suffix,))
 
@@ -556,11 +559,8 @@ class NoSpacePath(Path):
             raise ValueError('must not contain space')
 
 
-# TODO disallow NUL in Path?
 class PosixPath(Path):
-    def check_restriction_to_base(self):
-        if any('\0' in c for c in self.parts):
-            raise ValueError('must not contain NUL')
+    pass
 
 
 class PortablePosixPath(PosixPath):
