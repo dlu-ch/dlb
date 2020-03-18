@@ -155,13 +155,13 @@ class ClikeCompiler(dlb.ex.Tool):
     source_file = dlb.ex.Tool.Input.RegularFile()
     object_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
 
-    # tuple of paths of directories that are to be searched for include files in addition to the system include files
+    # Tuple of paths of directories that are to be searched for include files in addition to the system include files.
     include_search_directories = dlb.ex.Tool.Input.Directory[:](required=False)
 
-    # paths of all files in the managed tree directly or indirectly included by *source_file*
+    # Paths of all files in the managed tree directly or indirectly included by *source_file*.
     included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
-    # path of compiler executable
+    # Path of compiler executable.
     compiler_executable = dlb.ex.Tool.Input.RegularFile(explicit=False)
 
 

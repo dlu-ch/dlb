@@ -115,36 +115,36 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
 
     EXECUTABLE = 'git'  # dynamic helper, looked-up in the context
 
-    # consider only annotated tags with a name that matches this glob(7) pattern
+    # Consider only annotated tags with a name that matches this glob(7) pattern.
     TAG_PATTERN = 'v[0-9]*'
 
-    # number of matching annotated tag reachable from commit *latest_commit_hash* to consider
+    # Number of matching annotated tag reachable from commit *latest_commit_hash* to consider.
     MATCHING_TAG_CANDIDATE_COUNT = 10  # https://github.com/git/git/blob/v2.20.1/builtin/describe.c
 
-    # most recent annotated tag reachable from commit *latest_commit_hash* and matching *TAG_PATTERN*
+    # Most recent annotated tag reachable from commit *latest_commit_hash* and matching *TAG_PATTERN*.
     tag = dlb.ex.Tool.Output.Object(explicit=False)
 
-    # SHA-1 hash of the latest commit as a hex string of 40 characters ('0' - '0', 'a' - 'f')
+    # SHA-1 hash of the latest commit as a hex string of 40 characters ('0' - '9', 'a' - 'f').
     latest_commit_hash = dlb.ex.Tool.Output.Object(explicit=False)
 
-    # number of commits since the tag denoted by *tag* as a non-negative integer
+    # Number of commits since the tag denoted by *tag* as a non-negative integer.
     commit_number_from_tag_to_latest_commit = dlb.ex.Tool.Output.Object(explicit=False)
 
-    # True if there are files in the Git index with uncommitted changes
+    # True if there are files in the Git index with uncommitted changes.
     has_changes_in_tracked_files = dlb.ex.Tool.Output.Object(explicit=False)
 
-    # refname of the current branch (refs/heads/...) or None if in detached state
+    # Refname of the current branch (refs/heads/...) or None if in detached state.
     branch_refname = dlb.ex.Tool.Output.Object(explicit=False, required=False)
 
-    # refname of the upstream branch (refs/remotes/...), if any
+    # Refname of the upstream branch (refs/remotes/...), if any.
     upstream_branch_refname = dlb.ex.Tool.Output.Object(explicit=False, required=False)
 
-    # dictionary of files that are in the Git index and have uncommited changes,
-    # the keys are relative paths in the Git index as dlb.fs.Path objects
+    # Dictionary of files that are in the Git index and have uncommited changes.
+    # The keys are relative paths in the Git index as dlb.fs.Path objects.
     modification_by_file = dlb.ex.Tool.Output.Object(explicit=False)
 
-    # set of relative paths of files not in the Git index and not to be ignored according to '.gitignore' in the
-    # Git working directory as dlb.fs.Path objects
+    # Set of relative paths of files not in the Git index and not to be ignored according to '.gitignore' in the
+    # Git working directory as dlb.fs.Path objects.
     untracked_files = dlb.ex.Tool.Output.Object(explicit=False)
 
     async def redo(self, result, context):

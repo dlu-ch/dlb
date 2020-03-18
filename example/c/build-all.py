@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '..', '..', 'src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb_contrib_pkgconfig
 import dlb_contrib_clike
 import dlb_contrib_gcc
 import dlb_contrib_doxygen
@@ -30,12 +31,6 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
 
 # compile and link application written in C
 def build_application(*, version_result, source_path: Path, output_path: Path, application_name: str):
-    class CCompiler(dlb_contrib_gcc.CCompilerGcc):
-        DIALECT = 'c11'
-
-    class CLinker(dlb_contrib_gcc.CLinkerGcc):
-        pass
-
     with dlb.di.Cluster('Generate version file'), dlb.ex.Context():
         class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
             WD_VERSION = version_result.wd_version
@@ -52,12 +47,24 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
         generated_source_path = output_path / 'gsrc/'
         GenerateVersionFile(file=generated_source_path / 'Generated/Version.h').run()
 
+    with dlb.di.Cluster('Find libraries'), dlb.ex.Context():
+        class PkgConfig(dlb_contrib_pkgconfig.PkgConfig):
+            LIBRARY_NAMES = ('gtk+-3.0',)
+        pkgconfig_result = PkgConfig().run()
+
+    class CCompiler(dlb_contrib_gcc.CCompilerGcc):
+        DIALECT = 'c11'
+
+    class CLinker(dlb_contrib_gcc.CLinkerGcc):
+        LIBRARY_FILENAMES = pkgconfig_result.library_filenames
+
     with dlb.di.Cluster('Compile'), dlb.ex.Context(max_parallel_redo_count=4):
         compile_results = [
-            CCompiler(
+            CCompiler(  # TODO run in src
                 source_file=p,
                 object_file=output_path / p.with_appended_suffix('.o'),
-                include_search_directories=[source_path, generated_source_path]  # TODO run in src
+                include_search_directories=(source_path, generated_source_path) +
+                                           pkgconfig_result.include_search_directories
             ).run()
             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
         ]

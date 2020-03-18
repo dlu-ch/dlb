@@ -98,7 +98,7 @@ class Doxygen(dlb.ex.Tool):
     # The dictionary items for placeholder name equal to a name of dependency role are ignored.
     TEXTUAL_REPLACEMENTS = {}
 
-    # when any if these change: redo
+    # When any if these change: redo.
     source_files_to_watch = dlb.ex.Tool.Input.RegularFile[:](required=False, cls=Path)
 
     source_directories = dlb.ex.Tool.Input.Directory[1:](cls=Path)

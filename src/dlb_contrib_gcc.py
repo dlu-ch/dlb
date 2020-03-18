@@ -116,25 +116,24 @@ class CplusplusCompilerGcc(_CompilerGcc):
 class _LinkerGcc(dlb.ex.Tool):
     # Link with with gcc, gcc subprograms and the GNU linker
 
-    # tuple of library name to be search in the library search directories and linked against
-    # order matters; if library *b* depends on *a*, *b* should precede *a* in the sequence
+    # Tuple of library name to be searched in the library search directories and linked against.
+    # Order matters; if library *b* depends on *a*, *b* should precede *a* in the sequence
     LIBRARY_FILENAMES = ()  # e.g. 'libxy.a'
 
-    # object files and static libraries to link
-    # order matters; if file *b* depends on *a*, *b* should precede *a* in the sequence
+    # Object files and static libraries to link.
+    # Order matters; if file *b* depends on *a*, *b* should precede *a* in the sequence.
     object_and_archive_files = dlb.ex.Tool.Input.RegularFile[1:](cls=ObjectOrArchivePath)
 
     linked_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
 
-    # tuple of paths of directories that are to be searched for libraries in addition to the standard system directories
+    # Tuple of paths of directories that are to be searched for libraries in addition to the standard system directories
     library_search_directories = dlb.ex.Tool.Input.Directory[:](required=False, cls=Path)
 
-    # subprograms like 'ld', 'collect2' are searched in this directory
-    # if not set, the directory of EXECUTABLE is used
-    # see GCC_EXEC_PREFIX in gcc documentation for details
+    # Subprograms like 'ld', 'collect2' are searched in this directory.
+    # If not set, the directory of EXECUTABLE is used. See GCC_EXEC_PREFIX in gcc documentation for details.
     subprogram_directory = dlb.ex.Tool.Input.Directory(required=False, cls=Path)
 
-    # path of compiler executable
+    # Path of compiler executable
     linker_executable = dlb.ex.Tool.Input.RegularFile(explicit=False)
 
     def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
