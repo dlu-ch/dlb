@@ -175,6 +175,22 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
         self.assertEqual(msg, str(cm.exception))
 
 
+class RunWithDifferentInputDependenciesForSameEnvVarTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    # noinspection PyAbstractClass
+    class BTool(dlb.ex.Tool):
+        a = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='')
+        b = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='', explicit=False)
+
+    def test_fails(self):
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
+            with dlb.ex.Context():
+                t = RunWithDifferentInputDependenciesForSameEnvVarTest.BTool(a='a')
+                t.run()
+        msg = "input dependencies 'b' and 'a' both define the same environment variable: 'XY'"
+        self.assertEqual(msg, str(cm.exception))
+
+
 class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_explicit_input_dependency_of_wrong_type(self):
@@ -537,36 +553,6 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
                 "  | reason: value is invalid with respect to restriction: '_'"
             )
             self.assertEqual(msg, str(cm.exception))
-
-    def test_redo_for_explicit_and_nonexplicit(self):
-        class BTool(dlb.ex.Tool):
-            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH', explicit=False)
-            language2 = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH')
-
-            async def redo(self, result, context):
-                pass
-
-        t = BTool(language2='it_IT')
-        with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
-            dlb.ex.Context.active.env['LANG'] = 'fr_FR'
-            r = t.run()
-            self.assertIsNotNone(r)
-            self.assertEqual('it_IT', r.language.raw)
-            self.assertEqual('it_IT', r.language2.raw)
-            self.assertFalse(t.run())
-
-        t = BTool(language2='it_IT')
-        with dlb.ex.Context():
-            self.assertFalse(t.run())
-
-        t = BTool(language2='fr_FR')
-        with dlb.ex.Context():
-            r = t.run()
-            self.assertIsNotNone(r)
-            self.assertEqual('fr_FR', r.language.raw)
-            self.assertEqual('fr_FR', r.language2.raw)
-            self.assertFalse(t.run())
 
 
 class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWorkingDirectoryTestCase):

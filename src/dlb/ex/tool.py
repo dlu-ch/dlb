@@ -319,9 +319,7 @@ def _check_and_memorize_explicit_input_dependencies(tool, dependency_actions: Tu
                         raise DependencyError(msg) from None
             elif action.dependency.Value is depend.EnvVarInput.Value:
                 for ev in action.dependency.tuple_from_value(getattr(tool, action.name)):
-                    # ev is a depend.EnvVarInput.Value
-                    # TODO check if conflicting (in constructor?)
-                    envvar_value_by_name[ev.name] = ev.raw
+                    envvar_value_by_name[ev.name] = ev.raw  # ev is a depend.EnvVarInput.Value
 
     # treat all files used for definition of self.__class__ like explicit input dependencies if they
     # have a managed tree path.
@@ -641,20 +639,30 @@ class _ToolBase:
 
             with di.Cluster('environment variables', level=Level.REDO_NECESSITY_CHECK,
                             with_time=True, is_progress=True):
+                action_by_envvar_name = {}
                 for action in dependency_actions:
-                    if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
-                        d = action.dependency
-                        value = envvar_value_by_name.get(d.name)
-                        if value is None:
-                            if d.required:
-                                try:
-                                    value = context.env[d.name]
-                                except KeyError as e:
-                                    raise RedoError(*e.args) from None
-                            else:
-                                value = context.env.get(d.name)
-                        if value is not None:
-                            envvar_value_by_name[d.name] = value  # validate at redo
+                    d = action.dependency
+                    if d.Value is depend.EnvVarInput.Value:
+                        a = action_by_envvar_name.get(d.name)
+                        if a is not None:
+                            msg = (
+                                f"input dependencies {action.name!r} and {a.name!r} both define the same "
+                                f"environment variable: {d.name!r}"
+                            )
+                            raise DependencyError(msg)
+                        if not action.dependency.explicit:
+                            value = envvar_value_by_name.get(d.name)
+                            if value is None:
+                                if d.required:
+                                    try:
+                                        value = context.env[d.name]
+                                    except KeyError as e:
+                                        raise RedoError(*e.args) from None
+                                else:
+                                    value = context.env.get(d.name)
+                            if value is not None:
+                                envvar_value_by_name[d.name] = value  # validate at redo
+                        action_by_envvar_name[d.name] = action
 
                 envvar_digest = b''
                 for name in sorted(envvar_value_by_name):
