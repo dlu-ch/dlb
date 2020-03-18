@@ -157,7 +157,7 @@ class MultiplePendingRedosTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
             self.assertIsNotNone(ra)
             self.assertFalse(dlb.ex.is_complete(ra))
 
-            dlb.ex.Context.active.env.import_from_outer('LANG', r'.*', '')
+            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
 
             self.assertTrue(dlb.ex.is_complete(ra))
             rb = ATool(source_file='b.cpp', object_file='b.o').run()

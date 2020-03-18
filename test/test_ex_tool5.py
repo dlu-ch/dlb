@@ -351,7 +351,7 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertIs(NotImplemented, t.cflags)
 
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('LANG', '[a-z]{2}_[A-Z]{2}', 'sv_SE')
+            c.env.import_from_outer('LANG', restriction='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             c.env['LANG'] = 'de_CH'
             result = t.run()
 
@@ -359,7 +359,7 @@ class EnvVarRedoResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertIsNone(result.cflags)
 
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('LANG', '[a-z]{2}_[A-Z]{2}', 'sv_SE')
+            c.env.import_from_outer('LANG', restriction='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             with self.assertRaises(dlb.ex.RedoError) as cm:
                 t.run()
         msg = (

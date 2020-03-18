@@ -134,7 +134,7 @@ class _BaseEnvVarDict:
 
 class _EnvVarDict(_BaseEnvVarDict):
 
-    def import_from_outer(self, name: str, restriction: Union[str, Pattern], example: str):  # TODO keyword only?
+    def import_from_outer(self, name: str, *, restriction: Union[str, Pattern], example: str):
         self._check_non_empty_str(name=name)
 
         if isinstance(restriction, str):
