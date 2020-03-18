@@ -140,6 +140,21 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             self.assertRegex(output.getvalue(), regex)
             self.assertFalse(t.run())
 
+
+class RunNonExplicitInputDependencyChmodTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+
+    def test_inaccessible_dependency_causes_redo(self):
+        os.mkdir('.dlbroot')
+        open('a.cpp', 'xb').close()
+        open('a.h', 'xb').close()
+
+        t = ATool(source_file='a.cpp', object_file='a.o')
+
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertTrue(t.run())  # because of new dependency
+            self.assertFalse(t.run())
+
         os.mkdir('t')
         os.chmod('t', 0o000)
 

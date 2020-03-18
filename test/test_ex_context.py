@@ -589,10 +589,11 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
         os.makedirs(os.path.join('a', 'b', 'c'))
 
         with dlb.ex.Context():
-            p = dlb.ex.Context.working_tree_path_of(os.getcwd(), is_dir=True)
+            p = dlb.ex.Context.working_tree_path_of(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
             self.assertEqual(dlb.fs.Path('.'), p)
 
-            p = dlb.ex.Context.working_tree_path_of(os.path.join(os.getcwd(), 'a',  'b',  'c',  '..'))
+            p = dlb.ex.Context.working_tree_path_of(
+                dlb.fs.Path.Native(os.path.join(os.getcwd(), 'a',  'b',  'c',  '..')))
             self.assertEqual(dlb.fs.Path('a/b/'), p)
 
     def test_fails_for_absolute_path_outside_working_tree(self):
@@ -605,7 +606,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
             os.mkdir('.dlbroot')
             with dlb.ex.Context():
                 with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                    dlb.ex.Context.working_tree_path_of(os.path.join(old_cw, 'a', 'b2', 'c2'))
+                    dlb.ex.Context.working_tree_path_of(dlb.fs.Path.Native(os.path.join(old_cw, 'a', 'b2', 'c2')))
                 msg = "does not start with the working tree's root path"
                 self.assertEqual(msg, str(cm.exception))
 

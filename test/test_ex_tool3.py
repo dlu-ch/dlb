@@ -306,14 +306,6 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
 
         with dlb.ex.Context():
             self.assertFalse(t.run())
-            os.chmod(os.path.join('src', 'a.cpp'), 0o000)
-            os.chmod(os.path.join('src', 'a.cpp'), 0o600)
-            output = io.StringIO()
-            dlb.di.set_output_file(output)
-            self.assertTrue(t.run())
-            self.assertRegex(output.getvalue(), r'\b()permissions or owner have changed\b')
-
-        with dlb.ex.Context():
             # replace memo by invalid memo
             rundb = dlb.ex.context._get_rundb()
             rundb.replace_fsobject_inputs(1, {
@@ -337,6 +329,28 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
             dlb.di.set_output_file(output)
             self.assertTrue(t.run())
             self.assertRegex(output.getvalue(), r'\b()filesystem object did not exist\b')
+
+
+class RunDoesRedoIfRegularFileInputChmodModifiedTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+
+    def test_redo(self):
+        os.mkdir('.dlbroot')
+        os.mkdir('src')
+        open(os.path.join('src', 'a.cpp'), 'xb').close()
+
+        t = ATool(source_file='src/a.cpp', object_file='a.o')
+
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
+
+        with dlb.ex.Context():
+            os.chmod(os.path.join('src', 'a.cpp'), 0o000)
+            os.chmod(os.path.join('src', 'a.cpp'), 0o600)
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            self.assertRegex(output.getvalue(), r'\b()permissions or owner have changed\b')
 
 
 class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
