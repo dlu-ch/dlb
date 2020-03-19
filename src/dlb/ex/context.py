@@ -450,6 +450,16 @@ class _RootSpecifics:
         try:
             self._temp_path_provider, self._mtime_probe, self._rundb, self._is_working_tree_case_sensitive = \
                 worktree.prepare_locked_working_tree(self._root_path, rundb.SCHEMA_VERSION)
+
+            if not isinstance(cf.max_dependency_age, datetime.timedelta):
+                raise TypeError("'dlb.cf.max_dependency_age' must be a datetime.timedelta object")
+            if not cf.max_dependency_age > datetime.timedelta(0):
+                raise ValueError("'dlb.cf.max_dependency_age' must be positive")
+            try:
+                oldest = self._rundb.start_datetime - cf.max_dependency_age
+            except OverflowError:
+                raise ValueError(f"'dlb.cf.max_dependency_age' too large: {cf.max_dependency_age!r}") from None
+            self._rundb.forget_runs_before(oldest)
         except Exception:
             self._close_and_unlock_if_open()
             raise

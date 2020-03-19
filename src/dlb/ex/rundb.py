@@ -367,6 +367,10 @@ class Database:
     def run_dbid(self) -> int:
         return self._run_dbid
 
+    @property
+    def start_datetime(self) -> datetime.datetime:
+        return self._start_datetime
+
     def get_and_register_tool_instance_dbid(self, permanent_local_tool_id: bytes,
                                             permanent_local_tool_instance_fingerprint: bytes) -> int:
         # Return a tool instance dbid *tool_instance_dbid* for a tool instance identified by

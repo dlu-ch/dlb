@@ -13,6 +13,8 @@ import dlb.di
 import dlb.cf
 import dlb.ex
 import dlb.ex.aseq
+import time
+import datetime
 import logging
 import marshal
 import tempfile
@@ -552,3 +554,59 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             pass
 
         self.assertEqual("", output.getvalue())
+
+
+class ForgetOldInformationTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails_for_nonpositive_age(self):
+        orig = dlb.cf.max_dependency_age
+        try:
+            dlb.cf.max_dependency_age = datetime.timedelta(0)
+            with self.assertRaises(ValueError) as cm:
+                with dlb.ex.Context():
+                    pass
+            self.assertEqual("'dlb.cf.max_dependency_age' must be positive", str(cm.exception))
+        finally:
+            dlb.cf.max_dependency_age = orig
+
+    def test_fails_for_integer(self):
+        orig = dlb.cf.max_dependency_age
+        try:
+            dlb.cf.max_dependency_age = 12
+            with self.assertRaises(TypeError) as cm:
+                with dlb.ex.Context():
+                    pass
+            self.assertEqual("'dlb.cf.max_dependency_age' must be a datetime.timedelta object", str(cm.exception))
+        finally:
+            dlb.cf.max_dependency_age = orig
+
+    def test_fails_for_too_large(self):
+        orig = dlb.cf.max_dependency_age
+        try:
+            dlb.cf.max_dependency_age = datetime.timedelta.max
+            regex = r"^'dlb.cf.max_dependency_age' too large: datetime\.timedelta\(.+\)$"
+            with self.assertRaisesRegex(ValueError, regex):
+                with dlb.ex.Context():
+                    pass
+        finally:
+            dlb.cf.max_dependency_age = orig
+
+    def test_removes_older(self):
+        orig = dlb.cf.max_dependency_age
+        try:
+            dlb.cf.max_dependency_age = datetime.timedelta(days=1001)
+
+            with dlb.ex.Context():
+                self.assertEqual(0, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+            with dlb.ex.Context():
+                self.assertEqual(1, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+            with dlb.ex.Context():
+                self.assertEqual(2, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+
+            time.sleep(0.5)
+
+            dlb.cf.max_dependency_age = datetime.timedelta(seconds=1e-6)
+            with dlb.ex.Context():
+                self.assertEqual(0, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+        finally:
+            dlb.cf.max_dependency_age = orig
