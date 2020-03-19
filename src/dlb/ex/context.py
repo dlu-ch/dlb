@@ -449,7 +449,7 @@ class _RootSpecifics:
         self._rundb = None
         try:
             self._temp_path_provider, self._mtime_probe, self._rundb, self._is_working_tree_case_sensitive = \
-                worktree.prepare_locked_working_tree(self._root_path)
+                worktree.prepare_locked_working_tree(self._root_path, rundb.SCHEMA_VERSION)
         except Exception:
             self._close_and_unlock_if_open()
             raise

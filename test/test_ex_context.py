@@ -10,10 +10,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import dlb.ex
+import dlb.ex.worktree
+import dlb.ex.rundb
 import stat
 import time
 import unittest
 import tools_for_test
+
+
+RUNDB_FILENAME = dlb.ex.worktree.rundb_filename_for_schema_version(dlb.ex.rundb.SCHEMA_VERSION)
 
 
 class ImportTest(unittest.TestCase):
@@ -228,10 +233,10 @@ class ManagementTreeSetupTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertFalse(os.path.exists(os.path.join('.dlbroot', 'O')))
 
     def test_rundb_dir_is_removed(self):
-        os.makedirs(os.path.join('.dlbroot', 'runs.sqlite'))
+        os.makedirs(os.path.join('.dlbroot', RUNDB_FILENAME))
         with dlb.ex.Context():
             pass
-        self.assertTrue(os.path.isfile(os.path.join('.dlbroot', 'runs.sqlite')))
+        self.assertTrue(os.path.isfile(os.path.join('.dlbroot', RUNDB_FILENAME)))
 
 
 class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
@@ -408,7 +413,7 @@ class RunDatabaseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_nonexistent_is_created(self):
         with dlb.ex.Context():
-            self.assertTrue(os.path.isfile(os.path.join('.dlbroot', 'runs.sqlite')))
+            self.assertTrue(os.path.isfile(os.path.join('.dlbroot', RUNDB_FILENAME)))
 
     def test_access_is_possible_in_nonobvious_way_when_running(self):
         with dlb.ex.Context():
@@ -420,7 +425,7 @@ class RunDatabaseTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.Context.run_db_()
 
     def test_meaningful_exception_on_corrupt(self):
-        with open(os.path.join('.dlbroot', 'runs.sqlite'), 'xb') as f:
+        with open(os.path.join('.dlbroot', RUNDB_FILENAME), 'xb') as f:
             f.write(b'123')
 
         with self.assertRaises(dlb.ex.ManagementTreeError) as cm:

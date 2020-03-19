@@ -31,7 +31,7 @@ assert MTIME_PROBE_FILE_NAME.upper() != MTIME_PROBE_FILE_NAME
 
 LOCK_DIRNAME = 'lock'
 TEMPORARY_DIR_NAME = 't'
-RUNDB_FILE_NAME = 'runs.sqlite'
+RUNDB_FILE_NAME_TEMPLATE = 'runs-{}.sqlite'
 
 
 class NoWorkingTreeError(Exception):
@@ -379,17 +379,20 @@ def unlock_working_tree(root_path: fs.Path):
     os.rmdir(lock_dir_path)
 
 
-def prepare_locked_working_tree(root_path: fs.Path):
-    management_tree_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME)
+def rundb_filename_for_schema_version(schema_version: Tuple[int]) -> str:
+    return RUNDB_FILE_NAME_TEMPLATE.format('.'.join([str(c) for c in schema_version]))
 
+
+def prepare_locked_working_tree(root_path: fs.Path, rundb_schema_version: Tuple[int]):
+    rundb_filename = rundb_filename_for_schema_version(rundb_schema_version)
+    management_tree_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME)
     temp_path_provider = UniquePathProvider(root_path / f'{MANAGEMENTTREE_DIR_NAME}/{TEMPORARY_DIR_NAME}/')
 
     try:
         temporary_path = str(temp_path_provider.root_path.native)
         remove_filesystem_object(temporary_path, ignore_non_existent=True)
         os.mkdir(temporary_path)
-
-        rundb_path = os.path.join(management_tree_path, RUNDB_FILE_NAME)
+        rundb_path = os.path.join(management_tree_path, rundb_filename)
         try:
             mode = os.lstat(rundb_path).st_mode
             if not stat.S_ISREG(mode) or stat.S_ISLNK(mode):

@@ -19,6 +19,17 @@ import unittest
 import tools_for_test
 
 
+class SchemaVersionTest(unittest.TestCase):
+
+    def test_is_nonempty_tuple_of_nonnegative_ints(self):
+        v = dlb.ex.rundb.SCHEMA_VERSION
+        self.assertIsInstance(v, tuple)
+        self.assertGreater(len(v), 1)
+        for c in v:
+            self.assertIsInstance(c, int)
+            self.assertGreaterEqual(c, 0)
+
+
 class CreationTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_file_exists_after_construction(self):

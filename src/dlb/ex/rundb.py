@@ -65,6 +65,10 @@ class FilesystemObjectMemo:
     symlink_target: Optional[str] = None
 
 
+# unique identification of run-database schema among all versions (with a Git tag) of dlb declared as stable
+SCHEMA_VERSION = (0, 1)
+
+
 # note: without trailing 'Z'
 # reason: comparable with different number of decimal places
 _DATETIME_FORMAT = '%Y%m%dT%H%M%S.%f'
