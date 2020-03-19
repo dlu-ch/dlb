@@ -772,3 +772,28 @@ class ReadOnlyAccessTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 # noinspection PyTypeChecker
                 dlb.ex.ReadOnlyContext(rc)
             self.assertEqual("'context' must be a Context object", str(cm.exception))
+
+
+class RunSummaryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_no_runs_for_empty_successful(self):
+        with dlb.ex.Context():
+            pass
+
+        with dlb.ex.Context():
+            summaries = dlb.ex.Context.summary_of_latest_runs(max_count=10)
+
+        self.assertEqual(1, len(summaries))
+        summary = summaries[0]
+        self.assertEqual(0, summary[2])
+        self.assertEqual(0, summary[3])
+
+    def test_no_summary_for_failed(self):
+        with self.assertRaises(AssertionError):
+            with dlb.ex.Context():
+                assert False
+
+        with dlb.ex.Context():
+            summaries = dlb.ex.Context.summary_of_latest_runs(max_count=10)
+
+        self.assertEqual(0, len(summaries))

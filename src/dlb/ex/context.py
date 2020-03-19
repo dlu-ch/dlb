@@ -50,6 +50,16 @@ def _get_rundb() -> rundb.Database:
     return db
 
 
+def _register_successful_run(with_redo: bool):
+    rs = _get_root_specifics()
+    if with_redo:
+        # noinspection PyProtectedMember
+        rs._successful_redo_run_count += 1
+    else:
+        # noinspection PyProtectedMember
+        rs._successful_nonredo_run_count += 1
+
+
 class ContextNestingError(Exception):
     pass
 
@@ -372,6 +382,9 @@ class _RootSpecifics:
         self._implicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = {}
         self._path_cls = path_cls
 
+        self._successful_redo_run_count = 0
+        self._successful_nonredo_run_count = 0
+
         # 1. check if the process' working directory is a working tree`s root
 
         self._root_path = worktree.get_checked_root_path_from_cwd(os.getcwd(), path_cls)
@@ -421,9 +434,11 @@ class _RootSpecifics:
         self._rundb.commit()
         worktree.remove_filesystem_object(str(self._temp_path_provider.root_path.native), ignore_non_existent=True)
 
-    def _cleanup_and_delay_to_working_tree_time_change(self):
+    def _cleanup_and_delay_to_working_tree_time_change(self, was_successful: bool):
         t0 = time.monotonic_ns()  # since Python 3.7
         wt0 = self.working_tree_time_ns
+        if was_successful:
+            self._rundb.update_run_summary(self._successful_nonredo_run_count, self._successful_redo_run_count)
         self._cleanup()  # seize the the day
         while True:
             wt = self.working_tree_time_ns
@@ -464,11 +479,12 @@ class _RootSpecifics:
         if most_serious_exception:
             raise most_serious_exception
 
-    def _cleanup_and_close(self):  # "normal" exit of root context (as far as it is special for root context)
+    def _cleanup_and_close(self, was_successful: bool):
+        # "normal" exit of root context (as far as it is special for root context)
         first_exception = None
 
         try:
-            self._cleanup_and_delay_to_working_tree_time_change()
+            self._cleanup_and_delay_to_working_tree_time_change(was_successful)
         except Exception as e:
             first_exception = e
 
@@ -675,6 +691,11 @@ class Context(_BaseContext):
             _, e = redo_exceptions[0]
             raise e
 
+    @staticmethod
+    def summary_of_latest_runs(*, max_count: int = 1):  # TODO document
+        self = _get_root_specifics()
+        return self._rundb.get_latest_successful_run_summaries(max_count)
+
     def __enter__(self):
         find_helpers = self._find_helpers
         if _contexts:
@@ -724,7 +745,7 @@ class Context(_BaseContext):
 
         if self._root_specifics:
             # noinspection PyProtectedMember
-            self._root_specifics._cleanup_and_close()
+            self._root_specifics._cleanup_and_close(exc_val is None)
             self._root_specifics = None
 
         if exc_val is None:

@@ -723,6 +723,7 @@ class _ToolBase:
                             break
 
         if not needs_redo:
+            context_._register_successful_run(False)
             return _RunResult(self, False)  # no redo
 
         if obstructive_paths:
@@ -843,6 +844,8 @@ class _ToolBase:
                 db.declare_fsobject_input_as_modified(p)
 
             # note: no db.commit() necessary as long as root context does commit on exception
+
+        context_._register_successful_run(True)
 
         return result
 
