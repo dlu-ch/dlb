@@ -163,7 +163,7 @@ class _Native:
     def __copy__(self):
         return self
 
-    def __deepcopy__(self, memodict={}):
+    def __deepcopy__(self, memodict):
         return self
 
 

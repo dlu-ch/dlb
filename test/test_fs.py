@@ -307,7 +307,7 @@ class AppendTest(unittest.TestCase):
         self.assertNotEqual(pn2, pn)
 
 
-class AppendSuffixTest(unittest.TestCase):
+class WithAppendedSuffixTest(unittest.TestCase):
 
     def test_relative(self):
         self.assertEqual(dlb.fs.Path('a/b.o'), dlb.fs.Path('a/b').with_appended_suffix('.o'))
