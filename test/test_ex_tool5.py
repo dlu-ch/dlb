@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import dlb.di
+import dlb.cf
 import dlb.ex
 import dlb.ex.aseq
 import logging
@@ -466,3 +467,88 @@ class ReprOfResultTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             "object_file=Path('a.o')) result>"
         )
         self.assertEqual(s, complete_repr)
+
+
+class RunSummaryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_no_runs_for_empty_successful(self):
+        with dlb.ex.Context():
+            pass
+
+        with dlb.ex.Context():
+            summaries = dlb.ex.Context.summary_of_latest_runs(max_count=10)
+
+        self.assertEqual(1, len(summaries))
+        summary = summaries[0]
+        self.assertEqual(0, summary[2])
+        self.assertEqual(0, summary[3])
+
+    def test_no_summary_for_failed(self):
+        with self.assertRaises(AssertionError):
+            with dlb.ex.Context():
+                assert False
+
+        with dlb.ex.Context():
+            summaries = dlb.ex.Context.summary_of_latest_runs(max_count=10)
+
+        self.assertEqual(0, len(summaries))
+
+
+class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_is_correct_without_previous_and_without_runs(self):
+        dlb.cf.lastest_run_summary_max_count = 2
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        dlb.di.set_threshold_level(dlb.cf.level.INFO)
+
+        with dlb.ex.Context():
+            pass
+
+        regex = (
+            r"(?m)\A"
+            r"I duration: [0-9.]+ s \n"
+            r"  \| start +seconds +runs +redos \n"
+            r"  \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z\* +[0-9.]+ +0 +0\n\Z"
+        )
+        self.assertRegex(output.getvalue(), regex)
+
+    def test_is_correct_with_previous_and_with_runs(self):
+        dlb.cf.lastest_run_summary_max_count = 2
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        dlb.di.set_threshold_level(dlb.cf.level.ERROR)
+
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        open('a.cpp', 'xb').close()
+
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
+
+        with dlb.ex.Context():
+            with dlb.ex.Context():
+                self.assertFalse(t.run())
+                self.assertTrue(t.run(force_redo=True))
+            dlb.di.set_threshold_level(dlb.cf.level.INFO)
+
+        regex = (
+            r"(?m)\A"
+            f"I duration compared to mean duration of previous 1 successful runs: [0-9.]+% of [0-9.]+ s \n"
+            r"  \| start +seconds +runs +redos \n"
+            r"  \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z +[0-9.]+ +3 +2 +\(66\.7%\) \n"
+            r"  \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z\* +[0-9.]+ +2 +1 +\(50\.0%\)\n\Z"
+        )
+        self.assertRegex(output.getvalue(), regex)
+
+    def test_ignores_invalid_configuration(self):
+        dlb.cf.lastest_run_summary_max_count = []  # invalid
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        dlb.di.set_threshold_level(dlb.cf.level.INFO)
+
+        with dlb.ex.Context():
+            pass
+
+        self.assertEqual("", output.getvalue())

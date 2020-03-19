@@ -45,6 +45,10 @@ _decimal_places_for_time: int = _get_time_resolution()
 del _get_time_resolution
 
 
+def format_time_ns(time_ns):   # TODO document
+    return ut.format_time_ns(time_ns, _decimal_places_for_time)
+
+
 # these correspond to the first characters of the standard logging.getLevelName[...]
 # the level names of 'logging' are meant to be changed by the user, so do not rely on them:
 _level_indicator_by_level = {
@@ -248,7 +252,7 @@ def _get_relative_time_suffix(monotonic_ns: Optional[int]):
     if monotonic_ns is None:
         return ''
 
-    return " [+{}s]".format(ut.format_time_ns(_get_relative_monotonic_ns(monotonic_ns), _decimal_places_for_time))
+    return " [+{}s]".format(format_time_ns(_get_relative_monotonic_ns(monotonic_ns)))
 
 
 class Cluster:

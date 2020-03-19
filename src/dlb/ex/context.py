@@ -22,10 +22,13 @@ import os
 import os.path
 import stat
 import time
+import datetime
 import asyncio
 from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable
 from .. import ut
 from .. import fs
+from .. import di
+from .. import cf
 from . import rundb
 from . import worktree
 from .worktree import *
@@ -377,6 +380,34 @@ class _ContextMeta(type):
         return super().__setattr__(key, value)
 
 
+def _show_summary(summaries: List[Tuple[datetime.datetime, int, int, int]]):
+    # last element of *summaries* is summary of just completed dlb run
+
+    _, duration_ns, _, _ = summaries[-1]
+
+    mean_duration_ns = 0
+    if len(summaries) > 1:
+        mean_duration_ns = sum(d for _, d, _, _ in summaries[:-1]) // len(summaries)
+    if mean_duration_ns > 0:
+        msg = (
+            f'duration compared to mean duration of previous {len(summaries) - 1} successful runs: '
+            f'{100 * duration_ns / mean_duration_ns:.1f}% of {di.format_time_ns(mean_duration_ns)} s\n'
+        )
+    else:
+        msg = f'duration: {di.format_time_ns(duration_ns)} s\n'
+
+    msg += '    start  \tseconds  \truns\b  redos\b'
+    for i, (start_time, duration_ns, runs, redos) in enumerate(summaries):
+        current_mark = '*' if i == len(summaries) - 1 else ''
+        start_time = start_time.isoformat() + 'Z'
+        duration_ns = di.format_time_ns(duration_ns)
+        msg += f'\n    {start_time}{current_mark}  \t{duration_ns}  \t{runs}\b  {redos}\b'
+        if runs > 0:
+            redo_ratio_percent = 100 * redos / runs
+            msg += f' ({redo_ratio_percent:.1f}%)\b'
+    di.inform(msg, level=cf.level.RUN_SUMMARY)
+
+
 class _RootSpecifics:
     def __init__(self, path_cls: Type[fs.Path]):
         self._implicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = {}
@@ -438,7 +469,14 @@ class _RootSpecifics:
         t0 = time.monotonic_ns()  # since Python 3.7
         wt0 = self.working_tree_time_ns
         if was_successful:
-            self._rundb.update_run_summary(self._successful_nonredo_run_count, self._successful_redo_run_count)
+            summary = self._rundb.update_run_summary(self._successful_nonredo_run_count,
+                                                     self._successful_redo_run_count)
+            try:
+                if cf.lastest_run_summary_max_count > 0 and di.is_unsuppressed_level(cf.level.RUN_SUMMARY):
+                    summaries = self._rundb.get_latest_successful_run_summaries(cf.lastest_run_summary_max_count)
+                    _show_summary(summaries + [summary])
+            except (TypeError, ValueError):
+                pass  # ignore most common exceptions for invalid cf.lastest_run_summary_max_count, cf.level.*
         self._cleanup()  # seize the the day
         while True:
             wt = self.working_tree_time_ns

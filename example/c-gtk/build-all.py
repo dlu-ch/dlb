@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '..', '..', 'src')))
 
 import dlb.fs
 import dlb.di
+import dlb.cf
 import dlb.ex
 import dlb_contrib_pkgconfig
 import dlb_contrib_clike
@@ -100,6 +101,8 @@ def build_documentation(*, version_result, source_path: Path, output_path: Path,
             output_path / '{}_{}.html.bzip'.format(application_name, version_result.wd_version)
         dlb_contrib_zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run()
 
+
+dlb.cf.lastest_run_summary_max_count = 5
 
 with dlb.ex.Context():
     application_name = 'application'

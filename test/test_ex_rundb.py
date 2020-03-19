@@ -705,8 +705,12 @@ class RunSummaryTest(tools_for_test.TemporaryDirectoryTestCase):
             rundb.commit()
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
-            rundb.update_run_summary(2, 3)
+            start_datetime, duration_ns, run_count, redo_count = rundb.update_run_summary(2, 3)
             rundb.commit()
+            self.assertIsInstance(start_datetime, datetime.datetime)
+            self.assertGreater(duration_ns, 0)
+            self.assertEqual(2 + 3, run_count)
+            self.assertEqual(3, redo_count)
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             summaries10 = rundb.get_latest_successful_run_summaries(10)

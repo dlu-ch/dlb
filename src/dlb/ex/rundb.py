@@ -15,7 +15,7 @@ import dataclasses
 import datetime
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
 import sqlite3
-from typing import Optional, Union, Dict, Tuple
+from typing import Optional, Union, Dict, List, Tuple
 from .. import ut
 from .. import fs
 from . import platform
@@ -348,8 +348,9 @@ class Database:
             )
 
             # assign tool_inst_dbid by AUTOINCREMENT:
-            start_datetime = encode_datetime(datetime.datetime.utcnow())
-            cursor.execute("INSERT INTO Run VALUES (NULL, ?, NULL, NULL, NULL)", (start_datetime,))
+            self._start_datetime = datetime.datetime.utcnow()
+            cursor.execute("INSERT INTO Run VALUES (NULL, ?, NULL, NULL, NULL)",
+                           (encode_datetime(self._start_datetime),))
             cursor.execute("SELECT last_insert_rowid()")  # https://www.sqlite.org/c3ref/last_insert_rowid.html
             self._run_dbid = cursor.fetchone()[0]
             self._start_time_ns = time.monotonic_ns()  # since Python 3.7
@@ -515,7 +516,7 @@ class Database:
                 self._connection.rollback()
                 raise
 
-    def get_latest_successful_run_summaries(self, max_count: int):
+    def get_latest_successful_run_summaries(self, max_count: int) -> List[Tuple[datetime.datetime, int, int, int]]:
         # Without the run that opened this run-database.
         # Note: There is no guaranteed that all the datetimes differ.
 
@@ -532,17 +533,23 @@ class Database:
         summaries.reverse()
         return summaries
 
-    def update_run_summary(self, successful_nonredo_run_count: int, successful_redo_run_count: int):
+    def update_run_summary(self, successful_nonredo_run_count: int, successful_redo_run_count: int) -> \
+            Tuple[datetime.datetime, int, int, int]:
         # Consider the dlb run as successfully completed.
+
         duration_ns = time.monotonic_ns() - self._start_time_ns  # since Python 3.7
         duration_ns = max(0, min(2**63 - 1, duration_ns))
         successful_nonredo_run_count = max(0, min(2**63 - 1, successful_nonredo_run_count))
         successful_redo_run_count = max(0, min(2**63 - 1, successful_redo_run_count))
+
         with self._cursor_with_exception_mapping() as cursor:
             # https://www.sqlite.org/datatype3.html
             cursor.execute(
                 "UPDATE Run SET duration_ns = ?, nonredo_count = ?, redo_count = ? WHERE run_dbid = ?",
                 (duration_ns, successful_nonredo_run_count, successful_redo_run_count, self.run_dbid))
+
+        return self._start_datetime, duration_ns, \
+               successful_nonredo_run_count + successful_redo_run_count, successful_redo_run_count  # TODO test
 
     def forget_runs_before(self, utc: datetime.datetime):
         # Remove information on run started before *utc* an all dependency information last updated by such
