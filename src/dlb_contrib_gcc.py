@@ -7,6 +7,7 @@
 import sys
 from typing import Iterable, Union
 import dlb.fs
+import dlb.ex
 import dlb_contrib_make
 import dlb_contrib_clike
 assert sys.version_info >= (3, 7)
@@ -15,14 +16,16 @@ assert sys.version_info >= (3, 7)
 class Path(dlb.fs.PosixPath):
     UNSAFE_CHARACTERS = ':;\n\r'  # disallow ';' because of Makefile rules
 
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
+        if components_checked:
+            return
         if any(s in c for c in self.parts for s in self.UNSAFE_CHARACTERS):
             raise ValueError("must not contain these characters: {0}".format(
                 ','.join(repr(c) for c in sorted(self.UNSAFE_CHARACTERS))))
 
 
 class ObjectOrArchivePath(Path):
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
         if not self.is_dir() and self.parts:
             p = self.parts[-1]
             if not (p.endswith('.o') or p.endswith('.a')):
@@ -113,6 +116,7 @@ class CplusplusCompilerGcc(_CompilerGcc):
     DIALECT = 'c++11'  # https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html#C-Dialect-Options
 
 
+# noinspection PyUnresolvedReferences
 class _LinkerGcc(dlb.ex.Tool):
     # Link with with gcc, gcc subprograms and the GNU linker
 

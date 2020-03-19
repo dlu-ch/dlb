@@ -9,6 +9,7 @@ import re
 import asyncio
 import collections.abc
 import dlb.fs
+import dlb.ex
 assert sys.version_info >= (3, 7)
 
 LIBRARY_NAME_REGEX = re.compile(r'^[A-Za-z_][^ \t\n\r]*$')

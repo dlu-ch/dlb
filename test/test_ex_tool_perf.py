@@ -139,3 +139,15 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
 
         profile.disable()
         dump_profile_stats(profile, self, 3)
+
+    def test_join_paths(self):
+        profile = cProfile.Profile()
+        profile.enable()
+
+        r = dlb.fs.WindowsPath('a/b/c/')
+        p = dlb.fs.WindowsPath('d/e')
+        for i in range(10000):
+            r / p
+
+        profile.disable()
+        dump_profile_stats(profile, self, 4)

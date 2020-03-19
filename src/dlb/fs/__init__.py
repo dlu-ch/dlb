@@ -297,7 +297,7 @@ class Path(metaclass=_PathMeta):
             if is_dir is None:
                 self._sanitize_is_dir()
             if self.__class__.__bases__ != (object,):  # dlb.fs.Path() must be fast
-                self._check_constrains()
+                self._check_constrains(False)
 
     def _cast(self, other: PathLike) -> 'Path':
         if other.__class__ is self.__class__:
@@ -307,12 +307,12 @@ class Path(metaclass=_PathMeta):
     def _sanitize_is_dir(self):
         self._is_dir = self._is_dir or len(self._components) <= 1 or self._components[-1:] == ('..',)
 
-    def _check_constrains(self):
+    def _check_constrains(self, components_checked: bool):
+        # must be fast
         try:
-            for c in reversed(self.__class__.mro()):
-                if 'check_restriction_to_base' in c.__dict__:
-                    # noinspection PyUnresolvedReferences
-                    c.check_restriction_to_base(self)
+            for c in reversed(self.__class__.__mro__):
+                # noinspection PyUnresolvedReferences
+                'check_restriction_to_base' not in c.__dict__ or c.check_restriction_to_base(self, components_checked)
         except ValueError as e:
             reason = str(e)
             msg = f'invalid path for {self.__class__.__qualname__!r}: {str(self.as_string())!r}'
@@ -320,7 +320,9 @@ class Path(metaclass=_PathMeta):
                 msg = f'{msg} ({reason})'
             raise ValueError(msg) from None
 
-    def _with_components(self, components: Tuple[str, ...], *, is_dir: Optional[bool] = None) -> 'Path':
+    def _with_components(self, components: Tuple[str, ...], *, is_dir: Optional[bool] = None,
+                         components_checked: bool) -> 'Path':
+        # if *components_checked* is True, each member of *component* is a component of a valid self.__class__
         # note: the caller has to guarantee that *components* does not contain NUL
         p = self.__class__(self)  # fastest way of construction
         p._components = components
@@ -328,7 +330,7 @@ class Path(metaclass=_PathMeta):
             p._is_dir = bool(is_dir)
         p._native = None
         p._sanitize_is_dir()
-        p._check_constrains()
+        p._check_constrains(components_checked)
         return p
 
     def is_dir(self) -> bool:
@@ -342,12 +344,11 @@ class Path(metaclass=_PathMeta):
 
     def relative_to(self, other: PathLike, *, collapsable: bool = False) -> 'Path':
         other = self._cast(other)
-        if not other.is_dir():
+        if not other._is_dir:
             raise ValueError(f'since {other!r} is not a directory, a path cannot be relative to it')
         n = len(other._components)
         if self._components[:n] == other._components:
-            # TODO avoid unnecessary checking of constraints
-            return self._with_components(('',) + self._components[n:])
+            return self._with_components(('',) + self._components[n:], components_checked=True)
         if not collapsable:
             raise ValueError(f"{self.as_string()!r} does not start with {other.as_string()!r}")
 
@@ -362,10 +363,10 @@ class Path(metaclass=_PathMeta):
             common_prefix_length += 1
 
         components = ('',) + ('..',) * (n - common_prefix_length) + self._components[common_prefix_length:]
-        return self._with_components(components)  # TODO avoid unnecessary checking of constraints
+        return self._with_components(components, components_checked=True)
 
     def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
-        if not self.is_dir():
+        if not self._is_dir:
             raise ValueError(f'cannot list non-directory path: {self.as_string()!r}')
 
         def make_name_filter(f):
@@ -446,7 +447,7 @@ class Path(metaclass=_PathMeta):
             raise ValueError("cannot append suffix to '.' or '..' component")
         if not suffix or '/' in suffix or '\0' in suffix:
             raise ValueError(f"invalid suffix: {suffix!r}")
-        return self._with_components(self._components[:-1] + (self._components[-1] + suffix,))
+        return self._with_components(self._components[:-1] + (self._components[-1] + suffix,), components_checked=False)
 
     @property
     def pure_posix(self) -> pathlib.PurePosixPath:
@@ -478,12 +479,12 @@ class Path(metaclass=_PathMeta):
 
     def as_string(self) -> str:
         s = self._as_string()
-        if not self.is_dir() or s[-1] == '/':
+        if not self._is_dir or s[-1] == '/':
             return s
         return s + '/'
 
     def __truediv__(self, other: PathLike) -> 'Path':
-        if not self.is_dir():
+        if not self._is_dir:
             raise ValueError(f'cannot append to non-directory path: {self!r}')
         other = self._cast(other)
         o = other._components
@@ -491,8 +492,7 @@ class Path(metaclass=_PathMeta):
             raise ValueError(f'cannot append absolute path: {other!r}')
         if len(o) <= 1:
             return self
-        # TODO avoid unnecessary checking of constraints
-        return self._with_components(self._components + o[1:], is_dir=other._is_dir)
+        return self._with_components(self._components + o[1:], is_dir=other._is_dir, components_checked=True)
 
     def __rtruediv__(self, other: PathLike) -> 'Path':
         return self._cast(other) / self
@@ -538,30 +538,30 @@ class Path(metaclass=_PathMeta):
             components = parts
         else:
             components = ('',) + parts
-        return self._with_components(components, is_dir=stop < n or self._is_dir)
+        return self._with_components(components, is_dir=stop < n or self._is_dir, components_checked=True)
 
 
 class RelativePath(Path):
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
         if self.is_absolute():
             raise ValueError('must be relative')
 
 
 class AbsolutePath(Path):
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
         if not self.is_absolute():
             raise ValueError('must be absolute')
 
 
 class NormalizedPath(Path):
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
         if not self.is_normalized():
             raise ValueError('must be normalized')
 
 
 class NoSpacePath(Path):
-    def check_restriction_to_base(self):
-        if any(' ' in c for c in self.parts):
+    def check_restriction_to_base(self, components_checked: bool):
+        if not components_checked and any(' ' in c for c in self.parts):
             raise ValueError('must not contain space')
 
 
@@ -574,7 +574,7 @@ class PortablePosixPath(PosixPath):
     MAX_PATH_LENGTH = 255  # {_POSIX_PATH_MAX} - 1
     CHARACTERS = frozenset('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-')
 
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
 
         # IEEE Std 1003.1-2008, 4.13 Pathname Resolution:
         #
@@ -586,22 +586,23 @@ class PortablePosixPath(PosixPath):
         if components[0] == '//':
             raise ValueError("non-standardized component starting with '//' not allowed")
 
-        for c in components[1:]:
-            if len(c) > self.MAX_COMPONENT_LENGTH:
-                raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
+        if not components_checked:
+            for c in components[1:]:
+                if len(c) > self.MAX_COMPONENT_LENGTH:
+                    raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
 
-            # IEEE Std 1003.1-2008, section 4.7 Filename Portability
-            if c.startswith('-'):
-                raise ValueError("component must not start with '-'")
+                # IEEE Std 1003.1-2008, section 4.7 Filename Portability
+                if c.startswith('-'):
+                    raise ValueError("component must not start with '-'")
 
-            # IEEE Std 1003.1-2008, section 3.278 Portable Filename Character Set
-            invalid_characters = set(c) - self.CHARACTERS
-            if invalid_characters:
-                raise ValueError("must not contain these characters: {0}".format(
-                    ','.join(repr(c) for c in sorted(invalid_characters))))
+                # IEEE Std 1003.1-2008, section 3.278 Portable Filename Character Set
+                invalid_characters = set(c) - self.CHARACTERS
+                if invalid_characters:
+                    raise ValueError("must not contain these characters: {0}".format(
+                        ','.join(repr(c) for c in sorted(invalid_characters))))
 
         n = sum(len(c) for c in components) + max(0, len(components) - 2)
-        if self.is_dir() and (len(components) > 1 or components[0]):
+        if self._is_dir and (len(components) > 1 or components[0]):
             n += 1
         if n > self.MAX_PATH_LENGTH:
             raise ValueError(f'must not contain more than {self.MAX_PATH_LENGTH} characters')
@@ -611,34 +612,41 @@ class WindowsPath(Path):
     # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
     RESERVED_CHARACTERS = frozenset('\\"|?*<>:')  # besides: '/'
 
-    def check_restriction_to_base(self):
+    # from pathlib._WindowsFlavour.reserved_names of Python 3.7.3
+    RESERVED_AS_LAST_COMPONENT = (
+        {'CON', 'PRN', 'AUX', 'NUL'} | {'COM%d' % i for i in range(1, 10)} | {'LPT%d' % i for i in range(1, 10)}
+    )
+
+    def check_restriction_to_base(self, components_checked: bool):
         # unfortunately, there is not official way to access flaviour specifics without contructing a path object
 
         parts = _native_components_for_windows(self.components).components
         if not parts[0]:
             parts = parts[1:]
-        if parts and pathlib.PureWindowsPath(parts[-1]).is_reserved():
+        if parts and parts[-1].upper() in self.RESERVED_AS_LAST_COMPONENT:
             # not actually reserved for directory path, but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
 
-        # without already checked in _native_components_for_windows()
-        reserved = self.RESERVED_CHARACTERS - frozenset('\\:')
+        if not components_checked:
+            # without already checked in _native_components_for_windows()
+            reserved = self.RESERVED_CHARACTERS - frozenset('\\:')
 
-        for c in parts:
-            invalid_characters = set(c) & reserved
-            if invalid_characters:
-                raise ValueError("must not contain reserved characters: {0}".format(
-                    ','.join(repr(c) for c in sorted(invalid_characters))))
+            for c in parts:
+                invalid_characters = set(c) & reserved
+                if invalid_characters:
+                    raise ValueError("must not contain reserved characters: {0}".format(
+                        ','.join(repr(c) for c in sorted(invalid_characters))))
 
-            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
-            min_codepoint = ord(min(c))
-            if min_codepoint < 0x20:
-                raise ValueError(f'must not contain characters with codepoint lower than U+0020: U+{min_codepoint:04X}')
+                # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+                min_codepoint = ord(min(c))
+                if min_codepoint < 0x20:
+                    raise ValueError(f'must not contain characters with codepoint lower '
+                                     f'than U+0020: U+{min_codepoint:04X}')
 
-            max_codepoint = ord(max(c))
-            if max_codepoint > 0xFFFF:
-                raise ValueError(f'must not contain characters with codepoint '
-                                 f'higher than U+FFFF: U+{max_codepoint:04X}')
+                max_codepoint = ord(max(c))
+                if max_codepoint > 0xFFFF:
+                    raise ValueError(f'must not contain characters with codepoint '
+                                     f'higher than U+FFFF: U+{max_codepoint:04X}')
 
 
 class PortableWindowsPath(WindowsPath):
@@ -646,17 +654,19 @@ class PortableWindowsPath(WindowsPath):
     MAX_COMPONENT_LENGTH = 255  # lpMaximumComponentLength
     MAX_PATH_LENGTH = 259  # MAX_PATH - 1
 
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
         components = self.components
-        for c in components[1:]:
-            if len(c) > self.MAX_COMPONENT_LENGTH:
-                raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
-            if c != '..' and c[-1] in ' .':
-                # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
-                raise ValueError("component must not end with ' ' or '.'")
+
+        if not components_checked:
+            for c in components[1:]:
+                if len(c) > self.MAX_COMPONENT_LENGTH:
+                    raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
+                if c != '..' and c[-1] in ' .':
+                    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+                    raise ValueError("component must not end with ' ' or '.'")
 
         n = sum(len(c) for c in components) + max(0, len(components) - 2)
-        if self.is_dir() and (len(components) > 1 or components[0]):
+        if self._is_dir and (len(components) > 1 or components[0]):
             n += 1
 
         if n > self.MAX_PATH_LENGTH:

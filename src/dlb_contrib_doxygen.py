@@ -19,7 +19,9 @@ PLACEHOLDER_NAME = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*$')
 class Path(dlb.fs.PosixPath):
     UNSAFE_CHARACTERS = '\n\r'
 
-    def check_restriction_to_base(self):
+    def check_restriction_to_base(self, components_checked: bool):
+        if components_checked:
+            return
         if any(s in c for c in self.parts for s in self.UNSAFE_CHARACTERS):
             raise ValueError("must not contain these characters: {0}".format(
                 ','.join(repr(c) for c in sorted(self.UNSAFE_CHARACTERS))))

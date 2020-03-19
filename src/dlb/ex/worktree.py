@@ -309,7 +309,6 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
     return normalized_components
 
 
-# TODO check if canonical-case path
 def get_checked_root_path_from_cwd(cwd: str, path_cls: Type[fs.Path]):
     try:
         root_path = path_cls(path_cls.Native(cwd), is_dir=True)
