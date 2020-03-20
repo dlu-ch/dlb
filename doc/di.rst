@@ -14,15 +14,15 @@ Each *message* has an associated *level*, e.g. :attr:`WARNING`, with the same me
     +-------------------+---------------+
     | Level             | Numeric value |
     +===================+===============+
-    | :attr:`CRITICAL`  | 50            |
+    | :data:`CRITICAL`  | 50            |
     +-------------------+---------------+
-    | :attr:`ERROR`     | 40            |
+    | :data:`ERROR`     | 40            |
     +-------------------+---------------+
-    | :attr:`WARNING`   | 30            |
+    | :data:`WARNING`   | 30            |
     +-------------------+---------------+
-    | :attr:`INFO`      | 20            |
+    | :data:`INFO`      | 20            |
     +-------------------+---------------+
-    | :attr:`DEBUG`     | 10            |
+    | :data:`DEBUG`     | 10            |
     +-------------------+---------------+
 
 Messages below a global *message threshold* are not output. The message threshold can be changed any time.

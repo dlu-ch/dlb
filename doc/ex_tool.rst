@@ -226,19 +226,19 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :param stdin:
          If not ``None``:
          either a file-like object representing a pipe to be connected to the subprocess’s standard input stream using
-         :meth:`asyncio.loop.connect_read_pipe()`, or the :const:`asyncio.subprocess.PIPE` constant.
+         :meth:`asyncio.loop.connect_read_pipe()`, or the :data:`subprocess.PIPE` constant.
       :param stdout:
          If not ``None``:
          either a file-like object representing the pipe to be connected to the subprocess’s standard output stream
-         using :meth:`asyncio.loop.connect_read_pipe()`, or the :const:`asyncio.subprocess.PIPE` constant.
+         using :meth:`asyncio.loop.connect_read_pipe()`, or the :data:`subprocess.PIPE` constant.
       :param stderr:
          If not ``None``:
          either a file-like object representing the pipe to be connected to the subprocess’s standard error stream using
-         :meth:`asyncio.loop.connect_read_pipe()`, or one of :const:`asyncio.subprocess.PIPE` or
-         :const:`asyncio.subprocess.STDOUT` constants.
+         :meth:`asyncio.loop.connect_read_pipe()`, or one of :data:`subprocess.PIPE` or
+         :data:`subprocess.STDOUT` constants.
       :param limit:
          the buffer limit for :class:`python:StreamReader` wrappers for :attr:`python:Process.stdout` and
-         :attr:`python:Process.stderr` (if :attr:`python:subprocess.PIPE` is passed to *stdout* and *stderr*
+         :attr:`python:Process.stderr` (if :data:`python:subprocess.PIPE` is passed to *stdout* and *stderr*
          arguments).
 
       :raises HelperExecutionError: if the subprocess exits with a returncode not in *expected_returncodes*.

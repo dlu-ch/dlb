@@ -5,7 +5,7 @@
 """Support of the Posix sh shell - the standard command language interpreter."""
 
 import sys
-import asyncio
+import subprocess
 import textwrap
 from typing import Iterable, Union
 import dlb.fs
@@ -36,5 +36,5 @@ class ShScriptlet(dlb.ex.Tool):
             await context.execute_helper(
                 self.EXECUTABLE,
                 ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()],
-                stdout=asyncio.subprocess.PIPE)
+                stdout=subprocess.PIPE)
         result.output = stdout.decode(self.ENCODING)

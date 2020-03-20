@@ -6,7 +6,7 @@
 
 import sys
 import re
-import asyncio
+import subprocess
 import ast
 from typing import Optional, Tuple, Dict, Set, Iterable
 import dlb.fs
@@ -153,7 +153,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
             '--long', '--abbrev=41', '--dirty=?',
             f'--candidates={self.MATCHING_TAG_CANDIDATE_COUNT}', '--match', self.TAG_PATTERN
         ]
-        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=asyncio.subprocess.PIPE)
+        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=subprocess.PIPE)
 
         m = GIT_DESCRIPTION_REGEX.match(stdout.strip().decode())
         result.tag = m.group('tag')
@@ -161,7 +161,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         result.commit_number_from_tag_to_latest_commit = int(m.group('commit_number'), 10)
 
         arguments = ['status', '--porcelain=v2', '--untracked-files', '--branch']
-        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=asyncio.subprocess.PIPE)
+        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=subprocess.PIPE)
 
         # https://github.com/git/git/blob/v2.20.1/Documentation/i18n.txt:
         # Path names are encoded in UTF-8 normalization form C
@@ -175,7 +175,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         if potential_branch_refname == 'refs/heads/(detached)':  # detached?
             returncode, _, _ = \
                 await context.execute_helper(self.EXECUTABLE, ['symbolic-ref', '-q', 'HEAD'],
-                                             stdout=asyncio.subprocess.DEVNULL, expected_returncodes=[0, 1])
+                                             stdout=subprocess.DEVNULL, expected_returncodes=[0, 1])
             if returncode == 1:
                 potential_branch_refname = None  # is detached
 

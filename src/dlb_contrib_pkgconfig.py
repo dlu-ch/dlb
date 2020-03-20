@@ -6,7 +6,7 @@
 
 import sys
 import re
-import asyncio
+import subprocess
 import collections.abc
 import dlb.fs
 import dlb.ex
@@ -92,7 +92,7 @@ class PkgConfig(dlb.ex.Tool):
         if library_selection_arguments:
             _, stdout, _ = await context.execute_helper(
                 self.EXECUTABLE, ['--cflags', '--libs'] + library_selection_arguments,
-                stdout=asyncio.subprocess.PIPE)
+                stdout=subprocess.PIPE)
             arguments_by_option, options = parse_from_output(stdout.decode().strip(), options='ILl')
 
             for p in arguments_by_option.get('-I', []):
