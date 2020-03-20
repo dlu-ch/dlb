@@ -23,8 +23,7 @@ import os.path
 import stat
 import time
 import datetime
-import asyncio
-from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable
+from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable, Hashable
 from .. import ut
 from .. import fs
 from .. import di
@@ -32,7 +31,6 @@ from .. import cf
 from . import rundb
 from . import worktree
 from .worktree import *
-from . import aseq
 assert sys.version_info >= (3, 7)
 
 
@@ -702,8 +700,20 @@ class Context(_BaseContext):
         self._helper: Optional[_HelperDict] = None
 
         self._parent: Optional[Context] = None
-        self._redo_sequencer = aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        self._optional_redo_sequencer = None  # constructed when needed
         self._root_specifics: Optional[_RootSpecifics] = None
+
+    @property
+    def _redo_sequencer(self):
+        if self._optional_redo_sequencer is None:
+            from . import aseq
+            self._optional_redo_sequencer = aseq.LimitingResultSequencer()
+        return self._optional_redo_sequencer
+
+    def _get_pending_result_proxy_for(self, tool_instance_dbid: Hashable):
+        if self._optional_redo_sequencer is None:
+            return
+        return self._redo_sequencer.get_result_proxy(tool_instance_dbid)
 
     @property
     def active(self) -> 'Context':
@@ -728,11 +738,15 @@ class Context(_BaseContext):
         return self._helper
 
     def complete_pending_redos(self):
-        self._redo_sequencer.complete_all(timeout=None)
+        if self._optional_redo_sequencer is None:
+            return
+        self._optional_redo_sequencer.complete_all(timeout=None)
         self._consume_redos_and_raise_first_exception()
 
     def _consume_redos_and_raise_first_exception(self):
-        redo_results, redo_exceptions = self._redo_sequencer.consume_all()
+        if self._optional_redo_sequencer is None:
+            return
+        redo_results, redo_exceptions = self._optional_redo_sequencer.consume_all()
         redo_exceptions = [(tid, e) for tid, e in redo_exceptions.items()]
         if redo_exceptions:
             redo_exceptions.sort()
@@ -780,8 +794,10 @@ class Context(_BaseContext):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # complete all pending redos (before context is changed in any way)
-        redo_finisher = self._redo_sequencer.complete_all if exc_val is None else self._redo_sequencer.cancel_all
-        redo_finisher(timeout=None)
+        redo_sequencer = self._optional_redo_sequencer
+        if redo_sequencer is not None:
+            redo_finisher = redo_sequencer.complete_all if exc_val is None else redo_sequencer.cancel_all
+            redo_finisher(timeout=None)
 
         if not (_contexts and _contexts[-1] == self):
             raise ContextNestingError

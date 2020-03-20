@@ -22,7 +22,9 @@ class LimitingCoroutineSequencer:
     # All public methods are normal synchronous methods, so this class acts as an intermediary between synchronous code
     # and coroutines.
 
-    def __init__(self, asyncio_loop: asyncio.AbstractEventLoop):
+    def __init__(self, asyncio_loop: Optional[asyncio.AbstractEventLoop] = None):
+        if asyncio_loop is None:
+            asyncio_loop = asyncio.get_event_loop()
         self._asyncio_loop = asyncio_loop
         self._tid_by_pending_task: Dict[asyncio.Task, int] = {}
         self._pending_task_by_tid: Dict[int, asyncio.Task] = {}

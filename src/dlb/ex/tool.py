@@ -17,7 +17,6 @@ __all__ = (
 import sys
 import re
 import os
-import asyncio
 import collections
 import hashlib
 import inspect
@@ -28,7 +27,6 @@ from .. import cf
 from .. import di
 from . import rundb
 from . import worktree
-from . import aseq
 from . import context as context_
 from . import depend
 from . import dependaction
@@ -134,6 +132,7 @@ class _RedoContext(context_.ReadOnlyContext):
             )
             di.inform(msg, level=cf.level.HELPER_EXECUTION)
 
+        import asyncio
         proc = await asyncio.create_subprocess_exec(
             *commandline_tokens,  # must all by str
             cwd=(self.root_path / cwd).native, env=env,
@@ -624,7 +623,7 @@ class _ToolBase:
                 self.fingerprint)
             di.inform(f"tool instance is {tool_instance_dbid!r}", level=cf.level.RUN_PREPARATION)
 
-            result_proxy_of_last_run = context._redo_sequencer.get_result_proxy(tool_instance_dbid)
+            result_proxy_of_last_run = context._get_pending_result_proxy_for(tool_instance_dbid)
             if result_proxy_of_last_run is not None:
                 with di.Cluster('wait for last redo to complete', level=cf.level.RUN_SERIALIZATION,
                                 with_time=True, is_progress=True):
@@ -733,7 +732,8 @@ class _ToolBase:
                     raise RedoError(msg) from None
 
         # note: no db.commit() necessary as long as root context does commit on exception
-        tid = context._redo_sequencer.wait_then_start(
+        redo_sequencer = context._redo_sequencer
+        tid = redo_sequencer.wait_then_start(
             context.max_parallel_redo_count, None, self._redo_with_aftermath,
             result=result, context=_RedoContext(context, dependency_action_by_path),
             dependency_actions=dependency_actions, memo_by_encoded_path=memo_by_encoded_path,
@@ -741,7 +741,7 @@ class _ToolBase:
             execution_parameter_digest=execution_parameter_digest, envvar_digest=envvar_digest,
             db=db, tool_instance_dbid=tool_instance_dbid)
 
-        return context._redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_RunResult)
+        return redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_RunResult)
 
     async def _redo_with_aftermath(self, result, context,
                                    dependency_actions, memo_by_encoded_path,
@@ -1079,6 +1079,7 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
 def is_complete(result):
     if isinstance(result, _RunResult) and not result:
         return True
+    from . import aseq
     try:
         return aseq.is_complete(result)
     except TypeError:
