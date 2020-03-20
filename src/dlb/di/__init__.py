@@ -53,7 +53,7 @@ _decimal_places_for_time: int = _get_time_resolution()
 del _get_time_resolution
 
 
-def format_time_ns(time_ns):   # TODO document
+def format_time_ns(time_ns: int) -> str:
     return ut.format_time_ns(time_ns, _decimal_places_for_time)
 
 

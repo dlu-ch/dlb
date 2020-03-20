@@ -189,7 +189,14 @@ Module content
    :param level: level not lower that :attr:`DEBUG`
    :type level: int
 
-.. function:: format_message(message, level: int)
+.. function:: format_time_ns(time_ns)
+
+   Return a string representation for a time in seconds, rounded towards 0 approximately to the resolution of
+   :func:`python:time.monotonic_ns()`. The time *time_ns* is given in nanoseconds as an integer.
+
+   The number of decimal places is fixed for all calls. It is a platform-dependent value in the range of 1 to 6.
+
+.. function:: format_message(message, level)
 
    Return a formatted message with aligned fields, assuming nesting level 0.
 

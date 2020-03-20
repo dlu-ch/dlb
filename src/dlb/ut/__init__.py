@@ -102,7 +102,7 @@ def exception_to_line(exc: Exception, force_classname: bool = False):
 
 
 def format_time_ns(time_ns: int, number_of_decimal_places: int = 9) -> str:
-    # Returns a string representation for a time in seconds. The time *time_ns* is given in nanoseconds.
+    # Return a string representation for a time in seconds. The time *time_ns* is given in nanoseconds.
     # It is exact for *number_of_decimal_places* >= 9 and rounded towards 0 for *number_of_decimal_places* < 9.
 
     time_ns = int(time_ns)
