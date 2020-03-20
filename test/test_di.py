@@ -10,24 +10,31 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.di
 import dlb.fs
 import re
+import logging
 import time
 import io
-import logging
 import collections
 import unittest
+
+
+class LoggingCompatibilityTest(unittest.TestCase):
+
+    def test_levels_are_equals(self):
+        for level_name in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
+            self.assertEqual(getattr(logging, level_name), getattr(dlb.di, level_name))
 
 
 class GetLevelMarkerTest(unittest.TestCase):
 
     def test_exact_levels_are_correct(self):
-        self.assertEqual('D', dlb.di.get_level_indicator(logging.DEBUG))
-        self.assertEqual('I', dlb.di.get_level_indicator(logging.INFO))
-        self.assertEqual('W', dlb.di.get_level_indicator(logging.WARNING))
-        self.assertEqual('E', dlb.di.get_level_indicator(logging.ERROR))
-        self.assertEqual('C', dlb.di.get_level_indicator(logging.CRITICAL))
+        self.assertEqual('D', dlb.di.get_level_indicator(dlb.di.DEBUG))
+        self.assertEqual('I', dlb.di.get_level_indicator(dlb.di.INFO))
+        self.assertEqual('W', dlb.di.get_level_indicator(dlb.di.WARNING))
+        self.assertEqual('E', dlb.di.get_level_indicator(dlb.di.ERROR))
+        self.assertEqual('C', dlb.di.get_level_indicator(dlb.di.CRITICAL))
 
     def test_fails_for_positive_are_debug(self):
-        msg = "'level' must be > 0"
+        msg = "'level' must be positive"
 
         with self.assertRaises(ValueError) as cm:
             dlb.di.get_level_indicator(logging.NOTSET)
@@ -38,17 +45,17 @@ class GetLevelMarkerTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
     def test_exact_greater_than_critical_are_critical(self):
-        self.assertEqual('C', dlb.di.get_level_indicator(logging.CRITICAL + 123))
+        self.assertEqual('C', dlb.di.get_level_indicator(dlb.di.CRITICAL + 123))
 
     def test_between_is_next_smaller(self):
-        self.assertEqual('I', dlb.di.get_level_indicator(logging.INFO + 1))
-        self.assertEqual('I', dlb.di.get_level_indicator(logging.WARNING - 1))
+        self.assertEqual('I', dlb.di.get_level_indicator(dlb.di.INFO + 1))
+        self.assertEqual('I', dlb.di.get_level_indicator(dlb.di.WARNING - 1))
 
 
 class FormatMessageTest(unittest.TestCase):
     
     def format_info_message(self, message):
-        return dlb.di.format_message(message, logging.INFO)
+        return dlb.di.format_message(message, dlb.di.INFO)
 
     def test_fails_on_empty(self):
         with self.assertRaises(ValueError) as cm:
@@ -166,18 +173,18 @@ class FormatMessageTest(unittest.TestCase):
 class MessageThresholdTest(unittest.TestCase):
 
     def test_default_is_info(self):
-        dlb.di.set_threshold_level(logging.WARNING + 1)
-        self.assertTrue(dlb.di.is_unsuppressed_level(logging.WARNING + 1))
-        self.assertFalse(dlb.di.is_unsuppressed_level(logging.WARNING))
+        dlb.di.set_threshold_level(dlb.di.WARNING + 1)
+        self.assertTrue(dlb.di.is_unsuppressed_level(dlb.di.WARNING + 1))
+        self.assertFalse(dlb.di.is_unsuppressed_level(dlb.di.WARNING))
 
-        dlb.di.set_threshold_level(logging.CRITICAL + 100)
-        self.assertTrue(dlb.di.is_unsuppressed_level(logging.CRITICAL + 100))
-        self.assertFalse(dlb.di.is_unsuppressed_level(logging.CRITICAL + 99))
+        dlb.di.set_threshold_level(dlb.di.CRITICAL + 100)
+        self.assertTrue(dlb.di.is_unsuppressed_level(dlb.di.CRITICAL + 100))
+        self.assertFalse(dlb.di.is_unsuppressed_level(dlb.di.CRITICAL + 99))
 
     def test_fails_on_nonpositve(self):
         with self.assertRaises(ValueError) as cm:
             dlb.di.set_threshold_level(0)
-        msg = "'level' must be > 0"
+        msg = "'level' must be positive"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_on_none(self):
@@ -216,7 +223,7 @@ class SetOutputFileTest(unittest.TestCase):
 class ClusterTest(unittest.TestCase):
 
     def setUp(self):
-        dlb.di.set_threshold_level(logging.INFO)
+        dlb.di.set_threshold_level(dlb.di.INFO)
         _ = dlb.di._first_monotonic_ns  # make sure attribute exists
         dlb.di._first_monotonic_ns = None
 
@@ -246,25 +253,25 @@ class ClusterTest(unittest.TestCase):
         self.assertEqual('I A\n  I B\n    I C\n  I D\n', output.getvalue())  # does not output anything
 
     def test_level_threshold_is_observed_when_nested(self):
-        dlb.di.set_threshold_level(logging.WARNING)
+        dlb.di.set_threshold_level(dlb.di.WARNING)
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
-        with dlb.di.Cluster('A', level=logging.ERROR):
+        with dlb.di.Cluster('A', level=dlb.di.ERROR):
             self.assertEqual('E A\n', output.getvalue())
 
             with dlb.di.Cluster('B'):
                 self.assertEqual('E A\n', output.getvalue())
 
-                with dlb.di.Cluster('C', level=logging.WARNING):
+                with dlb.di.Cluster('C', level=dlb.di.WARNING):
                     self.assertEqual('E A\n  I B\n    W C\n', output.getvalue())
 
             with dlb.di.Cluster('D'):
                 self.assertEqual('E A\n  I B\n    W C\n', output.getvalue())
 
     def test_progress_only_if_not_suppress_at_enter(self):
-        dlb.di.set_threshold_level(logging.WARNING)
+        dlb.di.set_threshold_level(dlb.di.WARNING)
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
@@ -280,39 +287,39 @@ class ClusterTest(unittest.TestCase):
         self.assertEqual('', output.getvalue())
 
     def test_progress_success_is_at_most_info(self):
-        dlb.di.set_threshold_level(logging.DEBUG)
+        dlb.di.set_threshold_level(dlb.di.DEBUG)
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        with dlb.di.Cluster('A', level=logging.DEBUG, is_progress=True):
+        with dlb.di.Cluster('A', level=dlb.di.DEBUG, is_progress=True):
             self.assertEqual('D A...\n', output.getvalue())
         self.assertEqual('D A...\n  D done.\n', output.getvalue())
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        with dlb.di.Cluster('A', level=logging.CRITICAL, is_progress=True):
+        with dlb.di.Cluster('A', level=dlb.di.CRITICAL, is_progress=True):
             self.assertEqual('C A...\n', output.getvalue())
-        self.assertEqual('C A...\n  I done.\n', output.getvalue())  # at most logging.INFO
+        self.assertEqual('C A...\n  I done.\n', output.getvalue())  # at most dlb.di.INFO
 
     def test_progress_failure_is_at_least_error(self):
-        dlb.di.set_threshold_level(logging.DEBUG)
+        dlb.di.set_threshold_level(dlb.di.DEBUG)
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
         with self.assertRaises(AssertionError):
-            with dlb.di.Cluster('A', level=logging.DEBUG, is_progress=True):
+            with dlb.di.Cluster('A', level=dlb.di.DEBUG, is_progress=True):
                 assert False
-        self.assertEqual('D A...\n  E failed with AssertionError.\n', output.getvalue())  # at least logging.ERROR
+        self.assertEqual('D A...\n  E failed with AssertionError.\n', output.getvalue())  # at least dlb.di.ERROR
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
         with self.assertRaises(AssertionError):
-            with dlb.di.Cluster('A', level=logging.CRITICAL, is_progress=True):
+            with dlb.di.Cluster('A', level=dlb.di.CRITICAL, is_progress=True):
                 assert False
         self.assertEqual('C A...\n  C failed with AssertionError.\n', output.getvalue())
 
     def test_timing_information_is_correct_for_delayed_output_of_title(self):
-        dlb.di.set_threshold_level(logging.WARNING)
+        dlb.di.set_threshold_level(dlb.di.WARNING)
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
@@ -324,7 +331,7 @@ class ClusterTest(unittest.TestCase):
             with dlb.di.Cluster('B'):
                 self.assertEqual('', output.getvalue())
 
-                with dlb.di.Cluster('C', level=logging.WARNING):
+                with dlb.di.Cluster('C', level=dlb.di.WARNING):
                     self.assertRegex(output.getvalue(), r'\A()I A \[\+0\.0+s\]\n  I B\n    W C\n\Z')
 
     def test_timing_information_is_correct_for_progress(self):
@@ -349,7 +356,7 @@ class ClusterTest(unittest.TestCase):
 class InformTest(unittest.TestCase):
 
     def setUp(self):
-        dlb.di.set_threshold_level(logging.INFO)
+        dlb.di.set_threshold_level(dlb.di.INFO)
         _ = dlb.di._first_monotonic_ns  # make sure attribute exists
         dlb.di._first_monotonic_ns = None
 
@@ -368,20 +375,20 @@ class InformTest(unittest.TestCase):
             self.assertTrue(dlb.di.inform('M\n    m'))
             self.assertEqual('I A\n  I M \n    | m\n', output.getvalue())
 
-        dlb.di.set_threshold_level(logging.WARNING)
+        dlb.di.set_threshold_level(dlb.di.WARNING)
 
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
         with dlb.di.Cluster('A'):
             with dlb.di.Cluster('B'):
-                self.assertTrue(dlb.di.inform('M\n    m', level=logging.WARNING))
+                self.assertTrue(dlb.di.inform('M\n    m', level=dlb.di.WARNING))
                 self.assertEqual('I A\n  I B\n    W M \n      | m\n', output.getvalue())
 
     def test_suppresses_below_threshold(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        self.assertFalse(dlb.di.inform('M\n    m', level=logging.DEBUG))
+        self.assertFalse(dlb.di.inform('M\n    m', level=dlb.di.DEBUG))
         self.assertEqual('', output.getvalue())
 
     def test_timing_information_is_correct(self):
@@ -394,7 +401,7 @@ class InformTest(unittest.TestCase):
 class UsageExampleTest(unittest.TestCase):
 
     def setUp(self):
-        dlb.di.set_threshold_level(logging.INFO)
+        dlb.di.set_threshold_level(dlb.di.INFO)
         _ = dlb.di._first_monotonic_ns  # make sure attribute exists
         dlb.di._first_monotonic_ns = None
 
@@ -402,7 +409,7 @@ class UsageExampleTest(unittest.TestCase):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
-        with dlb.di.Cluster('title', level=logging.DEBUG):
+        with dlb.di.Cluster('title', level=dlb.di.DEBUG):
             dlb.di.inform(
                 """
                 summary
@@ -431,7 +438,7 @@ class UsageExampleTest(unittest.TestCase):
                 """)
 
             if rom > 0.8 * rom_max:
-                dlb.di.inform("more than 80 % of ROM used", level=logging.WARNING)
+                dlb.di.inform("more than 80 % of ROM used", level=dlb.di.WARNING)
 
         o = (
             "I analyze memory usage... \n"
@@ -454,7 +461,7 @@ class UsageExampleTest(unittest.TestCase):
         ]
 
         m = ''.join(f"\n    {n}:\t {s} =\b {v}\b{u}" for n, s, v, u in metrics)
-        s = dlb.di.format_message('Halstead complexity measures:' + m, logging.INFO)
+        s = dlb.di.format_message('Halstead complexity measures:' + m, dlb.di.INFO)
 
         o = (
             "I Halstead complexity measures: \n" 

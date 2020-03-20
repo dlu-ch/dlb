@@ -8,8 +8,23 @@ In contrast to the :mod:`python:logging` module, this module focuses on hierarch
 Absolute time information (date and time of day) is not output in favour of high-resolution relative times.
 The output is compact, line-oriented and well readable for humans.
 
-Each *message* has an associated *level*, e.g. :attr:`python:logging.WARNING` with the same meaning as for
-the :mod:`python:logging` module.
+Each *message* has an associated *level*, e.g. :attr:`WARNING`, with the same meaning and numerical value as in the
+:mod:`python:logging` module. The higher the associated numeric value, the more important the message is considered:
+
+    +-------------------+---------------+
+    | Level             | Numeric value |
+    +===================+===============+
+    | :attr:`CRITICAL`  | 50            |
+    +-------------------+---------------+
+    | :attr:`ERROR`     | 40            |
+    +-------------------+---------------+
+    | :attr:`WARNING`   | 30            |
+    +-------------------+---------------+
+    | :attr:`INFO`      | 20            |
+    +-------------------+---------------+
+    | :attr:`DEBUG`     | 10            |
+    +-------------------+---------------+
+
 Messages below a global *message threshold* are not output. The message threshold can be changed any time.
 
 Messages can be *nested* with *message clusters*. In the output, the nesting level of a message is expressed by the
@@ -48,7 +63,7 @@ Example
           """)
 
       if rom > 0.8 * rom_max:
-          dlb.di.inform("more than 80 % of ROM used", logging.WARNING)
+          dlb.di.inform("more than 80 % of ROM used", dlb.di.WARNING)
 
 This will generate the following output:
 
@@ -124,9 +139,23 @@ times. The number of decimal places is the same for all output timing informatio
 Module content
 --------------
 
+.. py:data:: DEBUG
+.. py:data:: INFO
+.. py:data:: WARNING
+.. py:data:: ERROR
+.. py:data:: CRITICAL
+
+   Positive integers representing standard logging levels of the same names.
+   See the documentation of `logging <https://docs.python.org/3/library/logging.html#logging-levels>`_.
+
+   In contrast to :mod:`logging`, these are *not* meant to be changed by the user.
+   Use them to define your own positive integers representing levels like this::
+
+       ... = dlb.di.INFO + 4  # a level more important as INFO, but not yet a WARNING
+
 .. function:: set_output_file(file)
 
-   Sets the output file for all future outputs of this module to *file* and return the old output file.
+   Set the output file for all future outputs of this module to *file* and return the old output file.
 
    :param file: new output file
    :type file: an object with a ``write(string)`` method
@@ -135,11 +164,11 @@ Module content
 
 .. function:: set_threshold_level(level)
 
-   Sets the level threshold for all future messaged to *level*.
+   Set the level threshold for all future messaged to *level*.
 
    Every message with a level below *level* will be suppressed.
 
-   :param level: new level threshold, not lower that :attr:`logging.DEBUG`
+   :param level: new level threshold, not lower that :attr:`DEBUG`
    :type level: int
 
 .. function:: is_unsuppressed_level(level)
@@ -150,19 +179,19 @@ Module content
 
 .. function:: get_level_indicator(level)
 
-   Returns a unique capital ASCII letter, representing the lowest standard :mod:`logging` level not lower than *level*.
+   Return a unique capital ASCII letter, representing the lowest standard level not lower than *level*.
 
    Example::
 
-      >>> dlb.di.get_level_indicator(logging.ERROR + 1)
+      >>> dlb.di.get_level_indicator(dlb.di.ERROR + 1)
       'E'
 
-   :param level: level not lower that :attr:`logging.DEBUG`
+   :param level: level not lower that :attr:`DEBUG`
    :type level: int
 
 .. function:: format_message(message, level: int)
 
-   Returns a formatted message with aligned fields, assuming nesting level 0.
+   Return a formatted message with aligned fields, assuming nesting level 0.
 
    First, empty lines are removed from the beginning and the end of *message* and trailing white space characters is
    removed from each line.
@@ -179,7 +208,7 @@ Module content
 
    Examples::
 
-      >>> dlb.di.format_message('\njust a moment! ', logging.WARNING)
+      >>> dlb.di.format_message('\njust a moment! ', dlb.di.WARNING)
       'W just a moment!'
 
       >>> dlb.di.format_message(
@@ -187,11 +216,11 @@ Module content
       ...   summary:
       ...       detail: blah blah blah...
       ...       see also here
-      ...   """, logging.INFO)
+      ...   """, dlb.di.INFO)
       'I summary: \n  | detail: blah blah blah... \n  | suggestion'
 
       >>> m = ''.join(f"\n    {n}:\t {s} =\b {v}\b{u}" for n, s, v, u in metrics)
-      >>> print(dlb.di.format_message('Halstead complexity measures:' + m, logging.INFO))
+      >>> print(dlb.di.format_message('Halstead complexity measures:' + m, dlb.di.INFO))
       I Halstead complexity measures:
         | volume:               V =   1.7
         | programming required: T = 127.3 s
@@ -201,18 +230,20 @@ Module content
    :rtype: str
    :raise ValueError: if *message* would violate :token:`message` or if *level* is invalid
 
-.. function:: inform(message, *, level: int = logging.INFO, with_time: bool = False)
+.. function:: inform(message, *, level: int = INFO, with_time: bool = False)
 
-   If level is not suppressed, outputs a message to the output file after the title messages of all
+   If level is not suppressed, output a message to the output file after the title messages of all
    parent :class:`Cluster` instances whose output was suppressed so far.
 
    *message* is formatted by :func:`format_message` and indented according the nesting level.
    If *with_time* is ``True``, a :token:`relative_time_suffix` for the current time is included.
 
-.. class:: Cluster(message, *, level=logging.INFO, is_progress=False, with_time=False)
+.. class:: Cluster(message, *, level=INFO, is_progress=False, with_time=False)
 
-   Used as a context manager, it defines a inner message cluster with *message* as its title; entering means an increase
-   of the nesting level by 1.
+   A message cluster with *message* as its title.
+
+   When used as a context manager, this defines a inner message cluster with *message* as its title;
+   entering means an increase of the nesting level by 1.
 
    With *is_progress* set to ``False``, the output when the context is entered is the same as the output of
    :meth:`inform` would be with the same parameters.

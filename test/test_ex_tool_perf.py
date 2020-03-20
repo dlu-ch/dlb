@@ -11,7 +11,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import logging
 import cProfile
 import pstats
 import unittest
@@ -57,7 +56,7 @@ class RunBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
 
-            dlb.di.set_threshold_level(logging.WARNING)
+            dlb.di.set_threshold_level(dlb.di.WARNING)
 
             t = ATool(source_file='a.cpp', object_file='a.o')
             assert t.run()
@@ -82,7 +81,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
         os.makedirs(os.path.join('a', 'b'))
         open(os.path.join('a', 'b', 'c'), 'xb').close()
 
-        dlb.di.set_threshold_level(logging.WARNING)
+        dlb.di.set_threshold_level(dlb.di.WARNING)
         p = dlb.fs.Path('a/b/c')
 
         profile = cProfile.Profile()
@@ -128,7 +127,7 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
     def test_inform(self):
         profile = cProfile.Profile()
 
-        dlb.di.set_threshold_level(logging.WARNING)
+        dlb.di.set_threshold_level(dlb.di.WARNING)
         message = 'abc' * 20  # typical for dlb.di.Cluster(): one line, no control characters
 
         profile.enable()

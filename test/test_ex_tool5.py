@@ -15,7 +15,6 @@ import dlb.ex
 import dlb.ex.aseq
 import time
 import datetime
-import logging
 import marshal
 import tempfile
 import zipfile
@@ -431,7 +430,7 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase
 
         with dlb.ex.Context():
             output = io.StringIO()
-            dlb.di.set_threshold_level(logging.DEBUG)
+            dlb.di.set_threshold_level(dlb.di.DEBUG)
             dlb.di.set_output_file(output)
             self.assertTrue(t.run())
             regex = r"\b()added 1 tool definition files as input dependency\n"
@@ -502,7 +501,7 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.cf.lastest_run_summary_max_count = 2
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        dlb.di.set_threshold_level(dlb.cf.level.INFO)
+        dlb.di.set_threshold_level(dlb.di.INFO)
 
         with dlb.ex.Context():
             pass
@@ -519,7 +518,7 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.cf.lastest_run_summary_max_count = 2
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        dlb.di.set_threshold_level(dlb.cf.level.ERROR)
+        dlb.di.set_threshold_level(dlb.di.ERROR)
 
         t = ATool(source_file='a.cpp', object_file='a.o')
         open('a.cpp', 'xb').close()
@@ -533,7 +532,7 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with dlb.ex.Context():
                 self.assertFalse(t.run())
                 self.assertTrue(t.run(force_redo=True))
-            dlb.di.set_threshold_level(dlb.cf.level.INFO)
+            dlb.di.set_threshold_level(dlb.di.INFO)
 
         regex = (
             r"(?m)\A"
@@ -548,7 +547,7 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.cf.lastest_run_summary_max_count = []  # invalid
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        dlb.di.set_threshold_level(dlb.cf.level.INFO)
+        dlb.di.set_threshold_level(dlb.di.INFO)
 
         with dlb.ex.Context():
             pass

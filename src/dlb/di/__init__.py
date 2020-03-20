@@ -3,7 +3,7 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 """Write formatted and indented lines to represent hierarchic diagnostic information to a file.
-This module uses levels of the 'logging' module."""
+This module uses levels compatible with the ones of the 'logging' module."""
 
 __all__ = ()
 
@@ -11,9 +11,17 @@ import sys
 import math
 import re
 import time
-import logging
 from typing import Optional, Dict, List, Tuple, Sequence
 from .. import ut
+
+
+# these correspond to logging.*, but are fixed (see https://docs.python.org/3/library/logging.html#logging-levels)
+# not importing 'logging' reduced import time for this module
+DEBUG = 10
+INFO = 20
+WARNING = 30
+ERROR = 40
+CRITICAL = 50
 
 
 _RESERVED_TITLEEND_CHARACTERS = " .]"
@@ -28,7 +36,7 @@ _output_file = sys.stderr
 
 _clusters = []
 
-_lowest_unsuppressed_level: int = logging.INFO
+_lowest_unsuppressed_level: int = INFO
 
 # time.monotonic_ns() of the first output message with enabled timing information
 _first_monotonic_ns: Optional[int] = None
@@ -52,11 +60,11 @@ def format_time_ns(time_ns):   # TODO document
 # these correspond to the first characters of the standard logging.getLevelName[...]
 # the level names of 'logging' are meant to be changed by the user, so do not rely on them:
 _level_indicator_by_level = {
-    logging.DEBUG: 'D',
-    logging.INFO: 'I',
-    logging.WARNING: 'W',
-    logging.ERROR: 'E',
-    logging.CRITICAL: 'C'
+    DEBUG: 'D',
+    INFO: 'I',
+    WARNING: 'W',
+    ERROR: 'E',
+    CRITICAL: 'C'
 }
 
 
@@ -195,8 +203,8 @@ def _checked_level(level):
     except (TypeError, ValueError):
         raise TypeError("'level' must be something convertible to an int")
 
-    if level <= logging.NOTSET:
-        raise ValueError(f"'level' must be > {logging.NOTSET}")
+    if not level > 0:
+        raise ValueError(f"'level' must be positive")
 
     return level
 
@@ -212,7 +220,7 @@ def is_unsuppressed_level(level):
 
 def get_level_indicator(level: int) -> str:
     level = _checked_level(level)
-    standard_level = max([logging.DEBUG] + [s for s in _level_indicator_by_level if s <= level])
+    standard_level = max([DEBUG] + [s for s in _level_indicator_by_level if s <= level])
     return _level_indicator_by_level[standard_level][0]
 
 
@@ -256,7 +264,7 @@ def _get_relative_time_suffix(monotonic_ns: Optional[int]):
 
 
 class Cluster:
-    def __init__(self, message: str, *, level: int = logging.INFO, is_progress: bool = False,
+    def __init__(self, message: str, *, level: int = INFO, is_progress: bool = False,
                  with_time: bool = False):
         # must be fast
         self._level: int = _checked_level(level)
@@ -301,10 +309,10 @@ class Cluster:
 
         if self._did_inform and self._is_progress:
             if exc_val is None:
-                result = '{l} done.'.format(l=get_level_indicator(min(self._level, logging.INFO)))
+                result = '{l} done.'.format(l=get_level_indicator(min(self._level, INFO)))
             else:
                 result = '{l} failed with {e}.'.format(
-                    l=get_level_indicator(max(self._level, logging.ERROR)),
+                    l=get_level_indicator(max(self._level, ERROR)),
                     e=exc_val.__class__.__qualname__)
 
             if self._monotonic_ns is not None:
@@ -315,7 +323,7 @@ class Cluster:
             _output_file.write(indented_result + '\n')
 
 
-def inform(message, *, level: int = logging.INFO, with_time: bool = False) -> bool:
+def inform(message, *, level: int = INFO, with_time: bool = False) -> bool:
     level = _checked_level(level)
 
     formatted_message = format_message(message, level=level)

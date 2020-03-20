@@ -114,8 +114,7 @@ class PkgConfigTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'gtk+-3.0': ['> 3.0.1', '< 4.0']}
 
         with dlb.ex.Context():
-            import logging
-            dlb.di.set_threshold_level(logging.DEBUG)
+            dlb.di.set_threshold_level(dlb.di.DEBUG)
             result = PkgConfig().run()
 
         self.assertIn('libgdk-3.so', result.library_filenames)
