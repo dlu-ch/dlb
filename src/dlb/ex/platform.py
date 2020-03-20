@@ -6,16 +6,23 @@
 This is an implementation detail - do not import it unless you know what you are doing."""
 
 import sys
-import platform
-import sqlite3
 from .. import version
 from .. import ut
 assert sys.version_info >= (3, 7)
 
 # changes whenever the platform, the Python version or the dlb version changes
 PERMANENT_PLATFORM_ID = ut.to_permanent_local_bytes((
-    platform.platform(),
-    sys.hexversion,
-    version.__version__,
-    sqlite3.sqlite_version_info  # the SQLite library, not the Python module
+    # increase this when the information sources for this tuple change (e.g. sys.platform instead of
+    # platform.platform())
+    0,
+
+    sys.platform,  # avoid platform.platform() - import of 'platform' is slow
+    sys.hexversion,  # version of the language the running interpreter conforms to
+    sys.implementation.name,  # name of the interpreter
+    sys.implementation.hexversion,  # version of the interpreter
+    version.__version__
 ))
+
+# notes:
+#  - 'platform' takes long to load
+#  - os.uname() is not available on all platforms
