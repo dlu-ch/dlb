@@ -245,6 +245,7 @@ class ManagementTreeSetupWithPermissionProblemTest(tools_for_test.TemporaryDirec
         os.mkdir('.dlbroot')
         temp_path = os.path.join('.dlbroot', 't')
         os.mkdir(temp_path)
+        open(os.path.join(temp_path, 'f'), 'xb').close()
         os.chmod(temp_path, 0o000)
 
         regex = (

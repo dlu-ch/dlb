@@ -15,7 +15,6 @@ __all__ = (
 import string
 import os
 import stat
-import shutil
 from typing import Optional, Union, Tuple, Type
 from .. import ut
 from .. import fs
@@ -151,24 +150,34 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
         if not os.path.isabs(abs_empty_dir_path):  # does not raise OSError
             raise ValueError(f"not an absolute path: {str(abs_empty_dir_path)!r}")
 
-    is_directory = False
     try:
-        try:
-            os.remove(abs_path)  # does remove symlink, not target
-            # according to the Python 3.8 documentation, 'IsADirectoryError' is raised if 'abs_path' is a directory;
-            # however, on Windows 10 PermissionError is raised instead
-        except IsADirectoryError:
-            is_directory = True
-        except PermissionError:
-            is_directory = os.path.isdir(abs_path)
+        os.remove(abs_path)  # does remove symlink, not target
+        return
+        # according to the Python 3.8 documentation, 'IsADirectoryError' is raised if 'abs_path' is a directory;
+        # however, on Windows 10 PermissionError is raised instead
+    except IsADirectoryError:
+        pass
+    except PermissionError:
+        if not os.path.isdir(abs_path):
+            raise
     except FileNotFoundError:
         if not ignore_non_existent:
             raise
-
-    if not is_directory:
         return
 
-    # was a directory at last remove attempt
+    # was an existing directory at last remove attempt
+
+    try:
+        os.rmdir(abs_path)
+        return
+    except FileNotFoundError:
+        return
+    except OSError:
+        pass
+
+    # was an existing non-empty directory at last remove attempt
+
+    import shutil
     try:
         if abs_empty_dir_path is None:
             lke = _KeepFirstRmTreeException()
