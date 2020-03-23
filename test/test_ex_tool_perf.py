@@ -150,3 +150,34 @@ class ImportantRunExecutionPathBenchmark(tools_for_test.TemporaryWorkingDirector
 
         profile.disable()
         dump_profile_stats(profile, self, 4)
+
+
+class ImportantImportBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_define_tool(self):
+
+        profile = cProfile.Profile()
+        profile.enable()
+
+        class BTool(dlb.ex.Tool):
+            PARAMETER = ()
+            PARAMETER2 = 123
+
+            input = dlb.ex.Tool.Input.RegularFile()
+            output = dlb.ex.Tool.Output.RegularFile()
+
+            def redo(self, result, context):
+                pass
+
+        # noinspection PyUnusedLocal
+        class CTool(BTool):
+            PARAMETER = (1, 2, 3)
+            PARAMETER3 = ''
+
+            output2 = dlb.ex.Tool.Output.RegularFile()
+
+            def redo(self, result, context):
+                pass
+
+        profile.disable()
+        dump_profile_stats(profile, self, 1)

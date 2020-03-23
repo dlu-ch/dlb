@@ -863,30 +863,31 @@ class _ToolMeta(type):
         super().__init__(name, bases, nmspc)
 
         # prevent attributes of _ToolBase from being overridden
-        if cls is not _ToolBase:
-            protected_attrs = (set(_ToolBase.__dict__.keys()) - _ToolMeta.OVERRIDEABLE_ATTRIBUTES | {'__new__'})
-            attrs = set(cls.__dict__) & protected_attrs
-            if attrs:
-                raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
-            cls.check_own_attributes()
-
+        protected_attrs = (set(_ToolBase.__dict__.keys()) - _ToolMeta.OVERRIDEABLE_ATTRIBUTES | {'__new__'})
+        attrs = set(cls.__dict__) & protected_attrs
+        if attrs:
+            raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
+        cls.check_own_attributes()
         dependency_names, execution_parameter_names = cls._get_names()
+
         super().__setattr__('_dependency_names', dependency_names)
         super().__setattr__('_execution_parameter_names', execution_parameter_names)
-        location = cls._find_definition_location(inspect.stack(context=0)[1])
+        frame_info = inspect.getframeinfo(inspect.currentframe().f_back, context=0)
+        location = cls._find_definition_location(frame_info)
         super().__setattr__('definition_location', location)
         _tool_class_by_definition_location[location] = cls
 
     def _find_definition_location(cls, defining_frame) -> Tuple[str, Optional[str], int]:
         # Return the location, cls is defined.
         # Raises DefinitionAmbiguityError, if the location is unknown or already a class with the same metaclass
-        # was defined at the same location (realpath of an existing source file and line number).
+        # was defined at the same location (abspath of an existing source file and line number).
         # If the source file is a zip archive with a filename ending in '.zip', the path relative to the root
         # of the archive is also given.
 
         # frame relies based on best practises, correct information not guaranteed
         source_lineno = defining_frame.lineno
-        if not os.path.isabs(defining_frame.filename):
+        source_path = defining_frame.filename
+        if not os.path.isabs(source_path):
             msg = (
                 f"invalid tool definition: location of definition depends on current working directory\n"
                 f"  | class: {cls!r}\n"
@@ -896,7 +897,6 @@ class _ToolMeta(type):
             )
             raise DefinitionAmbiguityError(msg)
 
-        source_path = os.path.realpath(defining_frame.filename)
         try:
             in_archive_path = None
             if not os.path.isfile(source_path):
@@ -945,11 +945,12 @@ class _ToolMeta(type):
 
     def check_own_attributes(cls):
         for name, value in cls.__dict__.items():
+            defining_base_classes = tuple(c for c in cls.__bases__ if name in c.__dict__)
             if UPPERCASE_WORD_NAME_REGEX.match(name):
                 # if overridden: must be instance of type of overridden attribute
-                for base_class in cls.__bases__:
-                    base_value = base_class.__dict__.get(name, None)
-                    if base_value is not None and not isinstance(value, type(base_value)):
+                for base_class in defining_base_classes:
+                    base_value = base_class.__dict__[name]
+                    if not isinstance(value, type(base_value)):
                         msg = (
                             f"attribute {name!r} of base class may only be overridden with a value "
                             f"which is a {type(base_value)!r}"
@@ -958,29 +959,28 @@ class _ToolMeta(type):
             elif LOWERCASE_WORD_NAME_REGEX.match(name):
                 if callable(value):
                     isasync, sig = inspect.iscoroutinefunction(value), inspect.signature(value)
-                    for base_class in cls.__bases__:
-                        base_value = base_class.__dict__.get(name, None)
-                        if base_value is not None:
-                            if not callable(base_value):
+                    for base_class in defining_base_classes:
+                        base_value = base_class.__dict__[name]
+                        if not callable(base_value):
+                            msg = (
+                                f"the value of {name!r} must not be callable since it is "
+                                f"not callable in {base_value!r}"
+                            )
+                            raise TypeError(msg)
+                        base_isasync = inspect.iscoroutinefunction(base_value)
+                        if base_isasync != isasync:
+                            if base_isasync:
                                 msg = (
-                                    f"the value of {name!r} must not be callable since it is "
-                                    f"not callable in {base_value!r}"
+                                    f"the value of {name!r} must be an coroutine function "
+                                    f"(defined with 'async def')"
                                 )
-                                raise TypeError(msg)
-                            base_isasync = inspect.iscoroutinefunction(base_value)
-                            base_sig = inspect.signature(base_value)
-                            if base_isasync != isasync:
-                                if base_isasync:
-                                    msg = (
-                                        f"the value of {name!r} must be an coroutine function "
-                                        f"(defined with 'async def')"
-                                    )
-                                else:
-                                    msg = f"the value of {name!r} must be an callable that is not a coroutine function"
-                                raise TypeError(msg)
-                            if base_sig != sig:
-                                msg = f"the value of {name!r} must be an callable with this signature: {base_sig!r}"
-                                raise TypeError(msg)
+                            else:
+                                msg = f"the value of {name!r} must be an callable that is not a coroutine function"
+                            raise TypeError(msg)
+                        base_sig = inspect.signature(base_value, follow_wrapped=False)  # beware: slow
+                        if base_sig != sig:
+                            msg = f"the value of {name!r} must be an callable with this signature: {base_sig!r}"
+                            raise TypeError(msg)
                 else:
                     # noinspection PyUnresolvedReferences
                     if not (isinstance(value, _ToolBase.Dependency) and hasattr(value.__class__, 'Value')):
@@ -989,9 +989,9 @@ class _ToolMeta(type):
                             f"'dlb.ex.Tool.Dependency'"
                         )
                         raise TypeError(msg)
-                    for base_class in cls.__bases__:
+                    for base_class in defining_base_classes:
                         value: depend.Dependency
-                        base_value = base_class.__dict__.get(name, None)
+                        base_value = base_class.__dict__[name]
                         if callable(base_value):
                             msg = f"the value of {name!r} must be callable since it is callable in {base_value!r}"
                             raise TypeError(msg)
@@ -1010,19 +1010,20 @@ class _ToolMeta(type):
                 raise AttributeError(msg)
 
     def _get_names(cls) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
-        names = dir(cls)
-        dependencies = {n: getattr(cls, n) for n in names if LOWERCASE_WORD_NAME_REGEX.match(n)}
-        execution_parameters = {n: getattr(cls, n) for n in names if UPPERCASE_WORD_NAME_REGEX.match(n)}
+        names = dir(cls)  # from this class and its base classes
 
-        def rank_of(d):
-            if isinstance(d, depend.Input):
-                return 0
-            return 1
+        execution_parameters = [n for n in names if UPPERCASE_WORD_NAME_REGEX.match(n)]
+        execution_parameters.sort()
+        execution_parameters = tuple(execution_parameters)
 
-        pairs = [(rank_of(d), not d.required, n) for n, d in dependencies.items() if isinstance(d, depend.Dependency)]
-        pairs.sort()
-        # order: input - output, required first
-        return tuple(p[-1] for p in pairs), tuple(sorted(execution_parameters))
+        dependencies = [(n, getattr(cls, n)) for n in names if LOWERCASE_WORD_NAME_REGEX.match(n)]
+        dependency_infos = [
+            (not isinstance(d, depend.Input), not d.required, n)
+            for n, d in dependencies if isinstance(d, depend.Dependency)
+        ]
+        dependency_infos.sort()
+
+        return tuple(p[-1] for p in dependency_infos), execution_parameters
 
     def __setattr__(cls, name, value):
         raise AttributeError
