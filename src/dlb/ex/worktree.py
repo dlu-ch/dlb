@@ -391,7 +391,7 @@ def rundb_filename_for_schema_version(schema_version: Tuple[int]) -> str:
     return RUNDB_FILE_NAME_TEMPLATE.format('.'.join([str(c) for c in schema_version]))
 
 
-def prepare_locked_working_tree(root_path: fs.Path, rundb_schema_version: Tuple[int]):
+def prepare_locked_working_tree(root_path: fs.Path, rundb_schema_version: Tuple[int], max_dependency_age):
     rundb_filename = rundb_filename_for_schema_version(rundb_schema_version)
     management_tree_path = os.path.join(str(root_path.native), MANAGEMENTTREE_DIR_NAME)
     temp_path_provider = UniquePathProvider(root_path / f'{MANAGEMENTTREE_DIR_NAME}/{TEMPORARY_DIR_NAME}/')
@@ -425,8 +425,8 @@ def prepare_locked_working_tree(root_path: fs.Path, rundb_schema_version: Tuple[
             else:
                 is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
-            db = rundb.Database(rundb_path, f"if you suspect database corruption, "
-                                            f"remove the run-database file(s): {rundb_path!r}")
+            db = rundb.Database(rundb_path, max_dependency_age,
+                                f"if you suspect database corruption, remove the run-database file(s): {rundb_path!r}")
         except:
             mtime_probe.close()
             raise

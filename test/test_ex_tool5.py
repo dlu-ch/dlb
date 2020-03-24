@@ -591,7 +591,7 @@ class ForgetOldInformationTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
         orig = dlb.cf.max_dependency_age
         try:
             dlb.cf.max_dependency_age = datetime.timedelta.max
-            regex = r"^'dlb.cf.max_dependency_age' too large: datetime\.timedelta\(.+\)$"
+            regex = r"^'max_dependency_age' too large: datetime\.timedelta\(.+\)$"
             with self.assertRaisesRegex(ValueError, regex):
                 with dlb.ex.Context():
                     pass

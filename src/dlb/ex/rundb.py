@@ -259,8 +259,13 @@ class Domain(enum.Enum):
 
 class Database:
 
-    def __init__(self, rundb_path: Union[str, os.PathLike], suggestion_if_database_error: str = ''):
+    def __init__(self, rundb_path: Union[str, os.PathLike],
+                 max_dependency_age: Optional[datetime.timedelta] = None,
+                 suggestion_if_database_error: str = ''):
         # Open or create the database with path *rundb_path*.
+        #
+        # Remove information from runs older than *max_dependency_age* and all dependency information last
+        # updated by such runs.
         #
         # *suggestion_if_database_error* should be a non-empty line suggesting a recovery solution for database errors.
         #
@@ -268,6 +273,15 @@ class Database:
         # *rundb_path*.
 
         self._suggestion_if_database_error = str(suggestion_if_database_error)
+        self._start_datetime = datetime.datetime.utcnow()
+
+        if max_dependency_age is None:
+            oldest_dependency_datetime = None
+        else:
+            try:
+                oldest_dependency_datetime = self._start_datetime - max_dependency_age
+            except OverflowError:
+                raise ValueError(f"'max_dependency_age' too large: {max_dependency_age!r}") from None
 
         try:
             connection = sqlite3.connect(rundb_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
@@ -352,8 +366,10 @@ class Database:
                 "PRAGMA foreign_keys = ON;"            # https://www.sqlite.org/foreignkeys.html
             )
 
+            if oldest_dependency_datetime is not None:
+                cursor.execute("DELETE FROM Run WHERE start_time < ?", (encode_datetime(oldest_dependency_datetime),))
+
             # assign tool_inst_dbid by AUTOINCREMENT:
-            self._start_datetime = datetime.datetime.utcnow()
             cursor.execute("INSERT INTO Run VALUES (NULL, ?, NULL, NULL, NULL)",
                            (encode_datetime(self._start_datetime),))
             cursor.execute("SELECT last_insert_rowid()")  # https://www.sqlite.org/c3ref/last_insert_rowid.html
@@ -367,10 +383,6 @@ class Database:
     @property
     def run_dbid(self) -> int:
         return self._run_dbid
-
-    @property
-    def start_datetime(self) -> datetime.datetime:
-        return self._start_datetime
 
     def get_and_register_tool_instance_dbid(self, permanent_local_tool_id: bytes,
                                             permanent_local_tool_instance_fingerprint: bytes) -> int:
@@ -539,14 +551,6 @@ class Database:
 
         return self._start_datetime, duration_ns, \
                successful_nonredo_run_count + successful_redo_run_count, successful_redo_run_count
-
-    # TODO move to constructor?
-    def forget_runs_before(self, utc: datetime.datetime):
-        # Remove information on run started before *utc* an all dependency information last updated by such
-        # a run.
-        encoded_utc = encode_datetime(utc)
-        with self._cursor_with_exception_mapping() as cursor:
-            cursor.execute("DELETE FROM Run WHERE start_time < ?", (encoded_utc,))
 
     def commit(self):
         with self._cursor_with_exception_mapping('commit failed'):

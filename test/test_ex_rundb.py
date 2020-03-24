@@ -723,15 +723,13 @@ class ForgetRunsBeforeTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
 
         t1 = datetime.datetime.utcnow()
-        self.assertNotEqual(t0, t1)
 
-        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
-            rundb.forget_runs_before(t0)
+        max_age = t1 - t0 + datetime.timedelta(seconds=1)
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite', max_dependency_age=max_age)) as rundb:
             self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
             self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
 
-        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
-            rundb.forget_runs_before(t1)
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite', max_dependency_age=t1 - t0)) as rundb:
             self.assertEqual(0, len(rundb.get_fsobject_inputs(tool_dbid1)))
             self.assertEqual(0, len(rundb.get_domain_inputs(tool_dbid2)))
 
