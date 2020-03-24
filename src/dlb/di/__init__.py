@@ -36,7 +36,7 @@ _output_file = sys.stderr
 
 _clusters = []
 
-_lowest_unsuppressed_level: int = INFO
+_lowest_unsuppressed_level: int = 1 if sys.flags.verbose else INFO
 
 # time.monotonic_ns() of the first output message with enabled timing information
 _first_monotonic_ns: Optional[int] = None

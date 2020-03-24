@@ -26,6 +26,7 @@ Each *message* has an associated *level*, e.g. :attr:`WARNING`, with the same me
     +-------------------+---------------+
 
 Messages below a global *message threshold* are not output. The message threshold can be changed any time.
+It is initialised to :data:`INFO` if :data:`sys.flags.verbose <python:sys.flags>` is ``False`` and 1 otherwise.
 
 Messages can be *nested* with *message clusters*. In the output, the nesting level of a message is expressed by the
 indentation of its lines.
