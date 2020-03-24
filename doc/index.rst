@@ -12,7 +12,7 @@ A build system *generates files* in a filesystem, mostly with the help of *exter
 Its most important tasks are:
 
 - collect and transform filesystem paths
-- find and execute tool binaries (e.g. compilers) with context-dependent command line arguments
+- find and execute tool executables (e.g. compilers) with context-dependent command line arguments
 - generate files (e.g. some program source files or configuration files)
 - make the build fast by omitting unnecessary redos
 

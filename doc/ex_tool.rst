@@ -12,7 +12,7 @@
 
 
 This module provides classes to represent tools to be executed during the build process (typically by calling
-:term:`dynamic helpers <dynamic helper>` like compiler binaries).
+:term:`dynamic helpers <dynamic helper>` like compiler executables).
 
 Every :term:`tool` is represented by a subclass of :class:`Tool` that describes its abstract behaviour and the way it
 is run (e.g. meaning of command line and output, interaction with file system and environment variables).

@@ -50,6 +50,29 @@ actions, whereas in dlb the cascade stops with the first file that does not chan
 Compare :file:`example/c-minimal/` and :file:`example/c-minimal-gnumake/`.
 
 
+How does dlb compare to SCons?
+------------------------------
+
+SCons shares some goals with dlb.
+However, it approaches them differently.
+
+SCons is monolithic, string-oriented and describes dependencies by (implicit) rules; the order of the rules does not
+reflect the order of the actions.
+dlb is modular, object-oriented and describes dependencies by explicit statements.
+SCons contains a lot of predefined roles for typical tasks and environments and does a lot of guessing
+(e.g. it tries to detect toolchains). This makes SCons quite slow and intricate to extend in some aspects.
+
+dlb is faster, scales better and is designed for easy extension.
+
+
+Why Python?
+-----------
+
+Building software with the help of external tools typically requires a lot of  "glue logic" for generating files and
+manipulating files and program output. Python and its libraries are very well suited for this task.
+The language is clean and expressive and the community takes pride in elegance and simplicity.
+
+
 Why is explicit better than implicit?
 -------------------------------------
 

@@ -156,7 +156,7 @@ Context objects
 
    .. attribute:: executable_search_paths
 
-      A duplicate-free tuple of absolute directory paths where this process should look for binaries according to
+      A duplicate-free tuple of absolute directory paths where this process should look for executables according to
       the operating system.
 
       It is compiled from the members :func:`python:os.get_exec_path()` when the root context is entered.
