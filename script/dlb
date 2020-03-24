@@ -2,15 +2,18 @@
 
 # Run a dlb script in the root of the working tree that contains the current directory.
 #
-# When called with a least one parameter, the parameter must be a dlb script as a path relative to the root of the
-# working tree. '.py' is appended if it does not end with '.py'.
-# All additional parameters are forwarded to the dlb script.
+# When called with a least one parameter that does not start with "-", the first such parameter must be a dlb script as
+# a path relative to the root of the working tree. '.py' is appended if it does not end with '.py'.
+# All parameters before are forwared the the Python interpreter.
+# All parameters after are forwarded to the dlb script.
 #
-# When called without parameters, the parameters from the last successul call of dlb by this script are used.
+# When called without a parameter that does not start with "-", the parameters from the last successul call of dlb
+# by this script are used.
 #
 # Example:
 #
 #    dlb build/all
+#    dlb -v -Ximporttime build/all
 #    dlb
 
 PYTHON=python3
@@ -28,6 +31,12 @@ while [ ! -d "./${DLBROOT:?}" ]; do
         printf "current working directory not in a dlb working tree (no '.dlbroot' found)\n" >&2
         exit 1
     fi
+done
+
+interpreter_arguments=()
+while [ $# -gt 0 -a "${1:0:1}" == - ]; do
+    interpreter_arguments+=("$1")
+    shift
 done
 
 # collect script and script parameters
@@ -58,9 +67,9 @@ else
 fi
 
 # execute script
-"${PYTHON:?}" -- "${PWD}/${arguments[0]}" "${arguments[@]:1}"
+"${PYTHON:?}" "${interpreter_arguments[@]}" -- "${PWD}/${arguments[0]}" "${arguments[@]:1}"
 
-# successful; write parameters to $LAST, suppressing errors
+# successful; write arguments (except interpreter arguments) to $LAST, suppressing error messages
 (
     printf '' > "./${LAST:?}"
     for a in "${arguments[@]}"; do
