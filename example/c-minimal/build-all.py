@@ -24,15 +24,15 @@ with dlb.ex.Context():
     source_path = dlb.fs.Path('src/')
     output_path = dlb.fs.Path('build/out/')
 
-    object_files = [
+    compile_results = [
         dlb_contrib_gcc.CCompilerGcc(
             source_file=p,
             object_file=output_path / p.with_appended_suffix('.o'),
             include_search_directories=[source_path]
-        ).run().object_file
+        ).run()
         for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
     ]
 
     dlb_contrib_gcc.CLinkerGcc(
-        object_and_archive_files=object_files,
+        object_and_archive_files=[r.object_file for r in compile_results],
         linked_file=output_path / 'application').run()
