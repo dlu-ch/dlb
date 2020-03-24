@@ -435,7 +435,7 @@ class Database:
                 rows = cursor.execute(
                     "SELECT path, is_explicit, memo_before FROM ToolInstFsInput "
                     "WHERE tool_inst_dbid == ? AND is_explicit == ?",
-                    (tool_instance_dbid, 1 if is_explicit_filter else 0)).fetchall()
+                    (tool_instance_dbid, int(bool(is_explicit_filter)))).fetchall()
 
         return {
             encoded_path: (bool(is_explicit), encoded_memo_before)
@@ -488,7 +488,7 @@ class Database:
                         if encoded_memo_before is not None and not isinstance(encoded_memo_before, bytes):
                             raise TypeError(f"not a valid 'encoded_memo_before': {encoded_memo_before!r}")
                         cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?, ?)", (
-                            tool_instance_dbid, encoded_path, 1 if is_explicit else 0,
+                            tool_instance_dbid, encoded_path, int(bool(is_explicit)),
                             encoded_memo_before, self.run_dbid))
 
                 if memo_digest_by_domain is not None:
