@@ -43,7 +43,7 @@ def dump_profile_stats(profile, test_case: unittest.TestCase, result_index: int)
 
     os.makedirs(output_dir_path, exist_ok=True)
     stats.dump_stats(os.path.join(output_dir_path, file_name))
-    # e.g. for https://jiffyclub.github.io/snakeviz/
+    # e.g. for https://github.com/jiffyclub/snakeviz or https://github.com/nschloe/tuna
 
 
 class RunBenchmark(tools_for_test.TemporaryWorkingDirectoryTestCase):

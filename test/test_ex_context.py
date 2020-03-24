@@ -561,6 +561,7 @@ class TemporaryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 class ManagedTreePathTest(tools_for_test.TemporaryDirectoryTestCase):
 
     class StupidPath(dlb.fs.Path):
+        # noinspection PyUnusedLocal
         def check_restriction_to_base(self, components_checked: bool):
             if self.parts[:1] == ('b',):
                 raise ValueError('hehe')

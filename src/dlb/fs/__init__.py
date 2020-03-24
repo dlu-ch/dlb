@@ -287,15 +287,13 @@ class Path(metaclass=_PathMeta):
             is_dir = bool(is_dir)
             if not is_dir and (self._components == ('',) or self._components[-1:] == ('..',)):
                 raise ValueError(f'cannot be the path of a non-directory: {self._as_string()!r}')
-            if self._is_dir != is_dir:
-                check = True
+            check = check or self._is_dir != is_dir
             self._is_dir = is_dir
 
         if check:
             if any('\0' in c for c in self._components):
                 raise ValueError(f"invalid path: {path!r} (must not contain NUL)")
-            if is_dir is None:
-                self._sanitize_is_dir()
+            self._sanitize_is_dir()
             if self.__class__.__bases__ != (object,):  # dlb.fs.Path() must be fast
                 self._check_constrains(False)
 

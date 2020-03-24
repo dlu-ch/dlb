@@ -371,7 +371,7 @@ Timing and concurrency
 .. |guarantee-t2| replace:: :ref:`G-T2 <guarantee-t2>`
 
 **G-T2** (root context exit)
-   A :term:`root context` is not left other than by a raised exception before there has been a time windows with the
+   A :term:`root context` is not left other than by a raised exception before there has been a time window with the
    following property:
    The :term:`mtime` of a regular file o in the :term:`management tree` would have been different from the
    :term:`mtime` of the last filesystem object modified by a running :term:`tool instance`.

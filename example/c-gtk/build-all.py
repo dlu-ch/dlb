@@ -18,11 +18,7 @@ import dlb.fs
 import dlb.di
 import dlb.cf
 import dlb.ex
-import dlb_contrib_pkgconfig
-import dlb_contrib_clike
-import dlb_contrib_gcc
 import dlb_contrib_doxygen
-import dlb_contrib_zip
 import build.version_from_repo
 
 
@@ -32,6 +28,10 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
 
 # compile and link GTK+ application written in C
 def build_application(*, version_result, source_path: Path, output_path: Path, application_name: str):
+    import dlb_contrib_pkgconfig
+    import dlb_contrib_clike
+    import dlb_contrib_gcc
+
     with dlb.di.Cluster('generate version file'), dlb.ex.Context():
         class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
             WD_VERSION = version_result.wd_version
@@ -82,6 +82,8 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
 # generate zipped HTML documentation from markup in source code comments and from "free" pages
 def build_documentation(*, version_result, source_path: Path, output_path: Path, application_name: str,
                         sources_changed: bool):
+    import dlb_contrib_zip
+
     with dlb.di.Cluster('compile documentation'):
 
         class Doxygen(dlb_contrib_doxygen.Doxygen):

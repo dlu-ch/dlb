@@ -643,6 +643,7 @@ class NativeTest(unittest.TestCase):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
+            # noinspection PyUnusedLocal
             def check_restriction_to_base(self, components_checked: bool):
                 self.__class__.n += 1
 
