@@ -471,14 +471,14 @@ class Database:
         # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
         # not before the last :meth:`cleanup()` (if any).
         #
-        # Includes a :meth:`commit()` at the start.
-        # In case of an exception, the information on input dependencies in the run-database remains unchanged.
+        # Starts a new transaction when no transaction is active, but does not commit.
+        # In case of an exception, the information on dependencies in the run-database remains unchanged;
+        # if a transaction was active, it is rolled back.
 
         with self._cursor_with_exception_mapping() as cursor:
-            try:
-                self._connection.commit()
+            if not self._connection.in_transaction:
                 cursor.execute("BEGIN")
-
+            try:
                 if info_by_encoded_path is not None:
                     cursor.execute("DELETE FROM ToolInstFsInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
                     for encoded_path, info in info_by_encoded_path.items():

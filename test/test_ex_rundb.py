@@ -572,6 +572,7 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1'),
                 dlb.ex.rundb.encode_path(dlb.fs.Path('b')): (False, b'1')
             })
+            rundb.commit()
 
             info_by_encoded_path = collections.OrderedDict([
                 (dlb.ex.rundb.encode_path(dlb.fs.Path('b')), (True, b'3')),
@@ -624,6 +625,7 @@ class ReplaceAndGetDomainInputsTest(tools_for_test.TemporaryDirectoryTestCase):
             tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
 
             rundb.update_dependencies(tool_dbid, memo_digest_by_domain={'a': b'A', 'b': b'BB'})
+            rundb.commit()
             self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid))
 
             info_by_encoded_path = collections.OrderedDict([
