@@ -302,7 +302,13 @@ class Database:
             self._suggestion_if_database_error
         )
         with cursor_with_exception_mapping as cursor:
-            cursor.executescript(  # includes a "BEGIN" according to the 'isolation_level'
+            # https://sqlite.org/pragma.html
+            cursor.execute("PRAGMA locking_mode = EXCLUSIVE")  # https://blog.devart.com/increasing-sqlite-performance.html
+            cursor.execute("PRAGMA foreign_keys = ON")         # https://www.sqlite.org/foreignkeys.html
+
+            cursor.execute("BEGIN")
+
+            cursor.execute(
                 "CREATE TABLE IF NOT EXISTS Run("
                     "run_dbid INTEGER NOT NULL, "   # unique id of dlb run among dlb run with this run-database
                     "start_time TEXT NOT NULL, "    # start UTC date/time of dlb run in ISO 8601 basic format 
@@ -314,8 +320,9 @@ class Database:
                     "redo_count INTEGER, "          # number of redo runs of any tool instance 
                                                     # (clipped at 2**63 - 1) or NULL if not successful
                     "PRIMARY KEY(run_dbid)"         # makes run_dbid an AUTOINCREMENT field
-                "); "
+                ")")
 
+            cursor.execute(
                 "CREATE TABLE IF NOT EXISTS ToolInst("
                     "tool_inst_dbid INTEGER NOT NULL, "   # unique id of tool instance across dlb run and platforms
                                                           # (until next cleanup)
@@ -329,8 +336,9 @@ class Database:
 
                     "PRIMARY KEY(tool_inst_dbid)"         # makes tool_inst_dbid an AUTOINCREMENT field
                     "UNIQUE(pl_platform_id, pl_tool_id, pl_tool_inst_fp)"
-                "); "
+                ")")
 
+            cursor.execute(
                 "CREATE TABLE IF NOT EXISTS ToolInstFsInput("
                     "tool_inst_dbid INTEGER, "         # tool instance
                     "path TEXT NOT NULL, "             # path of filesystem object in managed tree,
@@ -343,8 +351,9 @@ class Database:
                     "PRIMARY KEY(tool_inst_dbid, path), "
                     "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid), "
                     "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
-                "); "
+                ")")
 
+            cursor.execute(
                 "CREATE TABLE IF NOT EXISTS ToolInstDomainInput("
                     "tool_inst_dbid INTEGER, "             # tool instance
                     "domain TEXT NOT NULL, "               # name of domain (one of Domain)
@@ -353,18 +362,14 @@ class Database:
                     "PRIMARY KEY(tool_inst_dbid, domain), "
                     "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid), "
                     "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
-                "); "
+                ")")
 
+            cursor.execute(
                 "CREATE TRIGGER IF NOT EXISTS delete_obsolete_toolinst "
                     "AFTER DELETE ON Run FOR EACH ROW BEGIN "
                         "DELETE FROM ToolInstFsInput WHERE run_dbid = OLD.run_dbid; "
                         "DELETE FROM ToolInstDomainInput WHERE run_dbid = OLD.run_dbid; "
-                    "END; "
-
-                # https://sqlite.org/pragma.html
-                "PRAGMA locking_mode = EXCLUSIVE; "    # https://blog.devart.com/increasing-sqlite-performance.html
-                "PRAGMA foreign_keys = ON;"            # https://www.sqlite.org/foreignkeys.html
-            )
+                    "END")
 
             if oldest_dependency_datetime is not None:
                 cursor.execute("DELETE FROM Run WHERE start_time < ?", (encode_datetime(oldest_dependency_datetime),))
