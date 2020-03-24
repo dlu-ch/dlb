@@ -8,13 +8,6 @@
 #   - After a source dependency in a .c.o.d file is removed, the .c.o and .c.o.d files must be removed manually
 #   - After a source file is removed, the application file must be removed manually
 
-# https://pubs.opengroup.org/onlinepubs/009695399/utilities/make.html
-#
-#   Applications shall select target names from the set of characters consisting solely of periods,
-#   underscores, digits, and alphabetics from the portable character set [...].
-#   Implementations may allow other characters in target names as extensions.
-#   The interpretation of targets containing the characters '%' and '"' is implementation-defined.
-
 .SUFFIXES:
 
 SHELL=/bin/sh

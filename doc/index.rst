@@ -91,6 +91,7 @@ Content
    ex_tool.rst
    fs.rst
    di.rst
+   faq.rst
    similar_tools.rst
 
 Indices and tables

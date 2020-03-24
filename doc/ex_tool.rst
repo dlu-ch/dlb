@@ -197,7 +197,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
       Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
       its working directory and wait for it to complete.
-      The execution is consitered successful if an only if its returncode is one in *expected_returncodes*.
+      The execution is considered successful if an only if its returncode is one in *expected_returncodes*.
 
       If *cwd* is not ``None``, is must be the path of directory in the :term:`managed tree` or in :file:`.dlbroot/t/`
       of the :term:`management tree`.
@@ -215,7 +215,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       subprocess.
 
       :param helper_file: :term:`dynamic helper` to be executed as a relative path
-      :param arguments: commant-line arguments
+      :param arguments: command-line arguments
       :type arguments: iterable of objects that can be converted to str
       :param cwd: working directory of the subprocess to be started
       :type cwd: ``None`` or a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
@@ -400,10 +400,10 @@ Concrete dependency role classes support the following methods and attributes:
 
    .. class:: Value
 
-      A (potentically abstract) class such that ``isinstance(v, Value)`` is ``True`` for each validated single value
+      A (potentially abstract) class such that ``isinstance(v, Value)`` is ``True`` for each validated single value
       *v* of each instance *t* of this class.
 
-      This is the type of ``t.validate()`` if :attr:`multipliciy` is ``None`` and the type of each member
+      This is the type of ``t.validate()`` if :attr:`multiplicity` is ``None`` and the type of each member
       of ``t.validate()`` otherwise.
 
    .. method:: validate(value)

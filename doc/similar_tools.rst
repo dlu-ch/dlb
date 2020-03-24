@@ -1,3 +1,5 @@
+.. _similar_tools:
+
 Similar tools
 =============
 
@@ -47,23 +49,3 @@ Examples are:
  - `Apache Maven <https://maven.apache.org/>`_ (XML, Java-centric)
  - https://www.pantsbuild.org/
  - http://www.buildout.org/
-
-
-Why explicit is better than implicit
-------------------------------------
-
-`Some argue <https://taint.org/2011/02/18/001527a.html>`_ that restricting the expressiveness and power of the
-language used to describe a build process is a good thing. I disagree.
-
-A tailored DSL is a good thing exactly as long as you use it as foreseen by its creators.
-A two-line example may be impressive as a demonstration, but real-live projects look different.
-
-If a certain task is repetitive enough to be described by static content (e.g. an XML file), there's nothing wrong in
-doing so. But this situation does not call for a restriction of the language - it calls for an (optional) easy way
-to interpret the static content.
-
-In restricting the language instead, you usually lose first:
-
- - The possibility to *debug* the build process with powerful tools
- - The possibility to *extend* the build tool by aspects not anticipated by its creators
- - The possibility to *adapt* a certain behaviour of the build tool without replacing large parts of it

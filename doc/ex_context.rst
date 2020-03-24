@@ -76,7 +76,7 @@ Context objects
    :type path_cls: dlb.fs.Path
    :param max_parallel_redo_count: maximum number of redos started in this context than can be pending at the same time
    :type max_parallel_redo_count: int
-   :param find_helpers: are dynamic helpers not defined explictly to be searched for in :attr:`executable_search_paths`?
+   :param find_helpers: are dynamic helpers not defined explicitly to be searched for in :attr:`executable_search_paths`?
    :param find_helpers: None | bool
    :raises TypeError: if *path_cls* is not a subclass of :class:`dlb.fs.Path`
 
@@ -135,7 +135,7 @@ Context objects
 
    .. attribute:: find_helpers
 
-      Find dynamic helpers not defined explictly are in :attr:`executable_search_paths`?
+      Find dynamic helpers not defined explicitly are in :attr:`executable_search_paths`?
       This is defined in the constructor.
 
       When called on class, it refers to the :term:`active context`.
@@ -237,7 +237,7 @@ Context objects
       For *path* to be considered as the path of a filesystem object in the :term:`managed tree`, *path* must either
       be a relative path or it must have :attr:`root_path` as a prefix.
 
-      The arguments *existing* and *collapsable* describe the assuptions on the filesystem content that may be used to
+      The arguments *existing* and *collapsable* describe the assumptions on the filesystem content that may be used to
       increase the speed and reduce the number of filesystem accesses.
 
       If *existing* and *collapsable* are ``True`` and *path* is relative, the filesystem is never accessed.
@@ -295,7 +295,7 @@ Context objects
       explicitly or implicitly with the help of :meth:`find_path_in()`.
 
       If the :term:`active context` and the :term:`root context` both have :attr:`find_helpers` = ``False``
-      and no paths was explicitly assigned to the dynamic helper *p* in the active contect or one of its outer contexts,
+      and no paths was explicitly assigned to the dynamic helper *p* in the active context or one of its outer contexts,
       a look-up with ``dlb.ex.Context.helper[p]`` performs a search with ``dlb.ex.Context.find_path_in(p)``.
       (Each such search is performed only once for a given path; the result is stored.)
 
@@ -304,7 +304,7 @@ Context objects
          >>> dlb.ex.Context.helper['gcc']
          Path('/usr/bin/gcc')
 
-         >>> dlb.ex.Context.helper['gcc'] = '/usr/local/bin/my-very-own-very-special-gcc'  # set the path explictly
+         >>> dlb.ex.Context.helper['gcc'] = '/usr/local/bin/my-very-own-very-special-gcc'  # set the path explicitly
          >>> dlb.ex.Context.helper['gcc']
          Path('/usr/local/bin/my-very-own-very-special-gcc')
 
@@ -479,7 +479,7 @@ Exceptions
 .. exception:: ContextModificationError
 
    Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` or
-   a helper dictionaly object is modified while its associated :term:`context` is not the :term:`active context`.
+   a helper dictionary object is modified while its associated :term:`context` is not the :term:`active context`.
 
 .. exception:: WorkingTreePathError
 

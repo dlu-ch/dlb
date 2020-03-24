@@ -124,7 +124,7 @@ times. The number of decimal places is the same for all output timing informatio
    path_component: `path_component_character` `path_component_character`*
    path_component_character: `raw_path_component_character` | `escaped_path_component_character`
    raw_path_component_character: any Unicode character except from the range U+0000 to U+001F, '/', '\', ':', "'" and '"'
-   escaped_path_component_character: '\x' `hexdecimal_digit` `hexdecimal_digit`
+   escaped_path_component_character: '\x' `hexadecimal_digit` `hexadecimal_digit`
 
 .. productionlist:: diagmessage
    summary_first_character: any `summary_last_character` except "'" (U+0027) and '|' (U+007C)
@@ -133,7 +133,7 @@ times. The number of decimal places is the same for all output timing informatio
    decimal_integer: `nonzero_decimal_digit` `decimal_digit`*
    nonzero_decimal_digit: '1' | ... | '9'
    decimal_digit: '0' | `nonzero_decimal_digit`
-   hexdecimal_digit: `decimal_digit` | 'a' | ... | 'f'
+   hexadecimal_digit: `decimal_digit` | 'a' | ... | 'f'
 
 
 Module content
