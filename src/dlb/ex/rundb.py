@@ -269,15 +269,14 @@ class Database:
 
         self._suggestion_if_database_error = str(suggestion_if_database_error)
 
-        rundb_abs_path = os.path.abspath(rundb_path)
         try:
-            connection = sqlite3.connect(rundb_abs_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
+            connection = sqlite3.connect(rundb_path, isolation_level='DEFERRED')  # raises sqlite3.Error on error
         except sqlite3.Error as e:
-            exists = os.path.isfile(rundb_abs_path)  # does not raise OSError
+            exists = os.path.isfile(rundb_path)  # does not raise OSError
             state_msg = 'existing' if exists else 'non-existent'
             reason = ut.exception_to_line(e, True)
             msg = (
-                f"could not open {state_msg} run-database: {rundb_abs_path!r}\n"
+                f"could not open {state_msg} run-database: {rundb_path!r}\n"
                 f"  | reason: {reason}\n"
                 f"  | check access permissions"
             )
@@ -348,6 +347,8 @@ class Database:
                         "DELETE FROM ToolInstDomainInput WHERE run_dbid = OLD.run_dbid; "
                     "END; "
 
+                # https://sqlite.org/pragma.html
+                "PRAGMA locking_mode = EXCLUSIVE; "    # https://blog.devart.com/increasing-sqlite-performance.html
                 "PRAGMA foreign_keys = ON;"            # https://www.sqlite.org/foreignkeys.html
             )
 
