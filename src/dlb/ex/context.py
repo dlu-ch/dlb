@@ -463,7 +463,7 @@ class _RootSpecifics:
         return os.fstat(self._mtime_probe.fileno()).st_mtime_ns
 
     def _cleanup(self):
-        self._rundb.cleanup()  # TODO do not clean up every time
+        self._rundb.cleanup()
         self._rundb.commit()
         worktree.remove_filesystem_object(str(self._temp_path_provider.root_path.native), ignore_non_existent=True)
 
