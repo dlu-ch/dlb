@@ -308,7 +308,7 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
             self.assertFalse(t.run())
             # replace memo by invalid memo
             rundb = dlb.ex.context._get_rundb()
-            rundb.replace_fsobject_inputs(1, {
+            rundb.update_dependencies(1, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('src/a.cpp')): (True, marshal.dumps(42))
             })
 
@@ -320,7 +320,7 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
         with dlb.ex.Context():
             # replace memo by invalid memo
             rundb = dlb.ex.context._get_rundb()
-            rundb.replace_fsobject_inputs(1, {
+            rundb.update_dependencies(1, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('src/a.cpp')):
                     (True, dlb.ex.rundb.encode_fsobject_memo(dlb.ex.rundb.FilesystemObjectMemo()))
             })

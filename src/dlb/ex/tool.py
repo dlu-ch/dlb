@@ -801,32 +801,32 @@ class _ToolBase:
 
             encoded_paths_of_input_dependencies = \
                 encoded_paths_of_explicit_input_dependencies | encoded_paths_of_nonexplicit_input_dependencies
+            for p in context.modified_outputs:
+                encoded_paths_of_modified_output_dependencies.add(rundb.encode_path(p))
 
             with di.Cluster('store state before redo in run-database', level=cf.level.REDO_AFTERMATH):
                 # redo was successful, so save the state before the redo to the run-database
-                info_by_by_fsobject_dbid = {
+                info_by_fsobject_dbid = {
                     encoded_path: (
                         encoded_path in encoded_paths_of_explicit_input_dependencies,
                         rundb.encode_fsobject_memo(memo))
                     for encoded_path, memo in memo_by_encoded_path.items()
                     if encoded_path in encoded_paths_of_input_dependencies  # drop obsolete non-explicit dependencies
                 }
-                info_by_by_fsobject_dbid.update({  # add new non-explicit dependencies
+                info_by_fsobject_dbid.update({  # add new non-explicit dependencies
                     encoded_path: (False, None)
-                    for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_by_fsobject_dbid)
-                })
-                db.replace_fsobject_inputs(tool_instance_dbid, info_by_by_fsobject_dbid)
-
-                db.replace_domain_inputs(tool_instance_dbid, {
-                    rundb.Domain.REDO_REQUEST.value: redo_request if redo_request else None,
-                    rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest,
-                    rundb.Domain.ENVIRONMENT_VARIABLES.value: envvar_digest
+                    for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_fsobject_dbid)
                 })
 
-            for p in context.modified_outputs:
-                encoded_paths_of_modified_output_dependencies.add(rundb.encode_path(p))
-            for p in encoded_paths_of_modified_output_dependencies:
-                db.declare_fsobject_input_as_modified(p)
+                db.update_dependencies(
+                    tool_instance_dbid,
+                    info_by_encoded_path=info_by_fsobject_dbid,
+                    memo_digest_by_domain={
+                        rundb.Domain.REDO_REQUEST.value: b'\x01' if redo_request else None,
+                        rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest,
+                        rundb.Domain.ENVIRONMENT_VARIABLES.value: envvar_digest
+                    },
+                    encoded_paths_of_modified=encoded_paths_of_modified_output_dependencies)
 
             # note: no db.commit() necessary as long as root context does commit on exception
 

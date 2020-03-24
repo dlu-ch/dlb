@@ -99,7 +99,9 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
         with dlb.ex.Context():
             # replace memo by invalid memo
             rundb = dlb.ex.context._get_rundb()
-            rundb.update_fsobject_input(1, dlb.ex.rundb.encode_path(dlb.fs.Path('a.h')), False, marshal.dumps(42))
+            info_by_encoded_path = rundb.get_fsobject_inputs(1)
+            info_by_encoded_path[dlb.ex.rundb.encode_path(dlb.fs.Path('a.h'))] = (False, marshal.dumps(42))
+            rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -115,7 +117,9 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
         with dlb.ex.Context():
             # add dependency with invalid encoded path
             rundb = dlb.ex.context._get_rundb()
-            rundb.update_fsobject_input(1, 'a/../', False, None)
+            info_by_encoded_path = rundb.get_fsobject_inputs(1)
+            info_by_encoded_path['a/../'] = (False, None)
+            rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -133,7 +137,9 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
         with dlb.ex.Context():
             # add non-existent dependency with invalid memo
             rundb = dlb.ex.context._get_rundb()
-            rundb.update_fsobject_input(1, 'd.h/', False, marshal.dumps(42))
+            info_by_encoded_path = rundb.get_fsobject_inputs(1)
+            info_by_encoded_path['d.h/'] = (False, marshal.dumps(42))
+            rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -164,7 +170,9 @@ class RunNonExplicitInputDependencyChmodTest(tools_for_test.TemporaryDirectoryWi
             with dlb.ex.Context():
                 # add inaccessible dependency
                 rundb = dlb.ex.context._get_rundb()
-                rundb.update_fsobject_input(1, 't/d.h/', False, None)
+                info_by_encoded_path = rundb.get_fsobject_inputs(1)
+                info_by_encoded_path['t/d.h/'] = (False, None)
+                rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
 
                 output = io.StringIO()
                 dlb.di.set_output_file(output)

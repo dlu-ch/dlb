@@ -15,7 +15,7 @@ import dataclasses
 import datetime
 import marshal  # very fast, reasonably secure, round-trip loss-less (see comment below)
 import sqlite3
-from typing import Optional, Union, Dict, List, Tuple
+from typing import Optional, Union, Dict, List, Tuple, Sequence
 from .. import ut
 from .. import fs
 from . import platform
@@ -402,46 +402,6 @@ class Database:
 
         return n
 
-    def update_fsobject_input(self, tool_instance_dbid: int, encoded_path: str, is_explicit: bool,
-                              encoded_memo_before: Optional[bytes]):
-        # Add or replace the description of a filesystem object in the managed tree that is an input dependency
-        # of the tool instance *tool_instance_dbid* by ``(is_explicit, encoded_memo_before``).
-        #
-        # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
-        # not before the last :meth:`cleanup()` (if any).
-        #
-        # *encoded_path* must be the return value of :func:`encode_path()`.
-
-        if not is_encoded_path(encoded_path):
-            raise ValueError(f"not a valid 'encoded_path': {encoded_path!r}")
-
-        if encoded_memo_before is not None and not isinstance(encoded_memo_before, bytes):
-            raise TypeError(f"not a valid 'encoded_memo_before': {encoded_memo_before!r}")
-
-        with self._cursor_with_exception_mapping() as cursor:
-            cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?, ?)", (
-                tool_instance_dbid, encoded_path, 1 if is_explicit else 0, encoded_memo_before, self.run_dbid))
-
-    def replace_fsobject_inputs(self, tool_instance_dbid: int,
-                                info_by_by_fsobject_dbid: Dict[str, Tuple[bool, bytes]]):
-        # Replace all information on filesystem object input dependencies for a tool instance *tool_instance_dbid* by
-        # *info_by_by_fsobject_dbid*.
-        #
-        # Includes a :meth:`commit()` at the start.
-        # In case of an exception, the information on input dependencies in the run-database remains unchanged.
-
-        with self._cursor_with_exception_mapping() as cursor:
-            try:
-                self._connection.commit()
-                cursor.execute("BEGIN")
-                cursor.execute("DELETE FROM ToolInstFsInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
-                for encoded_path, info in info_by_by_fsobject_dbid.items():
-                    is_explicit, encoded_memo_before = info
-                    self.update_fsobject_input(tool_instance_dbid, encoded_path, is_explicit, encoded_memo_before)
-            except:
-                self._connection.rollback()
-                raise
-
     def get_fsobject_inputs(self, tool_instance_dbid: int, is_explicit_filter: Optional[bool] = None) \
             -> Dict[str, Tuple[bool, Optional[bytes]]]:
         # Return the *encoded_path* and the optional encoded memo of all filesystem objects in the managed tree that are
@@ -470,28 +430,6 @@ class Database:
             for encoded_path, is_explicit, encoded_memo_before in rows
         }
 
-    def declare_fsobject_input_as_modified(self, modified_encoded_path: str):
-        # Declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
-        # modified if
-        #
-        #   - their *encoded_path* = *modified_encoded_path* or
-        #   - their managed tree path is a prefix of the path of the filesystem object identified
-        #     by *modified_encoded_path*
-        #
-        # In case of an exception, the information on input dependencies in the run-database remains unchanged.
-        #
-        # Note: call :meth:`commit()` before the filesystem object is actually modified.
-
-        if not is_encoded_path(modified_encoded_path):
-            raise ValueError(f"not a valid 'encoded_path': {modified_encoded_path!r}")
-
-        with self._cursor_with_exception_mapping() as cursor:
-            # replace the 'memo_before' all non-explicit dependencies (of all tool instances) whose
-            # 'encoded_path' have 'modified_encoded_path' as a prefix by NULL
-            cursor.execute(
-                "UPDATE ToolInstFsInput SET memo_before = NULL WHERE instr(path, ?) == 1",
-                (modified_encoded_path,))
-
     def get_domain_inputs(self, tool_instance_dbid: int) -> Dict[str, bytes]:
         # Return the *domain* and the memo digest of all domain input dependencies of the tool
         # instance *tool_instance_dbid*.
@@ -504,10 +442,22 @@ class Database:
                 (tool_instance_dbid,)).fetchall()
         return {domain: memo_digest_before for domain, memo_digest_before in rows}
 
-    def replace_domain_inputs(self, tool_instance_dbid: int,
-                              memo_digest_before_by_domain: Dict[str, Optional[bytes]]):
-        # Replace all information on domain input dependencies for a tool instance *tool_instance_dbid* by
-        # *memo_digest_before_by_domain*.
+    def update_dependencies(self, tool_instance_dbid: int, *,
+                            info_by_encoded_path: Optional[Dict[str, Tuple[bool, bytes]]] = None,
+                            memo_digest_by_domain: Optional[Dict[str, Optional[bytes]]] = None,
+                            encoded_paths_of_modified: Optional[Sequence[str]] = None):
+        # Replace all information on filesystem object input dependencies and domain input dependencies for a
+        # tool instance *tool_instance_dbid* by *info_by_encoded_path* and *memo_digest_by_domain*, respectively.
+        #
+        # Also, declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
+        # modified if
+        #
+        #   - their *encoded_path* is as member of *encoded_paths_of_modified* or
+        #   - their managed tree path is a prefix of the path of the filesystem object identified
+        #     by any of the members of *encoded_paths_of_modified*
+        #
+        # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
+        # not before the last :meth:`cleanup()` (if any).
         #
         # Includes a :meth:`commit()` at the start.
         # In case of an exception, the information on input dependencies in the run-database remains unchanged.
@@ -516,11 +466,41 @@ class Database:
             try:
                 self._connection.commit()
                 cursor.execute("BEGIN")
-                cursor.execute("DELETE FROM ToolInstDomainInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
-                for domain, memo_digest_before in memo_digest_before_by_domain.items():
-                    if memo_digest_before is not None:
-                        cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?, ?)",
-                                       (tool_instance_dbid, domain, memo_digest_before, self.run_dbid))
+
+                if info_by_encoded_path is not None:
+                    cursor.execute("DELETE FROM ToolInstFsInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
+                    for encoded_path, info in info_by_encoded_path.items():
+                        is_explicit, encoded_memo_before = info
+                        if not is_encoded_path(encoded_path):
+                            raise ValueError(f"not a valid 'encoded_path': {encoded_path!r}")
+                        if encoded_memo_before is not None and not isinstance(encoded_memo_before, bytes):
+                            raise TypeError(f"not a valid 'encoded_memo_before': {encoded_memo_before!r}")
+                        cursor.execute("INSERT OR REPLACE INTO ToolInstFsInput VALUES (?, ?, ?, ?, ?)", (
+                            tool_instance_dbid, encoded_path, 1 if is_explicit else 0,
+                            encoded_memo_before, self.run_dbid))
+
+                if memo_digest_by_domain is not None:
+                    cursor.execute("DELETE FROM ToolInstDomainInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
+                    for domain, memo_digest_before in memo_digest_by_domain.items():
+                        if not isinstance(domain, str):
+                            raise TypeError(f"not a valid 'domain': {domain!r}")
+                        if not domain:
+                            raise ValueError(f"not a valid 'domain': {domain!r}")
+                        if memo_digest_before is not None:
+                            if not isinstance(memo_digest_before, bytes):
+                                raise TypeError(f"not a valid 'memo_digest_before': {memo_digest_before!r}")
+                            cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?, ?)",
+                                           (tool_instance_dbid, domain, memo_digest_before, self.run_dbid))
+
+                if encoded_paths_of_modified is not None:
+                    for modified_encoded_path in encoded_paths_of_modified:
+                        if not is_encoded_path(modified_encoded_path):
+                            raise ValueError(f"not a valid 'encoded_path': {modified_encoded_path!r}")
+                        # replace the 'memo_before' all non-explicit dependencies (of all tool instances) whose
+                        # 'encoded_path' have 'modified_encoded_path' as a prefix by NULL
+                        cursor.execute(
+                            "UPDATE ToolInstFsInput SET memo_before = NULL WHERE instr(path, ?) == 1",
+                            (modified_encoded_path,))
             except:
                 self._connection.rollback()
                 raise
@@ -558,8 +538,9 @@ class Database:
                 (duration_ns, successful_nonredo_run_count, successful_redo_run_count, self.run_dbid))
 
         return self._start_datetime, duration_ns, \
-               successful_nonredo_run_count + successful_redo_run_count, successful_redo_run_count  # TODO test
+               successful_nonredo_run_count + successful_redo_run_count, successful_redo_run_count
 
+    # TODO move to constructor?
     def forget_runs_before(self, utc: datetime.datetime):
         # Remove information on run started before *utc* an all dependency information last updated by such
         # a run.
