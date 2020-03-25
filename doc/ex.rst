@@ -560,6 +560,9 @@ Tools are customized by inheritance and defining class attributes.
       A filesystem object that is an output dependencies is treated as modified be the redo if it is a non-explicit
       dependency or if it is a explicit dependency that was replaced with `context.replace_output()`.
 
+      Raises :exc:`python:RuntimeError` on the attempt to enter a new :class:`dlb.ex.Context` as a context manager or
+      to modify the :term:`active context`.
+
       Return ``True`` if the next run this :term:`tool instance` should perform a :term:`redo`, regardless of the
       necessity according to its dependencies.
 

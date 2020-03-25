@@ -226,3 +226,35 @@ class KeyboardInterruptTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             pass
+
+
+class ContextInRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails_for_context_in_redo(self):
+
+        class CTool(dlb.ex.Tool):
+            async def redo(self, result, context):
+                with dlb.ex.Context():
+                    pass
+
+        with self.assertRaises(RuntimeError):
+            with dlb.ex.Context():
+                CTool().run()
+
+    def test_fails_for_env_modification_in_redo(self):
+        class CTool(dlb.ex.Tool):
+            async def redo(self, result, context):
+                dlb.ex.Context.active.env.import_from_outer('a', restriction=r'.*', example='')
+
+        with self.assertRaises(RuntimeError):
+            with dlb.ex.Context():
+                CTool().run()
+
+    def test_fails_for_helper_modification_in_redo(self):
+        class CTool(dlb.ex.Tool):
+            async def redo(self, result, context):
+                dlb.ex.Context.active.helper['a'] = 'A'
+
+        with self.assertRaises(RuntimeError):
+            with dlb.ex.Context():
+                CTool().run()

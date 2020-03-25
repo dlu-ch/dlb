@@ -734,6 +734,7 @@ class Context(_BaseContext):
     def complete_pending_redos(self):
         if self._optional_redo_sequencer is None:
             return
+        # raises RuntimeError if called from redo()
         self._optional_redo_sequencer.complete_all(timeout=None)
         self._consume_redos_and_raise_first_exception()
 
