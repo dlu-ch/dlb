@@ -64,13 +64,12 @@ dist_path = dlb.fs.Path('dist/')
 if dist_path.native.raw.exists():
     shutil.rmtree(dist_path.native)
 
-dst_path = dlb.fs.Path('build/')
+dst_path = dlb.fs.Path('out/build/')
 if dst_path.native.raw.exists():
     shutil.rmtree(dst_path.native)
 
 version = get_version_from_git()
 build_modified_src_tree(version)
-
 
 setuptools.setup(
     name='dlb',
@@ -129,6 +128,8 @@ setuptools.setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=setuptools.find_packages(where='out/gsrc'),
+
+    py_modules=[p[-1:].as_string()[:-3] for p in dlb.fs.Path('out/gsrc/').list(name_filter=r'dlb_contrib_.+\.py')],
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
