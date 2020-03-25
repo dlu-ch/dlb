@@ -61,6 +61,13 @@ especially for the development of embedded software with cross-compiler toolchai
 
 See :ref:`here <similar_tools>` for an overview and the following questions for specific reasons.
 
+Note that there is a lot of controversy in comparing the speed of build tools in general and
+`SCons in particular <https://github.com/SCons/scons/wiki/WhySconsIsNotSlow>`_.
+In my opinion, raw speed for a single build in an ideal environment is not the most important benchmark for
+productivity; the necessary effort to develop and maintain a correct and complete build description is more relevant.
+Spending hours to find subtle flaws in the build process and doing complete rebuilds out of mistrust in the completeness
+of the dependency information costs more than a few seconds per - otherwise perfect - partial build.
+
 
 How does dlb compare to Make?
 -----------------------------
@@ -99,7 +106,8 @@ Make *requires* that each output dependency (target) changes when one of its inp
 Fixing a typo in a comment of a :file:`.c` file necessarily leads to the compilation and linking and all dependent
 actions, whereas in dlb the cascade stops with the first file that does not change.
 
-Compare :file:`example/c-minimal/` and :file:`example/c-minimal-gnumake/`.
+Compare `example/c-minimal/ <https://github.com/dlu-ch/dlb/tree/master/example/c-minimal>`_ and
+`example/c-minimal-gnumake/ <https://github.com/dlu-ch/dlb/tree/master/example/c-minimal-gnumake>`_.
 
 
 How does dlb compare to SCons?
@@ -114,7 +122,7 @@ dlb is modular, object-oriented and describes dependencies by explicit statement
 SCons contains a lot of predefined roles for typical tasks and environments and does a lot of guessing
 (e.g. it tries to detect toolchains). This makes SCons quite slow and intricate to extend in some aspects.
 
-dlb is faster, scales better and is designed for easy extension.
+dlb is faster [#speedofscons1]_ and is designed for easy extension.
 
 
 Why Python?
@@ -155,3 +163,7 @@ In restricting the language instead, you usually lose first:
 
    Make implementations like GNU Make allow additional characters and limited quoting, but treat paths
    differently on different platforms.
+
+.. [#speedofscons1]
+   This statement is based only on small set of data and the remembered experience with earlier versions of SCons.
+   It has to be confirmed.
