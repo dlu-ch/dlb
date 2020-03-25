@@ -20,8 +20,8 @@ Setup a working tree
  - Place all input files (that are only read by tool instances) in a filesystem tree in the :term:`working tree`
    that is not modified by tool instances.
 
-   This is not required, but good practice.
-   It also enables you to use operating system specific possibility to protect the build against accidental changes
+   This is not required but good practice.
+   It also enables you to use operating system specific features to protect the build against accidental changes
    of input files.
    For example: Protect the input files from change by a transparent read-only filesystem mounted on top of it during
    the build.
@@ -131,7 +131,7 @@ working tree almost self-contained (only an external Python interpreter is neede
 If you use Git for version control which does not support empty directories, add an empty regular file
 :file:`.dlbroot/o`.
 
-The lines marked with * show filesystem object only given as an example.
+The lines marked with * show filesystem objects only given as an example.
 
 **Before** first run of a dlb script:
 

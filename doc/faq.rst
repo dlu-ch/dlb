@@ -92,6 +92,7 @@ In restricting the language instead, you usually lose first:
  - The possibility to *extend* the build tool by aspects not anticipated by its creators
  - The possibility to *adapt* a certain behaviour of the build tool without replacing large parts of it
 
+
 .. [#makeportability1]
    POSIX (ISO 1003.1-2008) `states <https://pubs.opengroup.org/onlinepubs/009695399/utilities/make.html>`_:
 
@@ -100,5 +101,5 @@ In restricting the language instead, you usually lose first:
       Implementations may allow other characters in target names as extensions.
       The interpretation of targets containing the characters '%' and '"' is implementation-defined.
 
-   Make implementations like GNU Make allow addition characters and quoting to a certain degree, but treat paths
+   Make implementations like GNU Make allow additional characters and limited quoting, but treat paths
    differently on different platforms.

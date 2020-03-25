@@ -13,6 +13,6 @@ from .version import __version__
 #
 #     ut             ->
 #     fs             ->
-#     cf             ->
 #     di             ->   ut  fs
-#     ex             ->   ut  fs  cf  di
+#     cf             ->           di
+#     ex             ->   ut  fs  di  cf

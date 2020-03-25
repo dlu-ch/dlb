@@ -251,7 +251,7 @@ Path objects
    .. attribute:: native
 
       This path as a native path.
-      Use this to access the filesystem::
+      Use it to access the filesystem::
 
           p = Path('/usr/bin/')
           with open(p.native) as f:
@@ -319,6 +319,20 @@ Path objects
 
         with open(dlb.fs.NoSpacePath('/tmp/x/a').native) as f:
             ... = f.read()
+
+   .. attribute:: raw
+
+      This path as a :class:`python:pathlib.Path`.
+      Use it to access the filesystem in an object-oriented manner::
+
+          p = Path('/usr/bin/')
+          ... = p.native.raw.is_dir()
+
+      This attribute cannot be written.
+
+      Constructing a :class:`python:pathlib.Path` is an expensive operation.
+      For performance-critical tasks, use ``p.native`` and functions for string-like paths instead:
+      e.g. ``os.path.isdir(p.native)`` instead of ``p.native.raw.is_dir()``.
 
 
 .. _restricting_paths:
