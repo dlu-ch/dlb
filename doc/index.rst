@@ -84,16 +84,17 @@ Content
 .. toctree::
    :maxdepth: 2
 
+   faq.rst
+   similar_tools.rst
    terms.rst
    toplevelspec.rst
+   usage.rst
+
    fs.rst
    di.rst
    cf.rst
-   ex_context.rst
-   ex_tool.rst
-   faq.rst
-   similar_tools.rst
-   usage.rst
+   ex.rst
+
 
 Indices and tables
 ==================

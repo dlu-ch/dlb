@@ -69,7 +69,7 @@ Terms
       An (execution) context describes how running :term:`tool instances <tool instance>` shall interact with the
       execution environment outside the :term:`working tree` and with each other.
 
-      It is represented as an instance of :class:`dlb.ex.Context <dlb.ex.context.Context>` used as a context manager.
+      It is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
 
    active context
       The innermost :term:`context`, if any.
