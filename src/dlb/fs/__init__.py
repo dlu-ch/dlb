@@ -18,7 +18,7 @@ import os
 import collections.abc
 import functools
 import pathlib  # since Python 3.4
-from typing import Pattern, Optional, Union, Tuple, Sequence
+from typing import Pattern, Optional, Union, Tuple, List, Sequence, Iterator
 assert sys.version_info >= (3, 7)
 
 
@@ -363,7 +363,8 @@ class Path(metaclass=_PathMeta):
         components = ('',) + ('..',) * (n - common_prefix_length) + self._components[common_prefix_length:]
         return self._with_components(components, components_checked=True)
 
-    def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
+    def iterdir(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None)\
+            -> Iterator['Path']:
         if not self._is_dir:
             raise ValueError(f'cannot list non-directory path: {self.as_string()!r}')
 
@@ -418,14 +419,15 @@ class Path(metaclass=_PathMeta):
 
             dir_paths_to_recurse.sort()
 
-    def iterdir_r(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
+    def iterdir_r(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None) \
+            -> Iterator['Path']:
         for p in self.iterdir(name_filter, recurse_name_filter, follow_symlinks, cls):
             yield p.relative_to(self)
 
-    def list(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
+    def list(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None) -> List['Path']:
         return sorted(self.iterdir(name_filter, recurse_name_filter, follow_symlinks, cls))
 
-    def list_r(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None):
+    def list_r(self, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None) -> List['Path']:
         return sorted(self.iterdir_r(name_filter, recurse_name_filter, follow_symlinks, cls))
 
     @property
