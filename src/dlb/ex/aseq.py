@@ -119,21 +119,22 @@ class LimitingCoroutineSequencer:
                 tid = self._tid_by_pending_task.get(task)
 
                 # tid is None: only seen when tasks were cancelled after KeyboardInterrupt (Python 3.7.3) under this
-                # circumstances:
-                #
-                #  - pending is empty
-                #  - task.cancelled() is True
+                # circumstances or RuntimeError('This event loop is already running').
+                # pending is empty in this cases.
 
                 if tid is not None:
                     del self._tid_by_pending_task[task]
                     del self._pending_task_by_tid[tid]
 
                 try:
-                    self._result_by_tid[tid] = task.result()
+                    r = task.result()
+                    if tid is not None:
+                        self._result_by_tid[tid] = r
                 except BaseException as e:  # asyncio.CancelledError if task.cancelled()
                     # Python 3.7: asyncio.CancelledError is a subclass of Exception
                     # Python 3.8: asyncio.CancelledError is _not_ a subclass of Exception
-                    self._exception_by_tid[tid] = e
+                    if tid is not None:
+                        self._exception_by_tid[tid] = e
 
     def _wait_for_pending_sync(self, *, max_count: int, timeout: Optional[float],
                                tid_filter: Optional[Set[int]] = None):
