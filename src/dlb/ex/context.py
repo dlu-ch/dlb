@@ -452,7 +452,7 @@ class _RootSpecifics:
                 raise ValueError("'dlb.cf.max_dependency_age' must be positive")
             self._temp_path_provider, self._mtime_probe, self._rundb, self._is_working_tree_case_sensitive = \
                 worktree.prepare_locked_working_tree(self._root_path, rundb.SCHEMA_VERSION, cf.max_dependency_age)
-        except Exception:
+        except BaseException:
             self._close_and_unlock_if_open()
             raise
 
@@ -499,20 +499,20 @@ class _RootSpecifics:
         if self._mtime_probe:
             try:
                 self._mtime_probe.close()
-            except Exception as e:
+            except BaseException as e:
                 most_serious_exception = e
             self._mtime_probe = None
 
         if self._rundb:
             try:
                 self._rundb.close()  # note: uncommitted changes are lost!
-            except Exception as e:
+            except BaseException as e:
                 most_serious_exception = e
             self._rundb = None
 
         try:
             worktree.unlock_working_tree(self._root_path)
-        except Exception as e:
+        except BaseException as e:
             if most_serious_exception is None:
                 most_serious_exception = e
 
@@ -525,12 +525,12 @@ class _RootSpecifics:
 
         try:
             self._cleanup_and_delay_to_working_tree_time_change(was_successful)
-        except Exception as e:
+        except BaseException as e:
             first_exception = e
 
         try:
             self._close_and_unlock_if_open()
-        except Exception as e:
+        except BaseException as e:
             first_exception = e
 
         if first_exception:
@@ -788,23 +788,24 @@ class Context(_BaseContext):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # complete all pending redos (before context is changed in any way)
-        redo_sequencer = self._optional_redo_sequencer
-        if redo_sequencer is not None:
-            redo_finisher = redo_sequencer.complete_all if exc_val is None else redo_sequencer.cancel_all
-            redo_finisher(timeout=None)
+        try:
+            redo_sequencer = self._optional_redo_sequencer
+            if redo_sequencer is not None:
+                redo_finisher = redo_sequencer.complete_all if exc_val is None else redo_sequencer.cancel_all
+                redo_finisher(timeout=None)  # may raise BaseException that is not an Exception (e.g. KeyboardInterrupt)
+        finally:
+            if not (_contexts and _contexts[-1] == self):
+                raise ContextNestingError from None
+            _contexts.pop()
 
-        if not (_contexts and _contexts[-1] == self):
-            raise ContextNestingError
-        _contexts.pop()
+            self._parent = None
+            self._env = None
+            self._helper = None
 
-        self._parent = None
-        self._env = None
-        self._helper = None
-
-        if self._root_specifics:
-            # noinspection PyProtectedMember
-            self._root_specifics._cleanup_and_close(exc_val is None)
-            self._root_specifics = None
+            if self._root_specifics:
+                # noinspection PyProtectedMember
+                self._root_specifics._cleanup_and_close(exc_val is None)
+                self._root_specifics = None
 
         if exc_val is None:
             self._consume_redos_and_raise_first_exception()

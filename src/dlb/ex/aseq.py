@@ -30,7 +30,7 @@ class LimitingCoroutineSequencer:
         self._pending_task_by_tid: Dict[int, asyncio.Task] = {}
         self._next_tid = 0
         self._result_by_tid: Dict[int, Any] = {}
-        self._exception_by_tid: Dict[int, Exception] = {}
+        self._exception_by_tid: Dict[int, BaseException] = {}
 
     def wait_then_start(self, _max_count: int, _timeout: Optional[float],
                         coro: Callable[[Any], Coroutine], *args, **kwargs) -> int:
@@ -60,12 +60,6 @@ class LimitingCoroutineSequencer:
 
     def complete_all(self, *, timeout: Optional[float]):
         # Wait until all pending coroutines are done or cancelled.
-        #
-        # Returns a tuple '(results, optional_exceptions)'.
-        # *results* is a dictionary with the task ID of all completed couroutines as key and their result as value.
-        # *optional_exceptions* is a dictionary with the task ID of all completed couroutines as key and their
-        # raised exception as value.
-
         self._wait_for_pending_sync(max_count=0, timeout=timeout)
 
     def cancel_all(self, *, timeout: Optional[float]):
@@ -136,7 +130,7 @@ class LimitingCoroutineSequencer:
 
                 try:
                     self._result_by_tid[tid] = task.result()
-                except (asyncio.CancelledError, Exception) as e:  # asyncio.CancelledError if task.cancelled()
+                except BaseException as e:  # asyncio.CancelledError if task.cancelled()
                     # Python 3.7: asyncio.CancelledError is a subclass of Exception
                     # Python 3.8: asyncio.CancelledError is _not_ a subclass of Exception
                     self._exception_by_tid[tid] = e
@@ -198,7 +192,7 @@ class _ResultProxy:
             self._sequencer.complete(self._tid, timeout=self._timeout)
             try:
                 object.__setattr__(self, '_result', self._sequencer.consume(self._tid))
-            except Exception as e:
+            except BaseException as e:
                 object.__setattr__(self, '_exception', e)
                 raise e from None
         return self._result
@@ -222,7 +216,7 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
             result = super().consume(tid)
             if proxy is not None:
                 object.__setattr__(proxy, '_result', result)
-        except Exception as e:
+        except BaseException as e:
             if proxy is not None:
                 object.__setattr__(proxy, '_exception', e)
             raise

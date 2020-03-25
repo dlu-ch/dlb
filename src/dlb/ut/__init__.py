@@ -87,7 +87,7 @@ def set_module_name_to_parent_by_name(obj_by_name: Dict[str, Any], names: Iterab
         obj.__module__ = '.'.join(obj.__module__.split('.')[:-1])
 
 
-def exception_to_line(exc: Exception, force_classname: bool = False):
+def exception_to_line(exc: BaseException, force_classname: bool = False):
     first_line = str(exc)
     if first_line:
         first_line = first_line.splitlines()[0].replace('\t', ' ').strip()  # only first line

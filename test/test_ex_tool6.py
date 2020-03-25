@@ -196,3 +196,33 @@ class MultiplePendingRedosTest(tools_for_test.TemporaryWorkingDirectoryTestCase)
             r"I redoing right now for b.o\n"
         )
         self.assertRegex(output.getvalue(), regex)
+
+
+class KeyboardInterruptTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    class CTool(dlb.ex.Tool):
+        async def redo(self, result, context):
+            raise KeyboardInterrupt
+
+    def test_does_recover(self):
+        try:
+            with dlb.ex.Context():
+                with dlb.ex.Context():
+                    KeyboardInterruptTest.CTool().run()
+        except KeyboardInterrupt:
+            pass
+
+        with dlb.ex.Context():
+            pass
+
+    def test_does_recover2(self):
+        try:
+            with dlb.ex.Context():
+                with dlb.ex.Context(max_parallel_redo_count=2):
+                    KeyboardInterruptTest.CTool().run()
+                    KeyboardInterruptTest.CTool().run()
+        except KeyboardInterrupt:
+            pass
+
+        with dlb.ex.Context():
+            pass
