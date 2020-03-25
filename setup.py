@@ -7,13 +7,70 @@
 See:
 https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
+
+Run with build-package.bash
 """
 
 import sys
+import re
+import os.path
+import subprocess
 import setuptools
-sys.path.insert(0, './src')
-from dlb.version import __version__
+import shutil
+sys.path.insert(0, os.path.abspath('src'))
+import dlb.fs
 del sys.path[0]
+
+
+def get_version_from_git():
+    s = subprocess.check_output(['git', 'describe', '--match', 'v*', '--long', '--abbrev=40']).decode().strip()
+    m = re.compile(r'v(?P<version>[0-9.]+)-(?P<n>[0-9]+)-g(?P<hash>[0-9a-f]+)').fullmatch(s)
+    if m is None:
+        print("git describe: {}".format(repr(s)))
+
+    last_version = m.group('version')
+    commits_since_tag = int(m.group('n'), base=10)
+    commit_hash = m.group('hash')
+
+    if commits_since_tag > 0:
+        # PEP 440
+        version = '{}.dev{}+{}'.format(last_version, commits_since_tag, commit_hash[:4])
+    else:
+        version = last_version
+
+    return version
+
+
+def build_modified_src_tree(version):
+    dst_path = dlb.fs.Path('out/gsrc/')
+    if dst_path.native.raw.exists():
+        shutil.rmtree(dst_path.native)
+
+    src_path = dlb.fs.Path('src/')
+    for p in src_path.list(name_filter=r'.+\.py', recurse_name_filter=r''):
+        q = dst_path / p[1:]
+        q[:-1].native.raw.mkdir(exist_ok=True, parents=True)
+        if p == src_path / 'dlb/version.py':
+            with p.native.raw.open('rb') as f:
+                content = f.read()
+            content = content.replace(b"__version__ = '?'", f"__version__ = {version!r}".encode())
+            with q.native.raw.open('wb') as f:
+                f.write(content)
+        else:
+            shutil.copy(src=str(p.native), dst=str(q.native))
+
+
+dist_path = dlb.fs.Path('dist/')
+if dist_path.native.raw.exists():
+    shutil.rmtree(dist_path.native)
+
+dst_path = dlb.fs.Path('build/')
+if dst_path.native.raw.exists():
+    shutil.rmtree(dst_path.native)
+
+version = get_version_from_git()
+build_modified_src_tree(version)
+
 
 setuptools.setup(
     name='dlb',
@@ -21,7 +78,7 @@ setuptools.setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=__version__,
+    version=version,
 
     description='A Pythonic build tool',
     long_description=(
@@ -45,7 +102,7 @@ setuptools.setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
@@ -61,15 +118,17 @@ setuptools.setup(
         'Programming Language :: Python :: 3.8'
     ],
 
+    zip_safe=True,
+
     # What does your project relate to?
     keywords='build development',
 
     # https://docs.python.org/3/distutils/setupscript.html#listing-whole-packages
-    package_dir={'': 'src'},
+    package_dir={'': 'out/gsrc'},
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=setuptools.find_packages(where='./src/'),
+    packages=setuptools.find_packages(where='out/gsrc'),
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
@@ -98,4 +157,6 @@ setuptools.setup(
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={},
+
+    scripts=['script/dlb']
 )
