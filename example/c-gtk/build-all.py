@@ -8,12 +8,6 @@
 #    python3 -m build-all           # in the directory of this file.
 #    python3 "$PWD"/build-all.py'   # in the directory of this file.
 
-import sys
-import os.path
-assert sys.version_info >= (3, 7)
-here = os.path.dirname(__file__) or os.curdir
-sys.path.insert(0, os.path.abspath(os.path.join(here, '..', '..', 'src')))
-
 import dlb.fs
 import dlb.di
 import dlb.cf
