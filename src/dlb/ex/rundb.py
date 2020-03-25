@@ -303,8 +303,9 @@ class Database:
         )
         with cursor_with_exception_mapping as cursor:
             # https://sqlite.org/pragma.html
-            cursor.execute("PRAGMA locking_mode = EXCLUSIVE")  # https://blog.devart.com/increasing-sqlite-performance.html
-            cursor.execute("PRAGMA foreign_keys = ON")         # https://www.sqlite.org/foreignkeys.html
+            # https://blog.devart.com/increasing-sqlite-performance.html
+            cursor.execute("PRAGMA locking_mode = EXCLUSIVE")
+            cursor.execute("PRAGMA foreign_keys = ON")  # https://www.sqlite.org/foreignkeys.html
 
             cursor.execute("BEGIN")
 
@@ -312,44 +313,47 @@ class Database:
             if not did_exist:
                 cursor.execute(
                     "CREATE TABLE Run("
-                        "run_dbid INTEGER NOT NULL, "   # unique id of dlb run among dlb run with this run-database
-                        "start_time TEXT NOT NULL, "    # start UTC date/time of dlb run in ISO 8601 basic format 
-                                                        # like this "20200318T153032.001Z"
-                        "duration_ns INTEGER, "         # duration since start (clipped at 2**63 - 1) or
-                                                        # NULL if not successful
-                        "nonredo_count INTEGER, "       # number of non-redo runs of any tool instance
-                                                        # (clipped at 2**63 - 1) or NULL if not successful
-                        "redo_count INTEGER, "          # number of redo runs of any tool instance 
-                                                        # (clipped at 2**63 - 1) or NULL if not successful
-                        "PRIMARY KEY(run_dbid)"         # makes run_dbid an AUTOINCREMENT field
+                        "run_dbid INTEGER NOT NULL, "         # unique id of dlb run among dlb run with this 
+                                                              # run-database
+                        "start_time TEXT NOT NULL, "          # start UTC date/time of dlb run in ISO 8601 basic format 
+                                                              # like this "20200318T153032.001Z"
+                        "duration_ns INTEGER, "               # duration since start (clipped at 2**63 - 1) or
+                                                              # NULL if not successful
+                        "nonredo_count INTEGER, "             # number of non-redo runs of any tool instance
+                                                              # (clipped at 2**63 - 1) or NULL if not successful
+                        "redo_count INTEGER, "                # number of redo runs of any tool instance 
+                                                              # (clipped at 2**63 - 1) or NULL if not successful
+                        "PRIMARY KEY(run_dbid)"               # makes run_dbid an AUTOINCREMENT field
                     ")")
 
                 cursor.execute(
                     "CREATE TABLE ToolInst("
                         "tool_inst_dbid INTEGER NOT NULL, "   # unique id of tool instance across dlb run and platforms
                                                               # (until next cleanup)
-    
+                                                              
                         "pl_platform_id BLOB NOT NULL, "      # permanent local platform id
                         "pl_tool_id BLOB NOT NULL, "          # permanent local tool id (unique among all tool with
                                                               # same pl_platform_id)
                         "pl_tool_inst_fp BLOB NOT NULL, "     # permanent local tool instance fingerprint
                                                               # ("almost unique" among all tool instances with
                                                               # same pl_platform_id and pl_tool_id)
-    
+                                                              
                         "PRIMARY KEY(tool_inst_dbid)"         # makes tool_inst_dbid an AUTOINCREMENT field
                         "UNIQUE(pl_platform_id, pl_tool_id, pl_tool_inst_fp)"
                     ")")
 
                 cursor.execute(
                     "CREATE TABLE ToolInstFsInput("
-                        "tool_inst_dbid INTEGER, "         # tool instance
-                        "path TEXT NOT NULL, "             # path of filesystem object in managed tree,
-                                                           # encoded by encode_path
-                        "is_explicit INTEGER NOT NULL, "   # 0 for implicit, 1 for explicit dependency of tool instance
-                        "memo_before BLOB, "               # memo of filesystem object before last redo of tool instance,
-                                                           # encoded by encode_fsobject_memo(), or NULL if
-                                                           # filesystem object was modified since last redo
-                        "run_dbid INTEGER, "               # run_dbid of last update
+                        "tool_inst_dbid INTEGER, "            # tool instance
+                        "path TEXT NOT NULL, "                # path of filesystem object in managed tree,
+                                                              # encoded by encode_path
+                        "is_explicit INTEGER NOT NULL, "      # 0 for implicit, 1 for explicit dependency of
+                                                              # tool instance
+                        "memo_before BLOB, "                  # memo of filesystem object before last redo of 
+                                                              # tool instance, encoded by encode_fsobject_memo(),
+                                                              # or NULL if filesystem object was modified since 
+                                                              # last redo
+                        "run_dbid INTEGER, "                  # run_dbid of last update
                         "PRIMARY KEY(tool_inst_dbid, path), "
                         "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid), "
                         "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
@@ -357,10 +361,11 @@ class Database:
 
                 cursor.execute(
                     "CREATE TABLE ToolInstDomainInput("
-                        "tool_inst_dbid INTEGER, "             # tool instance
-                        "domain TEXT NOT NULL, "               # name of domain (one of Domain)
-                        "memo_digest_before BLOB NOT NULL, "   # memo of filesystem object before last redo of tool instance
-                        "run_dbid INTEGER, "                   # run_dbid of last update
+                        "tool_inst_dbid INTEGER, "            # tool instance
+                        "domain TEXT NOT NULL, "              # name of domain (one of Domain)
+                        "memo_digest_before BLOB NOT NULL, "  # memo of filesystem object before last redo 
+                                                              # of tool instance
+                        "run_dbid INTEGER, "                  # run_dbid of last update
                         "PRIMARY KEY(tool_inst_dbid, domain), "
                         "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid), "
                         "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
