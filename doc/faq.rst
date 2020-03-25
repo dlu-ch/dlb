@@ -7,7 +7,59 @@ Why another build tool?
 A common answer to a common question: Because none of the available tools met the requirements of the author,
 especially for the development of embedded software with cross-compiler toolchains and generated code.
 
-See :ref:`similar_tools` for an overview and the following questions for specific reasons.
+   +----------------------------+---------------+---------------+---------------+
+   | Desirable property         | dlb           | Make          | SCons         |
+   +============================+===============+===============+===============+
+   | Speed of full build        | |plusplus|    | |plusplus|    | |plus|        |
+   +----------------------------+---------------+---------------+---------------+
+   | Speed of partial build,    | |plus|        | |avg|         | |avg|         |
+   | avoidance of unnecessary   |               |               |               |
+   | actions                    |               |               |               |
+   +----------------------------+---------------+---------------+---------------+
+   | Speed of "empty" build     | |avg|         | |plusplus|    | |minusminus|  |
+   +----------------------------+---------------+---------------+---------------+
+   | Expressiveness             | |plusplus|    | |minusminus|  | |avg|         |
+   | of build description       |               |               |               |
+   +----------------------------+---------------+---------------+---------------+
+   | Portability                | |plusplus|    | |minusminus|  | |avg|         |
+   | of build description       |               |               |               |
+   +----------------------------+---------------+---------------+---------------+
+   | Modularity                 | |plusplus|    | |minusminus|  | |minusminus|  |
+   +----------------------------+---------------+---------------+---------------+
+   | Robustness to              | |plus|        | |minusminus|  | |plusplus|    |
+   | system time jumps          |               |               |               |
+   +----------------------------+---------------+---------------+---------------+
+   | Robustness to              | |plusplus|    | |minusminus|  | |plusplus|    |
+   | changes during build       |               |               |               |
+   +----------------------------+---------------+---------------+---------------+
+   | Reproducibility of builds  | |plusplus|    | |minusminus|  | |minusminus|  |
+   +----------------------------+---------------+---------------+---------------+
+   | Fine-grained control       | |plusplus|    | |minusminus|  | |minusminus|  |
+   | of parallel execution      |               |               |               |
+   +----------------------------+---------------+---------------+---------------+
+   | Abstraction of tools       | |plusplus|    | |minusminus|  | |minus|       |
+   +----------------------------+---------------+---------------+---------------+
+   | Self-containedness         | |plusplus|    | |minusminus|  | |plusplus|    |
+   +----------------------------+---------------+---------------+---------------+
+   | Possibility to step        | |plusplus|    | |minusminus|  | |minus|       |
+   | through build with         |               |               |               |
+   | debugger                   |               |               |               |
+   +----------------------------+---------------+---------------+---------------+
+   | Core objects               | contexts,     | strings       | strings,      |
+   |                            | tools, paths  |               | string lists  |
+   +----------------------------+---------------+---------------+---------------+
+
+.. |plus| replace:: ⊕
+
+.. |plusplus| replace:: ⊕⊕
+
+.. |minus| replace:: ⊖
+
+.. |minusminus| replace:: ⊖⊖
+
+.. |avg| replace:: ⊙
+
+See :ref:`here <similar_tools>` for an overview and the following questions for specific reasons.
 
 
 How does dlb compare to Make?
@@ -34,8 +86,8 @@ dlb is executed by an instance of a Python interpreter; starting a Python interp
 typically takes approximately 70 ms.
 Therefore, dlb cannot compete with the efficiency of Make in the following situations:
 
-   a. Every output dependency (Make: target) has to be generated
-   b. No output dependency has to be generated (Make: no source is newer than its targets)
+   a. Full build: every output dependency (Make: target) has to be generated
+   b. "Empty" build: No output dependency has to be generated (Make: no source is newer than its targets)
 
 However, most :term:`runs of dlb <run of dlb>` or Make are something between - that is the whole idea behind a build
 tool after all.
