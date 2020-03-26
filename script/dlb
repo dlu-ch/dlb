@@ -2,13 +2,18 @@
 
 # Run a dlb script in the root of the working tree that contains the current directory.
 #
-# When called with a least one parameter that does not start with "-", the first such parameter must be a dlb script as
+# When called with a least one parameter that does not start with '-', the first such parameter must be a dlb script as
 # a path relative to the root of the working tree. '.py' is appended if it does not end with '.py'.
 # All parameters before are forwared the the Python interpreter.
 # All parameters after are forwarded to the dlb script.
 #
-# When called without a parameter that does not start with "-", the parameters from the last successul call of dlb
+# When called without a parameter that does not start with '-', the parameters from the last successul call of dlb
 # by this script are used.
+#
+# Each regular file or symbolic link in the directory '.dlbroot/u/' of the working tree whose name ends in '.zip'
+# is added to the list of module search paths of the Python interpreter.
+#
+# Set the environment variable 'PYTHON' to the path of a Python interpreter to use an other interpreter than 'python3'.
 #
 # Example:
 #
@@ -16,11 +21,14 @@
 #    dlb -v -Ximporttime build/all
 #    dlb
 
-PYTHON=python3
+PYTHON="${PYTHON:-python3}"
+
 DLBROOT=.dlbroot
 LAST="${DLBROOT:?}/last.bash"
 
 set -e
+shopt -s dotglob
+shopt -s nullglob
 
 # find root
 last_cwd=''
@@ -64,6 +72,27 @@ elif [ -f "./${LAST:?}" ]; then
 else
     printf "usage: %q [ <script-name> [ <script-parameter> ... ] ]\n" "${0##*/}" >&2
     exit 2
+fi
+
+# add .zip file in .dlbroot/u/ to PYTHONPATH
+# paths in PYTHONPATH are separated by os.pathsep
+# since this is Bash, assume os.pathsep to be ':'
+paths=()
+for zip_file in "${PWD}/.dlbroot/u/"?*.zip; do  # sorted
+    if [ -f "${zip_file}" ]; then  # regular file or symbolic link to regular file?
+        if [ "${zip_file%;*}" != "${zip_file}" ]; then
+            printf "file path with separator cannot be used in PYTHONPATH: %q\n" "${zip_file}" >&2
+            exit 1
+        fi
+        paths+=("${zip_file}")  # keep order of path name expansion
+    fi
+done
+if [ ${#paths[@]} -gt 0 ]; then
+    printf "add %d zip file(s) to PYTHONPATH\n" "${#paths[@]}"
+    printf -v PYTHONPATH "%s;" "${paths[@]}" "${PYTHONPATH}"
+    PYTHONPATH="${PYTHONPATH%;}"
+    PYTHONPATH="${PYTHONPATH%;}"
+    export PYTHONPATH
 fi
 
 # execute script

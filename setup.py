@@ -15,8 +15,9 @@ import sys
 import re
 import os.path
 import subprocess
-import setuptools
+import zipfile
 import shutil
+import setuptools
 sys.path.insert(0, os.path.abspath('src'))
 import dlb.fs
 del sys.path[0]
@@ -41,12 +42,10 @@ def get_version_from_git():
     return version
 
 
-def build_modified_src_tree(version):
-    dst_path = dlb.fs.Path('out/gsrc/')
+def build_modified_src_tree(*, src_path, dst_path, version):
     if dst_path.native.raw.exists():
         shutil.rmtree(dst_path.native)
 
-    src_path = dlb.fs.Path('src/')
     for p in src_path.list(name_filter=r'.+\.py', recurse_name_filter=r''):
         q = dst_path / p[1:]
         q[:-1].native.raw.mkdir(exist_ok=True, parents=True)
@@ -60,16 +59,31 @@ def build_modified_src_tree(version):
             shutil.copy(src=str(p.native), dst=str(q.native))
 
 
+def zip_modified_src_tree(*, src_path, zip_path):
+    zip_path[:-1].native.raw.mkdir(exist_ok=True, parents=True)
+    try:
+        zip_path.native.raw.unlink()
+    except FileNotFoundError:
+        pass
+    with zipfile.ZipFile(zip_path.native, 'w') as zip:
+        for p in src_path.list(name_filter=r'.+\.py', recurse_name_filter=r''):
+            zip.write(p.native, arcname=p.relative_to(src_path).as_string())
+
+
 dist_path = dlb.fs.Path('dist/')
 if dist_path.native.raw.exists():
     shutil.rmtree(dist_path.native)
+dist_path.native.raw.mkdir(exist_ok=True, parents=True)
 
-dst_path = dlb.fs.Path('out/build/')
+out_path = dlb.fs.Path('out/')
+dst_path = out_path / 'build/'
 if dst_path.native.raw.exists():
     shutil.rmtree(dst_path.native)
 
 version = get_version_from_git()
-build_modified_src_tree(version)
+build_modified_src_tree(src_path=dlb.fs.Path('src/'), dst_path=dlb.fs.Path('out/gsrc/'), version=version)
+zip_modified_src_tree(src_path=dlb.fs.Path('out/gsrc/'), zip_path=out_path / 'dlb.zip')
+shutil.copy(src=(out_path / 'dlb.zip').native, dst=(dist_path / f'dlb-{version}.zip').native)
 
 setuptools.setup(
     name='dlb',
