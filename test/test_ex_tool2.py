@@ -193,7 +193,7 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
         self.assertEqual(B.definition_location, (os.path.realpath(__file__), None, lineno + 2 + 3))
         self.assertEqual(C.definition_location, (os.path.realpath(__file__), None, lineno + 2 + 3 + 3))
 
-    def test_location_in_zip_archive_is_correct(self):
+    def test_location_in_zip_archive_package_is_correct(self):
         with tempfile.TemporaryDirectory() as tmp_dir_path:
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
                 open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
@@ -239,11 +239,31 @@ class AmbiguityTest(tools_for_test.TemporaryDirectoryTestCase):
         msg = (
             "invalid tool definition: location of definition is unknown\n"
             "  | class: <class 'u2.v.A'>\n"
-            "  | define the class in a regular file or in a zip archived with '.zip'\n"
-            "  | note also the importance of upper and lower case of module search paths "
+            "  | define the class in a regular file or in a zip archive ending in '.zip'\n"
+            "  | note also the significance of upper and lower case of module search paths "
             "on case-insensitive filesystems"
         )
         self.assertEqual(msg, str(cm.exception))
+
+    def test_location_in_zip_archive_module_is_correct(self):
+        with tempfile.TemporaryDirectory() as tmp_dir_path:
+            with tempfile.TemporaryDirectory() as content_tmp_dir_path:
+                with open(os.path.join(content_tmp_dir_path, 'u3.py'), 'w') as f:
+                    f.write(
+                        'import dlb.ex\n'
+                        'class A(dlb.ex.Tool): pass'
+                    )
+
+                zip_file_path = os.path.join(tmp_dir_path, 'abc.zip')
+                with zipfile.ZipFile(zip_file_path, 'w') as z:
+                    z.write(os.path.join(content_tmp_dir_path, 'u3.py'), arcname='u3.py')
+
+            sys.path.insert(0, zip_file_path)
+            # noinspection PyUnresolvedReferences
+            import u3
+            del sys.path[0]
+
+        self.assertEqual(u3.A.definition_location, (os.path.realpath(zip_file_path), 'u3.py', 2))
 
     # noinspection PyAbstractClass
     def test_definition_location_is_readonly(self):

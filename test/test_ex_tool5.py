@@ -426,15 +426,15 @@ class RunToolDefinitionFileTest(tools_for_test.TemporaryWorkingDirectoryTestCase
 
             zip_file_path = os.path.abspath('abc.zip')
             with zipfile.ZipFile(zip_file_path, 'w') as z:
-                z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u3/__init__.py')
-                z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u3/v.py')
+                z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u4/__init__.py')
+                z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u4/v.py')
 
         sys.path.insert(0, zip_file_path)
         # noinspection PyUnresolvedReferences
-        import u3.v
+        import u4.v
         del sys.path[0]
 
-        t = u3.v.A()
+        t = u4.v.A()
 
         with dlb.ex.Context():
             output = io.StringIO()

@@ -909,13 +909,14 @@ class _ToolMeta(type):
                 #     A module name must be a Python identifier, so it must not contain a '.'.
                 #     Therefore, the file path of the archive can always be determined unambiguously if the
                 #     archive's filename contains a '.'.
-                dir_path = os.path.dirname(source_path)
+                if os.path.altsep:
+                    source_path = source_path.replace(os.path.altsep, os.path.sep)
 
                 ext = '.zip'
-                i = dir_path.rfind(ext + os.path.sep)
-                if i <= 0:
-                    raise ValueError
-                source_path, in_archive_path = dir_path[:i + len(ext)], source_path[i + len(ext) + 1:]
+
+                # TypeError on assignment if no match:
+                source_path, in_archive_path = source_path.rstrip(os.path.sep).rsplit(ext + os.path.sep)
+                source_path += ext
 
                 if not os.path.isfile(source_path):
                     raise ValueError
@@ -925,8 +926,8 @@ class _ToolMeta(type):
             msg = (
                 f"invalid tool definition: location of definition is unknown\n"
                 f"  | class: {cls!r}\n"
-                f"  | define the class in a regular file or in a zip archived with '.zip'\n"
-                f"  | note also the importance of upper and lower case of module search paths on "
+                f"  | define the class in a regular file or in a zip archive ending in '.zip'\n"
+                f"  | note also the significance of upper and lower case of module search paths on "
                 f"case-insensitive filesystems"
             )
             raise DefinitionAmbiguityError(msg) from None
