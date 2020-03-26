@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.ex.rundb
 import dlb.ex.worktree
+import time
 import datetime
 import stat
 import collections
@@ -755,6 +756,7 @@ class RunSummaryTest(tools_for_test.TemporaryDirectoryTestCase):
             rundb.commit()
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            time.sleep(0.1)
             start_datetime, duration_ns, run_count, redo_count = rundb.update_run_summary(2, 3)
             rundb.commit()
             self.assertIsInstance(start_datetime, datetime.datetime)
