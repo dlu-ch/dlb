@@ -4,6 +4,7 @@
 
 import sys
 import os.path
+import io
 
 
 def sanitize_module_search_path():
@@ -98,3 +99,30 @@ class TemporaryWorkingDirectoryTestCase(TemporaryDirectoryTestCase):
     def setUp(self):
         super().setUp()
         os.mkdir('.dlbroot')
+
+
+class TemporaryWorkingDirectoryAndOutputTestCase(TemporaryWorkingDirectoryTestCase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._path = None
+        self._argv = None
+        self._stdout = None
+        self._stderr = None
+
+    def setUp(self):
+        super().setUp()
+        self._path = list(sys.path)
+        self._argv = list(sys.argv)
+        sys.argv = [sys.argv[0]]
+        self._stdout = sys.stdout
+        sys.stdout = io.StringIO()
+        self._stderr = sys.stderr
+        sys.stderr = io.StringIO()
+
+    def tearDown(self):
+        sys.path = self._path
+        sys.argv = self._argv
+        sys.stderr.close()
+        sys.stderr = self._stderr
+        sys.stdout.close()
+        sys.stdout = self._stdout

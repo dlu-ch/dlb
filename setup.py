@@ -33,12 +33,6 @@ def copy_src_tree(*, src_path, dst_path):
 
 
 def replace_version(*, src_path, version, version_info):
-    def repl(content, regex, dst):
-        m = regex.fullmatch(content)
-        if src not in content:
-            raise ValueError('line not found: {src!r}')
-        return content.replace(src, dst)
-
     version_path = src_path / 'dlb/version.py'
 
     with version_path.native.raw.open('rb') as f:
@@ -138,11 +132,11 @@ setuptools.setup(
     keywords='build development',
 
     # https://docs.python.org/3/distutils/setupscript.html#listing-whole-packages
-    package_dir={'': modified_src_path.as_string()},
+    package_dir={'': modified_src_path.as_string().rstrip('/')},
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=setuptools.find_packages(where=modified_src_path.as_string()),
+    packages=setuptools.find_packages(where=modified_src_path.as_string().rstrip('/')),
 
     py_modules=[p[-1:].as_string()[:-3] for p in modified_src_path.list(name_filter=r'dlb_contrib_.+\.py')],
 
@@ -172,7 +166,8 @@ setuptools.setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={},
-
-    scripts=['script/dlb']
+    # https://packaging.python.org/specifications/entry-points/
+    entry_points={
+        'console_scripts': ['dlb=dlb.launcher:main'],
+    },
 )
