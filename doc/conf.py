@@ -5,14 +5,12 @@
 # this file is used as working directory.
 
 import sys
-import os
-import re
-import subprocess
+import os.path
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(root_path, 'build'))
+sys.path.insert(0, os.path.join(root_path, 'src'))
+import version_from_repo
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../src'))
 
 # -- General configuration ------------------------------------------------
 
@@ -53,26 +51,8 @@ author = 'Daniel Lutz'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-def get_version_from_git():
-    s = subprocess.check_output(['git', 'describe', '--match', 'v*', '--long', '--abbrev=40']).decode().strip()
-    m = re.compile(r'v(?P<version>[0-9.]+)-(?P<n>[0-9]+)-g(?P<hash>[0-9a-f]+)').fullmatch(s)
-    if m is None:
-        print("git describe: {}".format(repr(s)))
-
-    last_version = m.group('version')
-    commits_since_tag = int(m.group('n'), base=10)
-    commit_hash = m.group('hash')
-
-    if commits_since_tag > 0:
-        # PEP 440
-        version = '{}.dev{}+{}'.format(last_version, commits_since_tag, commit_hash[:4])
-    else:
-        version = last_version
-
-    return version
-
 # The full version, including alpha/beta/rc tags.
-release = get_version_from_git()
+release, _ = version_from_repo.get_version()
 
 # The short X.Y version.
 version = release

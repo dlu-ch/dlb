@@ -4,7 +4,7 @@
 
 """dlb - a Pythonic build tool."""
 
-from .version import __version__
+from .version import __version__, version_info
 
 # inter-dependencies of modules of this package
 # (later line may depend on earlier lines):

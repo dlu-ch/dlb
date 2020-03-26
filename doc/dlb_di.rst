@@ -140,11 +140,11 @@ times. The number of decimal places is the same for all output timing informatio
 Module content
 --------------
 
-.. py:data:: DEBUG
-.. py:data:: INFO
-.. py:data:: WARNING
-.. py:data:: ERROR
-.. py:data:: CRITICAL
+.. data:: DEBUG
+.. data:: INFO
+.. data:: WARNING
+.. data:: ERROR
+.. data:: CRITICAL
 
    Positive integers representing standard logging levels of the same names.
    See the documentation of `logging <https://docs.python.org/3/library/logging.html#logging-levels>`_.

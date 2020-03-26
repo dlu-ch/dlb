@@ -90,10 +90,11 @@ Content
    toplevelspec.rst
    usage.rst
 
-   fs.rst
-   di.rst
-   cf.rst
-   ex.rst
+   dlb.rst
+   dlb_fs.rst
+   dlb_di.rst
+   dlb_cf.rst
+   dlb_ex.rst
 
 
 Indices and tables

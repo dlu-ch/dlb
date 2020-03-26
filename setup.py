@@ -14,49 +14,47 @@ Run with build-package.bash
 import sys
 import re
 import os.path
-import subprocess
 import zipfile
 import shutil
 import setuptools
+sys.path.insert(0, os.path.abspath('build'))
 sys.path.insert(0, os.path.abspath('src'))
 import dlb.fs
-del sys.path[0]
+import version_from_repo
 
 
-def get_version_from_git():
-    s = subprocess.check_output(['git', 'describe', '--match', 'v*', '--long', '--abbrev=40']).decode().strip()
-    m = re.compile(r'v(?P<version>[0-9.]+)-(?P<n>[0-9]+)-g(?P<hash>[0-9a-f]+)').fullmatch(s)
-    if m is None:
-        print("git describe: {}".format(repr(s)))
-
-    last_version = m.group('version')
-    commits_since_tag = int(m.group('n'), base=10)
-    commit_hash = m.group('hash')
-
-    if commits_since_tag > 0:
-        # PEP 440
-        version = '{}.dev{}+{}'.format(last_version, commits_since_tag, commit_hash[:4])
-    else:
-        version = last_version
-
-    return version
-
-
-def build_modified_src_tree(*, src_path, dst_path, version):
+def copy_src_tree(*, src_path, dst_path):
     if dst_path.native.raw.exists():
         shutil.rmtree(dst_path.native)
-
     for p in src_path.list(name_filter=r'.+\.py', recurse_name_filter=r''):
         q = dst_path / p[1:]
         q[:-1].native.raw.mkdir(exist_ok=True, parents=True)
-        if p == src_path / 'dlb/version.py':
-            with p.native.raw.open('rb') as f:
-                content = f.read()
-            content = content.replace(b"__version__ = '?'", f"__version__ = {version!r}".encode())
-            with q.native.raw.open('wb') as f:
-                f.write(content)
-        else:
-            shutil.copy(src=str(p.native), dst=str(q.native))
+        shutil.copy(src=str(p.native), dst=str(q.native))
+
+
+def replace_version(*, src_path, version, version_info):
+    def repl(content, regex, dst):
+        m = regex.fullmatch(content)
+        if src not in content:
+            raise ValueError('line not found: {src!r}')
+        return content.replace(src, dst)
+
+    version_path = src_path / 'dlb/version.py'
+
+    with version_path.native.raw.open('rb') as f:
+        content = f.read()
+
+    regex = re.compile(br'\n__version__ = [^\r\n]+')
+    content, n = regex.subn(f"\n__version__ = {version!r}".encode(), content)
+    assert n == 1, '__version__ line not found'
+
+    regex = re.compile(br'\nversion_info = [^\r\n]+')
+    version_info_str = '({})'.format(', '.join(str(c) for c in version_info))
+    content, n = regex.subn(f"\nversion_info = {version_info_str}".encode(), content)
+    assert n == 1, 'version_info line not found'
+
+    with version_path.native.raw.open('wb') as f:
+        f.write(content)
 
 
 def zip_modified_src_tree(*, src_path, zip_path):
@@ -82,8 +80,9 @@ if dst_path.native.raw.exists():
 
 modified_src_path = out_path / 'gsrc/'
 
-version = get_version_from_git()
-build_modified_src_tree(src_path=dlb.fs.Path('src/'), dst_path=modified_src_path, version=version)
+version, version_info = version_from_repo.get_version()
+copy_src_tree(src_path=dlb.fs.Path('src/'), dst_path=modified_src_path)
+replace_version(src_path=modified_src_path, version=version, version_info=version_info)
 zip_modified_src_tree(src_path=modified_src_path, zip_path=out_path / 'dlb.zip')
 shutil.copy(src=(out_path / 'dlb.zip').native, dst=(dist_path / f'dlb-{version}.zip').native)
 
