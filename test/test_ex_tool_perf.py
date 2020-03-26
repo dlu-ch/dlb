@@ -38,7 +38,7 @@ def dump_profile_stats(profile, test_case: unittest.TestCase, result_index: int)
     assert os.path.isabs(__file__)
     dir_path, file_name = os.path.split(__file__)
 
-    output_dir_path = os.path.join(dir_path, '..', 'out', 'prof')
+    output_dir_path = os.path.join(dir_path, '..', 'build', 'out', 'prof')
     file_name = '{}-{}-{}.prof'.format(file_name, test_case.__class__.__name__, result_index)
 
     os.makedirs(output_dir_path, exist_ok=True)

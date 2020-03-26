@@ -75,14 +75,16 @@ if dist_path.native.raw.exists():
     shutil.rmtree(dist_path.native)
 dist_path.native.raw.mkdir(exist_ok=True, parents=True)
 
-out_path = dlb.fs.Path('out/')
+out_path = dlb.fs.Path('build/out/')
 dst_path = out_path / 'build/'
 if dst_path.native.raw.exists():
     shutil.rmtree(dst_path.native)
 
+modified_src_path = out_path / 'gsrc/'
+
 version = get_version_from_git()
-build_modified_src_tree(src_path=dlb.fs.Path('src/'), dst_path=dlb.fs.Path('out/gsrc/'), version=version)
-zip_modified_src_tree(src_path=dlb.fs.Path('out/gsrc/'), zip_path=out_path / 'dlb.zip')
+build_modified_src_tree(src_path=dlb.fs.Path('src/'), dst_path=modified_src_path, version=version)
+zip_modified_src_tree(src_path=modified_src_path, zip_path=out_path / 'dlb.zip')
 shutil.copy(src=(out_path / 'dlb.zip').native, dst=(dist_path / f'dlb-{version}.zip').native)
 
 setuptools.setup(
@@ -137,13 +139,13 @@ setuptools.setup(
     keywords='build development',
 
     # https://docs.python.org/3/distutils/setupscript.html#listing-whole-packages
-    package_dir={'': 'out/gsrc'},
+    package_dir={'': modified_src_path.as_string()},
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=setuptools.find_packages(where='out/gsrc'),
+    packages=setuptools.find_packages(where=modified_src_path.as_string()),
 
-    py_modules=[p[-1:].as_string()[:-3] for p in dlb.fs.Path('out/gsrc/').list(name_filter=r'dlb_contrib_.+\.py')],
+    py_modules=[p[-1:].as_string()[:-3] for p in modified_src_path.list(name_filter=r'dlb_contrib_.+\.py')],
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's

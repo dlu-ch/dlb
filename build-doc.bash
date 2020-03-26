@@ -6,7 +6,7 @@ SPHINXBUILD=sphinx-build
 
 doc_dir=doc
 doc_to_root=..
-out_dir=out
+out_dir=build/out
 sphinx_out_dir="${out_dir:?}/sphinx"
 
 (
