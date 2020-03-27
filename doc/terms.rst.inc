@@ -114,10 +114,10 @@ Terms
       The effective :term:`mtime` resolution for a filesystem object *p* is defined by the following
       thought experiment:
 
-       - *p* is modified at :term:`ideal time` *t*, resulting in a :term:`mtime` *m* of *p*.
-       - *p* is modified at :term:`ideal time` *t* + *dt*, resulting in a
-         :term:`mtime` *m*  + *dm* of *p*.
-       - The effective mtime resolution for *p* is the minimum *dm* > 0 for any pair of *t* and *dt* > 0.
+      - *p* is modified at :term:`ideal time` *t*, resulting in a :term:`mtime` *m* of *p*.
+      - *p* is modified at :term:`ideal time` *t* + *dt*, resulting in a
+        :term:`mtime` *m*  + *dm* of *p*.
+      - The effective mtime resolution for *p* is the minimum *dm* > 0 for any pair of *t* and *dt* > 0.
 
       Resolution of timestamps for some filesystems: XFS: 1 ns, NTFS: 100 ns, ext2: 1 s, FAT32: 2 s.
       The effective mtime resolution depends also on the filesystem driver and the operating system, but it
@@ -173,13 +173,13 @@ Terms
       A modification of the :term:`managed tree` is benign, if it consist only of an arbitrary number of the
       following actions in any order:
 
-       - Remove or create a filesystem object
-         (this includes symbolic links and hard links)
-       - Write to a regular file
+      - Remove or create a filesystem object
+        (this includes symbolic links and hard links)
+      - Write to a regular file
 
       Examples of modifications of the managed tree that are no benign managed tree modifications:
 
-       - Replace a regular file by any other one with :command:`mv`
-         (does not :term:`update mtime <mtime update>` of the target)
-       - Swap two directories
-       - Set the :term:`mtime` of a filesystem object to something different from the current working tree time
+      - Replace a regular file by any other one with :command:`mv`
+        (does not :term:`update mtime <mtime update>` of the target)
+      - Swap two directories
+      - Set the :term:`mtime` of a filesystem object to something different from the current working tree time

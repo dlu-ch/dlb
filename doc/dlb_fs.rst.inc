@@ -157,8 +157,8 @@ Path objects
 
       The path of an existing filesystem object is eventually yielded if and only if
 
-        - its name matches the name filter *name_filter* and
-        - it is contained in a matched directory.
+      - its name matches the name filter *name_filter* and
+      - it is contained in a matched directory.
 
       A directory is a matched directory if and only if it is the directory *d* denoted by this path or a direct
       subdirectory of a matched directory whose name matches the name filter *recurse_name_filter*.
@@ -170,14 +170,14 @@ Path objects
       *name_filter* and *recurse_name_filter* are *name filters*.
       A name filter can be
 
-        - ``None`` --- no name matches this filter
-        - a callable *c* accepting exactly one argument --- a name *n* matches this filter if and only if
-          ``bool(c(n))`` is ``True``
-        - a compiled regular expression *r* --- a name *n* matches this filter if and only if ``r.fullmatch(n))``
-          is not ``None``
-        - a non-empty regular expression string ``s``--- a name *n* matches this filter if and only if
-          ``re.compile(s).fullmatch(n))`` is not ``None``
-        - an empty string --- every name matches this filter
+      - ``None`` --- no name matches this filter
+      - a callable *c* accepting exactly one argument --- a name *n* matches this filter if and only if
+        ``bool(c(n))`` is ``True``
+      - a compiled regular expression *r* --- a name *n* matches this filter if and only if ``r.fullmatch(n))``
+        is not ``None``
+      - a non-empty regular expression string ``s``--- a name *n* matches this filter if and only if
+        ``re.compile(s).fullmatch(n))`` is not ``None``
+      - an empty string --- every name matches this filter
 
       Example::
 
@@ -335,7 +335,7 @@ Path objects
       e.g. ``os.path.isdir(p.native)`` instead of ``p.native.raw.is_dir()``.
 
 
-.. _restricting_paths:
+.. _dlb-fs-restricting-paths:
 
 Restricting paths
 -----------------
@@ -412,6 +412,3 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: PortablePath
 
-.. _POSIX:
-.. _ISO 1003.1-2008: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/contents.html
-.. _hashable: https://docs.python.org/3/glossary.html#term-hashable

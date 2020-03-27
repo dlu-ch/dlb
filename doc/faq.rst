@@ -59,14 +59,66 @@ especially for the development of embedded software with cross-compiler toolchai
 
 .. |avg| replace:: ⊙
 
-See :ref:`here <similar_tools>` for an overview and the following questions for specific reasons.
-
 Note that there is a lot of controversy in comparing the speed of build tools in general and
 `SCons in particular <https://github.com/SCons/scons/wiki/WhySconsIsNotSlow>`_.
+
 In my opinion, raw speed for a single build in an ideal environment is not the most important benchmark for
 productivity; the necessary effort to develop and maintain a correct and complete build description is more relevant.
 Spending hours to find subtle flaws in the build process and doing complete rebuilds out of mistrust in the completeness
-of the dependency information costs more than a few seconds per - otherwise perfect - partial build.
+of the dependency information costs more than a few seconds per --- otherwise perfect --- partial build.
+
+See the following questions for a comparison to Make and SCons.
+
+There is also plethora of other build tools besides Make and SCons:
+
+- https://en.wikipedia.org/wiki/List_of_build_automation_software
+- https://pypi.org/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Build+Tools
+
+They fall into two large categories which both have major shortcomings in the view of the author.
+
+
+Tools based on declared dependency rules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Most of them implement the functionality of Make in a more readable descriptive language
+and improve the modularity and the ability to split large projects into smaller ones.
+
+See :ref:`here <manual-explicit-is-better-than-implicit>` why a descriptive language is not the best approach to describe a
+build process.
+
+Examples are:
+
+- `Apache Ant <https://ant.apache.org/>`_ (XML, Java-centric)
+- https://pypi.org/project/doit/ (Python)
+- https://mesonbuild.com/ (Python)
+- https://pypi.org/project/faff/ (Python, "An input file similar to a Makefile defines rules")
+- https://pypi.org/project/Aap/ (Python)
+- https://pypi.org/project/pyb/ (Python, "Modelled after Ant")
+- https://pypi.org/project/csbuild/ (Python, for fast incremental building of C(++) projects)
+- https://pypi.org/project/mkcode/ (Python)
+- https://pypi.org/project/bold/ (Python, C-centric)
+- https://pypi.org/project/buildit/ (Python, .ini-file syntax to describe rules)
+- `Bruce Eckel's builder.py <https://www.artima.com/weblogs/viewpost.jsp?thread=241209>`_ (Python)
+
+Of these, SCons and doit are closest to the goals of this project.
+
+
+Tools based on directory structure
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some build tools are specialized in organizing large projects, fetching files from different
+sources, packaging and publishing the build products.
+They usually do so by imposing a certain directory structure and assign files a given meaning
+based on this structure.
+
+These tools are heavy, complex and restrictive.
+A build tool should be simple and flexible.
+
+Examples are:
+
+- `Apache Maven <https://maven.apache.org/>`_ (XML, Java-centric)
+- https://www.pantsbuild.org/
+- http://www.buildout.org/
 
 
 How does dlb compare to Make?
@@ -96,7 +148,7 @@ Therefore, dlb cannot compete with the efficiency of Make in the following situa
    a. Full build: every output dependency (Make: target) has to be generated
    b. "Empty" build: No output dependency has to be generated (Make: no source is newer than its targets)
 
-However, most :term:`runs of dlb <run of dlb>` or Make are something between - that is the whole idea behind a build
+However, most :term:`runs of dlb <run of dlb>` or Make are something between --- that is the whole idea behind a build
 tool after all.
 Apart from the delay to start Python, the performance of Make and dlb is comparable.
 Since a typical dlb script describes the dependencies completely while a typical Makefile does not,
@@ -132,6 +184,7 @@ Building software with the help of external tools typically requires a lot of  "
 manipulating files and program output. Python and its libraries are very well suited for this task.
 The language is clean and expressive and the community takes pride in elegance and simplicity.
 
+.. _manual-explicit-is-better-than-implicit:
 
 Why is explicit better than implicit?
 -------------------------------------
@@ -143,15 +196,24 @@ A tailored DSL is a good thing exactly as long as you use it as foreseen by its 
 A two-line example may be impressive as a demonstration, but real-live projects look different.
 
 If a certain task is repetitive enough to be described by static content (e.g. an XML file), there's nothing wrong in
-doing so. But this situation does not call for a restriction of the language - it calls for an (optional) easy way
+doing so. But this situation does not call for a restriction of the language --- it calls for an (optional) easy way
 to interpret the static content.
 
 In restricting the language instead, you usually lose first:
 
- - The possibility to *debug* the build process with powerful tools
- - The possibility to *extend* the build tool by aspects not anticipated by its creators
- - The possibility to *adapt* a certain behaviour of the build tool without replacing large parts of it
+- The possibility to *debug* the build process with powerful tools
+- The possibility to *extend* the build tool by aspects not anticipated by its creators
+- The possibility to *adapt* a certain behaviour of the build tool without replacing large parts of it
 
+Where are the sources?
+----------------------
+
+Here: https://github.com/dlu-ch/dlb.
+
+Feel free to contribute.
+
+
+.. rubric:: Footnotes
 
 .. [#makeportability1]
    POSIX (ISO 1003.1-2008) `states <https://pubs.opengroup.org/onlinepubs/009695399/utilities/make.html>`_:

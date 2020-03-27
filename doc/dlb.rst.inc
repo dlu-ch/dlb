@@ -16,13 +16,16 @@
 
 .. data:: version_info
 
-   The version of dlb as a tuple of at least three members, similar to :data:`python:sys.version_info`.
-   Each member is a non-negative integer or a string ``'a'`` ... ``'z'``.
-   The first tree members are integers.
-   Example: ``(1, 2, 3, 'c', 4)``.
+   The version of dlb as a non-empty tuple of non-negative integers and strings ``'a'`` ... ``'z'``,
+   similar to :data:`python:sys.version_info`.
+   Example: ``(1, 2, 3)``.
 
-   Use it like this to compare versions::
+   Contains at least 3 members, the first 3 of them integers.
+   Contains more than 3 members if and only if this is an unreleased version.
+   For an unreleased version, *version_info* looks like this: ``(1, 2, 3, 'c', 4)``.
 
-      assert (1, 0) <= dlb.version_info  < (2,)
+   Use it like this to compare (released) versions::
+
+      assert (1, 0, 3) <= dlb.version_info  < (2,)
 
    Note: For a development version, *version_info* carries less information than *__version__*.

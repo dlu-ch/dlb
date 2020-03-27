@@ -38,11 +38,7 @@ messages as long as the syntax is not violated.
 
 To output a message, call :func:`dlb.di.inform()` or enter a context manager instance of :class:`dlb.di.Cluster()`.
 
-.. [#machinereadable]
-   Possible application: monitoring of the build progress on a build server.
-
-
-.. _diagmessage_example:
+.. _dlb-di-message-example:
 
 Example
 -------
@@ -259,4 +255,4 @@ Module content
    With *is_progress* set to ``True``, a :token:`progress_suffix` ``'...'`` is included in the message when the context
    is entered. In addition, a message ``'done.`` or ``'failed with E.'`` is output when the context is exited without or
    with an exception, respectively.
-   See :ref:`diagmessage_example`.
+   See :ref:`dlb-di-message-example`.

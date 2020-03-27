@@ -12,9 +12,9 @@ An :term:`(execution) context <context>` describes how running :term:`tool insta
 with the execution environment outside the :term:`working tree` and with each other.
 E.g:
 
- - number of asynchronously running :term:`tool instances <tool instance>`
- - search paths for :term:`dynamic helper` files
- - environment variables to be imported from :data:`python:os.environ` for use in :term:`tool instances <tool instance>`
+- number of asynchronously running :term:`tool instances <tool instance>`
+- search paths for :term:`dynamic helper` files
+- environment variables to be imported from :data:`python:os.environ` for use in :term:`tool instances <tool instance>`
 
 It also controls how diagnostic messages of :term:`tool instances <tool instance>` are handled and helps with filesystem
 abstraction (e.g. :term:`working tree time`, case sensitivity of names in the :term:`working tree`).
@@ -60,7 +60,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
    whose absolute path does not contain unresolved symbolic link.
 
    When a context (root or not) is entered, the path of the :term:`working tree`'s root must be representable as
-   as *path_cls*. This allows you to impose :ref:`restrictions <restricting_paths>` on the accepted paths.
+   as *path_cls*. This allows you to impose :ref:`restrictions <dlb-fs-restricting-paths>` on the accepted paths.
 
    If *find_helpers* is ``None`` for a :term:`root context`, ``True`` is used instead.
    If *find_helpers* is ``None`` for an active context that is not the :term:`root context`, *find_helpers* of
@@ -274,7 +274,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
    .. attribute:: env
 
-      The :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` with
+      The :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` with
       this context as its associated :term:`context`.
 
       When called on class, it refers to the :term:`active context`.
@@ -311,7 +311,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
 
-.. _environment_variable_dictionary_objects:
+.. _dlb-ex-environment-variable-dictionary-objects:
 
 Environment variable dictionary objects
 ---------------------------------------
@@ -520,12 +520,12 @@ Tools are customized by inheritance and defining class attributes.
       After each of the following actions the redo is guaranteed to be complete (either successfully or
       by raising an exception):
 
-        - read of a "public" attribute of the result proxy object
-        - exit of the context :meth:`run()` was called in
-        - enter of an inner context of the context :meth:`run()` was called in
-        - modification of :attr:`env <dlb.ex.Context.env>` or :attr:`helper <dlb.ex.Context.helper>` of
-          the context :meth:`run()` was called in
-        - call of :meth:`run()` of the same tool instance
+      - read of a "public" attribute of the result proxy object
+      - exit of the context :meth:`run()` was called in
+      - enter of an inner context of the context :meth:`run()` was called in
+      - modification of :attr:`env <dlb.ex.Context.env>` or :attr:`helper <dlb.ex.Context.helper>` of
+        the context :meth:`run()` was called in
+      - call of :meth:`run()` of the same tool instance
 
       The result object contains an attribute for every dependency role of the tool which contains the concrete
       dependencies.
@@ -549,8 +549,8 @@ Tools are customized by inheritance and defining class attributes.
 
       For a redo to be successful, this method must perform the following tasks:
 
-       - Create all explicit output dependencies
-       - Assign values to each required non-explicit dependencies
+      - Create all explicit output dependencies
+      - Assign values to each required non-explicit dependencies
 
       For a filesystem object whose path *p* is contained in an output dependency, it is recommended to first write
       to a temporary filesystem object *q* and then replace it with ``context.replace_output(p, q)``.
@@ -682,7 +682,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
    .. method:: replace_output(path, source):
 
-      Replace the - existing or non-existent - filesystem object *path* by *source*.
+      Replace the --- existing or non-existent --- filesystem object *path* by *source*.
       *path* must be contained in a dependency of the tool instance.
 
       *path* and *source* must be different filesystem objects.
@@ -1192,7 +1192,7 @@ Exceptions
 
 .. exception:: ContextModificationError
 
-   Raised, when an :ref:`environment variable dictionary object <environment_variable_dictionary_objects>` or
+   Raised, when an :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` or
    a helper dictionary object is modified while its associated :term:`context` is not the :term:`active context`.
 
 .. exception:: WorkingTreePathError

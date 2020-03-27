@@ -1,7 +1,7 @@
 .. dlb documentation master file
 
-dlb - explicit is better than implicit
-======================================
+dlb --- explicit is better than implicit
+========================================
 
 dlb is a `Pythonic`_ `build tool <https://en.wikipedia.org/wiki/Build_tool>`_ that does not try to mimic Make_,
 but brings the benefits of object-oriented languages to the build process.
@@ -16,7 +16,7 @@ Its most important tasks are:
 - generate files (e.g. some program source files or configuration files)
 - make the build fast by omitting unnecessary redos
 
-These are the areas where dlb wants to be strong - all this in a precisely specified way, with emphasis on correctness,
+These are the areas where dlb wants to be strong --- all this in a precisely specified way, with emphasis on correctness,
 reliability and robustness.
 
 dlb does not try to hide its Python personality.
@@ -82,19 +82,11 @@ Content
 =======
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    faq.rst
-   similar_tools.rst
-   terms.rst
-   toplevelspec.rst
    usage.rst
-
-   dlb.rst
-   dlb_fs.rst
-   dlb_di.rst
-   dlb_cf.rst
-   dlb_ex.rst
+   reference.rst
 
 
 Indices and tables

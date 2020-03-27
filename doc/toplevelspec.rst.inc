@@ -57,15 +57,15 @@ Modification of the working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-repair|
-      (e.g. after the :term:`run-database` has become corrupted)
-    - |assumptionviolationeffect-obscure-fail|
-      (e.g. after intermediate files have been modified)
-    - |assumptionviolationeffect-vulnerable|
-      (e.g. by a symlink attack)
-    - |assumptionviolationeffect-redo-miss|
-      (e.g. after the :term:`run-database` has been is tampered with)
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-repair|
+     (e.g. after the :term:`run-database` has become corrupted)
+   - |assumptionviolationeffect-obscure-fail|
+     (e.g. after intermediate files have been modified)
+   - |assumptionviolationeffect-vulnerable|
+     (e.g. by a symlink attack)
+   - |assumptionviolationeffect-redo-miss|
+     (e.g. after the :term:`run-database` has been is tampered with)
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-a2:
 .. |assumption-a2| replace:: :ref:`A-A2 <assumption-a2>`
@@ -77,11 +77,11 @@ Modification of the working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-obscure-fail|
-      (e.g. when a running tool instance "sees" an intermediate state of files that are input dependencies)
-    - |assumptionviolationeffect-vulnerable|
-      (e.g. by a symlink attack)
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-obscure-fail|
+     (e.g. when a running tool instance "sees" an intermediate state of files that are input dependencies)
+   - |assumptionviolationeffect-vulnerable|
+     (e.g. by a symlink attack)
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-a3:
 .. |assumption-a3| replace:: :ref:`A-A3 <assumption-a3>`
@@ -92,8 +92,8 @@ Modification of the working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-a4:
 .. |assumption-a4| replace:: :ref:`A-A4 <assumption-a4>`
@@ -104,10 +104,10 @@ Modification of the working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-obscure-fail|
-    - |assumptionviolationeffect-vulnerable|
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-obscure-fail|
+   - |assumptionviolationeffect-vulnerable|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 
 Filesystems behaviour of working tree
@@ -122,8 +122,8 @@ Filesystems behaviour of working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-f2:
 .. |assumption-f2| replace:: :ref:`A-F2 <assumption-f2>`
@@ -134,8 +134,8 @@ Filesystems behaviour of working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-f3:
 .. |assumption-f3| replace:: :ref:`A-F3 <assumption-f3>`
@@ -159,8 +159,8 @@ Filesystems behaviour of working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-f4:
 .. |assumption-f4| replace:: :ref:`A-F4 <assumption-f4>`
@@ -172,8 +172,8 @@ Filesystems behaviour of working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-f5:
 .. |assumption-f5| replace:: :ref:`A-F5 <assumption-f5>`
@@ -185,7 +185,7 @@ Filesystems behaviour of working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-f6:
 .. |assumption-f6| replace:: :ref:`A-F6 <assumption-f6>`
@@ -197,8 +197,8 @@ Filesystems behaviour of working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-obscure-fail|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-obscure-fail|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-f7:
 .. |assumption-f7| replace:: :ref:`A-F7 <assumption-f7>`
@@ -208,11 +208,11 @@ Filesystems behaviour of working tree
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-repair|
-    - |assumptionviolationeffect-obscure-fail|
-    - |assumptionviolationeffect-vulnerable|
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-repair|
+   - |assumptionviolationeffect-obscure-fail|
+   - |assumptionviolationeffect-vulnerable|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 
 Timing and concurrency
@@ -230,8 +230,8 @@ Timing and concurrency
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-t2:
 .. |assumption-t2| replace:: :ref:`A-T2 <assumption-t2>`
@@ -243,11 +243,11 @@ Timing and concurrency
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-      (the finer the :term:`effective mtime resolution` and the less frequent modification of inputs files are,
-      the less likely is a :term:`redo miss` due to this violation)
-    - |assumptionviolationeffect-graceful-fail|
-      (this is desirable since it forces correction before it can cause redo misses in the future)
+   - |assumptionviolationeffect-redo-miss|
+     (the finer the :term:`effective mtime resolution` and the less frequent modification of inputs files are,
+     the less likely is a :term:`redo miss` due to this violation)
+   - |assumptionviolationeffect-graceful-fail|
+     (this is desirable since it forces correction before it can cause redo misses in the future)
 
 .. _assumption-t3:
 .. |assumption-t3| replace:: :ref:`A-T3 <assumption-t3>`
@@ -258,7 +258,7 @@ Timing and concurrency
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-t4:
 .. |assumption-t4| replace:: :ref:`A-T4 <assumption-t4>`
@@ -269,7 +269,7 @@ Timing and concurrency
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-graceful-fail|
 
 
 Dependencies
@@ -291,8 +291,8 @@ Dependencies
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 .. _assumption-d3:
 .. |assumption-d3| replace:: :ref:`A-D3 <assumption-d3>`
@@ -304,8 +304,8 @@ Dependencies
 
    Acceptable when violated:
 
-    - |assumptionviolationeffect-redo-miss|
-    - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-redo-miss|
+   - |assumptionviolationeffect-graceful-fail|
 
 
 Guarantees
@@ -389,39 +389,3 @@ Timing and concurrency
 **G-T4** (threads)
    dlb does not create threads.
 
-
-.. [#mmap1]
-   The update of :term:`mtime` for an ``mmap``'d file
-   `conforming to ISO 1003.1-2008 <https://pubs.opengroup.org/onlinepubs/9699919799/functions/mmap.html>`_
-   after a write to the mapped memory is only guaranteed via :c:func:`msync()`.
-   Therefore such a write operation is not considered complete before the next call of :c:func:`msync()`
-   (which may never happen).
-   Actual behaviour of ``mmap`` on different operating systems (2018): https://apenwarr.ca/log/20181113.
-
-.. [#touch1]
-   Especially, :term:`mtime` is not manually set with :command:`touch -t` or any tool that uses a coarser time
-   resolution than the :term:`effective mtime resolution`.
-   See `touch <http://man7.org/linux/man-pages/man1/touch.1.html>`_  and
-   `utimensat() <http://man7.org/linux/man-pages/man2/utimensat.2.html>`_.
-
-.. [#linuxfstime1]
-   Linux currently (2020) `uses <https://elixir.bootlin.com/linux/v5.5/source/fs/inode.c#L2220>`_
-   `ktime_get_coarse_real_ts64() <https://www.kernel.org/doc/html/latest/core-api/timekeeping.html>`_ as time source
-   for its (optional) :term:`mtime` updates, which
-   `which returns the system-wide realtime clock at the last tick <https://lwn.net/Articles/347811/>`_.
-
-.. [#lazytime1]
-   Some filesystems support mount options to sacrifice this guaranteed for performance.
-   Example: Ext4 with mount option `lazytime <https://lwn.net/Articles/620086/>`_.
-
-.. [#adjtime1]
-   :c:func:`adjtime()` is not covered by `ISO 1003.1-2008 <https://pubs.opengroup.org/onlinepubs/9699919799/>`_.
-   It originated in 4.3BSD and System V.
-   For many operating systems it states "the clock is always monotonically increasing"
-   (`Linux <http://man7.org/linux/man-pages/man3/adjtime.3.html>`_,
-   `OpenBSD <https://man.openbsd.org/adjtime>`_,
-   `FreeBSD <https://www.freebsd.org/cgi/man.cgi?query=adjtime&sektion=2>`_).
-
-.. [#resolution1]
-   Resolution for this situation: Try later (delay should be part of the message) or correct the :term:`mtime` of the
-   affected filesystem objects (list should be part of the message).
