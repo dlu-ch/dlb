@@ -17,7 +17,8 @@ import unittest
 import tools_for_test
 
 
-class FindWorkingtreeRootTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
+class FindWorkingtreeRootTest(tools_for_test.CommandlineToolTestCase,
+                              tools_for_test.TemporaryWorkingDirectoryTestCase                              ):
 
     def test_chdir_stays_in_workingtree_root(self):
         root = os.getcwd()
@@ -44,7 +45,8 @@ class FindWorkingtreeRootTest(tools_for_test.TemporaryWorkingDirectoryAndOutputT
         self.assertEqual(root, os.getcwd())
 
 
-class HelpTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
+class HelpTest(tools_for_test.CommandlineToolTestCase,
+               tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     documentation_url = 'https://dlb.readthedocs.io/'
 
@@ -146,7 +148,8 @@ class HelpTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
             dlb.version_info = version_info
 
 
-class UsageTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
+class UsageTest(tools_for_test.CommandlineToolTestCase,
+                tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_outputs_usage_without_parameters(self):
         r = dlb.launcher.main()
@@ -155,7 +158,8 @@ class UsageTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
         self.assertRegex(sys.stderr.getvalue(), regex)
 
 
-class ScriptTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
+class ScriptTest(tools_for_test.CommandlineToolTestCase,
+                 tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_invalid_scriptname(self):
         invalid_script_names = [
@@ -215,7 +219,8 @@ class ScriptTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
         self.assertEqual(msg, sys.stdout.getvalue())
 
 
-class HistoryTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
+class HistoryTest(tools_for_test.CommandlineToolTestCase,
+                  tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_includes_script_name_and_script_parameters(self):
         open('build.py', 'xb').close()
@@ -266,10 +271,10 @@ class HistoryTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
                              sys.stderr.getvalue())
 
 
-class InaccessibleHistoryTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+class InaccessibleHistoryTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
+                              tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_outputs_usage_if_inaccessible_before(self):
-        os.mkdir('.dlbroot')
         history_file_path = os.path.abspath(os.path.join('.dlbroot', f'last.{os.name}'))
         open(history_file_path, 'wb').close()
         stderr = sys.stderr
@@ -284,7 +289,6 @@ class InaccessibleHistoryTest(tools_for_test.TemporaryDirectoryWithChmodTestCase
             os.chmod(history_file_path, 0o666)
 
     def test_ignores_inaccessible_after(self):
-        os.mkdir('.dlbroot')
         history_file_path = os.path.abspath(os.path.join('.dlbroot', f'last.{os.name}'))
         open(history_file_path, 'wb').close()
         open('build.py', 'xb').close()
@@ -301,7 +305,8 @@ class InaccessibleHistoryTest(tools_for_test.TemporaryDirectoryWithChmodTestCase
             os.chmod(history_file_path, 0o666)
 
 
-class ModuleSearchPathTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTestCase):
+class ModuleSearchPathTest(tools_for_test.CommandlineToolTestCase,
+                           tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_adds_zip_files_to_module_search_path(self):
         u_path = os.path.join('.dlbroot', 'u')

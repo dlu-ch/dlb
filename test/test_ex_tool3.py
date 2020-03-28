@@ -77,10 +77,9 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
                 t.run()
 
 
-class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryDirectoryTestCase):
+class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_absolute_in_managed_tree_remains_absolute(self):
-        os.mkdir('.dlbroot')
         open('a.cpp', 'xb').close()
 
         with dlb.ex.Context() as c:
@@ -117,10 +116,10 @@ class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryWorkingDirecto
                 t.run()
 
 
-class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
+                                                                     tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_inaccessible_inputfile(self):
-        os.mkdir('.dlbroot')
         os.mkdir('src')
         os.chmod('src', 0o000)
 
@@ -331,10 +330,10 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
             self.assertRegex(output.getvalue(), r'\b()filesystem object did not exist\b')
 
 
-class RunDoesRedoIfRegularFileInputChmodModifiedTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+class RunDoesRedoIfRegularFileInputChmodModifiedTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
+                                                     tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        os.mkdir('.dlbroot')
         os.mkdir('src')
         open(os.path.join('src', 'a.cpp'), 'xb').close()
 

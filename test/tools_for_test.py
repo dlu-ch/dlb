@@ -101,7 +101,7 @@ class TemporaryWorkingDirectoryTestCase(TemporaryDirectoryTestCase):
         os.mkdir('.dlbroot')
 
 
-class TemporaryWorkingDirectoryAndOutputTestCase(TemporaryWorkingDirectoryTestCase):
+class CommandlineToolTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._path = None

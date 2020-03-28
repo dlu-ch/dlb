@@ -149,10 +149,10 @@ class RunNonExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectory
             self.assertFalse(t.run())
 
 
-class RunNonExplicitInputDependencyChmodTest(tools_for_test.TemporaryDirectoryWithChmodTestCase):
+class RunNonExplicitInputDependencyChmodTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
+                                             tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_inaccessible_dependency_causes_redo(self):
-        os.mkdir('.dlbroot')
         open('a.cpp', 'xb').close()
         open('a.h', 'xb').close()
 
