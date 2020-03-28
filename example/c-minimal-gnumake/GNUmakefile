@@ -17,19 +17,23 @@ MKDIR=mkdir
 MV=mv
 RM=rm
 
-# functions are GNU Make specific: shell, sort, patsubst, subst
+# functions are GNU Make specific: shell, sort, patsubst, subst, file
 # ':=' is GNU Make specific
 # variable value cannot hold NUL - use LF
-source_files := $(shell $(FIND) -P src -name '*.c' -type f -exec ./print-makefile-safe-filename {} \;)
+source_files := $(shell $(FIND) -P src -name '*.c' -type f -exec build/print-makefile-safe-filename {} \;)
 ifneq ($(.SHELLSTATUS), 0)
     $(error failed while looking for source files)
 endif
 source_files := $(sort $(source_files))
+$(shell $(MKDIR) -p build/out/)
+$(file >build/out/source_files.makevar.t,$(source_files))
+$(shell build/replace-if-different build/out/source_files.makevar.t build/out/source_files.makevar)
+
 object_files := $(patsubst src/%.c,build/out/src/%.c.o,$(source_files))
 dependency_files := $(patsubst src/%.c,build/out/src/%.c.o.d,$(source_files))
 
 # $(MAKEFILE_LIST), $(@D) are GNU Make specific
-build/out/application: $(object_files) $(MAKEFILE_LIST)
+build/out/application: $(object_files) $(MAKEFILE_LIST) build/out/source_files.makevar
 	unset -v LANG LC_CTYPE LC_MESSAGES LC_ALL TMPDIR GCC_COMPARE_DEBUG GCC_EXEC_PREFIX
 	unset -v COMPILER_PATH LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH OBJC_INCLUDE_PATH
 	unset -v DEPENDENCIES_OUTPUT SUNPRO_DEPENDENCIES SOURCE_DATE_EPOCH
