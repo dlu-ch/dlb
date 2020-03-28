@@ -344,7 +344,7 @@ class ModuleSearchPathTest(tools_for_test.CommandlineToolTestCase,
                 "print(repr(sys.path[0]))\n"
             )
 
-        sys.argv = [sys.argv[0]] + ['build/show']
+        sys.argv = [sys.argv[0]] + [os.path.join('build', 'show')]
         r = dlb.launcher.main()
         self.assertEqual(0, r)
         self.assertEqual(repr(os.path.dirname(script_path)) + '\n', sys.stdout.getvalue())
