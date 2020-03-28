@@ -98,7 +98,7 @@ def build_documentation(*, version_result, source_path: Path, output_path: Path,
         dlb_contrib_zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run()
 
 
-dlb.cf.lastest_run_summary_max_count = 5
+dlb.cf.latest_run_summary_max_count = 5
 
 with dlb.ex.Context():
     application_name = 'application'

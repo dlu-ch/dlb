@@ -474,11 +474,11 @@ class _RootSpecifics:
             summary = self._rundb.update_run_summary(self._successful_nonredo_run_count,
                                                      self._successful_redo_run_count)
             try:
-                if cf.lastest_run_summary_max_count > 0 and di.is_unsuppressed_level(cf.level.RUN_SUMMARY):
-                    summaries = self._rundb.get_latest_successful_run_summaries(cf.lastest_run_summary_max_count)
+                if cf.latest_run_summary_max_count > 0 and di.is_unsuppressed_level(cf.level.RUN_SUMMARY):
+                    summaries = self._rundb.get_latest_successful_run_summaries(cf.latest_run_summary_max_count)
                     _show_summary(summaries + [summary])
             except (TypeError, ValueError):
-                pass  # ignore most common exceptions for invalid cf.lastest_run_summary_max_count, cf.level.*
+                pass  # ignore most common exceptions for invalid cf.latest_run_summary_max_count, cf.level.*
         self._cleanup()  # seize the the day
         while True:
             wt = self.working_tree_time_ns

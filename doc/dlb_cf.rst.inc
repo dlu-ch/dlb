@@ -6,11 +6,11 @@
 
 To change the behaviour of dlb, change the values of the following variables.
 
-.. data:: lastest_run_summary_max_count
+.. data:: latest_run_summary_max_count
 
    Number of dlb runs to summarize as an integer.
 
-   When > 0, a summary of the latest *lastest_run_summary_max_count* dlb runs is output when a root context exits.
+   When > 0, a summary of the latest *latest_run_summary_max_count* dlb runs is output when a root context exits.
 
 .. data:: max_dependency_age
 

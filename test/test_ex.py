@@ -83,9 +83,9 @@ class RunSummaryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_is_correct_without_previous_and_without_runs(self):
-        orig = dlb.cf.lastest_run_summary_max_count
+        orig = dlb.cf.latest_run_summary_max_count
         try:
-            dlb.cf.lastest_run_summary_max_count = 2
+            dlb.cf.latest_run_summary_max_count = 2
             output = io.StringIO()
             dlb.di.set_output_file(output)
             dlb.di.set_threshold_level(dlb.di.INFO)
@@ -101,13 +101,13 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             )
             self.assertRegex(output.getvalue(), regex)
         finally:
-            dlb.cf.lastest_run_summary_max_count = orig
+            dlb.cf.latest_run_summary_max_count = orig
 
     def test_is_correct_with_previous_and_with_runs(self):
-        orig = dlb.cf.lastest_run_summary_max_count
+        orig = dlb.cf.latest_run_summary_max_count
 
         try:
-            dlb.cf.lastest_run_summary_max_count = 2
+            dlb.cf.latest_run_summary_max_count = 2
             output = io.StringIO()
             dlb.di.set_output_file(output)
             dlb.di.set_threshold_level(dlb.di.ERROR)
@@ -149,12 +149,12 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertRegex(output.getvalue(), regex)
 
         finally:
-            dlb.cf.lastest_run_summary_max_count = orig
+            dlb.cf.latest_run_summary_max_count = orig
 
     def test_ignores_invalid_configuration(self):
-        orig = dlb.cf.lastest_run_summary_max_count
+        orig = dlb.cf.latest_run_summary_max_count
         try:
-            dlb.cf.lastest_run_summary_max_count = []  # invalid
+            dlb.cf.latest_run_summary_max_count = []  # invalid
             output = io.StringIO()
             dlb.di.set_output_file(output)
             dlb.di.set_threshold_level(dlb.di.INFO)
@@ -164,5 +164,5 @@ class RunSummaryOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
             self.assertEqual("", output.getvalue())
         finally:
-            dlb.cf.lastest_run_summary_max_count = orig
+            dlb.cf.latest_run_summary_max_count = orig
 
