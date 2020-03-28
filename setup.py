@@ -90,7 +90,7 @@ setuptools.setup(
 
     description='A Pythonic build tool',
     long_description=(
-        "dlb is a Pythonic build tool which does not try to mimic Make, but brings the benefits of "
+        "dlb is a Pythonic build tool that does not try to mimic Make, but brings the benefits of "
         "object-oriented languages to the build process. It is inspired by djb's redo."
     ),
 
@@ -102,9 +102,9 @@ setuptools.setup(
     author_email='dlu-ch@users.noreply.github.com',
 
     # Choose your license
-    license='GPLv3',
+    license='GPLv3+',
 
-    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    # See https://pypi.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         # How mature is this project? Common values are
         #   3 - Alpha
@@ -115,9 +115,11 @@ setuptools.setup(
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
+        'Operating System :: OS Independent',
+        'Environment :: Console',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
