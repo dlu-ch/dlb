@@ -11,20 +11,20 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import dlb_contrib_sh
+import dlb_contrib.sh
 import unittest
 from typing import Iterable, Union
 import tools_for_test
 
 
-class OutputTwoLines(dlb_contrib_sh.ShScriptlet):
+class OutputTwoLines(dlb_contrib.sh.ShScriptlet):
     SCRIPTLET = """
         echo first
         echo second
         """
 
 
-class ReadFile(dlb_contrib_sh.ShScriptlet):
+class ReadFile(dlb_contrib.sh.ShScriptlet):
     SCRIPTLET = """
         echo $0
         cat -- "$@"

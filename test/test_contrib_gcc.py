@@ -11,15 +11,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import dlb_contrib_sh
-import dlb_contrib_gcc
+import dlb_contrib.sh
+import dlb_contrib.gcc
 import textwrap
 import unittest
 from typing import Iterable, Union
 import tools_for_test
 
 
-class CCompiler(dlb_contrib_gcc.CCompilerGcc):
+class CCompiler(dlb_contrib.gcc.CCompilerGcc):
     DEFINITIONS = {
         '__GNUC__': None,  # predefined
         'ONE': 1,
@@ -89,7 +89,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertFalse(t.run())
 
         with dlb.ex.Context():
-            dlb_contrib_gcc.CLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').run()
+            dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').run()
 
     def test_fails_for_colon_in_name(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -173,7 +173,7 @@ class CplusplusTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_threshold_level(dlb.di.DEBUG)
         dlb.di.set_output_file(sys.stderr)
 
-        t = dlb_contrib_gcc.CplusplusCompilerGcc(
+        t = dlb_contrib.gcc.CplusplusCompilerGcc(
             source_file='a.c', object_file='a.o', include_search_directories=['i/'])
         with dlb.ex.Context():
             result = t.run()
@@ -190,7 +190,7 @@ class CplusplusTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertFalse(t.run())
 
         with dlb.ex.Context():
-            dlb_contrib_gcc.CplusplusLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').run()
+            dlb_contrib.gcc.CplusplusLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').run()
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
@@ -230,13 +230,13 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             ))
 
         with dlb.ex.Context():
-            dlb_contrib_gcc.CplusplusCompilerGcc(source_file='a.c', object_file='a.o').run()
-            dlb_contrib_gcc.CplusplusCompilerGcc(source_file='b.c', object_file='b.o').run()
-            dlb_contrib_gcc.CplusplusCompilerGcc(source_file='c.c', object_file='c.o').run()
+            dlb_contrib.gcc.CplusplusCompilerGcc(source_file='a.c', object_file='a.o').run()
+            dlb_contrib.gcc.CplusplusCompilerGcc(source_file='b.c', object_file='b.o').run()
+            dlb_contrib.gcc.CplusplusCompilerGcc(source_file='c.c', object_file='c.o').run()
 
     def test_fails_without_proper_suffix(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
-            dlb_contrib_gcc.CLinkerGcc(object_and_archive_files=['o'], linked_file='e')
+            dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['o'], linked_file='e')
         msg = (
             "keyword argument for dependency role 'object_and_archive_files' is invalid: ['o']\n"
             "  | reason: invalid path for 'ObjectOrArchivePath': 'o' (must end with '.o' or '.a')"
@@ -245,7 +245,7 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_succeeds_for_absolute_subprogram_directory(self):
         with dlb.ex.Context():
-            dlb_contrib_gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
+            dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
                                        subprogram_directory='/usr/bin/').run()
 
     def test_succeeds_for_relative_subprogram_directory(self):
@@ -256,15 +256,15 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             raise unittest.SkipTest from None
 
         with dlb.ex.Context():
-            dlb_contrib_gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
+            dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
                                        subprogram_directory='u/bin/').run()
 
     def test_finds_shared_library(self):
-        class CSharedLibraryLinkerGcc(dlb_contrib_gcc.CLinkerGcc):
+        class CSharedLibraryLinkerGcc(dlb_contrib.gcc.CLinkerGcc):
             def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
                 return ['-shared']
 
-        class CLinkerGcc(dlb_contrib_gcc.CLinkerGcc):
+        class CLinkerGcc(dlb_contrib.gcc.CLinkerGcc):
             LIBRARY_FILENAMES = ('libbc.so',)
 
         with dlb.ex.Context():

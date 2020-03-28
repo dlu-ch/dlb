@@ -1,0 +1,2 @@
+This will become a namespace package according to PEP 420.
+There is no __init__.py on purpose.

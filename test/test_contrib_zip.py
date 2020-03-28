@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
 import dlb.ex
-import dlb_contrib_zip
+import dlb_contrib.zip
 import zipfile
 import unittest
 import tools_for_test
@@ -21,7 +21,7 @@ class ZipDirectoryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
     def test_empty_directory(self):
         os.mkdir('d')
         with dlb.ex.Context():
-            dlb_contrib_zip.ZipDirectory(
+            dlb_contrib.zip.ZipDirectory(
                 content_directory='d/',
                 archive_file='a.bzip').run()
         with zipfile.ZipFile('a.bzip', 'r') as z:
@@ -35,7 +35,7 @@ class ZipDirectoryTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         os.mkdir(os.path.join('d', 'e'))  # this will by ignored since it is empty
 
         with dlb.ex.Context():
-            dlb_contrib_zip.ZipDirectory(
+            dlb_contrib.zip.ZipDirectory(
                 content_directory='d/',
                 archive_file='a.bzip').run()
         with dlb.ex.Context(), dlb.ex.Context.temporary(is_dir=True) as t:
@@ -53,7 +53,7 @@ class ZipDirectorySpecialTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         open(os.path.join('d', 'a\\b'), 'xb').close()
 
         with dlb.ex.Context():
-            dlb_contrib_zip.ZipDirectory(
+            dlb_contrib.zip.ZipDirectory(
                 content_directory='d/',
                 archive_file='a.bzip').run()
         with dlb.ex.Context(), dlb.ex.Context.temporary(is_dir=True) as t:
@@ -74,7 +74,7 @@ class ZipDirectorySpecialTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             raise unittest.SkipTest from None
 
         with dlb.ex.Context():
-            dlb_contrib_zip.ZipDirectory(
+            dlb_contrib.zip.ZipDirectory(
                 content_directory='d/',
                 archive_file='a.bzip').run()
         with zipfile.ZipFile('a.bzip', 'r') as z:

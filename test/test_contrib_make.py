@@ -7,7 +7,7 @@ import os.path
 here = os.path.dirname(__file__) or os.curdir
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
-import dlb_contrib_make as make
+import dlb_contrib.make as make
 import unittest
 
 

@@ -11,14 +11,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.di
 import dlb.ex
-import dlb_contrib_git
-import dlb_contrib_sh
+import dlb_contrib.git
+import dlb_contrib.sh
 import re
 import unittest
 import tools_for_test
 
 
-class PrepareGitRepo(dlb_contrib_sh.ShScriptlet):
+class PrepareGitRepo(dlb_contrib.sh.ShScriptlet):
     SCRIPTLET = """
         git init
         git config user.email "dlu-ch@users.noreply.github.com"
@@ -62,7 +62,7 @@ VERSION_REGEX = re.compile(
     r'$')
 
 
-class DescribeWorkingDirectory(dlb_contrib_git.GitDescribeWorkingDirectory):
+class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):
     SHORTENED_COMMIT_HASH_LENGTH = 8  # number of characters of the SHA1 commit hash in the *wd_version*
 
     # working directory version
@@ -108,7 +108,7 @@ class ModificationsFromStatusTest(unittest.TestCase):
             '# branch.ab +12 -3'
         ]
         _, _, branch_refname, upstream_branch_refname, before_upstream, behind_upstream = \
-            dlb_contrib_git.modifications_from_status(lines)
+            dlb_contrib.git.modifications_from_status(lines)
         self.assertEqual('refs/heads/"äüä"', branch_refname)
         self.assertEqual('refs/remotes/origin/master', upstream_branch_refname)
         self.assertEqual((12, 3), (before_upstream, behind_upstream))
@@ -118,7 +118,7 @@ class ModificationsFromStatusTest(unittest.TestCase):
             '# branch.head (detached)'
         ]
         _, _, branch_refname, upstream_branch_refname, before_upstream, behind_upstream = \
-            dlb_contrib_git.modifications_from_status(lines)
+            dlb_contrib.git.modifications_from_status(lines)
         self.assertEqual('refs/heads/(detached)', branch_refname)  # is ambiguous
         self.assertIsNone(upstream_branch_refname)
         self.assertIsNone(before_upstream)
@@ -130,46 +130,46 @@ class ModificationsFromStatusTest(unittest.TestCase):
             'd8755f8b2ede3dc58822895fa85e0e51c8f20dda d8755f8b2ede3dc58822895fa85e0e51c8f20dda jöö/herzig'
         )
         self.assertEqual({dlb.fs.Path('jöö/herzig'): (' M', None)},
-                         dlb_contrib_git.modifications_from_status([line])[0])
+                         dlb_contrib.git.modifications_from_status([line])[0])
         line = (
             '1 A. N... 000000 100644 100644 '
             '0000000000000000000000000000000000000000 e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 "a\\tb\\nc\\"\'d "'
         )
         self.assertEqual({dlb.fs.Path('a\tb\nc"\'d '): ('A ', None)},
-                         dlb_contrib_git.modifications_from_status([line])[0])
+                         dlb_contrib.git.modifications_from_status([line])[0])
 
         line = (
             '2 R. N... 100644 100644 100644 '
             'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 R100 a\tb'
         )
         self.assertEqual({dlb.fs.Path('b'): ('R ', dlb.fs.Path('a'))},
-                         dlb_contrib_git.modifications_from_status([line])[0])
+                         dlb_contrib.git.modifications_from_status([line])[0])
         line = (
             '2 R. N... 100644 100644 100644 '
             'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 R100 "a\\"b"\ta -> b'
         )
         self.assertEqual({dlb.fs.Path('a -> b'): ('R ', dlb.fs.Path('a"b'))},
-                         dlb_contrib_git.modifications_from_status([line])[0])
+                         dlb_contrib.git.modifications_from_status([line])[0])
         line = (
             '2 R. N... 100644 100644 100644 '
             'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 R100 '
             'a\t"a\\tb\\nc\\"\'d "'
         )
         self.assertEqual({dlb.fs.Path('a\tb\nc"\'d '): ('R ', dlb.fs.Path('a'))},
-                         dlb_contrib_git.modifications_from_status([line])[0])
+                         dlb_contrib.git.modifications_from_status([line])[0])
 
         self.assertEqual({dlb.fs.Path('a')},
-                         dlb_contrib_git.modifications_from_status(['? a'])[1])
+                         dlb_contrib.git.modifications_from_status(['? a'])[1])
         self.assertEqual({dlb.fs.Path('a\tb\nc"\'d ')},
-                         dlb_contrib_git.modifications_from_status(['? "a\\tb\\nc\\"\'d "'])[1])
+                         dlb_contrib.git.modifications_from_status(['? "a\\tb\\nc\\"\'d "'])[1])
 
     def test_fails_on_invalid_line(self):
         with self.assertRaises(ValueError):
-            dlb_contrib_git.modifications_from_status(['# branch.ab +0'])
+            dlb_contrib.git.modifications_from_status(['# branch.ab +0'])
         with self.assertRaises(ValueError):
-            dlb_contrib_git.modifications_from_status(['1 A.'])
+            dlb_contrib.git.modifications_from_status(['1 A.'])
         with self.assertRaises(ValueError):
-            dlb_contrib_git.modifications_from_status(['2 R.'])
+            dlb_contrib.git.modifications_from_status(['2 R.'])
 
 
 @unittest.skipIf(not (os.path.isfile('/bin/sh') and os.path.isfile('/usr/bin/git')), 'requires sh and Git')
@@ -195,7 +195,7 @@ class GitTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertEqual('refs/heads/master', result.branch_refname)
 
         with dlb.ex.Context():
-            class CommitGitRepo(dlb_contrib_sh.ShScriptlet):
+            class CommitGitRepo(dlb_contrib.sh.ShScriptlet):
                 SCRIPTLET = 'git commit -a -m 0'
 
             CommitGitRepo().run()
@@ -207,7 +207,7 @@ class GitTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
 
         with dlb.ex.Context():
-            class CheckoutBranch(dlb_contrib_sh.ShScriptlet):
+            class CheckoutBranch(dlb_contrib.sh.ShScriptlet):
                 SCRIPTLET = 'git checkout -f -b "(detached)"'
 
             CheckoutBranch().run()
@@ -217,7 +217,7 @@ class GitTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
 
         with dlb.ex.Context():
-            class CheckoutDetached(dlb_contrib_sh.ShScriptlet):
+            class CheckoutDetached(dlb_contrib.sh.ShScriptlet):
                 SCRIPTLET = 'git checkout --detach'
 
             CheckoutDetached().run()

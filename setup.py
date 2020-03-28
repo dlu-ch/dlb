@@ -140,7 +140,7 @@ setuptools.setup(
     # simple. Or you can use find_packages().
     packages=setuptools.find_packages(where=modified_src_path.as_string().rstrip('/')),
 
-    py_modules=[p[-1:].as_string()[:-3] for p in modified_src_path.list(name_filter=r'dlb_contrib_.+\.py')],
+    py_modules=[p[-2:].as_string()[:-3] for p in (modified_src_path / 'dlb_contrib/').list(name_filter=r'.*\.py')],
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's

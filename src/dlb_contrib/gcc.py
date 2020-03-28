@@ -8,8 +8,8 @@ import sys
 from typing import Iterable, Union
 import dlb.fs
 import dlb.ex
-import dlb_contrib_make
-import dlb_contrib_clike
+import dlb_contrib.make
+import dlb_contrib.clike
 assert sys.version_info >= (3, 7)
 
 
@@ -40,7 +40,7 @@ def check_warning_name(name: str) -> str:
 
 
 # noinspection PyUnresolvedReferences
-class _CompilerGcc(dlb_contrib_clike.ClikeCompiler):
+class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     EXECUTABLE = 'gcc'  # dynamic helper, looked-up in the context
 
     SUPPRESSED_WARNINGS = ()  # names of warnings to be suppressed (e.g. 'unused-value')
@@ -68,8 +68,8 @@ class _CompilerGcc(dlb_contrib_clike.ClikeCompiler):
         compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
 
         for macro, replacement in self.DEFINITIONS.items():
-            if not dlb_contrib_clike.SIMPLE_IDENTIFIER.match(macro) and \
-                    not dlb_contrib_clike.FUNCTIONLIKE_MACRO.match(macro):
+            if not dlb_contrib.clike.SIMPLE_IDENTIFIER.match(macro) and \
+                    not dlb_contrib.clike.FUNCTIONLIKE_MACRO.match(macro):
                 raise Exception(f"not a macro: {macro!r}")
             # *macro* is a string that does not start with '-' and does not contain '='
             if replacement is None:
@@ -95,7 +95,7 @@ class _CompilerGcc(dlb_contrib_clike.ClikeCompiler):
             # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
             included_files = []
             with open(make_rules_file.native, 'r', encoding='utf-8') as dep_file:
-                for p in dlb_contrib_make.additional_sources_from_rule(dep_file.readlines()):
+                for p in dlb_contrib.make.additional_sources_from_rule(dep_file.readlines()):
                     try:
                         included_files.append(context.working_tree_path_of(p))
                     except ValueError:

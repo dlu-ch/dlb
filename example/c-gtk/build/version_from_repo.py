@@ -4,7 +4,7 @@
 
 import re
 import dlb.ex
-import dlb_contrib_git
+import dlb_contrib.git
 
 
 # each annotated tag starting with 'v' followed by a decimal digit must match this (after 'v'):
@@ -15,7 +15,7 @@ VERSION_REGEX = re.compile(
     r'$')
 
 
-class VersionQuery(dlb_contrib_git.GitDescribeWorkingDirectory):
+class VersionQuery(dlb_contrib.git.GitDescribeWorkingDirectory):
     SHORTENED_COMMIT_HASH_LENGTH = 8  # number of characters of the SHA1 commit hash in the *wd_version*
 
     # working directory version

@@ -12,7 +12,7 @@ import dlb.fs
 import dlb.di
 import dlb.cf
 import dlb.ex
-import dlb_contrib_doxygen
+import dlb_contrib.doxygen
 import build.version_from_repo
 
 
@@ -22,17 +22,17 @@ class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
 
 # compile and link GTK+ application written in C
 def build_application(*, version_result, source_path: Path, output_path: Path, application_name: str):
-    import dlb_contrib_pkgconfig
-    import dlb_contrib_clike
-    import dlb_contrib_gcc
+    import dlb_contrib.pkgconfig
+    import dlb_contrib.clike
+    import dlb_contrib.gcc
 
     with dlb.di.Cluster('generate version file'), dlb.ex.Context():
-        class GenerateVersionFile(dlb_contrib_clike.GenerateHeaderFile):
+        class GenerateVersionFile(dlb_contrib.clike.GenerateHeaderFile):
             WD_VERSION = version_result.wd_version
             PATH_COMPONENTS_TO_STRIP = len(output_path.components)
 
             def write_content(self, file):
-                wd_version = dlb_contrib_clike.string_literal_from_bytes(self.WD_VERSION.encode())
+                wd_version = dlb_contrib.clike.string_literal_from_bytes(self.WD_VERSION.encode())
                 file.write(f'\n')
                 file.write(f'#define APPLICATION_VERSION {wd_version}\n')
                 file.write(f'#define APPLICATION_VERSION_MAJOR {version_result.version_components[0]}\n')
@@ -43,14 +43,14 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
         GenerateVersionFile(file=generated_source_path / 'Generated/Version.h').run()
 
     with dlb.di.Cluster('find libraries'), dlb.ex.Context():
-        class PkgConfig(dlb_contrib_pkgconfig.PkgConfig):
+        class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('gtk+-3.0',)
         pkgconfig_result = PkgConfig().run()
 
-    class CCompiler(dlb_contrib_gcc.CCompilerGcc):
+    class CCompiler(dlb_contrib.gcc.CCompilerGcc):
         DIALECT = 'c11'
 
-    class CLinker(dlb_contrib_gcc.CLinkerGcc):
+    class CLinker(dlb_contrib.gcc.CLinkerGcc):
         LIBRARY_FILENAMES = pkgconfig_result.library_filenames
 
     with dlb.di.Cluster('compile'), dlb.ex.Context(max_parallel_redo_count=4):
@@ -76,11 +76,11 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
 # generate zipped HTML documentation from markup in source code comments and from "free" pages
 def build_documentation(*, version_result, source_path: Path, output_path: Path, application_name: str,
                         sources_changed: bool):
-    import dlb_contrib_zip
+    import dlb_contrib.zip
 
     with dlb.di.Cluster('compile documentation'):
 
-        class Doxygen(dlb_contrib_doxygen.Doxygen):
+        class Doxygen(dlb_contrib.doxygen.Doxygen):
             TEXTUAL_REPLACEMENTS = {
                 'project_version': f'version {version_result.wd_version}',
                 'source_paths_to_strip': [str(source_path.native), str((output_path / 'gsrc/').native)]
@@ -95,7 +95,7 @@ def build_documentation(*, version_result, source_path: Path, output_path: Path,
 
         doc_archive_file = \
             output_path / '{}_{}.html.bzip'.format(application_name, version_result.wd_version)
-        dlb_contrib_zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run()
+        dlb_contrib.zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run()
 
 
 dlb.cf.latest_run_summary_max_count = 5
@@ -114,7 +114,7 @@ with dlb.ex.Context():
         application_name=application_name)
 
     # build documentaton if Doxygen is installed
-    if dlb.ex.Context.helper.get(dlb_contrib_doxygen.Doxygen.EXECUTABLE):
+    if dlb.ex.Context.helper.get(dlb_contrib.doxygen.Doxygen.EXECUTABLE):
         build_documentation(
             version_result=version_result,
             source_path=source_path,
