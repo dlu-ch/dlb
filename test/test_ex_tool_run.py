@@ -288,6 +288,22 @@ class NoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestC
             self.assertFalse(t.run())
 
 
+class RedoIfNoKnownRedoBefore(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo(self):
+        class BTool(dlb.ex.Tool):
+            async def redo(self, result, context):
+                pass
+
+        t = BTool()
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            self.assertRegex(output.getvalue(), r'\b()I redo necessary because not run before\b')
+            self.assertFalse(t.run())
+
+
 class RedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
@@ -478,6 +494,97 @@ class RedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryTestCase
             self.assertRegex(output.getvalue(), regex)
 
 
+class RedoIfInputSwitchesTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo(self):
+        class BTool(dlb.ex.Tool):
+            input_a = dlb.ex.Tool.Output.RegularFile()
+            input_b = dlb.ex.Tool.Output.RegularFile()
+            object_file = dlb.ex.Tool.Output.RegularFile()
+
+            async def redo(self, result, context):
+                dlb.di.inform("redoing right now")
+                open((context.root_path / self.object_file).native, 'wb').close()
+
+        open('a.c', 'xb').close()
+        open('b.c', 'xb').close()
+
+        t = BTool(input_a='a.c', input_b='b.c', object_file='a.o')
+        fingerprint = t.fingerprint
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
+
+        t = BTool(input_b='a.c', input_a='b.c', object_file='a.o')
+        self.assertNotEqual(fingerprint, t.fingerprint)
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before")
+            self.assertFalse(t.run())
+
+
+class RedoIfInputIsRemovedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo(self):
+        class BTool(dlb.ex.Tool):
+            inputs = dlb.ex.Tool.Output.RegularFile[:]()
+            object_file = dlb.ex.Tool.Output.RegularFile()
+
+            async def redo(self, result, context):
+                dlb.di.inform("redoing right now")
+                open((context.root_path / self.object_file).native, 'wb').close()
+
+        open('a.c', 'xb').close()
+        open('b.c', 'xb').close()
+
+        t = BTool(inputs=['a.c', 'b.c'], object_file='a.o')
+        fingerprint = t.fingerprint
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
+
+        t = BTool(inputs=['a.c'], object_file='a.o')
+        self.assertNotEqual(fingerprint, t.fingerprint)
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before")
+            self.assertFalse(t.run())
+
+
+class RedoIfInputOrderIsChangedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo(self):
+        class BTool(dlb.ex.Tool):
+            inputs = dlb.ex.Tool.Output.RegularFile[:]()
+            object_file = dlb.ex.Tool.Output.RegularFile()
+
+            async def redo(self, result, context):
+                dlb.di.inform("redoing right now")
+                open((context.root_path / self.object_file).native, 'wb').close()
+
+        open('a.c', 'xb').close()
+        open('b.c', 'xb').close()
+
+        t = BTool(inputs=['a.c', 'b.c'], object_file='a.o')
+        fingerprint = t.fingerprint
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertFalse(t.run())
+
+        t = BTool(inputs=['b.c', 'a.c'], object_file='a.o')
+        self.assertNotEqual(fingerprint, t.fingerprint)
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before")
+            self.assertFalse(t.run())
+
+
 class RedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
@@ -592,9 +699,13 @@ class RedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWorkingDi
 
         t = BTool()
         with dlb.ex.Context():
+            self.assertTrue(t.run())  # because not run yet
             self.assertTrue(t.run())
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             self.assertTrue(t.run())
-            self.assertTrue(t.run())
+            self.assertRegex(output.getvalue(), r"\b()I redo requested by last successful redo\n")
 
     def test_redo_cannot_forbid_next_redo(self):
         a_list = ['a', 2]
@@ -626,10 +737,14 @@ class RedoIfForced(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         t = BTool()
         with dlb.ex.Context():
-            self.assertTrue(t.run())
+            self.assertTrue(t.run())  # because not run yet
             self.assertFalse(t.run())
             self.assertTrue(t.run(force_redo=True))
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             self.assertTrue(t.run(force_redo=True))
+            self.assertRegex(output.getvalue(), r"\b()I redo requested by run\(\)\n")
 
 
 class RedoIfExplicitInputDependencyChangedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):

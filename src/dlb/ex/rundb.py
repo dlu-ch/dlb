@@ -66,7 +66,7 @@ class FilesystemObjectMemo:
 
 
 # unique identification of run-database schema among all versions (with a Git tag) of dlb declared as stable
-SCHEMA_VERSION = (0, 1)
+SCHEMA_VERSION = (0, 3)
 
 
 # note: without trailing 'Z'
@@ -249,12 +249,9 @@ class _CursorWithExceptionMapping:
 
 @enum.unique
 class Domain(enum.Enum):
-    EXECUTION_PARAMETERS = 'execparam'
-    ENVIRONMENT_VARIABLES = 'envvar'
-
-    # redo request of last successful redo
-    # if present and not empty: redo
-    REDO_REQUEST = 'request'
+    REDO_REQUEST = 'redo'  # redo request of last successful redo (b'\x01' or b'') or None if no known redo
+    EXECUTION_PARAMETERS = 'exec'
+    ENVIRONMENT_VARIABLES = 'envv'
 
 
 class Database:

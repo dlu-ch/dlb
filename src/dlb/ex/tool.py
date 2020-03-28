@@ -673,19 +673,23 @@ class _ToolBase:
             if not needs_redo:
                 domain_inputs_in_db = db.get_domain_inputs(tool_instance_dbid)
                 redo_request_in_db = domain_inputs_in_db.get(rundb.Domain.REDO_REQUEST.value)
-                redo_request_in_db = None if redo_request_in_db is None else bool(redo_request_in_db)
-
-                execution_parameter_digest_in_db = domain_inputs_in_db.get(rundb.Domain.EXECUTION_PARAMETERS.value)
-                envvar_digest_in_db = domain_inputs_in_db.get(rundb.Domain.ENVIRONMENT_VARIABLES.value)
-                if redo_request_in_db is True:
-                    di.inform("redo requested by last successful redo", level=cf.level.REDO_REASON)
+                if redo_request_in_db is None:
+                    di.inform("redo necessary because not run before", level=cf.level.REDO_REASON)
                     needs_redo = True
-                elif execution_parameter_digest != execution_parameter_digest_in_db:
-                    di.inform("redo necessary because of changed execution parameter", level=cf.level.REDO_REASON)
-                    needs_redo = True
-                elif envvar_digest != envvar_digest_in_db:
-                    di.inform("redo necessary because of changed environment variable", level=cf.level.REDO_REASON)
-                    needs_redo = True
+                else:
+                    redo_request_in_db = bool(redo_request_in_db)
+                    execution_parameter_digest_in_db = domain_inputs_in_db.get(
+                        rundb.Domain.EXECUTION_PARAMETERS.value, b'')
+                    envvar_digest_in_db = domain_inputs_in_db.get(rundb.Domain.ENVIRONMENT_VARIABLES.value, b'')
+                    if redo_request_in_db is True:
+                        di.inform("redo requested by last successful redo", level=cf.level.REDO_REASON)
+                        needs_redo = True
+                    elif execution_parameter_digest != execution_parameter_digest_in_db:
+                        di.inform("redo necessary because of changed execution parameter", level=cf.level.REDO_REASON)
+                        needs_redo = True
+                    elif envvar_digest != envvar_digest_in_db:
+                        di.inform("redo necessary because of changed environment variable", level=cf.level.REDO_REASON)
+                        needs_redo = True
 
             if not needs_redo:
                 with di.Cluster('compare input dependencies with state before last successful redo',
@@ -822,9 +826,12 @@ class _ToolBase:
                     tool_instance_dbid,
                     info_by_encoded_path=info_by_fsobject_dbid,
                     memo_digest_by_domain={
-                        rundb.Domain.REDO_REQUEST.value: b'\x01' if redo_request else None,
-                        rundb.Domain.EXECUTION_PARAMETERS.value: execution_parameter_digest,
-                        rundb.Domain.ENVIRONMENT_VARIABLES.value: envvar_digest
+                        rundb.Domain.REDO_REQUEST.value:
+                            b'\x01' if redo_request else b'',
+                        rundb.Domain.EXECUTION_PARAMETERS.value:
+                            execution_parameter_digest if execution_parameter_digest else None,
+                        rundb.Domain.ENVIRONMENT_VARIABLES.value:
+                            envvar_digest if envvar_digest else None
                     },
                     encoded_paths_of_modified=encoded_paths_of_modified_output_dependencies)
 
