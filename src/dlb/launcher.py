@@ -23,7 +23,7 @@ def chdir_to_workingtree_root():
             raise Exception("current working directory not in a dlb working tree (no '.dlbroot' found)")
 
 
-def complete_module_search_path(dlbroot_path):
+def complete_module_search_path(dlbroot_path, script_abs_path):
     ext = '.zip'
     zip_files = []
     try:
@@ -32,12 +32,10 @@ def complete_module_search_path(dlbroot_path):
     except FileNotFoundError:
         pass
     sys.path = [os.path.abspath(p) for p in sys.path]
-    cwd = os.getcwd()
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
     if zip_files:
         print(f'adding {len(zip_files)} zip file(s) to module search path', file=sys.stderr)
         sys.path = zip_files + sys.path
+    sys.path.insert(0, os.path.dirname(script_abs_path))
 
 
 def complete_command_line(history_file_path, arguments):
@@ -76,17 +74,17 @@ def find_script(script_name):
             os.path.isabs(script_name) or os.path.normpath(script_name) != script_name:
         raise Exception(f'not a script name: {script_name!r}')
 
-    script_path = os.path.abspath(script_name)
-    if not os.path.isfile(script_path):
+    script_abs_path = os.path.abspath(script_name)
+    if not os.path.isfile(script_abs_path):
         raise Exception(f'not an existing script: {script_name!r}')
 
     module_name = '__main__'
 
     import importlib.util
-    spec = importlib.util.spec_from_file_location(module_name, script_path)
+    spec = importlib.util.spec_from_file_location(module_name, script_abs_path)
     module = importlib.util.module_from_spec(spec)
 
-    return script_path, spec, module, module_name
+    return script_abs_path, spec, module, module_name
 
 
 def main():
@@ -159,14 +157,13 @@ def main():
                 executable_name = repr(executable_name)
             print(f'usage: {executable_name} [ --help ] [ <script-name> [ <script-parameter> ... ] ]', file=sys.stderr)
             return 2
-        complete_module_search_path(dlbroot_path)
-        script_module_spec = find_script(script_name)
+        script_abs_path, spec, module, module_name = find_script(script_name)
+        complete_module_search_path(dlbroot_path, script_abs_path)
     except Exception as e:
         print(f'error: {e}', file=sys.stderr)
         return 1
 
-    script_path, spec, module, module_name = script_module_spec
-    sys.argv = [script_path] + script_arguments
+    sys.argv = [script_abs_path] + script_arguments
     sys.modules[module_name] = module
     spec.loader.exec_module(module)  # may change the working directory of the process and sys.argv
 

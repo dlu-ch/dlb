@@ -325,6 +325,21 @@ class ModuleSearchPathTest(tools_for_test.TemporaryWorkingDirectoryAndOutputTest
         r = dlb.launcher.main()
         self.assertEqual(0, r)
 
-        rel_module_search_paths = [os.path.join(u_path, 'x.zip'), os.path.join(u_path, 'y.zip'), '.']
+        rel_module_search_paths = ['.', os.path.join(u_path, 'x.zip'), os.path.join(u_path, 'y.zip')]
         self.assertEqual(repr(rel_module_search_paths) + '\n', sys.stdout.getvalue())
         self.assertEqual("adding 2 zip file(s) to module search path\n", sys.stderr.getvalue())
+
+    def test_directory_of_script_is_first(self):
+        os.mkdir('build')
+
+        script_path = os.path.abspath(os.path.join('build', 'show.py'))
+        with open(script_path, 'x') as f:
+            f.write(
+                "import sys\n"
+                "print(repr(sys.path[0]))\n"
+            )
+
+        sys.argv = [sys.argv[0]] + ['build/show']
+        r = dlb.launcher.main()
+        self.assertEqual(0, r)
+        self.assertEqual(repr(os.path.dirname(script_path)) + '\n', sys.stdout.getvalue())
