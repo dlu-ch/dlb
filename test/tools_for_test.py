@@ -6,13 +6,8 @@ import sys
 import os.path
 import io
 
-
-def sanitize_module_search_path():
-    sys.path = [os.path.abspath(p) for p in sys.path]
-
-
 # make sure sys.path does not a relative path before you import a module inside
-sanitize_module_search_path()
+sys.path = [os.path.abspath(p) for p in sys.path]
 
 import os
 import pathlib
@@ -20,6 +15,7 @@ import tempfile
 import shutil
 from typing import Union
 import unittest
+import dlb.di
 
 
 class DirectoryChanger:  # change directory temporarily
@@ -99,6 +95,8 @@ class TemporaryWorkingDirectoryTestCase(TemporaryDirectoryTestCase):
     def setUp(self):
         super().setUp()
         os.mkdir('.dlbroot')
+        dlb.di.set_threshold_level(dlb.di.INFO)
+        dlb.di.set_output_file(sys.stderr)
 
 
 class CommandlineToolTestCase(unittest.TestCase):

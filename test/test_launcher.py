@@ -18,7 +18,7 @@ import tools_for_test
 
 
 class FindWorkingtreeRootTest(tools_for_test.CommandlineToolTestCase,
-                              tools_for_test.TemporaryWorkingDirectoryTestCase                              ):
+                              tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_chdir_stays_in_workingtree_root(self):
         root = os.getcwd()
@@ -70,7 +70,7 @@ class HelpTest(tools_for_test.CommandlineToolTestCase,
         r = dlb.launcher.main()
         self.assertEqual(0, r)
         lines = sys.stdout.getvalue().split('\n')
-        self.assertLessEqual(max(len(l) for l in lines), 80)
+        self.assertLessEqual(max(len(li) for li in lines), 80)
 
     def test_help_includes_version(self):
         sys.argv = [sys.argv[0]] + ['--help']

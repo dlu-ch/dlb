@@ -56,10 +56,10 @@ class MakeFundamentalTest(unittest.TestCase):
         self.assertEqual(dataclasses.astuple(d), r)
 
     def test_fails_for_recursive_list(self):
-        l = [1]
-        l.append(l)
+        li = [1]
+        li.append(li)
         with self.assertRaises(TypeError):
-            dlb.ut.make_fundamental(dlb.ut.make_fundamental(l))
+            dlb.ut.make_fundamental(dlb.ut.make_fundamental(li))
 
     def test_example_is_correct(self):
         s = [

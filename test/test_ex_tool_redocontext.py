@@ -16,7 +16,6 @@ import unittest
 import tools_for_test
 
 
-
 class ConstructionTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_noncontext(self):

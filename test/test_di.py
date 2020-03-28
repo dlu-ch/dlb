@@ -338,7 +338,7 @@ class ClusterTest(unittest.TestCase):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
-        regex = re.compile("(?m)(.|\n)* \[\+(?P<time>[0-9.]+)s\]\n\Z")
+        regex = re.compile(r"(?m)(.|\n)* \[\+(?P<time>[0-9.]+)s\]\n\Z")
 
         with dlb.di.Cluster('A', with_time=True, is_progress=True):
             s = output.getvalue()
@@ -426,7 +426,8 @@ class UsageExampleTest(unittest.TestCase):
         rom_max = 128
         logfile = dlb.fs.Path('out/linker.log')
 
-        with dlb.di.Cluster(f"analyze memory usage\n    note: see {logfile.as_string()!r} for details", is_progress=True):
+        with dlb.di.Cluster(f"analyze memory usage\n    note: see {logfile.as_string()!r} for details",
+                            is_progress=True):
             ram, rom, emmc = (12, 108, 512)
 
             dlb.di.inform(

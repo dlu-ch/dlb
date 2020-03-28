@@ -285,7 +285,8 @@ class NormalizeDotDotWithReference(tools_for_test.TemporaryDirectoryTestCase):
     def test_without_symlink_is_correct(self):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd', 'e'))
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
+        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+                                                               ref_dir_path=os.getcwd())
         self.assertEqual(('c', 'd'), c)
 
         c = dlb.ex.worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='/tmp')
@@ -301,7 +302,8 @@ class NormalizeDotDotWithReference(tools_for_test.TemporaryDirectoryTestCase):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
+        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+                                                               ref_dir_path=os.getcwd())
         self.assertEqual(('c', 'd'), c)
 
     def test_fails_for_relative_ref_dir(self):
@@ -320,7 +322,8 @@ class NormalizeDotDotWithReference(tools_for_test.TemporaryDirectoryTestCase):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd'))
         with self.assertRaises(dlb.ex.worktree.WorkingTreePathError) as cm:
-            dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
+            dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+                                                               ref_dir_path=os.getcwd())
         self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_for_parent_symlink(self):
@@ -335,7 +338,8 @@ class NormalizeDotDotWithReference(tools_for_test.TemporaryDirectoryTestCase):
 
         regex = r"\A()not a collapsable path, since this is a symbolic link: '.+'\Z"
         with self.assertRaisesRegex(dlb.ex.worktree.WorkingTreePathError, regex):
-            dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'), ref_dir_path=os.getcwd())
+            dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+                                                               ref_dir_path=os.getcwd())
 
 
 class GetCheckRootPathFromCwdTest(tools_for_test.TemporaryDirectoryTestCase):

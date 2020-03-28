@@ -5,6 +5,7 @@
 import sys
 import os.path
 here = os.path.dirname(__file__) or os.curdir
+sys.path.insert(0, os.path.abspath(os.path.join(here)))
 sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 
 import dlb.fs
@@ -12,6 +13,7 @@ import dlb.di
 import dlb.ex
 import dlb.ex.tool
 import unittest
+import tools_for_test
 
 
 class ATool(dlb.ex.Tool):
@@ -28,7 +30,7 @@ class ATool(dlb.ex.Tool):
         result.included_files = [dlb.fs.Path('src/a.h'), dlb.fs.Path('src/b.h')]
 
 
-class RunResultBeforeRedoTest(unittest.TestCase):
+class WithoutRedoBeforeRedoTest(unittest.TestCase):
 
     def test_is_true(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
@@ -41,7 +43,7 @@ class RunResultBeforeRedoTest(unittest.TestCase):
             result.source_file = 'b.cpp'
 
 
-class RedoResultBeforeRedoTest(unittest.TestCase):
+class WithRedoBeforeRedoTest(unittest.TestCase):
 
     def test_is_true(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
@@ -78,7 +80,7 @@ class RedoResultBeforeRedoTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
-class RedoResultAssignmentTest(unittest.TestCase):
+class AssignmentTest(unittest.TestCase):
 
     def test_assignment_validates(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
@@ -112,7 +114,7 @@ class RedoResultAssignmentTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
-class RedoResultRepr(unittest.TestCase):
+class Repr(unittest.TestCase):
 
     def test_shows_explicit_without_redo(self):
         t = ATool(source_file='a.cpp', object_file='a.o')

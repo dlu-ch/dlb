@@ -12,6 +12,8 @@ import dlb.fs
 import dlb.di
 import dlb.ex
 import marshal
+import tempfile
+import zipfile
 import io
 import unittest
 import tools_for_test
@@ -30,7 +32,21 @@ class ATool(dlb.ex.Tool):
         open((context.root_path / self.object_file).native, 'wb').close()
 
 
-class RunWithoutRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class FTool(dlb.ex.Tool):
+    source_file = dlb.ex.Tool.Input.RegularFile()
+    object_file = dlb.ex.Tool.Output.RegularFile()
+    included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+    async def redo(self, result, context):
+        dlb.di.inform("redoing right now")
+
+        with (context.root_path / self.object_file).native.raw.open('wb'):
+            pass
+
+        result.included_files = [dlb.fs.Path('a.h'), dlb.fs.Path('b.h')]
+
+
+class FailsWithoutRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_fails_without_redo(self):
@@ -44,7 +60,7 @@ class RunWithoutRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 t.run()
 
 
-class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class FailsWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonexistent_inputfile(self):
         regex = (
@@ -77,47 +93,9 @@ class RunWithMissingExplicitInputDependencyTest(tools_for_test.TemporaryWorkingD
                 t.run()
 
 
-class RunWithAbsoluteExplicitInputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
-
-    def test_absolute_in_managed_tree_remains_absolute(self):
-        open('a.cpp', 'xb').close()
-
-        with dlb.ex.Context() as c:
-            t = ATool(source_file=c.root_path / 'a.cpp', object_file='a.o')
-            r = t.run()
-            self.assertEqual(c.root_path / 'a.cpp', r.source_file)
-
-    def test_absolute_can_be_outside_managed_tree(self):
-        open('x.cpp', 'xb').close()
-
-        os.mkdir('t')
-        with tools_for_test.DirectoryChanger('t'):
-            os.mkdir('.dlbroot')
-            open('a.cpp', 'xb').close()
-
-            with dlb.ex.Context() as c:
-                t = ATool(source_file=c.root_path / '../x.cpp', object_file='a.o')
-                t.run()
-
-
-class RunWithExplicitOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
-
-    def test_fails_for_nonnormalized_outputfile_path(self):
-        open('a.cpp', 'xb').close()
-
-        regex = (
-            r"(?m)\A"
-            r"output dependency 'object_file' contains a path that is not a managed tree path: '\.\./a\.o'\n"
-            r"  | reason: is an upwards path: '\.\.[\\/]+a\.o'\Z"
-        )
-        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
-            with dlb.ex.Context():
-                t = ATool(source_file='a.cpp', object_file='../a.o')
-                t.run()
-
-
-class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
-                                                                     tools_for_test.TemporaryWorkingDirectoryTestCase):
+class FailsWithMissingExplicitInputDependencyWithPermissionProblemTest(
+        tools_for_test.TemporaryDirectoryWithChmodTestCase,
+        tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_inaccessible_inputfile(self):
         os.mkdir('src')
@@ -136,7 +114,7 @@ class RunWithMissingExplicitInputDependencyWithPermissionProblemTest(tools_for_t
         os.chmod('src', 0o600)
 
 
-class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class FailsWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_input_as_output(self):
         open('a.cpp', 'xb').close()
@@ -149,7 +127,23 @@ class RunWithExplicitInputDependencyThatIsAlsoOutputDependencyTest(tools_for_tes
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class FailsWithExplicitOutputDependencyOutsideTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails_for_nonnormalized_outputfile_path(self):
+        open('a.cpp', 'xb').close()
+
+        regex = (
+            r"(?m)\A"
+            r"output dependency 'object_file' contains a path that is not a managed tree path: '\.\./a\.o'\n"
+            r"  | reason: is an upwards path: '\.\.[\\/]+a\.o'\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
+            with dlb.ex.Context():
+                t = ATool(source_file='a.cpp', object_file='../a.o')
+                t.run()
+
+
+class FailsWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     # noinspection PyAbstractClass
     class BTool(dlb.ex.Tool):
@@ -160,7 +154,8 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
     def test_fails_for_two_files(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
-                t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(object_file='o', log_files=['o'])
+                t = FailsWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(
+                        object_file='o', log_files=['o'])
                 t.run()
         msg = "output dependencies 'object_file' and 'log_files' both contain the same path: 'o'"
         self.assertEqual(msg, str(cm.exception))
@@ -168,29 +163,30 @@ class RunWithExplicitWithDifferentOutputDependenciesForSamePathTest(tools_for_te
     def test_fails_for_file_and_directory(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
-                t = RunWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(object_file='o', temp_dir='o/')
+                t = FailsWithExplicitWithDifferentOutputDependenciesForSamePathTest.BTool(
+                        object_file='o', temp_dir='o/')
                 t.run()
         msg = "output dependencies 'temp_dir' and 'object_file' both contain the same path: 'o/'"
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunWithDifferentInputDependenciesForSameEnvVarTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
-
-    # noinspection PyAbstractClass
-    class BTool(dlb.ex.Tool):
-        a = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='')
-        b = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='', explicit=False)
+class FailsWithDifferentInputDependenciesForSameEnvVarTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails(self):
+        # noinspection PyAbstractClass
+        class BTool(dlb.ex.Tool):
+            a = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='')
+            b = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='', explicit=False)
+
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
-                t = RunWithDifferentInputDependenciesForSameEnvVarTest.BTool(a='a')
+                t = BTool(a='a')
                 t.run()
         msg = "input dependencies 'b' and 'a' both define the same environment variable: 'XY'"
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class FailWithInputDependenciesOfWrongType(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_explicit_input_dependency_of_wrong_type(self):
         os.mkdir('src')
@@ -252,7 +248,26 @@ class RunFilesystemObjectTypeTest(tools_for_test.TemporaryWorkingDirectoryTestCa
         self.assertEqual(msg, str(cm.exception))
 
 
-class RunDoesNoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class FailsWithInvalidExecutionParameterTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails_if_execution_parameter_not_fundamental(self):
+        # noinspection PyAbstractClass
+        class BTool(dlb.ex.Tool):
+            XY = dlb.fs.Path('.')
+
+        with dlb.ex.Context():
+            t = BTool()
+            with self.assertRaises(dlb.ex.ExecutionParameterError) as cm:
+                t.run()
+            msg = (
+                "value of execution parameter 'XY' is not fundamental: Path('./')\n"
+                "  | an object is fundamental if it is None, or of type 'bool', 'int', 'float', 'complex', 'str', "
+                "'bytes', or a mapping or iterable of only such objects"
+            )
+            self.assertEqual(msg, str(cm.exception))
+
+
+class NoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_run_causes_redo_only_the_first_time(self):
         os.mkdir('src')
@@ -273,7 +288,7 @@ class RunDoesNoRedoIfInputNotModifiedTest(tools_for_test.TemporaryWorkingDirecto
             self.assertFalse(t.run())
 
 
-class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         os.mkdir('src')
@@ -330,8 +345,8 @@ class RunDoesRedoIfRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingD
             self.assertRegex(output.getvalue(), r'\b()filesystem object did not exist\b')
 
 
-class RunDoesRedoIfRegularFileInputChmodModifiedTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
-                                                     tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfRegularFileInputChmodModifiedTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
+                                              tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         os.mkdir('src')
@@ -352,7 +367,7 @@ class RunDoesRedoIfRegularFileInputChmodModifiedTest(tools_for_test.TemporaryDir
             self.assertRegex(output.getvalue(), r'\b()permissions or owner have changed\b')
 
 
-class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         os.mkdir('src')
@@ -396,7 +411,7 @@ class RunDoesRedoIfNonRegularFileInputModifiedTest(tools_for_test.TemporaryWorki
             self.assertFalse(t.run())
 
 
-class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         os.mkdir('src')
@@ -422,7 +437,7 @@ class RunDoesRedoIfInputIsOutputTest(tools_for_test.TemporaryWorkingDirectoryTes
             self.assertFalse(t.run())
 
 
-class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_if_not_existing(self):
         os.mkdir('src')
@@ -463,7 +478,7 @@ class RunDoesRedoIfOutputNotAsExpected(tools_for_test.TemporaryWorkingDirectoryT
             self.assertRegex(output.getvalue(), regex)
 
 
-class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         a_list = ['a', 2]
@@ -493,7 +508,7 @@ class RunDoesRedoIfExecutionParameterModifiedTest(tools_for_test.TemporaryWorkin
             self.assertFalse(t.run())
 
 
-class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_for_explicit(self):
         class BTool(dlb.ex.Tool):
@@ -568,7 +583,7 @@ class RunDoesRedoIfEnvironmentVariableModifiedTest(tools_for_test.TemporaryWorki
             self.assertEqual(msg, str(cm.exception))
 
 
-class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_always(self):
         class BTool(dlb.ex.Tool):
@@ -602,7 +617,7 @@ class RunDoesRedoIfAccordingToLastRedoReturnValueTest(tools_for_test.TemporaryWo
             self.assertFalse(t.run())
 
 
-class RunDoesRedoWhenForced(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfForced(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_when_forced(self):
         class BTool(dlb.ex.Tool):
@@ -617,7 +632,200 @@ class RunDoesRedoWhenForced(tools_for_test.TemporaryWorkingDirectoryTestCase):
             self.assertTrue(t.run(force_redo=True))
 
 
-class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+class RedoIfExplicitInputDependencyChangedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_new_or_missing_dependency_causes_redo(self):
+        open('a.cpp', 'xb').close()
+
+        t = FTool(source_file='a.cpp', object_file='a.o')
+
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())  # because new dependency
+            regex = (
+                r"(?m)\b"
+                r"redo necessary because of filesystem object: 'a\.h' \n"
+                r" *  \| reason: was a new dependency or was potentially changed by a redo\n"
+            )
+            self.assertRegex(output.getvalue(), regex)
+            self.assertFalse(t.run())
+
+        open('a.h', 'xb').close()
+
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())  # because new dependency
+            regex = (
+                r"(?m)\b"
+                r"redo necessary because of filesystem object: 'a\.h' \n"
+                r" *  \| reason: existence has changed\n"
+            )
+            self.assertRegex(output.getvalue(), regex)
+            self.assertFalse(t.run())
+
+        os.remove('a.h')
+
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())  # because of new dependency
+            regex = (
+                r"(?m)\b"
+                r"redo necessary because of non-existent filesystem object: 'a.h'\n"
+            )
+            self.assertRegex(output.getvalue(), regex)
+            self.assertFalse(t.run())
+
+    def test_invalid_dependency_causes_redo(self):
+        open('a.cpp', 'xb').close()
+        open('a.h', 'xb').close()
+
+        t = FTool(source_file='a.cpp', object_file='a.o')
+
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertTrue(t.run())  # because of new dependency
+            self.assertFalse(t.run())
+
+        with dlb.ex.Context():
+            # replace memo by invalid memo
+            rundb = dlb.ex.context._get_rundb()
+            info_by_encoded_path = rundb.get_fsobject_inputs(1)
+            info_by_encoded_path[dlb.ex.rundb.encode_path(dlb.fs.Path('a.h'))] = (False, marshal.dumps(42))
+            rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())  # because new dependency
+            regex = (
+                r"(?m)\b"
+                r"redo necessary because of filesystem object: 'a.h' \n"
+                r" *  \| reason: state before last successful redo is unknown\n"
+            )
+            self.assertRegex(output.getvalue(), regex)
+            self.assertFalse(t.run())
+
+        with dlb.ex.Context():
+            # add dependency with invalid encoded path
+            rundb = dlb.ex.context._get_rundb()
+            info_by_encoded_path = rundb.get_fsobject_inputs(1)
+            info_by_encoded_path['a/../'] = (False, None)
+            rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            r = t.run()
+            self.assertTrue(r)
+            with r:
+                pass
+
+            regex = r"\b()redo necessary because of invalid encoded path: 'a/\.\./'\n"
+            self.assertRegex(output.getvalue(), regex)
+            self.assertNotIn('a/../', rundb.get_fsobject_inputs(1, is_explicit_filter=False))
+
+            self.assertFalse(t.run())
+
+        with dlb.ex.Context():
+            # add non-existent dependency with invalid memo
+            rundb = dlb.ex.context._get_rundb()
+            info_by_encoded_path = rundb.get_fsobject_inputs(1)
+            info_by_encoded_path['d.h/'] = (False, marshal.dumps(42))
+            rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            regex = r"\b()redo necessary because of non-existent filesystem object: 'd\.h'\n"
+            self.assertRegex(output.getvalue(), regex)
+            self.assertFalse(t.run())
+
+
+class RedoIfExplicitInputDependencyChangedChmodTest(tools_for_test.TemporaryDirectoryWithChmodTestCase,
+                                                    tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_inaccessible_dependency_causes_redo(self):
+        open('a.cpp', 'xb').close()
+        open('a.h', 'xb').close()
+
+        t = FTool(source_file='a.cpp', object_file='a.o')
+
+        with dlb.ex.Context():
+            self.assertTrue(t.run())
+            self.assertTrue(t.run())  # because of new dependency
+            self.assertFalse(t.run())
+
+        os.mkdir('t')
+        os.chmod('t', 0o000)
+
+        try:
+            with dlb.ex.Context():
+                # add inaccessible dependency
+                rundb = dlb.ex.context._get_rundb()
+                info_by_encoded_path = rundb.get_fsobject_inputs(1)
+                info_by_encoded_path['t/d.h/'] = (False, None)
+                rundb.update_dependencies(1, info_by_encoded_path=info_by_encoded_path)
+
+                output = io.StringIO()
+                dlb.di.set_output_file(output)
+                self.assertTrue(t.run())
+                regex = r"\b()redo necessary because of inaccessible filesystem object: 't/d\.h'\n"
+                self.assertRegex(output.getvalue(), regex)
+                self.assertFalse(t.run())
+        finally:
+            os.chmod('t', 0o700)
+
+
+class RedoIfDefinitionChangedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_redo_if_source_has_changed(self):
+
+        with tempfile.TemporaryDirectory() as content_tmp_dir_path:
+            open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
+            with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
+                f.write(
+                    'import dlb.ex\n'
+                    'class A(dlb.ex.Tool):\n'
+                    '    async def redo(self, result, context):\n'
+                    '       pass'
+                )
+
+            zip_file_path = os.path.abspath('abc.zip')
+            with zipfile.ZipFile(zip_file_path, 'w') as z:
+                z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u4/__init__.py')
+                z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u4/v.py')
+
+        sys.path.insert(0, zip_file_path)
+        # noinspection PyUnresolvedReferences
+        import u4.v
+        del sys.path[0]
+
+        t = u4.v.A()
+
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_threshold_level(dlb.di.DEBUG)
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            regex = r"\b()added 1 tool definition files as input dependency\n"
+            self.assertRegex(output.getvalue(), regex)
+            self.assertFalse(t.run())
+
+        with zipfile.ZipFile(zip_file_path, 'w') as z:
+            z.writestr('dummy', '')
+
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.run())
+            regex = r"\b()redo necessary because of filesystem object: 'abc.zip' \n"
+            self.assertRegex(output.getvalue(), regex)
+
+
+class RedoRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_ignores_nonexistent_output_file(self):
         os.mkdir('src')
@@ -667,22 +875,3 @@ class RunRemovesObstructingExplicitOutputBeforeRedoTest(tools_for_test.Temporary
 
         self.assertTrue(os.path.isfile('a.o'))
         self.assertTrue(os.path.isdir('d'))
-
-
-class ExecutionParameterTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
-
-    def test_fails_if_execution_parameter_not_fundamental(self):
-        # noinspection PyAbstractClass
-        class BTool(dlb.ex.Tool):
-            XY = dlb.fs.Path('.')
-
-        with dlb.ex.Context():
-            t = BTool()
-            with self.assertRaises(dlb.ex.ExecutionParameterError) as cm:
-                t.run()
-            msg = (
-                "value of execution parameter 'XY' is not fundamental: Path('./')\n"
-                "  | an object is fundamental if it is None, or of type 'bool', 'int', 'float', 'complex', 'str', "
-                "'bytes', or a mapping or iterable of only such objects"
-            )
-            self.assertEqual(msg, str(cm.exception))

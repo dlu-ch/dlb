@@ -563,7 +563,7 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
             self.assertEqual(info_by_encoded_path, rundb.get_fsobject_inputs(tool_dbid))
             self.assertEqual({
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'0')
-            }, rundb.get_fsobject_inputs(tool_dbid0)) # input dependencies of tool_dbid0 are unchanged
+            }, rundb.get_fsobject_inputs(tool_dbid0))  # input dependencies of tool_dbid0 are unchanged
 
     def test_is_unchanged_after_fail(self):
 

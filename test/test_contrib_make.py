@@ -163,5 +163,5 @@ class AdditionalSourcesFromRuleTest(unittest.TestCase):
 
     def test_fails_without_source(self):
         with self.assertRaises(ValueError) as cm:
-            make.additional_sources_from_rule(['a.o:',])
+            make.additional_sources_from_rule(['a.o:'])
         self.assertEqual("needs at least one source in rule", str(cm.exception))

@@ -338,9 +338,9 @@ class ObjectOutputValidationTest(unittest.TestCase):
 
     def test_validated_list_value_is_copy(self):
         d = dlb.ex.depend.ObjectOutput(explicit=False)
-        l = [1, 2, 3]
-        v = d.validate(l)
-        l.append(4)
+        li = [1, 2, 3]
+        v = d.validate(li)
+        li.append(4)
         self.assertEqual([1, 2, 3], v)
 
     def test_fails_for_none(self):
@@ -462,7 +462,7 @@ class ValueOfNonAbstractDependencyTest(unittest.TestCase):
         )
 
         public_dependency_classes_except_abstract_ones = {
-            v for n, v in dlb.ex.depend.__dict__.items() \
+            v for n, v in dlb.ex.depend.__dict__.items()
             if isinstance(v, type) and issubclass(v, dlb.ex.depend.Dependency) and
                v is not dlb.ex.depend.Dependency and not n.startswith('_') and
                v not in abstract_dependencies
@@ -475,7 +475,7 @@ class ValueOfNonAbstractDependencyTest(unittest.TestCase):
 class CoverageTest(unittest.TestCase):
     def test_all_concrete_dependency_is_complete(self):
         public_dependency_classes_except_abstract_ones = {
-            v  for n, v in dlb.ex.depend.__dict__.items() \
+            v for n, v in dlb.ex.depend.__dict__.items()
             if isinstance(v, type) and issubclass(v, dlb.ex.depend.Dependency) and
                v is not dlb.ex.depend.Dependency and not n.startswith('_')
         }

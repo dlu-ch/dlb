@@ -129,15 +129,18 @@ class PathFromSequenceTest(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('///',))
-        self.assertEqual("if 'path' is a parts tuple, its first element must be one of '', '/', '//'", str(cm.exception))
+        msg = "if 'path' is a parts tuple, its first element must be one of '', '/', '//'"
+        self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('', 'a/b'))
-        self.assertEqual("if 'path' is a parts tuple, none except its first element must contain '/'", str(cm.exception))
+        msg = "if 'path' is a parts tuple, none except its first element must contain '/'"
+        self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('', '/a'))
-        self.assertEqual("if 'path' is a parts tuple, none except its first element must contain '/'", str(cm.exception))
+        msg = "if 'path' is a parts tuple, none except its first element must contain '/'"
+        self.assertEqual(msg, str(cm.exception))
 
 
 class PathFromOtherTest(unittest.TestCase):
@@ -146,7 +149,8 @@ class PathFromOtherTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.Path(None)
-        self.assertEqual("'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence", str(cm.exception))
+        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+        self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_int(self):
         with self.assertRaises(TypeError) as cm:
