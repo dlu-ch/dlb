@@ -52,9 +52,9 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
    When used as a context manager, it embodies an (execution) context and :term:`activates <active context>` it:
 
-      a. a :term:`root context`, if :term:`dlb is not yet running <run of dlb>`;
+   a. a :term:`root context`, if :term:`dlb is not yet running <run of dlb>`;
 
-      b. an inner context of the :term:`active context`, otherwise.
+   b. an inner context of the :term:`active context`, otherwise.
 
    When a root context is entered, the working directory of the Python process must be a :term:`working tree`'s root
    whose absolute path does not contain unresolved symbolic link.
@@ -720,15 +720,15 @@ to create *concrete dependencies* from their constructor arguments.
 
 Each dependency role has an *multiplicity specification*:
 
-   a. An instance *d* of a dependency class *D* created with ``D(...)`` has a *multiplicity* of ``None`` which
-      means that its concrete dependency must be a *single object* (its type depends on *D* only) or ``None``.
+a. An instance *d* of a dependency class *D* created with ``D(...)`` has a *multiplicity* of ``None`` which
+   means that its concrete dependency must be a *single object* (its type depends on *D* only) or ``None``.
 
-   b. An instance *d* of a dependency class *D* created with ``D[m](...)`` has a *multiplicity* of
-      *m* which means that its concrete dependencies are a *sequence of objects* (their type depends on *D* only)
-      or ``None``. The accepted number of members is specified by *m*.
+b. An instance *d* of a dependency class *D* created with ``D[m](...)`` has a *multiplicity* of
+   *m* which means that its concrete dependencies are a *sequence of objects* (their type depends on *D* only)
+   or ``None``. The accepted number of members is specified by *m*.
 
-      *m* can be any non-negative integer or any meaningful :token:`python:proper_slice` (of non-negative integers).
-      A number of members is accepted if and only if is either equal to *m* or contained in ``range(n + 1)[m]``.
+   *m* can be any non-negative integer or any meaningful :token:`python:proper_slice` (of non-negative integers).
+   A number of members is accepted if and only if is either equal to *m* or contained in ``range(n + 1)[m]``.
 
 Example::
 

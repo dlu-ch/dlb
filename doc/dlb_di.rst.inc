@@ -1,3 +1,5 @@
+.. _dlb-di:
+
 :mod:`dlb.di` --- Line-oriented hierarchical diagnostic messages
 ================================================================
 

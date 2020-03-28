@@ -5,7 +5,7 @@ Why another build tool?
 -----------------------
 
 A common answer to a common question: Because none of the available tools met the requirements of the author,
-especially for the development of embedded software with cross-compiler toolchains and generated code.
+especially for the development of embedded software with cross-compiler toolchains and generated source code.
 
    +----------------------------+---------------+---------------+---------------+
    | Desirable property         | dlb           | Make          | SCons         |
@@ -145,8 +145,8 @@ dlb is executed by an instance of a Python interpreter; starting a Python interp
 typically takes approximately 70 ms.
 Therefore, dlb cannot compete with the efficiency of Make in the following situations:
 
-   a. Full build: every output dependency (Make: target) has to be generated
-   b. "Empty" build: No output dependency has to be generated (Make: no source is newer than its targets)
+a. Full build: every output dependency (Make: target) has to be generated
+b. "Empty" build: No output dependency has to be generated (Make: no source is newer than its targets)
 
 However, most :term:`runs of dlb <run of dlb>` or Make are something between --- that is the whole idea behind a build
 tool after all.
@@ -155,7 +155,7 @@ Since a typical dlb script describes the dependencies completely while a typical
 you won't so easily find yourself in the position with dlb where you have to remove all output dependencies and build
 from scratch.
 Make *requires* that each output dependency (target) changes when one of its input dependencies (sources) has changed.
-Fixing a typo in a comment of a :file:`.c` file necessarily leads to the compilation and linking and all dependent
+Fixing a typo in a comment of a :file:`.c` file necessarily leads to compilation, linking and all dependent
 actions, whereas in dlb the cascade stops with the first file that does not change.
 
 Compare `example/c-minimal/ <https://github.com/dlu-ch/dlb/tree/master/example/c-minimal>`_ and
@@ -184,26 +184,41 @@ Building software with the help of external tools typically requires a lot of  "
 manipulating files and program output. Python and its libraries are very well suited for this task.
 The language is clean and expressive and the community takes pride in elegance and simplicity.
 
+
 .. _manual-explicit-is-better-than-implicit:
 
 Why is explicit better than implicit?
 -------------------------------------
 
 `Some argue <https://taint.org/2011/02/18/001527a.html>`_ that restricting the expressiveness and power of the
-language used to describe a build process is a good thing. I disagree.
+language to configure software is a good thing. For a tool whose developers have a different background than its
+users this is certainly true. As far as tools for developers are concerned, it is not.
+A build tool should be a powerful tool in the developer's tool box that allows him to complete his tasks efficiently and
+without risking dead ends (caused by language restrictions).
 
 A tailored DSL is a good thing exactly as long as you use it as foreseen by its creators.
-A two-line example may be impressive as a demonstration, but real-live projects look different.
+A two-line example may be impressive as a demonstration, but real-life projects look different.
 
 If a certain task is repetitive enough to be described by static content (e.g. an XML file), there's nothing wrong in
 doing so. But this situation does not call for a restriction of the language --- it calls for an (optional) easy way
 to interpret the static content.
 
-In restricting the language instead, you usually lose first:
+By restricting the language used to describe the build process instead, you usually lose first:
 
 - The possibility to *debug* the build process with powerful tools
 - The possibility to *extend* the build tool by aspects not anticipated by its creators
 - The possibility to *adapt* a certain behaviour of the build tool without replacing large parts of it
+
+
+How do I control build scripts with command-line parameters?
+------------------------------------------------------------
+
+When run with ``python3 -v`` or :envvar:`python:PYTHONVERBOSE` is set, dlb does not
+:ref:`suppress any messages <dlb-di>`. Aside from this, there is no command-line mechanism built into dlb.
+
+Use :mod:`python:argparse` or `Click`_, for example.
+But: Less is more.
+
 
 Where are the sources?
 ----------------------
@@ -211,6 +226,9 @@ Where are the sources?
 Here: https://github.com/dlu-ch/dlb.
 
 Feel free to contribute.
+
+
+.. _Click: https://click.palletsprojects.com/
 
 
 .. rubric:: Footnotes

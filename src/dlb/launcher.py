@@ -106,9 +106,9 @@ def main():
         When called without a parameter, the parameters from the last successul call of
         this script with the same 'os.name' are used.
 
-        Each regular file or symbolic link in the directory '.dlbroot/u/' of the working
-        tree whose name ends in '.zip' is added to the list of module search paths of
-        the Python interpreter.
+        Each regular file or symbolic link to a regular file in the directory
+        '.dlbroot/u/' of the working tree whose name ends in '.zip' is added to the list
+        of module search paths of the Python interpreter.
 
         Exit status:
 
@@ -120,11 +120,11 @@ def main():
 
         Examples:
 
-           dlb build/all           # executes the dlb script 'build/all.py' in the
-                                   # working tree's root
-           dlb                     # same as dlb build/all if the previous call
-                                   # was successful
-           PYTHONVERBOSE=1 dlb.py  # when called from a POSIX-compliant shell
+           dlb build/all         # executes the dlb script 'build/all.py' in the
+                                 # working tree's root
+           dlb                   # same as dlb build/all if the previous call
+                                 # was successful
+           PYTHONVERBOSE=1 dlb   # when called from a POSIX-compliant shell
            dlb --help
         """
         import textwrap
