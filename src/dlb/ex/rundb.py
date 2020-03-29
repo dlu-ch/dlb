@@ -66,7 +66,7 @@ class FilesystemObjectMemo:
 
 
 # unique identification of run-database schema among all versions (with a Git tag) of dlb declared as stable
-SCHEMA_VERSION = (0, 3)
+SCHEMA_VERSION = (0, 4)
 
 
 # note: without trailing 'Z'
@@ -248,10 +248,10 @@ class _CursorWithExceptionMapping:
 
 
 @enum.unique
-class Domain(enum.Enum):
-    REDO_REQUEST = 'redo'  # redo request of last successful redo (b'\x01' or b'') or None if no known redo
-    EXECUTION_PARAMETERS = 'exec'
-    ENVIRONMENT_VARIABLES = 'envv'
+class Aspect(enum.Enum):
+    RESULT = 0  # redo request of last successful redo (b'\x01' or b'') (not present if no known redo)
+    EXECUTION_PARAMETERS = 1   # memo digest of execution parameters
+    ENVIRONMENT_VARIABLES = 2  # memo digest of environment variables
 
 
 class Database:
@@ -356,23 +356,29 @@ class Database:
                         "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
                     ")")
 
+                # state before last sucessful redo of tool instance by aspect
                 cursor.execute(
-                    "CREATE TABLE ToolInstDomainInput("
+                    "CREATE TABLE ToolInstRedoState("
                         "tool_inst_dbid INTEGER, "            # tool instance
-                        "domain TEXT NOT NULL, "              # name of domain (one of Domain)
-                        "memo_digest_before BLOB NOT NULL, "  # memo of filesystem object before last redo 
-                                                              # of tool instance
+                        "aspect INTEGER NOT NULL, "           # aspect of redo state (one of Aspect)
+                        "memo_digest BLOB NOT NULL, "         # short memo digest describing the aspect
                         "run_dbid INTEGER, "                  # run_dbid of last update
-                        "PRIMARY KEY(tool_inst_dbid, domain), "
+                        "PRIMARY KEY(tool_inst_dbid, aspect), "
                         "FOREIGN KEY(tool_inst_dbid) REFERENCES ToolInst(tool_inst_dbid), "
                         "FOREIGN KEY(run_dbid) REFERENCES Run(run_dbid)"
                     ")")
+                # Implementation note:
+                # If all possible aspects would be used for every tool instance, fixed columns for all aspects would be
+                # more efficient (about halve the time and a third of the space).
+                # That is not the case, however.
+                # If on average only a few of the aspects are used, this approach is more efficient. It is also more
+                # flexible.
 
                 cursor.execute(
                     "CREATE TRIGGER delete_obsolete_toolinst "
                         "AFTER DELETE ON Run FOR EACH ROW BEGIN "
                             "DELETE FROM ToolInstFsInput WHERE run_dbid = OLD.run_dbid; "
-                            "DELETE FROM ToolInstDomainInput WHERE run_dbid = OLD.run_dbid; "
+                            "DELETE FROM ToolInstRedoState WHERE run_dbid = OLD.run_dbid; "
                         "END")
 
             if oldest_dependency_datetime is not None:
@@ -453,24 +459,24 @@ class Database:
             for encoded_path, is_explicit, encoded_memo_before in rows
         }
 
-    def get_domain_inputs(self, tool_instance_dbid: int) -> Dict[str, bytes]:
-        # Return the *domain* and the memo digest of all domain input dependencies of the tool
-        # instance *tool_instance_dbid*.
+    def get_redo_state(self, tool_instance_dbid: int) -> Dict[int, bytes]:
+        # Return state of the last known redo of the tool instance *tool_instance_dbid* as a dictionary of
+        # memo digests by aspect.
         #
         # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
         # the last :meth:`cleanup()` (if any).
         with self._cursor_with_exception_mapping() as cursor:
             rows = cursor.execute(
-                "SELECT domain, memo_digest_before FROM ToolInstDomainInput WHERE tool_inst_dbid == ?",
+                "SELECT aspect, memo_digest FROM ToolInstRedoState WHERE tool_inst_dbid == ?",
                 (tool_instance_dbid,)).fetchall()
-        return {domain: memo_digest_before for domain, memo_digest_before in rows}
+        return {aspect: memo_digest for aspect, memo_digest in rows}
 
-    def update_dependencies(self, tool_instance_dbid: int, *,
-                            info_by_encoded_path: Optional[Dict[str, Tuple[bool, bytes]]] = None,
-                            memo_digest_by_domain: Optional[Dict[str, Optional[bytes]]] = None,
-                            encoded_paths_of_modified: Optional[Sequence[str]] = None):
-        # Replace all information on filesystem object input dependencies and domain input dependencies for a
-        # tool instance *tool_instance_dbid* by *info_by_encoded_path* and *memo_digest_by_domain*, respectively.
+    def update_dependencies_and_state(self, tool_instance_dbid: int, *,
+                                      info_by_encoded_path: Optional[Dict[str, Tuple[bool, bytes]]] = None,
+                                      memo_digest_by_aspect: Optional[Dict[int, Optional[bytes]]] = None,
+                                      encoded_paths_of_modified: Optional[Sequence[str]] = None):
+        # Replace all information on filesystem object input dependencies and redo state for a
+        # tool instance *tool_instance_dbid* by *info_by_encoded_path* and *memo_digest_by_aspect*, respectively.
         #
         # Also, declare the filesystem objects in the managed tree that are input dependencies (of any tool instance) as
         # modified if
@@ -502,18 +508,16 @@ class Database:
                             tool_instance_dbid, encoded_path, int(bool(is_explicit)),
                             encoded_memo_before, self.run_dbid))
 
-                if memo_digest_by_domain is not None:
-                    cursor.execute("DELETE FROM ToolInstDomainInput WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
-                    for domain, memo_digest_before in memo_digest_by_domain.items():
-                        if not isinstance(domain, str):
-                            raise TypeError(f"not a valid 'domain': {domain!r}")
-                        if not domain:
-                            raise ValueError(f"not a valid 'domain': {domain!r}")
-                        if memo_digest_before is not None:
-                            if not isinstance(memo_digest_before, bytes):
-                                raise TypeError(f"not a valid 'memo_digest_before': {memo_digest_before!r}")
-                            cursor.execute("INSERT OR REPLACE INTO ToolInstDomainInput VALUES (?, ?, ?, ?)",
-                                           (tool_instance_dbid, domain, memo_digest_before, self.run_dbid))
+                if memo_digest_by_aspect is not None:
+                    cursor.execute("DELETE FROM ToolInstRedoState WHERE tool_inst_dbid == ?", (tool_instance_dbid,))
+                    for aspect, memo_digest in memo_digest_by_aspect.items():
+                        if not isinstance(aspect, int):
+                            raise TypeError(f"not a valid 'aspect': {aspect!r}")
+                        if memo_digest is not None:
+                            if not isinstance(memo_digest, bytes):
+                                raise TypeError(f"not a valid 'memo_digest': {memo_digest!r}")
+                            cursor.execute("INSERT OR REPLACE INTO ToolInstRedoState VALUES (?, ?, ?, ?)",
+                                           (tool_instance_dbid, aspect, memo_digest, self.run_dbid))
 
                 if encoded_paths_of_modified is not None:
                     for modified_encoded_path in encoded_paths_of_modified:
@@ -574,7 +578,7 @@ class Database:
                 "DELETE FROM ToolInst WHERE tool_inst_dbid IN ("
                     "SELECT ti.tool_inst_dbid FROM ToolInst AS ti "
                         "LEFT OUTER JOIN ToolInstFsInput AS fs ON ti.tool_inst_dbid = fs.tool_inst_dbid "
-                        "LEFT OUTER JOIN ToolInstDomainInput AS do ON ti.tool_inst_dbid = do.tool_inst_dbid "
+                        "LEFT OUTER JOIN ToolInstRedoState AS do ON ti.tool_inst_dbid = do.tool_inst_dbid "
                     "WHERE fs.tool_inst_dbid IS NULL AND do.tool_inst_dbid IS NULL"
                 ")")
 

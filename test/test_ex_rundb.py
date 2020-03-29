@@ -353,7 +353,7 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
 
             encoded_path1 = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
             encoded_path2 = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/'))
-            rundb.update_dependencies(tool_dbid, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path={
                 encoded_path1: (False, b'?'),
                 encoded_path2: (True, None)
             })
@@ -372,8 +372,8 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
             tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i')
 
             encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
-            rundb.update_dependencies(tool_dbid, info_by_encoded_path={encoded_path: (True, b'1')})
-            rundb.update_dependencies(tool_dbid, info_by_encoded_path={encoded_path: (False, b'234')})
+            rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path={encoded_path: (True, b'1')})
+            rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path={encoded_path: (False, b'234')})
 
             rows = rundb.get_fsobject_inputs(tool_dbid)
             self.assertEqual({encoded_path: (False, b'234')}, rows)
@@ -383,7 +383,7 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
                                                       suggestion_if_database_error="don't panic")) as rundb:
             with self.assertRaises(dlb.ex.DatabaseError) as cm:
                 encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
-                rundb.update_dependencies(12, info_by_encoded_path={encoded_path: (True, b'')})
+                rundb.update_dependencies_and_state(12, info_by_encoded_path={encoded_path: (True, b'')})
 
             msg = (
                 "run-database access failed\n"
@@ -396,9 +396,9 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             with self.assertRaises(ValueError):
                 # noinspection PyTypeChecker
-                rundb.update_dependencies(12, info_by_encoded_path={3: (True, b'')})
+                rundb.update_dependencies_and_state(12, info_by_encoded_path={3: (True, b'')})
             with self.assertRaises(ValueError):
-                rundb.update_dependencies(12, info_by_encoded_path={'/3': (True, b'')})
+                rundb.update_dependencies_and_state(12, info_by_encoded_path={'/3': (True, b'')})
 
     def test_update_fails_for_invalid_encoded_memo(self):
         encoded_path = dlb.ex.rundb.encode_path(dlb.fs.Path('a/b/c'))
@@ -406,7 +406,7 @@ class UpdateAndGetFsobjectInputTest(tools_for_test.TemporaryDirectoryTestCase):
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             with self.assertRaises(TypeError):
                 # noinspection PyTypeChecker
-                rundb.update_dependencies(12, info_by_encoded_path={encoded_path: (True, '')})
+                rundb.update_dependencies_and_state(12, info_by_encoded_path={encoded_path: (True, '')})
 
 
 class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -451,7 +451,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
             tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
             d = {encoded_path: (True, b'e1') for encoded_path in encoded_paths1_explicit}
             d.update({encoded_path: (False, b'n1') for encoded_path in encoded_paths1_nonexplicit})
-            rundb.update_dependencies(tool_dbid1, info_by_encoded_path=d)
+            rundb.update_dependencies_and_state(tool_dbid1, info_by_encoded_path=d)
 
             encoded_paths2_explicit = [
                 encoded_paths[0],
@@ -468,7 +468,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
             tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i2')
             d = {encoded_path: (True, b'e2') for encoded_path in encoded_paths2_explicit}
             d.update({encoded_path: (False, b'n2') for encoded_path in encoded_paths2_nonexplicit})
-            rundb.update_dependencies(tool_dbid2, info_by_encoded_path=d)
+            rundb.update_dependencies_and_state(tool_dbid2, info_by_encoded_path=d)
 
             self.assertEqual(len(encoded_paths1_explicit) + len(encoded_paths1_nonexplicit),
                              len(rundb.get_fsobject_inputs(tool_dbid1)))
@@ -477,7 +477,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
 
             # 2.1 define some as modified
 
-            rundb.update_dependencies(tool_dbid1, encoded_paths_of_modified=[modified_encoded_path])
+            rundb.update_dependencies_and_state(tool_dbid1, encoded_paths_of_modified=[modified_encoded_path])
 
             # 2.2 check result
 
@@ -505,7 +505,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
             # 3.1 define _all_ as modified
 
             # managed tree's root...
-            rundb.update_dependencies(tool_dbid1, encoded_paths_of_modified=[encoded_paths[0]])
+            rundb.update_dependencies_and_state(tool_dbid1, encoded_paths_of_modified=[encoded_paths[0]])
 
             # 3.2 check result
 
@@ -534,7 +534,7 @@ class DeclareFsobjectInputAsModifiedTest(tools_for_test.TemporaryDirectoryTestCa
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             with self.assertRaises(ValueError):
-                rundb.update_dependencies(0, encoded_paths_of_modified='..')
+                rundb.update_dependencies_and_state(0, encoded_paths_of_modified='..')
 
 
 class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -544,12 +544,12 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
 
             tool_dbid0 = rundb.get_and_register_tool_instance_dbid(b't', b'i0')
-            rundb.update_dependencies(tool_dbid0, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid0, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'0')
             })
 
             tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
-            rundb.update_dependencies(tool_dbid, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1'),
                 dlb.ex.rundb.encode_path(dlb.fs.Path('b')): (False, b'1')
             })
@@ -558,7 +558,7 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.rundb.encode_path(dlb.fs.Path('b')): (True, b'3'),
                 dlb.ex.rundb.encode_path(dlb.fs.Path('c')): (False, b'4')
             }
-            rundb.update_dependencies(tool_dbid, info_by_encoded_path=info_by_encoded_path)
+            rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path=info_by_encoded_path)
 
             self.assertEqual(info_by_encoded_path, rundb.get_fsobject_inputs(tool_dbid))
             self.assertEqual({
@@ -569,7 +569,7 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
-            rundb.update_dependencies(tool_dbid, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1'),
                 dlb.ex.rundb.encode_path(dlb.fs.Path('b')): (False, b'1')
             })
@@ -580,7 +580,7 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
                 (None, (False, b'4'))
             ])
             with self.assertRaises(ValueError):
-                rundb.update_dependencies(tool_dbid, info_by_encoded_path=info_by_encoded_path)
+                rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path=info_by_encoded_path)
 
             self.assertEqual({
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1'),
@@ -592,63 +592,61 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             with self.assertRaises(TypeError):
-                rundb.update_dependencies(0, info_by_encoded_path={
+                rundb.update_dependencies_and_state(0, info_by_encoded_path={
                     dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (True, 1)
                 })
             with self.assertRaises(TypeError):
-                rundb.update_dependencies(0, info_by_encoded_path={
+                rundb.update_dependencies_and_state(0, info_by_encoded_path={
                     dlb.ex.rundb.encode_path(dlb.fs.Path('a')): 1
                 })
 
 
-class ReplaceAndGetDomainInputsTest(tools_for_test.TemporaryDirectoryTestCase):
+class ReplaceAndGetRedoStateTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_is_correct_after_success(self):
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
 
             tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i0')
-            rundb.update_dependencies(tool_dbid1, memo_digest_by_domain={'a': b'A', 'b': b'BB'})
-            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid1))
+            rundb.update_dependencies_and_state(tool_dbid1, memo_digest_by_aspect={1: b'A', 2: b'BB'})
+            self.assertEqual({1: b'A', 2: b'BB'}, rundb.get_redo_state(tool_dbid1))
 
             tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
-            rundb.update_dependencies(tool_dbid2, memo_digest_by_domain={'c': b'CCC'})
+            rundb.update_dependencies_and_state(tool_dbid2, memo_digest_by_aspect={3: b'CCC'})
 
-            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid1))  # unchanged
-            rundb.update_dependencies(tool_dbid1, memo_digest_by_domain={'a': b'!'})
-            self.assertEqual({'a': b'!'}, rundb.get_domain_inputs(tool_dbid1))  # 'b' is removed
+            self.assertEqual({1: b'A', 2: b'BB'}, rundb.get_redo_state(tool_dbid1))  # unchanged
+            rundb.update_dependencies_and_state(tool_dbid1, memo_digest_by_aspect={1: b'!'})
+            self.assertEqual({1: b'!'}, rundb.get_redo_state(tool_dbid1))  # 'b' is removed
 
-            self.assertEqual({'c': b'CCC'}, rundb.get_domain_inputs(tool_dbid2))
+            self.assertEqual({3: b'CCC'}, rundb.get_redo_state(tool_dbid2))
 
     def test_is_unchanged_after_fail(self):
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
             tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
 
-            rundb.update_dependencies(tool_dbid, memo_digest_by_domain={'a': b'A', 'b': b'BB'})
+            rundb.update_dependencies_and_state(tool_dbid, memo_digest_by_aspect={1: b'A', 2: b'BB'})
             rundb.commit()
-            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid))
+            self.assertEqual({1: b'A', 2: b'BB'}, rundb.get_redo_state(tool_dbid))
 
-            info_by_encoded_path = collections.OrderedDict([
-                ('a', b'A!'),  # valid
-                (None, 1)   # invalid
+            memo_digest_by_aspect = collections.OrderedDict([
+                (1, b'A!'),  # valid
+                (None, 1)    # invalid
             ])
             with self.assertRaises(TypeError):
-                rundb.update_dependencies(tool_dbid, memo_digest_by_domain=info_by_encoded_path)
+                rundb.update_dependencies_and_state(tool_dbid, memo_digest_by_aspect=memo_digest_by_aspect)
 
-            self.assertEqual({'a': b'A', 'b': b'BB'}, rundb.get_domain_inputs(tool_dbid))  # unchanged
+            self.assertEqual({1: b'A', 2: b'BB'}, rundb.get_redo_state(tool_dbid))  # unchanged
 
     # noinspection PyTypeChecker
-    def test_fails_for_invalid_domain(self):
+    def test_fails_for_invalid_aspect(self):
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
 
             with self.assertRaises(TypeError):
-                rundb.update_dependencies(0, memo_digest_by_domain={1: b''})
-            with self.assertRaises(ValueError):
-                rundb.update_dependencies(0, memo_digest_by_domain={'': b''})
+                rundb.update_dependencies_and_state(0, memo_digest_by_aspect={'1': b''})
             with self.assertRaises(TypeError):
-                rundb.update_dependencies(0, memo_digest_by_domain={'d': 1})
+                rundb.update_dependencies_and_state(0, memo_digest_by_aspect={'d': 1})
 
 
 class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
@@ -660,13 +658,13 @@ class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
             tool_dbid0 = rundb.get_and_register_tool_instance_dbid(b't', b'i0')
 
             tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
-            rundb.update_dependencies(tool_dbid1, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid1, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1'),
                 dlb.ex.rundb.encode_path(dlb.fs.Path('b')): (False, b'2')
             })
 
             tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i2')
-            rundb.update_dependencies(tool_dbid2, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid2, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('c')): (False, b'3')
             })
 
@@ -687,20 +685,20 @@ class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
             rundb.get_and_register_tool_instance_dbid(b't', b'i0')
 
             tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
-            rundb.update_dependencies(tool_dbid1, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid1, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1')
             })
             tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i2')
-            rundb.update_dependencies(tool_dbid2, memo_digest_by_domain={'a': b'A'})
+            rundb.update_dependencies_and_state(tool_dbid2, memo_digest_by_aspect={1: b'A'})
 
             self.assertEqual(3, rundb.get_tool_instance_dbid_count())
 
             rundb.cleanup()
 
             self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
-            self.assertEqual(0, len(rundb.get_domain_inputs(tool_dbid1)))
+            self.assertEqual(0, len(rundb.get_redo_state(tool_dbid1)))
             self.assertEqual(0, len(rundb.get_fsobject_inputs(tool_dbid2)))
-            self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
+            self.assertEqual(1, len(rundb.get_redo_state(tool_dbid2)))
 
             self.assertEqual(3 - 1, rundb.get_tool_instance_dbid_count())
 
@@ -714,27 +712,27 @@ class ForgetRunsBeforeTest(tools_for_test.TemporaryDirectoryTestCase):
             rundb.get_and_register_tool_instance_dbid(b't', b'i0')
 
             tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
-            rundb.update_dependencies(tool_dbid1, info_by_encoded_path={
+            rundb.update_dependencies_and_state(tool_dbid1, info_by_encoded_path={
                 dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1')
             })
 
             tool_dbid2 = rundb.get_and_register_tool_instance_dbid(b't', b'i2')
-            rundb.update_dependencies(tool_dbid2, memo_digest_by_domain={'a': b'A'})
+            rundb.update_dependencies_and_state(tool_dbid2, memo_digest_by_aspect={1: b'A'})
             rundb.commit()
 
             self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
-            self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
+            self.assertEqual(1, len(rundb.get_redo_state(tool_dbid2)))
 
         t1 = datetime.datetime.utcnow()
 
         max_age = t1 - t0 + datetime.timedelta(seconds=1)
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite', max_dependency_age=max_age)) as rundb:
             self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
-            self.assertEqual(1, len(rundb.get_domain_inputs(tool_dbid2)))
+            self.assertEqual(1, len(rundb.get_redo_state(tool_dbid2)))
 
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite', max_dependency_age=t1 - t0)) as rundb:
             self.assertEqual(0, len(rundb.get_fsobject_inputs(tool_dbid1)))
-            self.assertEqual(0, len(rundb.get_domain_inputs(tool_dbid2)))
+            self.assertEqual(0, len(rundb.get_redo_state(tool_dbid2)))
 
 
 class RunSummaryTest(tools_for_test.TemporaryDirectoryTestCase):
