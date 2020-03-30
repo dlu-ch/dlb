@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-3.0-or-later
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
@@ -102,7 +102,7 @@ setuptools.setup(
     author_email='dlu-ch@users.noreply.github.com',
 
     # Choose your license
-    license='GPLv3+',
+    license='LGPLv3+',
 
     # See https://pypi.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -119,7 +119,7 @@ setuptools.setup(
         'Environment :: Console',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.

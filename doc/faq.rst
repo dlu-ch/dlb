@@ -220,6 +220,22 @@ Use :mod:`python:argparse` or `Click`_, for example.
 But: Less is more.
 
 
+Can I use dlb in closed-source projects?
+----------------------------------------
+
+dlb is licensed under LGPLv3_ (which is a supplement to the GPLv3_), dlb being "The Library" and each dlb scripts being
+a "Combined Work". [#lgpl1]_
+
+dlb scripts can be part of commercial closed-source software without the need to publish any of it.
+You may also add dlb to your source code repository (as :file:`dlb-*.zip`, for example).
+
+If you "convey" [#distributeinorganization1]_ a *modified* copy of dlb itself, however, you are required to convey your
+changes as free software too according to the terms of the LGPLv3 (see section 4 and 5 of the GPLv3_).
+An easy way to do so is to fork dlb on GitHub.
+It is even better if you contribute to the original dlb by creating an
+`issue <https://github.com/dlu-ch/dlb/issues/new>`_.
+
+
 Where are the sources?
 ----------------------
 
@@ -229,6 +245,8 @@ Feel free to contribute.
 
 
 .. _Click: https://click.palletsprojects.com/
+.. _LGPLv3: https://www.gnu.org/licenses/lgpl-3.0.en.html
+.. _GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html
 
 
 .. rubric:: Footnotes
@@ -247,3 +265,13 @@ Feel free to contribute.
 .. [#speedofscons1]
    This statement is based only on small set of data and the remembered experience with earlier versions of SCons.
    It has to be confirmed.
+
+.. [#distributeinorganization1]
+   Propagating dlb to several developers in the same organization by the means of a source code repository
+   `does not qualify as conveying <https://www.gnu.org/licenses/gpl-faq.html#v3CoworkerConveying>`_ in the sense
+   of GPLv3.
+
+.. [#lgpl1]
+   "Inheritance creates derivative works in the same way as traditional linking, and the LGPL permits this type of
+   derivative work in the same way as it permits ordinary function calls."
+   (https://www.gnu.org/licenses/lgpl-java.en.html)
