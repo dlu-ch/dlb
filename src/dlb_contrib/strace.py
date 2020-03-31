@@ -7,6 +7,7 @@
 import sys
 import re
 import dlb.ex
+from . import backslashescape
 from typing import Optional, List, Tuple
 assert sys.version_info >= (3, 7)
 
@@ -23,48 +24,6 @@ SHORTENED_QUOTED_STRING_ARG_REGEX = re.compile(rb'^"([^"\\]|\\.)*"\.\.\.')
 FD_STRING_ARG_REGEX = re.compile(rb'^(0|[1-9][0-9]*)<(?P<value>([^<>"\\]|\\[^<>])*)>')
 
 OTHER_ARG_REGEX = re.compile(rb'^[^,(){}\[\]"\\]+')
-
-
-REPLACEMENT_BY_ESCAPE_CHARACTER = {
-    ord('"'): b'"',
-    ord('b'): b'\b',
-    ord('f'): b'\f',
-    ord('n'): b'\n',
-    ord('r'): b'\r',
-    ord('t'): b'\t',
-    ord('v'): b'\v'
-}
-
-
-def _unquote(literal: bytes) -> bytes:
-    # https://github.com/strace/strace/blob/v5.5/util.c#L634
-    parts = literal.split(b'\\')
-    s = parts[0]
-    for p in parts[1:]:
-        if not p:
-            raise ValueError(f"truncated escape sequence")
-        c = p[0]
-        if c in REPLACEMENT_BY_ESCAPE_CHARACTER:
-            s += REPLACEMENT_BY_ESCAPE_CHARACTER[c] + p[1:]
-        elif 0x30 <= c <= 0x39:
-            # octal: exactly 3 octal digits or less than 3 octal digits followed by a non-octal digit
-            n = 1
-            while n < 3 and n < len(p) and 0x30 <= p[n] <= 0x39:
-                n += 1
-            s += bytes([int(p[:n], 8)]) + p[n:]
-        elif c == ord('x'):
-            # hexadecimal: exactly 2 lower-case hexadecimal digits
-            if len(p) < 3:
-                raise ValueError(f"truncated \\xXX escape sequence")
-            try:
-                s += bytes([int(p[1:3], 16)]) + p[3:]
-            except ValueError:
-                raise ValueError(f"truncated \\xXX escape sequence") from None
-        else:
-            e = '\\{}'.format(chr(p[0]))
-            raise ValueError(f"unknown escape sequence: {e!r}")
-
-    return s
 
 
 def _scan_argument_list(argument_list_str, closing_character):
@@ -94,7 +53,8 @@ def _scan_argument_list(argument_list_str, closing_character):
                     v = m.groupdict().get('value')
                     if v is not None:
                         try:
-                            potential_path_argument = _unquote(v)
+                            # https://github.com/strace/strace/blob/v5.5/util.c#L634
+                            potential_path_argument = backslashescape.unquote(v, opening=None)
                         except ValueError:
                             raise ValueError(f"invalid quoting in argument: {raw_argument!r}") from None
                     rest = rest[len(raw_argument):]

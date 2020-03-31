@@ -27,35 +27,6 @@ class RegexTest(unittest.TestCase):
         self.assertFalse(dlb_contrib.strace.QUOTED_STRING_ARG_REGEX.fullmatch(b'"""'))
 
 
-class UnquoteTest(unittest.TestCase):
-
-    def test_replaces_escape_sequences(self):
-        self.assertEqual(b'', dlb_contrib.strace._unquote(b''))
-        self.assertEqual(b'a"b\fc\nd\re\tf\vg', dlb_contrib.strace._unquote(b'a\\"b\\fc\\nd\\re\\tf\\vg'))
-        self.assertEqual(b'a\x1F2b\1234\0z', dlb_contrib.strace._unquote(b'a\\x1F2b\\1234\\0z'))
-
-    def test_fails_for_incomplete_escape_sequence(self):
-        with self.assertRaises(ValueError) as cm:
-            dlb_contrib.strace._unquote(b'a\\')
-        self.assertEqual("truncated escape sequence", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            dlb_contrib.strace._unquote(b'a\\_')
-        self.assertEqual("unknown escape sequence: '\\\\_'", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            dlb_contrib.strace._unquote(b'a\\x')
-        self.assertEqual("truncated \\xXX escape sequence", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            dlb_contrib.strace._unquote(b'a\\x1')
-        self.assertEqual("truncated \\xXX escape sequence", str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            dlb_contrib.strace._unquote(b'a\\x1z')
-        self.assertEqual("truncated \\xXX escape sequence", str(cm.exception))
-
-
 class ParseLineTest(unittest.TestCase):
 
     def test_successful_read_is_correct(self):
@@ -79,7 +50,7 @@ class ParseLineTest(unittest.TestCase):
         self.assertEqual(b'1', value)
 
     def test_successful_write_with_undecodable_path_is_correct(self):
-        line = b'write(1</t\777p/empty>, "\\n", 1) = 1'
+        line = b'write(1</t\377p/empty>, "\\n", 1) = 1'
         name, potential_filesystem_paths, other_arguments, value = dlb_contrib.strace.syscall_from_line(line)
         self.assertEqual('write', name)
         self.assertEqual([None, '\n'], potential_filesystem_paths)

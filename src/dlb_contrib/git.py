@@ -7,10 +7,10 @@
 import sys
 import re
 import subprocess
-import ast
 from typing import Optional, Tuple, Dict, Set, Iterable
 import dlb.fs
 import dlb.ex
+from . import backslashescape
 assert sys.version_info >= (3, 7)
 
 
@@ -18,7 +18,7 @@ GIT_DESCRIPTION_REGEX = re.compile(
     r'^(?P<tag>.+)-(?P<commit_number>0|[1-9][0-9]*)-g(?P<latest_commit_hash>[0-9a-f]{40})(?P<dirty>\??)$')
 assert GIT_DESCRIPTION_REGEX.match('v1.2.3-0-ge08663af738857fcb4448d0fc00b95334bbfd500?')
 
-C_ESCAPED_PATH_REGEX = re.compile(r'^"([^"]|\\.)*"$')
+C_ESCAPED_PATH_REGEX = re.compile(r'^"([^"\\]|\\.)*"$')
 
 STATUS_UPSTREAM_BRANCH_COMPARE_REGEX = re.compile(r'^\+(?P<ahead_count>[0-9]+) -(?P<behind_count>[0-9]+)$')
 
@@ -38,10 +38,20 @@ def _without_prefix(s, prefix):
 
 
 def _unquote_path(optionally_quoted_path):
+    # https://github.com/git/git/blob/v2.20.1/wt-status.c#L250
+    # https://github.com/git/git/blob/v2.20.1/quote.c#L333
+    # https://github.com/git/git/blob/v2.20.1/quote.c#L258
+    # https://github.com/git/git/blob/v2.20.1/quote.c#L184
+    # https://github.com/git/git/blob/v2.20.1/config.c#L1115
+
+    # Characters < U+0020: quoted as octal, except these: '\a', '\b', '\t', '\n', '\v', '\f', '\r'.
+    # Characters '"' and '\\' are quoted as '\"' and '\\', respectively.
+    # Characters >= U+0080: quoted as octal if and only if 'core.quotepath' is true (default).
+
     m = C_ESCAPED_PATH_REGEX.match(optionally_quoted_path)
     if not m:
         return optionally_quoted_path
-    return ast.literal_eval(m.group(0))
+    return backslashescape.unquote(m.group(0))
 
 
 def modifications_from_status(lines: Iterable[str]) \
@@ -79,6 +89,8 @@ def modifications_from_status(lines: Iterable[str]) \
             continue
 
         # https://github.com/git/git/blob/v2.20.1/Documentation/git-status.txt#L301
+        # https://github.com/git/git/blob/v2.20.1/wt-status.c#L2074
+
         ordinary_tracked = _without_prefix(line, '1 ')
         if ordinary_tracked:
             m = ORDINARY_TRACKED_REGEX.match(ordinary_tracked)
