@@ -13,6 +13,11 @@ import dlb.ex
 assert sys.version_info >= (3, 7)
 
 
+def quote(text: str) -> str:
+    # Quote an arbitrary string such that it keeps it literal meaning when evaluated by sh
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
 # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/sh.html
 class ShScriptlet(dlb.ex.Tool):
     # Run a small sh script, wait for its completion and return its output to stdout as a string.

@@ -36,6 +36,14 @@ class ReadFile(dlb_contrib.sh.ShScriptlet):
         return [s for s in self.source_files]
 
 
+class QuoteTest(unittest.TestCase):
+
+    def test_it(self):
+        self.assertEqual("''", dlb_contrib.sh.quote(''))
+        self.assertEqual("'a\"b'", dlb_contrib.sh.quote('a"b'))
+        self.assertEqual("'a'\\''b'", dlb_contrib.sh.quote("a'b"))
+
+
 @unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')
 class ShTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
