@@ -1,0 +1,319 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# dlb - a Pythonic build tool
+# Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
+
+"""Support of strace."""
+
+import sys
+import re
+import dlb.ex
+from typing import Optional, List, Tuple
+assert sys.version_info >= (3, 7)
+
+SYSCALL_NAME_REGEX = re.compile(rb'^(?P<name>[a-z][a-zA-Z0-9_#]*)')
+
+# https://github.com/strace/strace/blob/v5.5/print_fields.h#L127
+# https://github.com/strace/strace/blob/v5.5/util.c#L573
+QUOTED_STRING_ARG_REGEX = re.compile(rb'^"(?P<value>([^"\\]|\\.)*)"')
+
+SHORTENED_QUOTED_STRING_ARG_REGEX = re.compile(rb'^"([^"\\]|\\.)*"\.\.\.')
+
+# https://github.com/strace/strace/blob/v5.5/print_fields.h#L233
+# https://github.com/strace/strace/blob/v5.5/util.c#L539
+FD_STRING_ARG_REGEX = re.compile(rb'^(0|[1-9][0-9]*)<(?P<value>([^<>"\\]|\\[^<>])*)>')
+
+OTHER_ARG_REGEX = re.compile(rb'^[^,(){}\[\]"\\]+')
+
+
+REPLACEMENT_BY_ESCAPE_CHARACTER = {
+    ord('"'): b'"',
+    ord('b'): b'\b',
+    ord('f'): b'\f',
+    ord('n'): b'\n',
+    ord('r'): b'\r',
+    ord('t'): b'\t',
+    ord('v'): b'\v'
+}
+
+
+def _unquote(literal: bytes) -> bytes:
+    # https://github.com/strace/strace/blob/v5.5/util.c#L634
+    parts = literal.split(b'\\')
+    s = parts[0]
+    for p in parts[1:]:
+        if not p:
+            raise ValueError(f"truncated escape sequence")
+        c = p[0]
+        if c in REPLACEMENT_BY_ESCAPE_CHARACTER:
+            s += REPLACEMENT_BY_ESCAPE_CHARACTER[c] + p[1:]
+        elif 0x30 <= c <= 0x39:
+            # octal: exactly 3 octal digits or less than 3 octal digits followed by a non-octal digit
+            n = 1
+            while n < 3 and n < len(p) and 0x30 <= p[n] <= 0x39:
+                n += 1
+            s += bytes([int(p[:n], 8)]) + p[n:]
+        elif c == ord('x'):
+            # hexadecimal: exactly 2 lower-case hexadecimal digits
+            if len(p) < 3:
+                raise ValueError(f"truncated \\xXX escape sequence")
+            try:
+                s += bytes([int(p[1:3], 16)]) + p[3:]
+            except ValueError:
+                raise ValueError(f"truncated \\xXX escape sequence") from None
+        else:
+            e = '\\{}'.format(chr(p[0]))
+            raise ValueError(f"unknown escape sequence: {e!r}")
+
+    return s
+
+
+def _scan_argument_list(argument_list_str, closing_character):
+    closing_by_opening = {ord('['): ord(']'), ord('{'): ord('}')}
+    arguments = []
+    rest = argument_list_str
+
+    # strace/print_fields.h
+    while True:
+        if not rest:
+            raise ValueError(f"missing {chr(closing_character)!r} in argument list")
+
+        raw_argument = None
+        potential_path_argument = None
+
+        if rest[0] in closing_by_opening:
+            raw_argument, r = _scan_argument_list(rest[1:], closing_by_opening[rest[0]])
+            n = len(rest) - len(r)
+            raw_argument = rest[:n]
+            rest = rest[n:]
+        else:
+            for regex in [FD_STRING_ARG_REGEX, SHORTENED_QUOTED_STRING_ARG_REGEX, QUOTED_STRING_ARG_REGEX,
+                          OTHER_ARG_REGEX]:
+                m = regex.match(rest)
+                if m:
+                    raw_argument = m.group()
+                    v = m.groupdict().get('value')
+                    if v is not None:
+                        try:
+                            potential_path_argument = _unquote(v)
+                        except ValueError:
+                            raise ValueError(f"invalid quoting in argument: {raw_argument!r}") from None
+                    rest = rest[len(raw_argument):]
+                    break
+            if raw_argument is None:
+                raise ValueError(f"invalid argument: {rest!r}")
+
+        arguments.append((raw_argument, potential_path_argument))
+
+        if rest and rest[0] == closing_character:
+            rest = rest[1:]
+            break
+
+        if rest[:1] != b',':
+            raise ValueError(f"missing {chr(closing_character)!r} in argument list")
+
+        rest = rest[1:].lstrip(b' ')
+
+    return arguments, rest
+
+
+# line from 'strace ...' or 'strace -y ...'
+def syscall_from_line(line: bytes) -> Tuple[str, List[Optional[str]], List[bytes], bytes]:
+    m = SYSCALL_NAME_REGEX.match(line)
+    if not m:
+        raise ValueError(f'not an strace line: {line!r}')
+    name = m.group().decode()
+    rest = line[len(name):]
+
+    if not rest[:1] == b'(':
+        raise ValueError(f'not an strace line: {line!r}')
+
+    arguments, rest = _scan_argument_list(rest[1:], ord(')'))
+
+    rest = rest.lstrip(b' ')
+    if rest[:1] != b'=':
+        raise ValueError(f'not an strace line: {line!r}')
+    value = rest[1:].lstrip(b' ')
+
+    string_and_fd_arguments = []  # e.g. '"a/b"' or '3</lib/x86_64-linux-gnu/libc-2.28.so>'
+    other_arguments = []  # e.g. '{st_mode=S_IFDIR|0755, st_size=12288, ...}' or '0x7fffb28622d0 /* 39 vars */'
+    encoding = sys.getfilesystemencoding()
+    for raw, potential_path in arguments:
+        if potential_path is None:
+            other_arguments.append(raw)
+        else:
+            try:
+                potential_path = potential_path.decode(encoding)
+                string_and_fd_arguments.append(potential_path)
+            except UnicodeDecodeError:
+                string_and_fd_arguments.append(None)
+
+    return name, string_and_fd_arguments, other_arguments, value
+
+
+class RunStraced(dlb.ex.Tool):
+    # Run dynamic helper with strace and return all successfully read files in the managed tree in *read_files*
+    # and all successfully written files in the managed tree in *written_files*.
+
+    EXECUTABLE = 'strace'  # dynamic helper, looked-up in the context
+
+    read_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+    written_files = dlb.ex.Tool.Output.RegularFile[:](explicit=False)
+
+    def get_command_line(self) -> Tuple[str, List[str]]:
+        # Return tuple '(executable, arguments)`, where *executable* is the dynamic helper to execute
+        # and *arguments* the list of its arguments.
+        # Overwrite in subclass.
+        raise NotImplementedError
+
+    async def redo(self, result, context):
+        straced_helper, arguments = self.get_command_line()
+        straced_helper = context.helper[straced_helper]
+
+        with context.temporary() as strace_output_file:
+            await context.execute_helper(
+                self.EXECUTABLE,
+                ['-y', '-e', 'trace=read,write', '-qq', '-o', strace_output_file, '--', straced_helper] +
+                [c for c in arguments])
+
+            read_files = []
+            checked_for_read_files = set()
+            written_files = []
+            checked_for_written_files = set()
+
+            with open(strace_output_file.native, 'rb') as f:
+                for line in f:
+                    name, string_and_fd_arguments, other_arguments, value = syscall_from_line(line)
+                    if name == 'read' and 'value' != b'0':
+                        # SYS_FUNC(read): https://github.com/strace/strace/blob/v5.5/io.c#L16
+                        try:
+                            path = string_and_fd_arguments[0]
+                        except IndexError:
+                            raise ValueError(f"invalid strace output: {line!r}") from None
+                        if path and path not in checked_for_read_files:
+                            try:
+                                read_files.append(context.working_tree_path_of(path, is_dir=False, existing=False))
+                            except ValueError:
+                                pass
+                            checked_for_read_files.add(path)
+                    elif name == 'write' and 'value' != b'0':
+                        # SYS_FUNC(write): https://github.com/strace/strace/blob/v5.5/io.c#L31
+                        try:
+                            path = string_and_fd_arguments[0]
+                        except IndexError:
+                            raise ValueError(f"invalid strace output: {line!r}") from None
+                        if path and path not in checked_for_written_files:
+                            try:
+                                written_files.append(context.working_tree_path_of(path, is_dir=False, existing=False))
+                            except ValueError:
+                                pass
+                            checked_for_written_files.add(path)
+
+            result.read_files = sorted(read_files)
+            result.written_files = sorted(written_files)
+
+
+# struct_sysent for system calls that match 'strace -e trace=%file ...':
+#
+#     %file -> TRACE_FILE: https://github.com/strace/strace/blob/v5.5/basic_filters.c#L152
+#     TRACE_FILE -> TF:    https://github.com/strace/strace/blob/v5.5/sysent_shorthand_defs.h#L37
+#
+# https://github.com/strace/strace/blob/v5.5/syscall.c#L51:
+#
+#     const struct_sysent sysent0[] = {
+#         #include "syscallent.h"
+#     };
+#
+# https://github.com/strace/strace/blob/v5.5/sysent.h#L11:
+#
+#     typedef struct sysent {
+#         unsigned nargs;
+#         int sys_flags;
+#         int sen;
+#         int (*sys_func)();
+#         const char *sys_name;
+#     } struct_sysent;
+#
+# find . -name syscallent.h -exec grep -e '\bTF\b' {} \;
+#
+#     access
+#     acct
+#     chdir
+#     chmod
+#     chown
+#     chown32
+#     chroot
+#     creat
+#     execv
+#     execve
+#     execve#64
+#     execveat
+#     execveat#64
+#     faccessat
+#     fanotify_mark
+#     fchmodat
+#     fchownat
+#     fstatat64
+#     futimesat
+#     getcwd
+#     getxattr
+#     inotify_add_watch
+#     lchown
+#     lchown32
+#     lgetxattr
+#     link
+#     linkat
+#     listxattr
+#     llistxattr
+#     lremovexattr
+#     lsetxattr
+#     lstat
+#     lstat64
+#     mkdir
+#     mkdirat
+#     mknod
+#     mknodat
+#     mount
+#     name_to_handle_at
+#     newfstatat
+#     oldlstat
+#     oldstat
+#     oldumount
+#     open
+#     openat
+#     osf_lstat
+#     osf_old_lstat
+#     osf_old_stat
+#     osf_stat
+#     osf_statfs
+#     osf_statfs64
+#     osf_utimes
+#     pivot_root
+#     quotactl
+#     readlink
+#     readlinkat
+#     removexattr
+#     rename
+#     renameat
+#     renameat2
+#     rmdir
+#     setxattr
+#     stat
+#     stat64
+#     statfs
+#     statfs64
+#     statx
+#     swapoff
+#     swapon
+#     symlink
+#     symlinkat
+#     truncate
+#     truncate64
+#     umount
+#     umount2
+#     unlink
+#     unlinkat
+#     uselib
+#     uselib#64
+#     utime
+#     utimensat
+#     utimes
