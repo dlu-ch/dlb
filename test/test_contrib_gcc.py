@@ -108,7 +108,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 return ['a.c']
 
         t = C(source_file='a.c', object_file='a.o')
-        with self.assertRaises(Exception):
+        with self.assertRaises(dlb.ex.HelperExecutionError):
             with dlb.ex.Context():
                 t.run()
 
@@ -119,7 +119,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             SUPPRESSED_WARNINGS = ('no-all',)
 
         t = C(source_file='a.c', object_file='a.o')
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
                 t.run()
         self.assertEqual("not a warning name: 'no-all'", str(cm.exception))
@@ -131,7 +131,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             DEFINITIONS = {'a(': None}
 
         t = C(source_file='a.c', object_file='a.o')
-        with self.assertRaises(Exception) as cm:
+        with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
                 t.run()
         self.assertEqual("not a macro: 'a('", str(cm.exception))

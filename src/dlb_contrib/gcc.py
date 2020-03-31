@@ -35,7 +35,7 @@ class ObjectOrArchivePath(Path):
 def check_warning_name(name: str) -> str:
     name = str(name)
     if not name or name.startswith('no-') or '=' in name:
-        raise Exception(f"not a warning name: {name!r}")  # not usable after -W or -Werror=
+        raise ValueError(f"not a warning name: {name!r}")  # not usable after -W or -Werror=
     return name
 
 
@@ -70,7 +70,7 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
         for macro, replacement in self.DEFINITIONS.items():
             if not dlb_contrib.clike.SIMPLE_IDENTIFIER.match(macro) and \
                     not dlb_contrib.clike.FUNCTIONLIKE_MACRO.match(macro):
-                raise Exception(f"not a macro: {macro!r}")
+                raise ValueError(f"not a macro: {macro!r}")
             # *macro* is a string that does not start with '-' and does not contain '='
             if replacement is None:
                 compile_arguments += ['-U', macro]
@@ -95,7 +95,7 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
             # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
             included_files = []
             with open(make_rules_file.native, 'r', encoding='utf-8') as dep_file:
-                for p in dlb_contrib.make.additional_sources_from_rule(dep_file.readlines()):
+                for p in dlb_contrib.make.additional_sources_from_rule(dep_file):
                     try:
                         included_files.append(context.working_tree_path_of(p))
                     except ValueError:
