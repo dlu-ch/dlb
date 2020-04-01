@@ -7,47 +7,46 @@ Why another build tool?
 A common answer to a common question: Because none of the available tools met the requirements of the author,
 especially for the development of embedded software with cross-compiler toolchains and generated source code.
 
-   +----------------------------+---------------+---------------+---------------+
-   | Desirable property         | dlb           | Make          | SCons         |
-   +============================+===============+===============+===============+
-   | Speed of full build        | |plusplus|    | |plusplus|    | |plus|        |
-   +----------------------------+---------------+---------------+---------------+
-   | Speed of partial build,    | |plus|        | |avg|         | |avg|         |
-   | avoidance of unnecessary   |               |               |               |
-   | actions                    |               |               |               |
-   +----------------------------+---------------+---------------+---------------+
-   | Speed of "empty" build     | |avg|         | |plusplus|    | |minusminus|  |
-   +----------------------------+---------------+---------------+---------------+
-   | Expressiveness             | |plusplus|    | |minusminus|  | |avg|         |
-   | of build description       |               |               |               |
-   +----------------------------+---------------+---------------+---------------+
-   | Portability                | |plusplus|    | |minusminus|  | |avg|         |
-   | of build description       |               |               |               |
-   +----------------------------+---------------+---------------+---------------+
-   | Modularity                 | |plusplus|    | |minusminus|  | |minusminus|  |
-   +----------------------------+---------------+---------------+---------------+
-   | Robustness to              | |plus|        | |minusminus|  | |plusplus|    |
-   | system time jumps          |               |               |               |
-   +----------------------------+---------------+---------------+---------------+
-   | Robustness to              | |plusplus|    | |minusminus|  | |plusplus|    |
-   | changes during build       |               |               |               |
-   +----------------------------+---------------+---------------+---------------+
-   | Reproducibility of builds  | |plusplus|    | |minusminus|  | |minusminus|  |
-   +----------------------------+---------------+---------------+---------------+
-   | Fine-grained control       | |plusplus|    | |minusminus|  | |minusminus|  |
-   | of parallel execution      |               |               |               |
-   +----------------------------+---------------+---------------+---------------+
-   | Abstraction of tools       | |plusplus|    | |minusminus|  | |minus|       |
-   +----------------------------+---------------+---------------+---------------+
-   | Self-containedness         | |plusplus|    | |minusminus|  | |plusplus|    |
-   +----------------------------+---------------+---------------+---------------+
-   | Possibility to step        | |plusplus|    | |minusminus|  | |minus|       |
-   | through build with         |               |               |               |
-   | debugger                   |               |               |               |
-   +----------------------------+---------------+---------------+---------------+
-   | Core objects               | contexts,     | strings       | strings,      |
-   |                            | tools, paths  |               | string lists  |
-   +----------------------------+---------------+---------------+---------------+
+   +----------------------------------------+---------------+---------------+---------------+
+   | Desirable property                     | dlb           | Make          | SCons         |
+   +========================================+===============+===============+===============+
+   | Speed of full build                    | |plusplus|    | |plusplus|    | |plus|        |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Speed of partial build, avoidance of   | |plus|        | |avg|         | |avg|         |
+   | unnecessary actions                    |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Speed of "empty" build                 | |avg|         | |plusplus|    | |minusminus|  |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Expressiveness of build description    | |plusplus|    | |minusminus|  | |avg|         |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Portability of build description       | |plusplus|    | |minusminus|  | |avg|         |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Modularity                             | |plusplus|    | |minusminus|  | |minus|       |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Robustness to system time jumps        | |plus|        | |minusminus|  | |plusplus|    |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Robustness to changes during build     | |plusplus|    | |minusminus|  | |plusplus|    |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Reproducibility of builds              | |plusplus|    | |minusminus|  | |minusminus|  |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Fine-grained control                   | |plusplus|    | |minusminus|  | |minusminus|  |
+   | of parallel execution                  |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Abstraction of tools                   | |plusplus|    | |minusminus|  | |minus|       |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Self-containedness                     | |plusplus|    | |minusminus|  | |plusplus|    |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Possibility to step through build      | |plusplus|    | |minusminus|  | |minus|       |
+   | with debugger                          |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Safe use of paths containing "special" | |plusplus|    | |minusminus|  | |minus|       |
+   | characters (``' '``,  ``'$'``,         |               |               |               |
+   | ``'\\'``, ...)                         |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Fundamental objects                    | contexts,     | strings       | environments, |
+   |                                        | tools, paths  |               | strings,      |
+   |                                        |               |               | string lists  |
+   +----------------------------------------+---------------+---------------+---------------+
 
 .. |plus| replace:: ⊕
 
@@ -173,6 +172,19 @@ reflect the order of the actions.
 dlb is modular, object-oriented and describes dependencies by explicit statements.
 SCons contains a lot of predefined roles for typical tasks and environments and does a lot of guessing
 (e.g. it tries to detect toolchains). This makes SCons quite slow and intricate to extend in some aspects.
+
+SCons relies on shell command-lines described as strings and tries to escape characters with special meaning only in
+a very simple manner (like putting ``'"'`` around paths with spaces).
+It is therefore risky to use characters in paths that have a special meaning in the shell (implicitly) used on any
+of the supported platforms.
+dlb does not use a shell. A relative path ``str(p.native)`` always starts with :file:`.` if *p* is
+a :class:`dlb.fs.Path`. As far as dlb is concerned, it is safe to use *any* character in paths
+(e.g. :file:`-o ~/.bashrc` or :file:`; sudo rm -rf /`).
+
+SCons detects dependencies *before* it runs a tool. It does so by scanning input files, roughly mimicking the tool
+to be run potentially. dlb detects dependencies *after* a redo of a :term:`tool instance`. It uses information provided
+by the tool itself (e.g. the list of include file directly from the compiler), which is much more precise and also
+much faster.
 
 dlb is faster [#speedofscons1]_ and is designed for easy extension.
 
