@@ -2,7 +2,34 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of Git - the stupid content tracker."""
+"""Access a working directory managed by Git - the stupid content tracker."""
+
+# Git: <https://git-scm.com/>
+# Tested with: git 2.20.1
+# Executable: 'git'
+#
+# Usage example:
+#
+#     import dlb.di
+#     import dlb.ex
+#     import dlb_contrib.git
+#
+#     with dlb.ex.Context():
+#         result = dlb_contrib.git.GitDescribeWorkingDirectory().run()
+#
+#         ... = result.tag  # e.g. 'v1.2.3'
+#         ... = result.branch_refname  # 'refs/heads/master'
+#
+#         if result.untracked_files:
+#             s = ','.join(repr(p.as_string()) for p in result.untracked_files)
+#             dlb.di.inform(f'repository contains {len(result.untracked_files)} untracked file(s): {s}',
+#                           level=dlb.di.WARNING)
+
+__all__ = [
+    'GIT_DESCRIPTION_REGEX', 'modifications_from_status',
+    'GitDescribeWorkingDirectory'
+]
+
 
 import sys
 import re
@@ -134,10 +161,10 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     MATCHING_TAG_CANDIDATE_COUNT = 10  # https://github.com/git/git/blob/v2.20.1/builtin/describe.c
 
     # Most recent annotated tag reachable from commit *latest_commit_hash* and matching *TAG_PATTERN*.
-    tag = dlb.ex.Tool.Output.Object(explicit=False)
+    tag = dlb.ex.Tool.Output.Object(explicit=False)  # e.g. 'v1.2.3'
 
     # SHA-1 hash of the latest commit as a hex string of 40 characters ('0' - '9', 'a' - 'f').
-    latest_commit_hash = dlb.ex.Tool.Output.Object(explicit=False)
+    latest_commit_hash = dlb.ex.Tool.Output.Object(explicit=False)  # e.g. '97db12cb0d88c1c157a371f48cf2e0884bf82ade'
 
     # Number of commits since the tag denoted by *tag* as a non-negative integer.
     commit_number_from_tag_to_latest_commit = dlb.ex.Tool.Output.Object(explicit=False)
@@ -146,10 +173,11 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     has_changes_in_tracked_files = dlb.ex.Tool.Output.Object(explicit=False)
 
     # Refname of the current branch (refs/heads/...) or None if in detached state.
-    branch_refname = dlb.ex.Tool.Output.Object(explicit=False, required=False)
+    branch_refname = dlb.ex.Tool.Output.Object(explicit=False, required=False)  # e.g. 'refs/heads/master'
 
     # Refname of the upstream branch (refs/remotes/...), if any.
     upstream_branch_refname = dlb.ex.Tool.Output.Object(explicit=False, required=False)
+    # e.g. 'refs/remotes/origin/master'
 
     # Dictionary of files that are in the Git index and have uncommited changes.
     # The keys are relative paths in the Git index as dlb.fs.Path objects.

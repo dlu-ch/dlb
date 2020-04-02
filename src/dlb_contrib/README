@@ -1,2 +1,32 @@
-This will become a namespace package according to PEP 420.
+This is a namespace package according to PEP 420.
 There is no __init__.py on purpose.
+
+Each module in this package must contain the following:
+
+ - Exactly one line '# SPDX-License-Identifier: <license>' in the first comment block with <license> listed here:
+   https://spdx.org/licenses/
+
+ - A module docstring that starts with single sentence describing the tasks its content abstracts.
+
+ - In the second comment block at the top with
+    - a reference block and
+    - a complete usage example, starting with '# Usage example:' and indented by 4 spaces
+      (this is extracted for the documentation)
+
+  - A list '__all__' of all exported?? objects, grouped by their type.
+
+A comment block consists of consecutive lines starting with '#'.
+
+The reference block consists of consecutive lines of the form
+'# <aspect>: <value>', where <aspect> does not contain ':' and does not start with ' '.
+The same <aspect> can be given multiple times.
+
+It should contain references to abstracted external tool, language or file format, preferrably as URLs
+enclosed in '<' ... '>'.
+It should contain an <aspect> 'Tested with' for each tested configurations.
+It should contain an <aspect> 'Executable' for the name of each dynamic helper that is potentially executed
+by one of its tools.
+
+See dlb_contrib.git for an example.
+
+The content of the modules should be described by comments (not docstrings) with emphasis on examples.

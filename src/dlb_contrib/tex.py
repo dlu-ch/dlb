@@ -2,7 +2,34 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of TeX and LaTeX implementations based on web2c and kpathsea."""
+"""Typeset documents with TeX and LaTeX implementations based on web2c and kpathsea."""
+
+# TeX: <https://www.tug.org/books/index.html#texbook>
+# TeX: <https://ctan.org/tex-archive/systems/knuth/dist/tex/texbook.tex>
+# LaTeX: <https://www.latex-project.org/>
+# pdflatex: <http://www.tug.org/applications/pdftex/>
+# Tested with: pdfTeX 3.14159265-2.6-1.40.19 with kpathsea version 6.3.1/dev
+# Executable: 'tex'
+# Executable: 'latex'
+#
+# Usage example:
+#
+#     import dlb.ex
+#     import dlb_contrib.tex
+#
+#     with dlb.ex.Context():
+#         output_path = dlb.fs.Path('build/out/')
+#
+#         dlb_contrib.tex.Latex(
+#             toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
+#             input_search_paths=['src/'],
+#             state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
+
+__all__ = [
+    'KpathseaPath', 'TexPath',
+    'accessed_files_from_recorded',
+    'Tex', 'Latex'
+]
 
 import sys
 import os
@@ -13,7 +40,7 @@ import dlb.di
 import dlb.ex
 
 
-def check_option(option: str) -> str:
+def check_option(option: str) -> str:  # TODO make private
     option = str(option)
     if option[:1] != '-':
         raise ValueError(f"not an option: {option!r}")  # would change meaning of following arguments

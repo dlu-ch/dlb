@@ -2,7 +2,41 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of languages of the C family by the GNU Compiler Collection."""
+"""Compile and link languages of the C family with the GNU Compiler Collection."""
+
+# GCC: <https://gcc.gnu.org/>
+# Tested with: gcc 8.3.0
+# Executable: 'gcc'
+# Executable: 'g++'
+#
+# Usage example:
+#
+#     import dlb.ex
+#     import dlb_contrib.gcc
+#
+#     with dlb.ex.Context():
+#         source_path = dlb.fs.Path('src/')
+#         output_path = dlb.fs.Path('build/out/')
+#
+#         compile_results = [
+#             dlb_contrib.gcc.CCompilerGcc(
+#                 source_file=p,
+#                 object_file=output_path / p.with_appended_suffix('.o'),
+#                 include_search_directories=[source_path]
+#             ).run()
+#             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
+#         ]
+#
+#         dlb_contrib.gcc.CLinkerGcc(
+#             object_and_archive_files=[r.object_file for r in compile_results],
+#             linked_file=output_path / 'application').run()
+
+__all__ = [
+    'Path', 'ObjectOrArchivePath',
+    'CCompilerGcc', 'CplusplusCompilerGcc',
+    'CLinkerGcc', 'CplusplusLinkerGcc'
+]
+
 
 import sys
 from typing import Iterable, Union
@@ -32,7 +66,7 @@ class ObjectOrArchivePath(Path):
                 raise ValueError("must end with '.o' or '.a'")
 
 
-def check_warning_name(name: str) -> str:
+def check_warning_name(name: str) -> str:  # TODO make private
     name = str(name)
     if not name or name.startswith('no-') or '=' in name:
         raise ValueError(f"not a warning name: {name!r}")  # not usable after -W or -Werror=

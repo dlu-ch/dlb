@@ -4,6 +4,15 @@
 
 """Backslash escape sequences (Python, Bash, Git, ...)."""
 
+# Usage example:
+#
+#   import dlb_contrib.backslashescape
+#
+#   s = b'"tmp/x\\076y"'
+#   ... = dlb_contrib.backslashescape.unquote(s)  # b'tmp/x\076y'
+
+__all__ = ['PYTHON', 'unquote']
+
 import sys
 import string
 from typing import Optional, AnyStr, Dict

@@ -2,7 +2,23 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of the Posix sh shell - the standard command language interpreter."""
+"""Run commands with the Posix sh shell - the standard command language interpreter."""
+
+# sh: <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/sh.html>
+# Executable: 'sh'
+#
+# Usage example:
+#
+#     import dlb.ex
+#     import dlb_contrib.sh
+#
+#     class PrintString(dlb_contrib.sh.ShScriptlet):
+#         SCRIPTLET = "echo echoed: " + dlb_contrib.sh.quote('a $ is a $')
+#
+#     with dlb.ex.Context():
+#         ... = PrintString().run().output  # 'echoed: a $ is a $\n'
+
+__all__ = ['quote', 'ShScriptlet']
 
 import sys
 import subprocess
@@ -18,7 +34,6 @@ def quote(text: str) -> str:
     return "'" + text.replace("'", "'\\''") + "'"
 
 
-# https://pubs.opengroup.org/onlinepubs/9699919799/utilities/sh.html
 class ShScriptlet(dlb.ex.Tool):
     # Run a small sh script, wait for its completion and return its output to stdout as a string.
     # Do not use this for "big" scripts with a lot of output.

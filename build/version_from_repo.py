@@ -33,7 +33,7 @@ def _version_from_describe(describe_word):
     else:
         version = last_version
 
-    return version, version_info
+    return version, version_info, commit_hash
 
 
 def get_version():
@@ -41,5 +41,5 @@ def get_version():
     return _version_from_describe(s.strip())
 
 
-assert _version_from_describe('v1.2.3-35-g13afa33') == ('1.2.3.dev35+13af', (1, 2, 3))
-assert _version_from_describe('v1.2.3a4-35-g13afa33') == ('1.2.3a4.dev35+13af', (1, 2, 3, 'a', 4))
+assert _version_from_describe('v1.2.3-35-g13afa33') == ('1.2.3.dev35+13af', (1, 2, 3), '13afa33')
+assert _version_from_describe('v1.2.3a4-35-g13afa33') == ('1.2.3a4.dev35+13af', (1, 2, 3, 'a', 4), '13afa33')

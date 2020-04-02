@@ -2,7 +2,29 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Support of strace."""
+"""Detect read and written filesystem objects of a running process with strace."""
+
+# strace: <https://strace.io/>
+# Tested with: strace 4.26
+# Executable: 'strace'
+#
+# Usage example:
+#
+#     from typing import Tuple, List
+#     import dlb.ex
+#     import dlb_contrib.strace
+#
+#     class ShowContent(dlb_contrib.strace.RunStraced):
+#         def get_command_line(self) -> Tuple[str, List[str]]:
+#             return 'bash', ['-c', '-', 'cat  -- *', 's']
+#
+#     with dlb.ex.Context():
+#         ... = ShowContent().run().read_files
+
+__all__ = [
+    'SYSCALL_NAME_REGEX', 'syscall_from_line',
+    'RunStraced'
+]
 
 import sys
 import re

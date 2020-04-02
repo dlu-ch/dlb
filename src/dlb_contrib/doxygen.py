@@ -2,7 +2,27 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Document generation from source code with Doxygen."""
+"""Generate documents from source code with Doxygen."""
+
+# Doxygen: <http://www.doxygen.nl/>
+# Tested with: Doxygen 1.8.13
+# Executable: 'doxygen'
+#
+# Usage example:
+#
+#     import dlb.ex
+#     import dlb_contrib.doxygen
+#
+#     with dlb.ex.Context():
+#         dlb_contrib.doxygen.Doxygen(
+#             configuration_template_file='Doxyfile',  # contains '${{source_directories}}', '${{output_directory}}'
+#             source_directories=['src/'],  # replaces '${{source_directories}}' in Doxyfile
+#             output_directory='build/out/').run()
+
+__all__ = [
+    'PLACEHOLDER_NAME', 'Template',
+    'Path', 'Doxygen'
+]
 
 import sys
 import re

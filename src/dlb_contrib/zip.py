@@ -2,7 +2,20 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Zip archive creation."""
+"""Create Zip archives from directory content."""
+
+# .ZIP file format: <https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT>
+#
+# Usage example:
+#
+#     import dlb.ex
+#     import dlb_contrib.zip
+#
+#     with dlb.ex.Context():
+#         dlb_contrib.zip.ZipDirectory(content_directory='build/out/html/',
+#                                      archive_file='build/out/application.html.zip').run()
+
+__all__ = ['ZipDirectory']
 
 import sys
 import os.path

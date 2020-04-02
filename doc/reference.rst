@@ -11,6 +11,8 @@ Reference
 .. include:: dlb_di.rst.inc
 .. include:: dlb_cf.rst.inc
 .. include:: dlb_ex.rst.inc
+.. include:: dlb_contrib.rst.inc
+
 
 .. _POSIX:
 .. _ISO 1003.1-2008: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/contents.html

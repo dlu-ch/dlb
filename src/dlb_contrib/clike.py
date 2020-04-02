@@ -4,6 +4,47 @@
 
 """The C language family and its tools."""
 
+# C:   ISO/IEC 9899:1999 (E)
+# C++: ISO/IEC 14882:1998 (E)
+#
+# Usage example:
+#
+#     import dlb.ex
+#     import dlb_contrib.clike
+#
+#     name = ...
+#     assert dlb_contrib.clike.SIMPLE_IDENTIFIER.match(name)
+#
+#     ... = dlb_contrib.clike.string_literal_from_bytes('Tête-à-tête'.encode())
+#     # '"T\\xC3\\xAAte-\\xC3\\xA0-t\\xC3\\xAAte"'
+#
+#     class GenerateVersionFile(dlb_contrib.clike.GenerateHeaderFile):
+#         WD_VERSION = ...
+#
+#         def write_content(self, file):
+#             wd_version = dlb_contrib.clike.string_literal_from_bytes(self.WD_VERSION.encode())
+#             file.write(f'\n#define APPLICATION_VERSION {wd_version}\n')
+#
+#     class CCompiler(dlb_contrib.clike.ClikeCompiler):
+#         EXECUTABLE = 'specific-cc'  # dynamic helper, looked-up in the context
+#
+#         async def redo(self, result, context):
+#             with context.temporary() as object_file:
+#                 await context.execute_helper(self.EXECUTABLE, ..., '-o', object_file, result.source_file)
+#                 included_files = ...
+#                 result.included_files = included_files
+#                 context.replace_output(result.object_file, object_file)
+#
+#     with dlb.ex.Context():
+#         GenerateVersionFile(file='Version.h').run()
+#         CCompiler(source_file='main.c', object_file='main.c.o').run()
+
+__all__ = [
+    'SIMPLE_IDENTIFIER', 'IDENTIFIER', 'PORTABLE_C_IDENTIFIER', 'FUNCTIONLIKE_MACRO',
+    'string_literal_from_bytes', 'identifier_like_from_string', 'identifier_from_path',
+    'ClikeCompiler', 'GenerateHeaderFile'
+]
+
 import sys
 import string
 import re

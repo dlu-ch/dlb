@@ -4,7 +4,24 @@
 
 """Parsing of Make rules."""
 
-__all__ = ('sources_from_rules',)
+# Make: <https://pubs.opengroup.org/onlinepubs/009695399/utilities/make.html>
+# GNU Make: <https://www.gnu.org/software/make/>
+# Tested with: GNU Make 4.2.1
+#
+# Usage example:
+#
+#     import dlb.fs
+#     import dlb_contrib.make
+#
+#     makefile = dlb.fs.Path(...)
+#
+#     sources = set()
+#     with open(makefile.native, 'r', encoding='utf-8') as f:
+#         for r in dlb_contrib.make.sources_from_rules(f):
+#             sources |= set(r)
+#
+
+__all__ = ['sources_from_rules', 'additional_sources_from_rule']
 
 import sys
 import string

@@ -74,7 +74,7 @@ if dst_path.native.raw.exists():
 
 modified_src_path = out_path / 'gsrc/'
 
-version, version_info = version_from_repo.get_version()
+version, version_info, _ = version_from_repo.get_version()
 copy_src_tree(src_path=dlb.fs.Path('src/'), dst_path=modified_src_path)
 replace_version(src_path=modified_src_path, version=version, version_info=version_info)
 zip_modified_src_tree(src_path=modified_src_path, zip_path=out_path / 'dlb.zip')

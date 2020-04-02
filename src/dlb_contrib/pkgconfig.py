@@ -4,6 +4,29 @@
 
 """Query paths of installed librares with pkg-config."""
 
+# pkg-config: <https://www.freedesktop.org/wiki/Software/pkg-config/>
+# Tested with: pkg-config 0.29
+# Executable: 'pkg-config'
+#
+# Usage example:
+#
+#     import dlb.ex
+#     import dlb_contrib.pkgconfig
+#
+#     class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
+#         LIBRARY_NAMES = ('gtk+-3.0',)
+#         VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'gtk+-3.0': ['> 3.0.1', '< 4.0']}
+#
+#     with dlb.ex.Context():
+#         result = PkgConfig().run()
+#         ... = result.library_filenames
+
+__all__ = [
+    'LIBRARY_NAME_REGEX', 'VERSION_CONSTRAINT_REGEX',
+    'parse_from_output',
+    'PkgConfig'
+]
+
 import sys
 import re
 import subprocess

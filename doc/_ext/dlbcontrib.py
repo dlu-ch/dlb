@@ -1,0 +1,419 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# dlb - a Pythonic build tool
+# Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
+
+"""Documentation generation from dlb_contrib modules."""
+
+import re
+import collections
+import importlib
+import inspect
+from typing import Tuple, List, Callable
+import docutils
+import docutils.parsers.rst
+import sphinx
+import sphinx.addnodes
+import sphinx.directives
+import sphinx.domains
+from sphinx.locale import _
+import dlb.ex
+
+DOCSTRING_REGEX = re.compile(r'^(?P<summary>.+\.)(\s|$)')
+assert not DOCSTRING_REGEX.match('')
+assert not DOCSTRING_REGEX.match('.')
+assert not DOCSTRING_REGEX.match('a.b')
+assert DOCSTRING_REGEX.match('a. b').group('summary') == 'a.'
+assert DOCSTRING_REGEX.match('a.b.\nc').group('summary') == 'a.b.'
+
+LICENSE_REGEX = re.compile(r'^ SPDX-License-Identifier: (?P<license>[A-Za-z][A-Za-z_0-9.-]+)$')
+assert LICENSE_REGEX.match(' SPDX-License-Identifier: LGPL-3.0-or-later').group('license') == 'LGPL-3.0-or-later'
+
+DEFINITION_REGEX = re.compile(r'^ (?P<name>[^:]+): +(?P<value>.+)$')
+assert DEFINITION_REGEX.match(' Git: https://git-scm.com/')
+
+URL_REGEX = re.compile(r'(?P<before>^|\W)<(?P<url>[A-Za-z][A-Za-z0-9+-.]*://[^<>\s]+)>(?P<after>\W|$)')
+assert URL_REGEX.search('<https://x>')
+assert not URL_REGEX.search('<https://a.b.c/<>')
+assert not URL_REGEX.search('<https://a.b .c/>')
+assert URL_REGEX.search('a <https://a.b.c/> b')
+assert not URL_REGEX.search('a<https://a.b.c/>b')
+
+
+def text_and_reference_nodes_from_plaintext(text):
+    nodes = []
+    while True:
+        m = URL_REGEX.search(text)
+        if not m:
+            break
+
+        token = text[:m.end('before')]
+        if token:
+            nodes.append(docutils.nodes.Text(token))
+        text = text[m.start('after'):]
+
+        url = m.group('url')
+        nodes.append(docutils.nodes.reference('', docutils.nodes.Text(url), refuri=url, nolinkurl=True))
+
+    if text:
+        nodes.append(docutils.nodes.Text(text))
+
+    return nodes
+
+
+def paragraph_for_object_definition(name, obj, fq_modname, resolve_function):
+    try:
+        _, lineno = inspect.getsourcelines(obj)
+    except (TypeError, OSError):
+        lineno = None
+    url = resolve_function(fq_modname, lineno)
+
+    paragraph = docutils.nodes.paragraph()
+    reference = docutils.nodes.reference('', '', internal=False, refuri=url)
+    reference += docutils.nodes.literal(name, name, classes=['py', 'py-class'])
+    paragraph += reference
+
+    return paragraph
+
+
+def bullet_list_with_source_link(object_by_name, fq_modname, resolve_function):
+    bullet_list = docutils.nodes.bullet_list()
+    for name, obj in object_by_name.items():
+        item = docutils.nodes.list_item()
+        item += paragraph_for_object_definition(name, obj, fq_modname, resolve_function)
+        bullet_list += item
+    return bullet_list
+
+
+ModuleSummary = collections.namedtuple('ModuleSummary', [
+    'description', 'definitions', 'usage_example', 'tool_by_name', 'nontool_by_name'
+])
+
+
+# https://docutils.sourceforge.io/docs/howto/rst-directives.html
+class PySubModule(sphinx.directives.SphinxDirective):
+    """
+    Directive to mark description of a submodule.
+
+    The generated content is taken from the docstring of the module and its first two blocks of consecutive line
+    starting with '#'.
+    """
+
+    has_content = False
+
+    required_arguments = 1
+    optional_arguments = 0
+
+    final_argument_whitespace = False
+    option_spec = {
+        'platform': lambda x: x,
+        'noindex': docutils.parsers.rst.directives.flag,
+        'deprecated': docutils.parsers.rst.directives.flag,
+    }
+
+    def get_info_from_module(self, fq_modname: str) -> Tuple[str, List[str], collections.OrderedDict]:
+        try:
+            module = importlib.import_module(fq_modname)
+        except ModuleNotFoundError:
+            raise self.error(f"module {fq_modname!r} not found") from None
+
+        try:
+            docstring = module.__doc__.strip()
+        except AttributeError:
+            raise self.error(f"module {fq_modname!r} does not contain '__doc__'") from None
+
+        comment_blocks = []
+
+        block_lines = []
+        for line in inspect.getsource(module).splitlines():
+            if line[:1] == '#':
+                block_lines.append(line[1:].rstrip())
+            elif block_lines:
+                comment_blocks.append('\n'.join(block_lines))
+                block_lines = []
+
+        try:
+            exported_object_names = tuple(module.__all__)
+        except (AttributeError, TypeError):
+            raise self.error(f"module {fq_modname!r} does not contain '__all__'") from None
+
+        exported_object_by_name = collections.OrderedDict()
+        for name in exported_object_names:
+            try:
+                exported_object_by_name[name] = getattr(module, name)
+            except AttributeError:
+                msg = f"module {fq_modname!r} does not contain object listed in  '__all__': {name!r}"
+                raise self.error(msg) from None
+
+        return docstring, comment_blocks, exported_object_by_name
+
+    def get_summary_from_module(self, fq_modname: str) -> ModuleSummary:
+        docstring, comment_blocks, exported_object_by_name = self.get_info_from_module(fq_modname)
+
+        docstring = docstring.strip()
+        m = DOCSTRING_REGEX.match(docstring)
+        if not m:
+            raise self.error(f"no proper '__doc__' in module {fq_modname!r}")
+        description = m.group('summary')
+
+        licenses = set()
+        if comment_blocks:
+            for line in comment_blocks[0].splitlines():
+                m = LICENSE_REGEX.match(line)
+                if m:
+                    licenses.add(m.group('license'))
+        if not licenses:
+            raise self.error(f"no SPDX license defined in first comment block in module {fq_modname!r}")
+        if len(licenses) > 1:
+            lic_str = ', '.join(li for li in sorted(licenses))
+            msg = f"different SPDX licenses defined in first comment block in module {fq_modname!r}: {lic_str}"
+            raise self.error(msg)
+
+        if len(comment_blocks) < 2:
+            raise self.error(f"second comment block missing in module {fq_modname!r}")
+
+        lines = comment_blocks[1].splitlines()
+
+        definitions = collections.OrderedDict()
+        for i, line in enumerate(lines):
+            m = DEFINITION_REGEX.match(line)
+            if m:
+                name = m.group('name').strip()
+                value = m.group('value').strip()
+                definitions[name] = definitions.get(name, ()) + (value,)
+            else:
+                lines = lines[i:]
+                break
+        if 'License' in definitions:
+            msg = f"second comment block in module {fq_modname!r} defines reserved definition 'License'"
+            raise self.error(msg)
+        definitions['License'] = tuple(licenses)
+
+        executables = definitions.get('Executable')
+        if executables:
+            for executable in executables:
+                import ast
+                try:
+                    s = ast.literal_eval(executable)
+                    if not isinstance(s, str):
+                        raise TypeError
+                except (SyntaxError, TypeError, ValueError):
+                    msg = (
+                        f"definition 'Executable' in second comment block in module {fq_modname!r} "
+                        f"is not a Python str: {executable!r}"
+                    )
+                    raise self.error(msg)
+
+        usage_example = None
+        found = False
+        for i, line in enumerate(lines):
+            if line == ' Usage example:':
+                found = True
+            elif found and line:
+                usage_example = lines[i:]
+                break
+
+        if not usage_example:
+            raise self.error(f"second comment block in module {fq_modname!r} contains no usage example")
+
+        first = usage_example[0]
+        indentation = first[:len(first) - len(first.lstrip())]
+        dedented_usage_example = []
+        for line in usage_example:
+            if line:
+                if line[:len(indentation)] != indentation:
+                    msg = f"usage example in second comment block in module {fq_modname!r} not properly indented"
+                    raise self.error(msg)
+                line = line[len(indentation):]
+            dedented_usage_example.append(line)
+
+        dedented_usage_example = '\n'.join(dedented_usage_example)
+
+        tool_by_name = collections.OrderedDict()
+        nontool_by_name = collections.OrderedDict()
+        for name, obj in exported_object_by_name.items():
+            if isinstance(obj, type) and issubclass(obj, dlb.ex.Tool):
+                tool_by_name[name] = obj
+            elif not inspect.ismodule(obj):  # exclude modules since they would mess up the index
+                nontool_by_name[name] = obj
+
+        return ModuleSummary(
+            description=description, definitions=definitions, usage_example=dedented_usage_example,
+            tool_by_name=tool_by_name, nontool_by_name=nontool_by_name)
+
+    def add_summary_content(self, fq_modname: str, summary: ModuleSummary) -> docutils.nodes.Element:
+        contentnode = sphinx.addnodes.desc_content()
+        contentnode.append(docutils.nodes.paragraph(text=summary.description))
+
+        field_list = docutils.nodes.field_list()
+        for name, values in summary.definitions.items():
+            body = docutils.nodes.paragraph()
+            for value in values:
+                value_paragraph = docutils.nodes.paragraph()
+                if name == 'License':
+                    url = f'https://spdx.org/licenses/{value}.html#licenseText'
+                    reference = docutils.nodes.reference('', docutils.nodes.Text(value), refuri=url, nolinkurl=True)
+                    value_paragraph += reference
+                elif name == 'Executable':
+                    value_paragraph += docutils.nodes.literal(value, value)
+                else:
+                    value_paragraph += text_and_reference_nodes_from_plaintext(value)
+                body += value_paragraph
+
+            field_name = docutils.nodes.field_name(name, name)
+            field_body = docutils.nodes.field_body()
+            field_body += body
+
+            fieldnode = docutils.nodes.field()
+            fieldnode += [field_name, field_body]
+            field_list += fieldnode
+
+        contentnode += field_list
+
+        resolve_function = self.get_resolve_function()
+        if summary.tool_by_name:
+            contentnode += docutils.nodes.paragraph(text='Provided tools:')
+            contentnode += bullet_list_with_source_link(summary.tool_by_name, fq_modname, resolve_function)
+        if summary.nontool_by_name:
+            title = 'Other objects:' if summary.tool_by_name else 'Provided objects:'
+            contentnode += docutils.nodes.paragraph(text=title)
+            contentnode += bullet_list_with_source_link(summary.nontool_by_name, fq_modname, resolve_function)
+
+        # like sphinx.directives.code.CodeBlock
+        contentnode += docutils.nodes.paragraph(text='Usage example:')
+        contentnode += docutils.nodes.literal_block(summary.usage_example, summary.usage_example)
+        return contentnode
+
+    def get_resolve_function(self) -> Callable:
+        try:
+            resolve_function = self.env.config.dlbcontrib_resolve
+            if not callable(resolve_function):
+                raise AttributeError
+        except AttributeError:
+            raise self.error("function 'dlbcontrib_resolve' not given in 'conf.py'") from None
+        return resolve_function
+
+    def add_signature(self, modname: str, parent_modname: str) -> docutils.nodes.TextElement:
+        signode = sphinx.addnodes.desc_signature(modname, '')
+        signode['first'] = False
+
+        sig_components = modname.split('.')
+        name = sig_components[-1]
+        name_prefix = '.'.join(sig_components[:-1])
+        fq_modname = (parent_modname and parent_modname + '.' or '') + modname
+
+        sig_prefix = self.objtype + ' '
+        signode += sphinx.addnodes.desc_annotation(sig_prefix, sig_prefix)
+        if name_prefix:
+            name_prefix += '.'
+            signode += sphinx.addnodes.desc_addname(name_prefix, name_prefix)
+        elif self.env.config.add_module_names:
+            nodetext = parent_modname + '.'
+            signode += sphinx.addnodes.desc_addname(nodetext, nodetext)
+        signode += sphinx.addnodes.desc_name(name, name)
+
+        resolve_function = self.get_resolve_function()
+        uri = resolve_function(fq_modname, None)
+        if uri:
+            # like sphinx.ext.linkcode:
+            onlynode = sphinx.addnodes.only(expr='html')
+            onlynode += docutils.nodes.reference('', '', internal=False, refuri=uri)
+            onlynode[0] += docutils.nodes.inline('', _('[source]'), classes=['viewcode-link'])
+            signode += onlynode
+
+        return signode
+
+    def run(self) -> List[docutils.nodes.Node]:
+        parent_modname = self.env.ref_context.get('py:module')
+        if not parent_modname:
+            raise self.error("containing module must be defined before with ':py:module:'")
+
+        classname = self.env.ref_context.get('py:class')
+        if classname:
+            raise self.error(f'must no be nested inside class (but is in {classname!r})')
+
+        modname = self.arguments[0].strip()
+        fq_modname = (parent_modname and parent_modname + '.' or '') + modname
+
+        fq_modname_regex = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*(\.[A-Za-z_][A-Za-z_0-9]*)*$')
+        if not fq_modname_regex.match(fq_modname):
+            raise self.error(f'invalid module name: {fq_modname!r}')
+
+        if ':' in self.name:
+            self.domain, self.objtype = self.name.split(':', 1)
+        else:
+            self.domain, self.objtype = '', self.name
+        self.indexnode = sphinx.addnodes.index(entries=[])
+
+        node = sphinx.addnodes.desc()
+        node.document = self.state.document
+        node['domain'] = self.domain
+        # 'desctype' is a backwards compatible attribute
+        node['objtype'] = node['desctype'] = self.objtype
+        node['noindex'] = 'noindex' in self.options
+
+        # add a signature node for each signature in the current unit
+        # and add a reference target for it
+        signode = self.add_signature(modname, parent_modname)
+        node.append(signode)
+
+        summary = self.get_summary_from_module(fq_modname)
+        node.append(self.add_summary_content(fq_modname, summary))
+        ret = [self.indexnode, node]
+
+        if 'noindex' not in self.options:
+            synopsis = summary.description.rstrip('.')
+            platform = ''  # shown in module index
+
+            self.env.domaindata['py']['modules'][fq_modname] = (
+                self.env.docname,
+                synopsis,
+                platform,
+                'deprecated' in self.options
+            )
+            # make a duplicate entry in 'objects' to facilitate searching for the module in PythonDomain.find_obj()
+            self.env.domaindata['py']['objects'][fq_modname] = (self.env.docname, 'module')
+
+            module_id = 'module-' + fq_modname
+            signode['names'].append(fq_modname)
+            signode['ids'].append(module_id)
+            signode['first'] = False
+
+            indextext = _('%s (module)') % fq_modname
+            self.indexnode['entries'].append(('single', indextext, module_id, '', None))
+
+            for name, tool in summary.tool_by_name.items():
+                # from PyClasslike.get_index_text() andPyObject.add_target_and_index()
+                # in sphinx.domains.python
+                indextext = _(f'{name} (class in {fq_modname})')
+                fullname = (fq_modname and fq_modname + '.' or '') + name
+
+                # add tool class to index
+                self.indexnode['entries'].append(('single', indextext, fullname, '', None))
+
+                # make tool class a cross-reference target (:class:`xxx`)
+                objects = self.env.domaindata['py']['objects']
+                objects[fullname] = (self.env.docname, 'class')
+
+                # use this module as link target for tool class
+                signode['ids'].append(fullname)
+
+        return ret
+
+
+class PySrcDomain(sphinx.domains.Domain):
+    name = 'dlbcontrib'
+    label = 'Python submodules for documentation style of dlb_contrib package'
+    directives = {
+        'module': PySubModule
+    }
+
+
+def setup(app):
+    app.add_config_value('dlbcontrib_resolve', None, 'html')
+    app.add_domain(PySrcDomain)
+
+    return {
+        'version': '1.0',
+        'parallel_read_safe': True,
+        'parallel_write_safe': True,
+    }
