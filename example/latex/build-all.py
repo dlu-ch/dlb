@@ -14,7 +14,7 @@ import dlb_contrib.tex
 
 
 class PdfLatex(dlb_contrib.tex.Latex):
-    EXECUTABLE = 'pdflatex'  # dynamic helper, looked-up in the context
+    EXECUTABLE = 'pdflatex'
     OUTPUT_EXTENSION = 'pdf'
 
 
@@ -22,9 +22,10 @@ with dlb.ex.Context():
     source_path = dlb.fs.Path('src/')
     output_path = dlb.fs.Path('build/out/')
 
-    # run until none of the state file changes, but at most 10 times
+    # repeat redo until all state files exist and their content remains unchanged, but at most 10 times
     for i in range(10):
-        r = PdfLatex(toplevel_file='src/report.tex', output_file=output_path / 'report.pdf',
+        r = PdfLatex(toplevel_file='src/report.tex',
+                     output_file=output_path / 'report.pdf',
                      input_search_paths=['src/'],
                      state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
         if not r:
