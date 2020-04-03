@@ -183,7 +183,7 @@ a :class:`dlb.fs.Path`. As far as dlb is concerned, it is safe to use *any* char
 
 SCons detects dependencies *before* it runs a tool. It does so by scanning input files, roughly mimicking the tool
 to be run potentially. dlb detects dependencies *after* a redo of a :term:`tool instance`. It uses information provided
-by the tool itself (e.g. the list of include file directly from the compiler), which is much more precise and also
+by the tool itself (e.g. the list of include file directly from the compiler), which is much more accurate and also
 much faster.
 
 dlb is faster [#speedofscons1]_ and is designed for easy extension.
@@ -225,7 +225,7 @@ By restricting the language used to describe the build process instead, you usua
 How do I control build scripts with command-line parameters?
 ------------------------------------------------------------
 
-When run with ``python3 -v`` or :envvar:`python:PYTHONVERBOSE` is set, dlb does not
+When run with ``python3 -v`` or :envvar:`PYTHONVERBOSE` is set, dlb does not
 :ref:`suppress any messages <dlb-di>`. Aside from this, there is no command-line mechanism built into dlb.
 
 Use :mod:`python:argparse` or `Click`_, for example.

@@ -23,7 +23,7 @@ The same <aspect> can be given multiple times.
 
 It should contain references to abstracted external tool, language or file format, preferrably as URLs
 enclosed in '<' ... '>'.
-It should contain an <aspect> 'Tested with' for each tested configurations.
+It should contain an <aspect> 'Tested with' for each tested configuration.
 It should contain an <aspect> 'Executable' for the name of each dynamic helper that is potentially executed
 by one of its tools.
 

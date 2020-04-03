@@ -117,6 +117,7 @@ def main():
            2  if no command-line arguments were given and the command-line arguments
               of the last successful call are not available
            e  otherwise, where e is the exit status of the specified dlb script
+              (0 if it finished successfuly)
 
         Examples:
 

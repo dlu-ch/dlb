@@ -183,6 +183,8 @@ There are more meaningful tasks than replacing text in text file.
 For example, building a C program with GCC looks like
 `this <https://github.com/dlu-ch/dlb/blob/master/example/c-minimal/build-all.py>`_.
 
+The package :mod:`dlb_contrib` provides tools and utilities to build upon.
+
 
 Commit the changes
 ^^^^^^^^^^^^^^^^^^

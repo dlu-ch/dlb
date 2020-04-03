@@ -251,7 +251,7 @@ def _check_and_memorize_explicit_fs_input_dependencies(tool, dependency_actions:
         -> Dict[str, rundb.FilesystemObjectMemo]:
 
     # For all explicit input dependencies of *tool* in *dependency_actions* for filesystem objects:
-    # Checks existence, reads and checks its FilesystemObjectMemo.
+    # Check existence, read and check its FilesystemObjectMemo.
     #
     # Treats all definitions file of this tool class that are in the managed tree as explicit input dependencies.
     #

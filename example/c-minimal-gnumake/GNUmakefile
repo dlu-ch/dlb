@@ -6,7 +6,6 @@
 #   - The system time must be monotonic during execution of GNU make
 #   - The mtime of all target or source files must be in the past
 #   - After a source dependency in a .c.o.d file is removed, the .c.o and .c.o.d files must be removed manually
-#   - After a source file is removed, the application file must be removed manually
 
 .SUFFIXES:
 

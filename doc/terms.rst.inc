@@ -62,8 +62,8 @@ Terms
       A redo miss of a :term:`tool instance` is an undesirable situation that occurs when the :term:`redo` check
       considers a redo not necessary while it actually is.
 
-      It is caused by bugs of dlb or external helpers and violations of assumptions (e.g. on the behaviour of the
-      filesystem).
+      It is caused by bugs of dlb or :term:`dynamic helpers <dynamic helper>` and violations of assumptions (e.g. on the
+      behaviour of the filesystem).
 
    context
       An (execution) context describes how running :term:`tool instances <tool instance>` shall interact with the
@@ -107,7 +107,7 @@ Terms
       Setting the :term:`mtime` of a filesystem object to the current :term:`working tree time`.
 
    working tree's system time
-      The system time used a source for every :term:`mtime update` of every filesystem object in the working tree
+      The system time used as source for every :term:`mtime update` of every filesystem object in the working tree
       (assuming there is one).
 
    effective mtime resolution
@@ -119,9 +119,9 @@ Terms
         :term:`mtime` *m*  + *dm* of *p*.
       - The effective mtime resolution for *p* is the minimum *dm* > 0 for any pair of *t* and *dt* > 0.
 
-      Resolution of timestamps for some filesystems: XFS: 1 ns, NTFS: 100 ns, ext2: 1 s, FAT32: 2 s.
+      Nominal resolution of timestamps for some filesystems: XFS: 1 ns, NTFS: 100 ns, ext2: 1 s, FAT32: 2 s.
       The effective mtime resolution depends also on the filesystem driver and the operating system, but it
-      cannot be finer that the timestamp resolution of the filesystem.
+      can (nominally) not be finer that the timestamp resolution of the filesystem.
 
    ideal time
       The (strictly increasing) physical time at the place the dlb process is running.
@@ -152,7 +152,7 @@ Terms
       The :term:`normal path` of an existing filesystem object relative to the :term:`working tree`'s root.
 
    managed tree path
-      A working tree path of file system object in the :term:`managed tree`.
+      A working tree path of a file system object in the :term:`managed tree`.
 
    run-database
       The database in the :term:`management tree` that stores information on the current and past
@@ -166,7 +166,7 @@ Terms
       by a previous running :term:`tool instance` (in the current or a previous :term:`run of dlb`).
 
    redo-safe
-      An action (e.g. a modification of the :term:`managed tree`) is said to be redo-safe if it cannot not lead to a
+      An action (e.g. a modification of the :term:`managed tree`) is said to be redo-safe if it cannot lead to a
       :term:`redo miss` for any :term:`tool instance` in the current run or any future :term:`run of dlb`.
 
    benign managed tree modification
