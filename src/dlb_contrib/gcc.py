@@ -66,7 +66,7 @@ class ObjectOrArchivePath(Path):
                 raise ValueError("must end with '.o' or '.a'")
 
 
-def check_warning_name(name: str) -> str:  # TODO make private
+def _check_warning_name(name: str) -> str:
     name = str(name)
     if not name or name.startswith('no-') or '=' in name:
         raise ValueError(f"not a warning name: {name!r}")  # not usable after -W or -Werror=
@@ -98,8 +98,8 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
 
         # https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
         compile_arguments += ['-Wall']
-        compile_arguments += ['-Wno-' + check_warning_name(n) for n in self.SUPPRESSED_WARNINGS]
-        compile_arguments += ['-Werror=' + check_warning_name(n) for n in self.FATAL_WARNINGS]
+        compile_arguments += ['-Wno-' + _check_warning_name(n) for n in self.SUPPRESSED_WARNINGS]
+        compile_arguments += ['-Werror=' + _check_warning_name(n) for n in self.FATAL_WARNINGS]
 
         for macro, replacement in self.DEFINITIONS.items():
             if not dlb_contrib.clike.SIMPLE_IDENTIFIER.match(macro) and \
@@ -128,14 +128,13 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
 
             # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
             included_files = []
-            with open(make_rules_file.native, 'r', encoding='utf-8') as dep_file:
+            with open(make_rules_file.native, 'r', encoding=sys.getfilesystemencoding()) as dep_file:
                 for p in dlb_contrib.make.additional_sources_from_rule(dep_file):
                     try:
                         included_files.append(context.working_tree_path_of(p))
                     except ValueError:
                         pass
 
-            result.compiler_executable = context.helper[self.EXECUTABLE]
             result.included_files = included_files
             context.replace_output(result.object_file, object_file)
 
@@ -171,9 +170,6 @@ class _LinkerGcc(dlb.ex.Tool):
     # If not set, the directory of EXECUTABLE is used. See GCC_EXEC_PREFIX in gcc documentation for details.
     subprogram_directory = dlb.ex.Tool.Input.Directory(required=False, cls=Path)
 
-    # Path of compiler executable
-    linker_executable = dlb.ex.Tool.Input.RegularFile(explicit=False)
-
     def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return []  # e.g. '-shared'
 
@@ -208,8 +204,6 @@ class _LinkerGcc(dlb.ex.Tool):
                 link_arguments += ['-l:' + lib]  # if l is empty: '/usr/bin/ld: cannot find -l:'
 
             await context.execute_helper(self.EXECUTABLE, link_arguments)
-
-            result.linker_executable = context.helper[self.EXECUTABLE]
             context.replace_output(result.linked_file, linked_file)
 
 

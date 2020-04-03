@@ -144,8 +144,10 @@ class RunStracedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             f.write(b'')
 
         class ShowContent(dlb_contrib.strace.RunStraced):
-            def get_command_line(self) -> Tuple[str, List[str]]:
-                return 'bash', ['-c', '-', 'cat  -- *', 's']
+            EXECUTABLE = 'bash'
+
+            def get_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+                return ['-c', '-', 'cat  -- *', 's']
 
         with dlb.ex.Context():
             r = ShowContent().run()
@@ -158,11 +160,13 @@ class RunStracedTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             f.write(b'abc')
 
         class ShowContent(dlb_contrib.strace.RunStraced):
+            EXECUTABLE = 'cp'
+
             source_file = dlb.ex.Tool.Input.RegularFile()
             target_file = dlb.ex.Tool.Output.RegularFile()
 
-            def get_command_line(self) -> Tuple[str, List[str]]:
-                return 'cp', [self.source_file, self.target_file]
+            def get_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+                return [self.source_file, self.target_file]
 
         with dlb.ex.Context():
             r = ShowContent(source_file='x', target_file='y').run()

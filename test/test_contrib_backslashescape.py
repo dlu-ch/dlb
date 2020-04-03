@@ -12,6 +12,14 @@ import dlb_contrib.backslashescape
 import unittest
 
 
+class UnquoteOtherTest(unittest.TestCase):
+
+    def test_fails_for_nonstring(self):
+        with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
+            dlb_contrib.backslashescape.unquote(27)
+
+
 class UnquoteBytesTest(unittest.TestCase):
 
     def test_replaces_escape_sequences(self):

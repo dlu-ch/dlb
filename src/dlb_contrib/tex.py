@@ -40,7 +40,7 @@ import dlb.di
 import dlb.ex
 
 
-def check_option(option: str) -> str:  # TODO make private
+def _check_option(option: str) -> str:
     option = str(option)
     if option[:1] != '-':
         raise ValueError(f"not an option: {option!r}")  # would change meaning of following arguments
@@ -123,7 +123,8 @@ def accessed_files_from_recorded(recorder_output_file: dlb.fs.Path, context) \
                     working_tree_path = working_tree_path_by_path[path]
                 else:
                     try:
-                        working_tree_path = context.working_tree_path_of(dlb.fs.Path.Native(path), existing=True, allow_temporary=True)
+                        working_tree_path = context.working_tree_path_of(dlb.fs.Path.Native(path),
+                                                                         existing=True, allow_temporary=True)
                         working_tree_path_by_path[path] = working_tree_path
                     except ValueError:
                         working_tree_path = None
@@ -179,7 +180,7 @@ class Tex(dlb.ex.Tool):
                 '-interaction=nonstopmode', '-halt-on-error', '-file-line-error', '-no-shell-escape',
                 '-recorder'  # create .fls file
             ]
-            arguments += [check_option(c) for c in self.get_options()]
+            arguments += [_check_option(c) for c in self.get_options()]
             arguments += [self.toplevel_file]  # must be last
 
             # compile TEXINPUTS

@@ -10,13 +10,15 @@
 #
 # Usage example:
 #
-#     from typing import Tuple, List
+#     from typing import Union, Tuple, List, Iterable
 #     import dlb.ex
 #     import dlb_contrib.strace
 #
 #     class ShowContent(dlb_contrib.strace.RunStraced):
-#         def get_command_line(self) -> Tuple[str, List[str]]:
-#             return 'bash', ['-c', '-', 'cat  -- *', 's']
+#         EXECUTABLE = 'bash'
+#
+#         def get_command_line(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+#             return ['-c', '-', 'cat  -- *', 's']
 #
 #     with dlb.ex.Context():
 #         ... = ShowContent().run().read_files
@@ -28,9 +30,10 @@ __all__ = [
 
 import sys
 import re
+import dlb.fs
 import dlb.ex
 from . import backslashescape
-from typing import Optional, List, Tuple
+from typing import Optional, Union, List, Tuple, Iterable
 assert sys.version_info >= (3, 7)
 
 SYSCALL_NAME_REGEX = re.compile(rb'^(?P<name>[a-z][a-zA-Z0-9_#]*)')
@@ -136,26 +139,27 @@ class RunStraced(dlb.ex.Tool):
     # Run dynamic helper with strace and return all successfully read files in the managed tree in *read_files*
     # and all successfully written files in the managed tree in *written_files*.
 
-    EXECUTABLE = 'strace'  # dynamic helper, looked-up in the context
+    TRACING_EXECUTABLE = 'strace'  # dynamic helper, looked-up in the context
+
+    # Define *EXECUTABLE* to be traced by *TRACING_EXECUTABLE* in subclass:
+    # EXECUTABLE = 'latex'  # dynamic helper, looked-up in the context (set to string in subclass)
 
     read_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
     written_files = dlb.ex.Tool.Output.RegularFile[:](explicit=False)
 
-    def get_command_line(self) -> Tuple[str, List[str]]:
-        # Return tuple '(executable, arguments)`, where *executable* is the dynamic helper to execute
-        # and *arguments* the list of its arguments.
-        # Overwrite in subclass.
+    def get_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+        # Return iterable of commandline arguments for *EXECUTABLE*.
         raise NotImplementedError
 
     async def redo(self, result, context):
-        straced_helper, arguments = self.get_command_line()
-        straced_helper = context.helper[straced_helper]
+        # noinspection PyUnresolvedReferences
+        straced_helper = context.helper[self.EXECUTABLE]
 
         with context.temporary() as strace_output_file:
             await context.execute_helper(
-                self.EXECUTABLE,
+                self.TRACING_EXECUTABLE,
                 ['-y', '-e', 'trace=read,write', '-qq', '-o', strace_output_file, '--', straced_helper] +
-                [c for c in arguments])
+                [c for c in self.get_arguments()])
 
             read_files = []
             checked_for_read_files = set()

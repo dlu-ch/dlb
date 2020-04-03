@@ -202,9 +202,6 @@ class ClikeCompiler(dlb.ex.Tool):
     # Paths of all files in the managed tree directly or indirectly included by *source_file*.
     included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
 
-    # Path of compiler executable.
-    compiler_executable = dlb.ex.Tool.Input.RegularFile(explicit=False)
-
 
 class GenerateHeaderFile(dlb.ex.Tool):
     # Generates a file to be included with '#include'.

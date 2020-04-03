@@ -11,7 +11,7 @@
 #   s = b'"tmp/x\\076y"'
 #   ... = dlb_contrib.backslashescape.unquote(s)  # b'tmp/x\076y'
 
-__all__ = ['PYTHON', 'unquote']
+__all__ = ['PYTHON_ESCAPES', 'unquote']
 
 import sys
 import string
@@ -19,7 +19,7 @@ from typing import Optional, AnyStr, Dict
 assert sys.version_info >= (3, 7)
 
 
-PYTHON = {
+PYTHON_ESCAPES = {
     '"': 0x22,  # U+0022 QUOTATION MARK
     "'": 0x27,  # U+0027 APOSTROPHE
     'a': 0x07,  # U+0007 ALERT
@@ -32,7 +32,7 @@ PYTHON = {
 }
 
 
-def unquote(literal: AnyStr, replacement_by_escaped_character: Dict[str, int] = PYTHON,
+def unquote(literal: AnyStr, replacement_by_escaped_character: Dict[str, int] = PYTHON_ESCAPES,
             with_hex: bool = True, with_oct: bool = True,
             opening: Optional[str] = '"', closing: Optional[str] = None) -> AnyStr:
     # Return an unquoted version of the backslash-quoted *literal* with the same type as *literal*
