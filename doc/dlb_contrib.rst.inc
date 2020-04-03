@@ -18,6 +18,7 @@ reside in your repositories.
 The documentation is maintained only in the source files to make the modules self-contained.
 Please see there for details.
 
+.. dlbcontrib:module:: generic
 .. dlbcontrib:module:: backslashescape
 .. dlbcontrib:module:: zip
 .. dlbcontrib:module:: make
