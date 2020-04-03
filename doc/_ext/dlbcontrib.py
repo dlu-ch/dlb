@@ -8,7 +8,7 @@ import re
 import collections
 import importlib
 import inspect
-from typing import Tuple, List, Callable
+from typing import Tuple, List, Callable, Sequence
 import docutils
 import docutils.parsers.rst
 import sphinx
@@ -17,6 +17,8 @@ import sphinx.directives
 import sphinx.domains
 from sphinx.locale import _
 import dlb.ex
+
+DOMAIN_NAME = 'dlbcontrib'
 
 DOCSTRING_REGEX = re.compile(r'^(?P<summary>.+\.)(\s|$)')
 assert not DOCSTRING_REGEX.match('')
@@ -69,7 +71,7 @@ def paragraph_for_object_definition(name, obj, fq_modname, resolve_function):
 
     paragraph = docutils.nodes.paragraph()
     reference = docutils.nodes.reference('', '', internal=False, refuri=url)
-    reference += docutils.nodes.literal(name, name, classes=['py', 'py-class'])
+    reference += docutils.nodes.literal(name, name, classes=['xref', 'py', 'py-class'])
     paragraph += reference
 
     return paragraph
@@ -84,9 +86,52 @@ def bullet_list_with_source_link(object_by_name, fq_modname, resolve_function):
     return bullet_list
 
 
+def table_row_from_paragraphs(paragraphs):
+    row = docutils.nodes.row()
+    for p in paragraphs:
+        entry = docutils.nodes.entry()
+        entry += p
+        row += entry
+    return row
+
+
+def table_from_header_texts_and_rows_of_paragraphs(
+        header_row_texts: Sequence[str],
+        paragraphs_in_rows: Sequence[Sequence[docutils.nodes.paragraph]],
+        rel_col_widths: Sequence[int] = ()) -> docutils.nodes.table:
+
+    assert len(header_row_texts) > 1
+    assert all(len(r) <= len(header_row_texts) for r in paragraphs_in_rows)
+
+    if not rel_col_widths:
+        rel_col_widths = [1]
+    rel_col_widths = rel_col_widths[:len(header_row_texts)]
+    rel_col_widths.extend(rel_col_widths[-1:] * (len(header_row_texts) - len(rel_col_widths)))
+
+    table = docutils.nodes.table()
+    tgroup = docutils.nodes.tgroup(cols=len(header_row_texts))
+    table += tgroup
+    for rel_col_width in rel_col_widths:
+        tgroup += docutils.nodes.colspec(colwidth=rel_col_width)
+    thead = docutils.nodes.thead()
+    tgroup += thead
+    paragraphs = [docutils.nodes.paragraph(text=te) for te in header_row_texts]
+    thead += table_row_from_paragraphs(paragraphs)
+    tbody = docutils.nodes.tbody()
+
+    tgroup += tbody
+    for paragraphs in paragraphs_in_rows:
+        tbody += table_row_from_paragraphs(paragraphs)
+
+    return table
+
+
 ModuleSummary = collections.namedtuple('ModuleSummary', [
     'description', 'definitions', 'usage_example', 'tool_by_name', 'nontool_by_name'
 ])
+
+
+ModuleInfo = collections.namedtuple('ModuleInfo', ['docname', 'id', 'tools', 'executables'])
 
 
 # https://docutils.sourceforge.io/docs/howto/rst-directives.html
@@ -94,16 +139,12 @@ class PySubModule(sphinx.directives.SphinxDirective):
     """
     Directive to mark description of a submodule.
 
-    The generated content is taken from the docstring of the module and its first two blocks of consecutive line
-    starting with '#'.
+    The generated content is taken from the docstring of the module, __all__, and its first two blocks of
+    consecutive lines starting with '#'.
     """
 
-    has_content = False
-
     required_arguments = 1
-    optional_arguments = 0
 
-    final_argument_whitespace = False
     option_spec = {
         'platform': lambda x: x,
         'noindex': docutils.parsers.rst.directives.flag,
@@ -358,7 +399,7 @@ class PySubModule(sphinx.directives.SphinxDirective):
 
         summary = self.get_summary_from_module(fq_modname)
         node.append(self.add_summary_content(fq_modname, summary))
-        ret = [self.indexnode, node]
+        nodes = [self.indexnode, node]
 
         if 'noindex' not in self.options:
             synopsis = summary.description.rstrip('.')
@@ -381,6 +422,28 @@ class PySubModule(sphinx.directives.SphinxDirective):
             indextext = _('%s (module)') % fq_modname
             self.indexnode['entries'].append(('single', indextext, module_id, '', None))
 
+            resolve_function = self.get_resolve_function()
+            tool_reference_paragraphs = [
+                paragraph_for_object_definition(name, tool, fq_modname, resolve_function)
+                for name, tool in summary.tool_by_name.items()
+            ]
+            executable_paragraphs = []
+            for ex in summary.definitions.get('Executable', []):
+                p = docutils.nodes.paragraph()
+                p += docutils.nodes.literal(ex, ex)
+                executable_paragraphs.append(p)
+
+            moduleinfo_by_modname = \
+                self.env.domaindata[DOMAIN_NAME].get('moduleinfo_by_modname', collections.OrderedDict())
+            if not fq_modname in moduleinfo_by_modname:
+                moduleinfo_by_modname[fq_modname] = ModuleInfo(
+                    docname=self.env.docname,
+                    id=module_id,
+                    tools=tool_reference_paragraphs,
+                    executables=executable_paragraphs
+                )
+            self.env.domaindata[DOMAIN_NAME]['moduleinfo_by_modname'] = moduleinfo_by_modname
+
             for name, tool in summary.tool_by_name.items():
                 # from PyClasslike.get_index_text() andPyObject.add_target_and_index()
                 # in sphinx.domains.python
@@ -397,14 +460,73 @@ class PySubModule(sphinx.directives.SphinxDirective):
                 # use this module as link target for tool class
                 signode['ids'].append(fullname)
 
-        return ret
+        return nodes
+
+
+# necessary to detect elements to replace
+class moduleindex(docutils.nodes.General, docutils.nodes.Element):
+    pass
+
+
+def purge_dlbcontrib_module_list(app, env, docname):
+    moduleinfo_by_modname = env.domaindata[DOMAIN_NAME].get('moduleinfo_by_modname', {})
+    env.domaindata[DOMAIN_NAME]['moduleinfo_by_modname'] = \
+        collections.OrderedDict((k, v) for k, v in moduleinfo_by_modname.items() if v.docname != docname)
+
+
+def process_moduleindex_nodes(app, doctree, fromdocname):
+    # Replace all *moduleindex* nodes (created empty) with the actual index.
+
+    moduleinfo_by_modname = app.builder.env.domaindata[DOMAIN_NAME].get('moduleinfo_by_modname')
+    if not moduleinfo_by_modname:
+        return
+
+    for node in doctree.traverse(moduleindex):
+        content = []
+
+        paragraphs_in_rows: List[List[docutils.nodes.table]] = []  # all table rows except the header
+        for fq_modname, module_info in moduleinfo_by_modname.items():
+            tools = docutils.nodes.paragraph()
+            if module_info.tools:
+                tools += module_info.tools
+            executables = docutils.nodes.paragraph()
+            if module_info.executables:
+                executables += module_info.executables
+
+            # create a table row for module_info
+            paragraphs_in_row: List[docutils.nodes.table] = []  # a single table row
+
+            # link to module
+            url = '{}#{}'.format(app.builder.get_relative_uri(fromdocname, module_info.docname), module_info.id)
+            paragraph = docutils.nodes.paragraph()
+            reference = docutils.nodes.reference('', '', internal=False, refuri=url)
+            reference += docutils.nodes.literal(fq_modname, fq_modname, classes=['xref', 'py', 'py-mod'])
+            paragraph += reference
+            paragraphs_in_row += [paragraph, executables, tools]
+
+            paragraphs_in_rows.append(paragraphs_in_row)
+
+        content.append(table_from_header_texts_and_rows_of_paragraphs(
+            header_row_texts=['Module', 'executables (dynamic helpers)', 'tool classes'],
+            paragraphs_in_rows=paragraphs_in_rows,
+            rel_col_widths = [3, 2, 3]
+        ))
+
+        node.replace_self(content)
+
+
+# https://www.sphinx-doc.org/en/master/development/tutorials/todo.html
+class PySubModuleIndex(sphinx.directives.SphinxDirective):
+    def run(self) -> List[docutils.nodes.Node]:
+        return [moduleindex('')]  # will be replaced by process_moduleindex_nodes()
 
 
 class PySrcDomain(sphinx.domains.Domain):
-    name = 'dlbcontrib'
+    name = DOMAIN_NAME
     label = 'Python submodules for documentation style of dlb_contrib package'
     directives = {
-        'module': PySubModule
+        'module': PySubModule,
+        'moduleindex': PySubModuleIndex
     }
 
 
@@ -412,8 +534,12 @@ def setup(app):
     app.add_config_value('dlbcontrib_resolve', None, 'html')
     app.add_domain(PySrcDomain)
 
+    app.add_node(moduleindex)
+    app.connect('doctree-resolved', process_moduleindex_nodes)
+    app.connect('env-purge-doc', purge_dlbcontrib_module_list)
+
     return {
-        'version': '1.0',
+        'version': '1.1',
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }

@@ -13,7 +13,17 @@ Everything specific to a certain tool, language or file format is not part of dl
 The package :mod:`dlb_contrib` contains such tools as well as utilities to generate input understood by the tools
 and parsers for the output of the tools.
 
-They are meant as starting points for your own tools and contributions which will
+
+Overview
+--------
+
+.. dlbcontrib:moduleindex::
+
+
+Details
+-------
+
+The modules in :mod:`dlb_contrib` are meant as starting points for your own tools and contributions which will
 reside in your repositories.
 The documentation is maintained only in the source files to make the modules self-contained.
 Please see there for details.
