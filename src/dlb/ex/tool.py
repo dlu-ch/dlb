@@ -4,7 +4,7 @@
 
 """Dependency-aware tool execution."""
 
-__all__ = (
+__all__ = [
     'Tool',
     'DefinitionAmbiguityError',
     'DependencyError',
@@ -12,7 +12,7 @@ __all__ = (
     'RedoError',
     'HelperExecutionError',
     'is_complete'
-)
+]
 
 import sys
 import re

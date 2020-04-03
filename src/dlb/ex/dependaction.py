@@ -5,11 +5,11 @@
 """Actions for dependency classes for tools to be used by tool instances.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = (
+__all__ = [
     'Action',
     'register_action',
     'get_action'
-)
+]
 
 import os
 import stat

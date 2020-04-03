@@ -4,7 +4,7 @@
 
 """Execution contexts for tool instances."""
 
-__all__ = (
+__all__ = [
     'Context',
     'ReadOnlyContext',
     'ContextNestingError',
@@ -14,7 +14,7 @@ __all__ = (
     'WorkingTreeTimeError',
     'ContextModificationError',
     'WorkingTreePathError'
-)
+]
 
 import sys
 import re

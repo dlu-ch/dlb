@@ -5,6 +5,8 @@
 """Dependency classes for tools.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
+__all__ = []
+
 import re
 import dataclasses
 import copy

@@ -5,7 +5,7 @@
 """Abstraction of run-database.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = ('DatabaseError',)
+__all__ = ['DatabaseError']
 
 import os.path
 import enum

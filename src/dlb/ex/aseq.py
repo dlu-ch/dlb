@@ -4,6 +4,8 @@
 
 """Sequencing of a limited number of coroutines."""
 
+__all__ = []
+
 import sys
 import time
 import asyncio

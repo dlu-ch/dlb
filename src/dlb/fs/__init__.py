@@ -4,13 +4,13 @@
 
 """Classes to represent and access filesystem objects in a safe and platform-independent manner."""
 
-__all__ = (
+__all__ = [
     'PathLike',
     'Path', 'RelativePath', 'AbsolutePath', 'NormalizedPath', 'NoSpacePath',
     'PosixPath', 'PortablePosixPath',
     'PortableWindowsPath', 'WindowsPath',
     'PortablePath'
-)
+]
 
 import sys
 import re

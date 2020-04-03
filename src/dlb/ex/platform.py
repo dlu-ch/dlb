@@ -5,6 +5,8 @@
 """Permanent identification of platform.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
+__all__ = []
+
 import sys
 from .. import version
 from .. import ut

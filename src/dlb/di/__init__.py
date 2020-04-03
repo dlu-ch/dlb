@@ -5,7 +5,21 @@
 """Write formatted and indented lines to represent hierarchic diagnostic information to a file.
 This module uses levels compatible with the ones of the 'logging' module."""
 
-__all__ = ()
+__all__ = [
+    'DEBUG',
+    'INFO',
+    'WARNING',
+    'ERROR',
+    'CRITICAL',
+    'format_time_ns',
+    'set_threshold_level',
+    'is_unsuppressed_level',
+    'get_level_indicator',
+    'set_output_file',
+    'format_message',
+    'Cluster',
+    'inform'
+]
 
 import sys
 import math

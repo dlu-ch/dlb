@@ -5,7 +5,7 @@
 """Representation of multiplicity by subscripting classes, e.g. T[2:].
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = ('MultiplicityRange',)
+__all__ = ['MultiplicityRange']
 
 import re
 from typing import Optional, Union

@@ -9,7 +9,7 @@ This is an implementation detail - do not import it unless you know what you are
 #  - This is not significantly slower than a Bash script on GNU/Linux
 #  - Python starts much faster than PowerShell even on Windows.
 
-__all__ = ('main',)
+__all__ = ['main']
 
 import sys
 import os.path

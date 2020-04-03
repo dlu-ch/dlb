@@ -5,6 +5,8 @@
 """(Technical) utilities.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
+__all__ = []
+
 import sys
 import marshal
 import dataclasses

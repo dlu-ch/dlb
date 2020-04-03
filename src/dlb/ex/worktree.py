@@ -5,12 +5,12 @@
 """Filesystem manipulations in the working tree.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = (
+__all__ = [
     'Temporary',
     'NoWorkingTreeError',
     'ManagementTreeError',
     'WorkingTreePathError'
-)
+]
 
 import string
 import os

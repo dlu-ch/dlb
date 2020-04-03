@@ -20,3 +20,5 @@ REDO_AFTERMATH: int = di.DEBUG + 5
 HELPER_EXECUTION: int = di.DEBUG + 7
 
 RUN_SUMMARY: int = di.INFO
+
+del di
