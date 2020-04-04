@@ -1,0 +1,66 @@
+# Restrictions:
+#
+#   - Must only be interpreted by GNU make without the options -e, -k or -s
+#   - /bin/sh must be a POSIX compliant shell
+#   - The GNU utilities 'find', 'xargs', 'mkdir', 'mv', 'rm' must be in found in search path
+#   - The system time must be monotonic during execution of GNU make
+#   - The mtime of all target or source files must be in the past
+#   - After a source dependency in a .cpp.o.d file is removed, the .cpp.o and .cpp.o.d files must be removed manually
+
+.SUFFIXES:
+
+SHELL=/bin/sh
+GCC=g++
+AR=ar
+FIND=find
+MKDIR=mkdir
+MV=mv
+RM=rm
+BASENAME=basename
+
+# functions are GNU Make specific: shell, sort, patsubst, subst, file
+# ':=' is GNU Make specific
+# variable value cannot hold NUL - use LF
+source_files := $(shell $(FIND) -P . -name '*.cpp' -type f -exec ../print-makefile-safe-filename {} \;)
+ifneq ($(.SHELLSTATUS), 0)
+    $(error failed while looking for source files)
+endif
+source_files := $(sort $(source_files))
+$(shell $(MKDIR) -p out/)
+$(file >out/source_files.makevar.t,$(source_files))
+$(shell ../replace-if-different out/source_files.makevar.t out/source_files.makevar)
+
+object_files := $(patsubst ./%.cpp,out/%.cpp.o,$(source_files))
+dependency_files := $(patsubst ./%.cpp,out/%.cpp.o.d,$(source_files))
+directory_name := $(shell $(BASENAME) $(CURDIR))
+lib := $(directory_name).a
+
+.PHONY:
+all: $(lib)
+
+# $(MAKEFILE_LIST), $(@D) are GNU Make specific
+$(lib): $(object_files) $(MAKEFILE_LIST) out/source_files.makevar
+	unset -v LANG LC_CTYPE LC_MESSAGES LC_ALL TMPDIR GCC_COMPARE_DEBUG GCC_EXEC_PREFIX
+	unset -v COMPILER_PATH LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH OBJC_INCLUDE_PATH
+	unset -v DEPENDENCIES_OUTPUT SUNPRO_DEPENDENCIES SOURCE_DATE_EPOCH
+	$(MKDIR) -p -- $(@D)
+	$(RM) -f -- $@
+	$(AR) cr $@.t $(object_files)
+	$(MV) -- $@.t $@
+
+# static pattern rules are GNU Make specific
+# $(MAKEFILE_LIST), $(@D) are GNU Make specific
+$(object_files): out/%.cpp.o: ./%.cpp $(MAKEFILE_LIST)
+	unset -v LANG LC_CTYPE LC_MESSAGES LC_ALL TMPDIR GCC_COMPARE_DEBUG GCC_EXEC_PREFIX
+	unset -v COMPILER_PATH LIBRARY_PATH CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH OBJC_INCLUDE_PATH
+	unset -v DEPENDENCIES_OUTPUT SUNPRO_DEPENDENCIES SOURCE_DATE_EPOCH
+	$(MKDIR) -p -- $(@D)
+	$(RM) -f -- $@
+	$(GCC) -x c++ -std=c++11 -MMD -MT $@ -MF $@.d.t -g -o $@.t -I.. -c $<
+	$(MV) -- $@.d.t $@.d
+	$(MV) -- $@.t $@
+
+# static pattern rules are GNU Make specific
+$(dependency_files): out/%.cpp.o.d: out/%.cpp.o
+
+include $(dependency_files)

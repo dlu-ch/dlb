@@ -58,13 +58,6 @@ especially for the development of embedded software with cross-compiler toolchai
 
 .. |avg| replace:: ⊙
 
-Note that there is a lot of controversy in comparing the speed of build tools in general and
-`SCons in particular <https://github.com/SCons/scons/wiki/WhySconsIsNotSlow>`_.
-
-In my opinion, raw speed for a single build in an ideal environment is not the most important benchmark for
-productivity; the necessary effort to develop and maintain a correct and complete build description is more relevant.
-Spending hours to find subtle flaws in the build process and doing complete rebuilds out of mistrust in the completeness
-of the dependency information costs more than a few seconds per --- otherwise perfect --- partial build.
 
 See the following questions for a comparison to Make and SCons.
 
@@ -120,6 +113,40 @@ Examples are:
 - http://www.buildout.org/
 
 
+.. _manual-speed-comparison:
+
+How fast is dlb?
+----------------
+
+There is a lot of controversy in comparing the speed of build tools in general and SCons in particular.
+
+In my opinion, raw speed for a single build in an ideal and static environment is not the most important benchmark for
+productivity; the necessary effort to develop and maintain a correct and complete build description is more relevant.
+Spending hours to find subtle flaws in the build process and doing complete rebuilds out of mistrust in the completeness
+of the dependency information costs more than a few seconds per --- otherwise perfect --- partial build.
+
+Having said that, here are the results of a simple benchmark used both
+`against <http://gamesfromwithin.com/the-quest-for-the-perfect-build-system>`_ and
+`in defense of <https://github.com/SCons/scons/wiki/WhySconsIsNotSlow>`_ SCons
+(which means it has some significance):
+
+.. image:: grph/benchmark-2.svg
+
+.. image:: grph/benchmark-1.svg
+
+Notes:
+
+- Each source file defines one C++ class and includes 15 files from its own library as well as 5 files from
+  other libraries.
+- The generated simplistic GNU Makefiles contain static lists of files while SCons and dlb find the files at run-time
+  and miss a lot of dependencies (labeled ``simplistic`` in the plots).
+- A build with GNU Makefiles based on `example/c-minimal-gnumake/`_ that describes the dependencies completely was added
+  for comparison (labeled ``complete`` in the plots).
+- :command:`makedepend` (used in a rule of the simplistic GNU Makefiles) crashes for very large numbers of classes.
+
+
+.. _manual-make-comparison:
+
 How does dlb compare to Make?
 -----------------------------
 
@@ -139,26 +166,20 @@ dlb does not guess or assume, but requires the explicit statement of information
 (the expected content of environment variables, for example). This results in readable and self-documenting dlb scripts
 that concisely describe their requisites and assumptions.
 
+Make is much faster than dlb when only a small fraction of the output dependencies has to be generated
+(Make: only a few sourcea are newer than their targets).
 The available Make implementations have been carefully optimized for speed over the years.
 dlb is executed by an instance of a Python interpreter; starting a Python interpreter and importing some modules
 typically takes approximately 70 ms.
-Therefore, dlb cannot compete with the efficiency of Make in the following situations:
 
-a. Full build: every output dependency (Make: target) has to be generated
-b. "Empty" build: No output dependency has to be generated (Make: no source is newer than its targets)
-
-However, most :term:`runs of dlb <run of dlb>` or Make are something between --- that is the whole idea behind a build
-tool after all.
-Apart from the delay to start Python, the performance of Make and dlb is comparable.
-Since a typical dlb script describes the dependencies completely while a typical Makefile does not,
-you won't so easily find yourself in the position with dlb where you have to remove all output dependencies and build
-from scratch.
 Make *requires* that each output dependency (target) changes when one of its input dependencies (sources) has changed.
 Fixing a typo in a comment of a :file:`.c` file necessarily leads to compilation, linking and all dependent
 actions, whereas in dlb the cascade stops with the first file that does not change.
+Since a typical dlb script describes the dependencies completely while a typical Makefile does not,
+you won't so easily find yourself in the position with dlb where you have to remove all output dependencies and build
+from scratch.
 
-Compare `example/c-minimal/ <https://github.com/dlu-ch/dlb/tree/master/example/c-minimal>`_ and
-`example/c-minimal-gnumake/ <https://github.com/dlu-ch/dlb/tree/master/example/c-minimal-gnumake>`_.
+Compare `example/c-minimal/`_ and `example/c-minimal-gnumake/`_.
 
 
 How does dlb compare to SCons?
@@ -186,7 +207,7 @@ to be run potentially. dlb detects dependencies *after* a redo of a :term:`tool 
 by the tool itself (e.g. the list of include file directly from the compiler), which is much more accurate and also
 much faster.
 
-dlb is faster [#speedofscons1]_ and is designed for easy extension.
+dlb is significantly faster and is designed for easy extension.
 
 
 Why Python?
@@ -259,6 +280,8 @@ Feel free to contribute.
 .. _Click: https://click.palletsprojects.com/
 .. _LGPLv3: https://www.gnu.org/licenses/lgpl-3.0.en.html
 .. _GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html
+.. _`example/c-minimal/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal
+.. _`example/c-minimal-gnumake/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal-gnumake
 
 
 .. rubric:: Footnotes
@@ -273,10 +296,6 @@ Feel free to contribute.
 
    Make implementations like GNU Make allow additional characters and limited quoting, but treat paths
    differently on different platforms.
-
-.. [#speedofscons1]
-   This statement is based only on small set of data and the remembered experience with earlier versions of SCons.
-   It has to be confirmed.
 
 .. [#distributeinorganization1]
    Propagating dlb to several developers in the same organization by the means of a source code repository
