@@ -2,23 +2,23 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Parsing of Make rules."""
+"""Parse GNU Make rules."""
 
-# Make: <https://pubs.opengroup.org/onlinepubs/009695399/utilities/make.html>
 # GNU Make: <https://www.gnu.org/software/make/>
+# Make: <https://pubs.opengroup.org/onlinepubs/009695399/utilities/make.html>
 # Tested with: GNU Make 4.2.1
 #
 # Usage example:
 #
 #     import sys
 #     import dlb.fs
-#     import dlb_contrib.make
+#     import dlb_contrib.gnumake
 #
 #     makefile = dlb.fs.Path(...)
 #
 #     sources = set()
 #     with open(makefile.native, 'r', encoding=sys.getfilesystemencoding()) as f:
-#         for r in dlb_contrib.make.sources_from_rules(f):
+#         for r in dlb_contrib.gnumake.sources_from_rules(f):
 #             sources |= set(r)
 #
 
@@ -55,7 +55,7 @@ def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
     # is severely underspecified for Makefiles, portability issues are to be expected with other implementations of
     # Make if paths contain "special characters".
     #
-    # Limitations of possible paths by Make:
+    # Limitations of possible paths by GNU Make:
     #
     #   - path must not contain a line separators
     #   - path nost not contain '\\' followed by a escapable character
@@ -88,7 +88,7 @@ def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
         unprocessed_line = unprocessed_line.rstrip('\n\r')
 
         if unprocessed_line[-2:] == '\\\\':
-            # Make handles multiple backslashes at the end of the line in an efficient but strange way that makes
+            # GNU Make handles multiple backslashes at the end of the line in an efficient but strange way that makes
             # correct escaping impossible. Do not allow this since this probably differs between Make implementation.
             # See readline() in read.c and collapse_continuations() in misc.c
             raise ValueError(f"multiple '\\' at end of line {lineno0 + 1}")

@@ -42,7 +42,7 @@ import sys
 from typing import Iterable, Union
 import dlb.fs
 import dlb.ex
-import dlb_contrib.make
+import dlb_contrib.gnumake
 import dlb_contrib.clike
 assert sys.version_info >= (3, 7)
 
@@ -130,7 +130,7 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
             # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
             included_files = []
             with open(make_rules_file.native, 'r', encoding=sys.getfilesystemencoding()) as dep_file:
-                for p in dlb_contrib.make.additional_sources_from_rule(dep_file):
+                for p in dlb_contrib.gnumake.additional_sources_from_rule(dep_file):
                     try:
                         included_files.append(context.working_tree_path_of(p))
                     except ValueError:

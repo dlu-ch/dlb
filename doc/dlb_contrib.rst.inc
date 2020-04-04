@@ -31,7 +31,7 @@ Please see there for details.
 .. dlbcontrib:module:: generic
 .. dlbcontrib:module:: backslashescape
 .. dlbcontrib:module:: zip
-.. dlbcontrib:module:: make
+.. dlbcontrib:module:: gnumake
 .. dlbcontrib:module:: git
 .. dlbcontrib:module:: clike
 .. dlbcontrib:module:: gcc
