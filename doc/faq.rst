@@ -8,14 +8,17 @@ A common answer to a common question: Because none of the available tools met th
 especially for the development of embedded software with cross-compiler toolchains and generated source code.
 
    +----------------------------------------+---------------+---------------+---------------+
-   | Desirable property                     | dlb           | Make          | SCons         |
+   | (Desirable) property                   | dlb           | Make          | SCons         |
    +========================================+===============+===============+===============+
    | Speed of full build                    | |plusplus|    | |plusplus|    | |plus|        |
    +----------------------------------------+---------------+---------------+---------------+
-   | Speed of partial build, avoidance of   | |plus|        | |avg|         | |avg|         |
-   | unnecessary actions                    |               |               |               |
+   | Speed of partial or "empty" build      | |plus|        | |plusplus|    | |minus|       |
    +----------------------------------------+---------------+---------------+---------------+
-   | Speed of "empty" build                 | |avg|         | |plusplus|    | |minusminus|  |
+   | Avoidance of unnecessary execution     | |plusplus|    | |minusminus|  | |plus|        |
+   | of tools                               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Accuracy of automatically detected     | |plusplus|    | |minusminus|  | |plus|        |
+   | input dependencies                     |               |               |               |
    +----------------------------------------+---------------+---------------+---------------+
    | Expressiveness of build description    | |plusplus|    | |minusminus|  | |avg|         |
    +----------------------------------------+---------------+---------------+---------------+
@@ -42,6 +45,9 @@ especially for the development of embedded software with cross-compiler toolchai
    | Safe use of paths containing "special" | |plusplus|    | |minusminus|  | |minus|       |
    | characters (``' '``,  ``'$'``,         |               |               |               |
    | ``'\\'``, ...)                         |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+
+   | Ability to deal with circular          | |plusplus|    | |minusminus|  | |minusminus|  |
+   | dependencies                           |               |               |               |
    +----------------------------------------+---------------+---------------+---------------+
    | Fundamental objects                    | contexts,     | strings       | environments, |
    |                                        | tools, paths  |               | strings,      |
@@ -121,9 +127,10 @@ How fast is dlb?
 There is a lot of controversy in comparing the speed of build tools in general and SCons in particular.
 
 In my opinion, raw speed for a single build in an ideal and static environment is not the most important benchmark for
-productivity; the necessary effort to develop and maintain a correct and complete build description is more relevant.
-Spending hours to find subtle flaws in the build process and doing complete rebuilds out of mistrust in the completeness
-of the dependency information costs more than a few seconds per --- otherwise perfect --- partial build.
+productivity; the necessary total effort to develop and maintain a trustworthy and complete build description is
+far from negligible. Spending hours to find subtle flaws in the build process and doing complete rebuilds out of
+mistrust in the completeness of the dependency information costs more than a few seconds per --- otherwise perfect ---
+partial build.
 
 Having said that, here are the results of a simple benchmark used both
 `against <http://gamesfromwithin.com/the-quest-for-the-perfect-build-system>`_ and
@@ -166,7 +173,7 @@ dlb does not guess or assume, but requires the explicit statement of information
 (the expected content of environment variables, for example). This results in readable and self-documenting dlb scripts
 that concisely describe their requisites and assumptions.
 
-Make is much faster than dlb when only a small fraction of the output dependencies has to be generated
+Make is significantly faster than dlb when only a small fraction of the output dependencies has to be generated
 (Make: only a few sourcea are newer than their targets).
 The available Make implementations have been carefully optimized for speed over the years.
 dlb is executed by an instance of a Python interpreter; starting a Python interpreter and importing some modules
@@ -202,10 +209,12 @@ dlb does not use a shell. A relative path ``str(p.native)`` always starts with :
 a :class:`dlb.fs.Path`. As far as dlb is concerned, it is safe to use *any* character in paths
 (e.g. :file:`-o ~/.bashrc` or :file:`; sudo rm -rf /`).
 
-SCons detects dependencies *before* it runs a tool. It does so by scanning input files, roughly mimicking the tool
-to be run potentially. dlb detects dependencies *after* a redo of a :term:`tool instance`. It uses information provided
-by the tool itself (e.g. the list of include file directly from the compiler), which is much more accurate and also
-much faster.
+SCons detects dependencies *before* it executes a tool. It does so by scanning input files, roughly mimicking the tool
+to be executed potentially. dlb detects dependencies *after* a redo of a :term:`tool instance`. It uses information
+provided by the tool itself (e.g. the list of include file directly from the compiler), which is much more accurate and
+also faster.
+When dlb detects a new dependency (after the execution of a tool instance), the next execution of this
+tool instance always performs a redo. SCons can avoid "redos" right after its *first* run.
 
 dlb is significantly faster and is designed for easy extension.
 
@@ -272,7 +281,7 @@ It is even better if you contribute to the original dlb by creating an
 Where are the sources?
 ----------------------
 
-Here: https://github.com/dlu-ch/dlb.
+Here: https://github.com/dlu-ch/dlb/.
 
 Feel free to contribute.
 

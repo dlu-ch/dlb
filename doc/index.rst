@@ -3,9 +3,8 @@
 dlb --- explicit is better than implicit
 ========================================
 
-dlb is a `Pythonic`_ `build tool <https://en.wikipedia.org/wiki/Build_tool>`_ that does not try to mimic Make_,
-but brings the benefits of object-oriented languages to the build process.
-It is `free software`_.
+dlb is a `Pythonic`_ `build tool <https://en.wikipedia.org/wiki/Build_tool>`_ that does not try to mimic Make_
+but to leverage the power of object-oriented languages. It is `free software`_.
 
 dlb is inspired by `djb's redo`_ but takes a more dynamic approach.
 
@@ -17,13 +16,13 @@ Its most important tasks are:
 - generate files (e.g. some program source files or configuration files)
 - make the build fast by omitting unnecessary redos
 
-These are the areas where dlb wants to be strong --- all this in a precisely specified way, with emphasis on correctness,
-reliability and robustness.
+These are the strengths of dlb.
+dlb performs its tasks in a precisely specified way and with emphasis on correctness, reliability, and robustness.
 
 dlb does not try to hide its Python personality.
-Instead dlb build scripts are just Python scripts importing the :mod:`dlb` module and using its functionality.
+dlb build scripts are just Python scripts importing the :mod:`dlb` module and using its functionality.
 There is no magic code before or after the script.
-Since dlb build scripts are Python scripts, you can easily analyse, run or debug them in your favorite Python IDE.
+Since dlb build scripts are Python scripts, you can easily analyse, run, or debug them in your favorite Python IDE.
 
 Tools (e.g. compiler/linker toolchains) are represented as classes. Adapting tools means adapting classes
 by subclassing.

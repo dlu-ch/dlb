@@ -23,9 +23,9 @@ Overview
 Details
 -------
 
-The modules in :mod:`dlb_contrib` are meant as starting points for your own tools and contributions which will
+The modules in :mod:`dlb_contrib` are meant as starting points for your own tools and extensions which will
 reside in your repositories.
-The documentation is maintained only in the source files to make the modules self-contained.
+Therefore, their documentation is maintained only in the source files to make them self-contained.
 Please see there for details.
 
 .. dlbcontrib:module:: generic

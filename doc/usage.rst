@@ -119,9 +119,9 @@ Replace the content of :file:`build.py` by this::
        Replacer(template='src/main.c.tmpl', output='build/out/main.c').run()  # create a tool instance and run it
 
 
-This defines a :term:`tool` called ``Replacer`` with an *input dependency* ``template`` and an *output
-dependency* ``output``. The class attributes ``PATTERN`` and ``REPLACEMENT`` are *execution parameters* of the tool.
-The method ``redo()`` is called by ``Replacer(...).run()`` if a :term:`redo` is necessary.
+This defines a :term:`tool` called ``Replacer`` with an *input dependency role* ``template`` and an *output
+dependency role* ``output``. The class attributes ``PATTERN`` and ``REPLACEMENT`` are *execution parameters* of the
+tool. The method ``redo()`` is called by ``Replacer(...).run()`` if a :term:`redo` is necessary.
 
 Create a file :file:`src/main.c.tmpl` with this content::
 
@@ -204,8 +204,36 @@ Self-contained project: add dlb to the repository
 
 ZIP archives in :file:`.dlbroot/u/` are automatically added to the module search path of the Python interpreter
 by :ref:`dlb <dlbexe>`. Placing the :mod:`dlb` package as a version controlled ZIP archive there
---- say, :file:`.dlbroot/u/dlb-1.2.3.zip` --- allows you to keep a certain version of dlb independent of a system-wide
-installed version.
+--- say, :file:`.dlbroot/u/dlb-1.2.3.zip` --- allows you to keep a certain version of dlb in your project's repository
+independent of a system-wide installed version.
+
+If you do not need the command-line utility :ref:`dlb <dlbexe>`, dlb does not even have to be installed (globally)
+to build your project.
+
+
+PyCharm integration
+-------------------
+
+If you use `PyCharm`_ to edit (and/or run and debug) your :term:`dlb scripts <script>` you can take advantage
+of the integrated referral to external HTML documentation: Place the caret in the editor on a dlb object
+(anything except a module) --- e.g. between the ``P`` and the ``a`` of ``dlb.fs.Path`` ---
+and press :kbd:`Shift+F1` or :kbd:`Ctrl+Q` to show the HTML documentation in you web browser.
+
+Configuration (as of PyCharm 2019.3):
+Add the following documentation URLs in the dialog :menuselection:`Tool --> External Documentation`:
+
++-------------------+---------------------------------------------------------------------------------+
+| Module Name       | URL/Path Pattern                                                                |
++===================+=================================================================================+
+| ``dlb``           | :file:`https://dlb.readthedocs.io/en/{<which>}/reference.html#{element.qname}`  |
++-------------------+---------------------------------------------------------------------------------+
+| ``dlb_contrib``   | :file:`https://dlb.readthedocs.io/en/{<which>}/reference.html#{element.qname}`  |
++-------------------+---------------------------------------------------------------------------------+
+
+Replace *<which>* by a specific version like ``v0.3.0`` or ``stable`` for the latest version.
+
+
+.. _PyCharm: https://www.jetbrains.com/pycharm/
 
 
 Recommendations for efficiency and reliability

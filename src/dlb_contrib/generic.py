@@ -23,7 +23,7 @@ assert sys.version_info >= (3, 7)
 
 
 class Check(dlb.ex.Tool):
-    # Make a redo (which does nothing) whenever an regular file or a directory changed.
+    # Make a redo (which does nothing) when one of the given regular files or directories has changed.
     #
     # The result 'Check(...).run()' can be used like this to a add an input dependency on a group of other
     # input dependencies:

@@ -511,7 +511,7 @@ def process_moduleindex_nodes(app, doctree, fromdocname):
             paragraphs_in_rows.append(paragraphs_in_row)
 
         content.append(table_from_header_texts_and_rows_of_paragraphs(
-            header_row_texts=['Module', 'executables (dynamic helpers)', 'tool classes'],
+            header_row_texts=['Module', 'Executables (dynamic helpers)', 'Tool classes'],
             paragraphs_in_rows=paragraphs_in_rows,
             rel_col_widths = [3, 2, 3]
         ))
