@@ -53,7 +53,9 @@ def parse_from_output(line, options=''):  # parse an output line of pkg-config
 
 class PkgConfig(dlb.ex.Tool):
     # https://www.freedesktop.org/wiki/Software/pkg-config/
-    EXECUTABLE = 'pkg-config'  # dynamic helper, looked-up in the context
+
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'pkg-config'
 
     LIBRARY_NAMES = ()  # e.g. ('orte')
 

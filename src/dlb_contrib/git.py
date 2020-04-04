@@ -152,7 +152,8 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     # This includes tag, commit and changed files.
     # Fails if the Git working directory contains not annotated tag match *TAG_PATTERN*.
 
-    EXECUTABLE = 'git'  # dynamic helper, looked-up in the context
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'git'
 
     # Consider only annotated tags with a name that matches this glob(7) pattern.
     TAG_PATTERN = 'v[0-9]*'

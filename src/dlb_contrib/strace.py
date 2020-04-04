@@ -139,10 +139,11 @@ class RunStraced(dlb.ex.Tool):
     # Run dynamic helper with strace and return all successfully read files in the managed tree in *read_files*
     # and all successfully written files in the managed tree in *written_files*.
 
-    TRACING_EXECUTABLE = 'strace'  # dynamic helper, looked-up in the context
+    # Dynamic helper, looked-up in the context.
+    TRACING_EXECUTABLE = 'strace'
 
-    # Define *EXECUTABLE* to be traced by *TRACING_EXECUTABLE* in subclass:
-    # EXECUTABLE = 'latex'  # dynamic helper, looked-up in the context (set to string in subclass)
+    # Dynamic helper of executable to  be traced by *TRACING_EXECUTABLE*, looked-up in the context.
+    EXECUTABLE = ''  # define in subclass
 
     read_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
     written_files = dlb.ex.Tool.Output.RegularFile[:](explicit=False)

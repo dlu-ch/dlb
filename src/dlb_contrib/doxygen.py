@@ -104,7 +104,8 @@ def _transform_replacement(replacements: Dict[str, Any]):
 
 
 class Doxygen(dlb.ex.Tool):
-    EXECUTABLE = 'doxygen'  # dynamic helper, looked-up in the context
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'doxygen'
 
     # Placeholders in doxygen configuration file template.
     # The dictionary key are placeholder names and the value their replacement value.

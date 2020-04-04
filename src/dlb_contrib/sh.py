@@ -38,7 +38,8 @@ class ShScriptlet(dlb.ex.Tool):
     # Run a small sh script, wait for its completion and return its output to stdout as a string.
     # Do not use this for "big" scripts with a lot of output.
 
-    EXECUTABLE = 'sh'  # dynamic helper, looked-up in the context
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'sh'
 
     ENCODING = 'utf-8'
 

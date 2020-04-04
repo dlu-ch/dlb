@@ -75,16 +75,17 @@ def _check_warning_name(name: str) -> str:
 
 # noinspection PyUnresolvedReferences
 class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
-    EXECUTABLE = 'gcc'  # dynamic helper, looked-up in the context
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'gcc'
 
-    SUPPRESSED_WARNINGS = ()  # names of warnings to be suppressed (e.g. 'unused-value')
-    FATAL_WARNINGS = ('all',)  # names of warnings that should make the the compilation unsuccessful
+    # Names of warnings to be suppressed (e.g. 'unused-value').
+    SUPPRESSED_WARNINGS = ()
+
+    # Names of warnings that should make the the compilation unsuccessful.
+    FATAL_WARNINGS = ('all',)
 
     source_file = dlb.ex.Tool.Input.RegularFile(cls=Path)
     include_search_directories = dlb.ex.Tool.Input.Directory[:](required=False, cls=Path)
-
-    def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
-        return []
 
     async def redo(self, result, context):
         compile_arguments = [c for c in self.get_compile_arguments()]
@@ -208,8 +209,8 @@ class _LinkerGcc(dlb.ex.Tool):
 
 
 class CLinkerGcc(_LinkerGcc):
-    EXECUTABLE = 'gcc'  # dynamic helper, looked-up in the context
+    EXECUTABLE = 'gcc'
 
 
 class CplusplusLinkerGcc(_LinkerGcc):
-    EXECUTABLE = 'g++'  # dynamic helper, looked-up in the context
+    EXECUTABLE = 'g++'

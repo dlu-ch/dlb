@@ -26,7 +26,7 @@
 #             file.write(f'\n#define APPLICATION_VERSION {wd_version}\n')
 #
 #     class CCompiler(dlb_contrib.clike.ClikeCompiler):
-#         EXECUTABLE = 'specific-cc'  # dynamic helper, looked-up in the context
+#         EXECUTABLE = 'specific-cc'
 #
 #         async def redo(self, result, context):
 #             with context.temporary() as object_file:
@@ -50,7 +50,7 @@ import string
 import re
 import dlb.fs
 import dlb.ex
-from typing import Optional
+from typing import Optional, Union, Iterable
 assert sys.version_info >= (3, 7)
 
 # Identifier of unrestricted length without universal characters.
@@ -187,6 +187,8 @@ def identifier_from_path(path: dlb.fs.PathLike, *, to_upper_case: bool = True) -
 
 # noinspection PyAbstractClass
 class ClikeCompiler(dlb.ex.Tool):
+    # Dynamic helper of compiler executable, looked-up in the context.
+    EXECUTABLE = ''  # define in subclass
 
     # Definition of object-like macros (like '#define VERSION 1.2.3') and function-like macros (like '#define V(x) #x').
     # If value is not None: define the definition with the value as the macro's replacement list.
@@ -201,6 +203,10 @@ class ClikeCompiler(dlb.ex.Tool):
 
     # Paths of all files in the managed tree directly or indirectly included by *source_file*.
     included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+
+    def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+        # Return iterable of additional commandline arguments for *EXECUTABLE*.
+        return []
 
 
 class GenerateHeaderFile(dlb.ex.Tool):
