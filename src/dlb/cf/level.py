@@ -6,19 +6,19 @@
 
 from .. import di
 
-RUN_PREPARATION: int = di.DEBUG + 3
-RUN_SERIALIZATION: int = di.INFO
+run_preparation: int = di.DEBUG + 3
+run_serialization: int = di.INFO
 
-REDO_NECESSITY_CHECK: int = di.DEBUG + 3
-REDO_REASON: int = di.INFO
-REDO_SUSPICIOUS_REASON: int = di.WARNING
+redo_necessity_check: int = di.DEBUG + 3
+redo_reason: int = di.INFO
+redo_suspicious_reason: int = di.WARNING
 
-REDO_PREPARATION: int = di.DEBUG + 5
-REDO_START: int = di.INFO
-REDO_AFTERMATH: int = di.DEBUG + 5
+redo_preparation: int = di.DEBUG + 5
+redo_start: int = di.INFO
+redo_aftermath: int = di.DEBUG + 5
 
-HELPER_EXECUTION: int = di.DEBUG + 7
+helper_execution: int = di.DEBUG + 7
 
-RUN_SUMMARY: int = di.INFO
+run_summary: int = di.INFO
 
 del di

@@ -403,7 +403,7 @@ def _show_summary(summaries: List[Tuple[datetime.datetime, int, int, int]]):
         if runs > 0:
             redo_ratio_percent = 100 * redos / runs
             msg += f' ({redo_ratio_percent:.1f}%)\b'
-    di.inform(msg, level=cf.level.RUN_SUMMARY)
+    di.inform(msg, level=cf.level.run_summary)
 
 
 class _RootSpecifics:
@@ -474,7 +474,7 @@ class _RootSpecifics:
             summary = self._rundb.update_run_summary(self._successful_nonredo_run_count,
                                                      self._successful_redo_run_count)
             try:
-                if cf.latest_run_summary_max_count > 0 and di.is_unsuppressed_level(cf.level.RUN_SUMMARY):
+                if cf.latest_run_summary_max_count > 0 and di.is_unsuppressed_level(cf.level.run_summary):
                     summaries = self._rundb.get_latest_successful_run_summaries(cf.latest_run_summary_max_count)
                     _show_summary(summaries + [summary])
             except (TypeError, ValueError):

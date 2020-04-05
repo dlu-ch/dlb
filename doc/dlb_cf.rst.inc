@@ -22,17 +22,16 @@ To change the behaviour of dlb, change the values of the following variables.
 .. module:: dlb.cf.level
    :synopsis: Categorical message levels
 
-.. data:: RUN_PREPARATION
-.. data:: RUN_PREPARATION
-.. data:: RUN_SERIALIZATION
-.. data:: REDO_NECESSITY_CHECK
-.. data:: REDO_REASON
-.. data:: REDO_SUSPICIOUS_REASON
-.. data:: REDO_PREPARATION
-.. data:: REDO_START
-.. data:: REDO_AFTERMATH
-.. data:: HELPER_EXECUTION
-.. data:: RUN_SUMMARY
+.. data:: run_preparation
+.. data:: run_serialization
+.. data:: redo_necessity_check
+.. data:: redo_reason
+.. data:: redo_suspicious_reason
+.. data:: redo_preparation
+.. data:: redo_start
+.. data:: redo_aftermath
+.. data:: helper_execution
+.. data:: run_summary
 
    Assign a message level (a positive integer like :data:`dlb.di.INFO`) to be used for all message of a given
    category.

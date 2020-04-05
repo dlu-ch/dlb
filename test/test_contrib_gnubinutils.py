@@ -27,7 +27,7 @@ class ArTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
         import dlb.cf
         import dlb.di
-        dlb.cf.level.HELPER_EXECUTION = dlb.di.ERROR
+        dlb.cf.level.helper_execution = dlb.di.ERROR
 
         with dlb.ex.Context():
             object_files = [

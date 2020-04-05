@@ -186,11 +186,11 @@ Add the following lines to :file:`build.py` (before the line ``with dlb.ex.Conte
   import dlb.di
   import dlb.cf
 
-  dlb.cf.level.HELPER_EXECUTION = dlb.di.INFO
+  dlb.cf.level.helper_execution = dlb.di.INFO
   dlb.cf.latest_run_summary_max_count = 5
 
 This instructs dlb to use the the log level :data:`dlb.di.INFO` for all future diagnostic messages of the category
-:data:`dlb.cf.level.HELPER_EXECUTION` and to output a summary after each run that compares the run with the
+:data:`dlb.cf.level.helper_execution` and to output a summary after each run that compares the run with the
 previous ones.
 
 
