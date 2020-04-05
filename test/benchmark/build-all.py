@@ -2,6 +2,7 @@ import dlb.fs
 import dlb.di
 import dlb.ex
 import dlb_contrib.gcc
+import dlb_contrib.gnubinutils
 from typing import Iterable, Union
 
 
@@ -12,16 +13,6 @@ output_path = dlb.fs.Path('out/')
 class CplusplusCompiler(dlb_contrib.gcc.CplusplusCompilerGcc):
     def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return ['-g']
-
-
-class Archive(dlb.ex.Tool):
-    EXECUTABLE = 'ar'
-
-    object_files = dlb.ex.Tool.Input.RegularFile[1:]()
-    archive_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
-
-    async def redo(self, result, context):
-        await context.execute_helper(self.EXECUTABLE, ['-cr', result.archive_file] + [p for p in result.object_files])
 
 
 with dlb.ex.Context():
@@ -38,5 +29,5 @@ with dlb.ex.Context():
                 ]
             with dlb.di.Cluster(f'link'):
                 archive_file = output_path / (library_path.components[-1] + '.a')
-                Archive(object_files=[r.object_file for r in compile_results],
-                        archive_file=archive_file).run()
+                dlb_contrib.gnubinutils.Archive(object_files=[r.object_file for r in compile_results],
+                                                archive_file=archive_file).run()
