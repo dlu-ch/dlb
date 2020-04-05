@@ -119,6 +119,36 @@ Examples are:
 - http://www.buildout.org/
 
 
+Who should use dlb?
+-------------------
+
+You should *not* use dlb if:
+
+- You are proud to have mastered a flavour of Make + sh + makedepend + automake + autoconf + find + xargs + grep +
+  sed + awk + ...  and happily run a ``make clean-all`` now and then --- because that's what you do.
+  You cannot understand the need for an alternative.
+- You are happy with your IDE and build all your software with :kbd:`Ctrl+Shift+B`.
+- You do not know Python and are not willing to learn it.
+- You do not have to build your code on several machines (i.e. you work alone).
+- You do not care about portability and quality.
+- Your project is very small or very static (i.e. the set of involved files does not change).
+
+Otherwise, you should give dlb a try. Especially if:
+
+- You build the same project on several platforms (e.g. GNU/Linux and MS Windows).
+- You need to generate source code (e.g. a header file with version information).
+- You love the elegance and power of Python.
+- You use a not-so-common compiler toolchain and want to control every aspect
+  of code generation (e.g. for embedded software where code size matters).
+- You have to make sure your software can be reproduced exactly in 10 years.
+- Your build process consists of sequential steps whose dependencies cannot easily be described by a acyclic
+  graph (you currently use a shell script to combine them).
+- You lost enough time with missing dependencies: You just tested a bunch of small code modification based on
+  each other, carefully tested the output for each of them and committed them to the repository. Only to realize that
+  the first of them introduced a bug (you did not notice it because your build tool did not regenerate *all* the
+  dependent files).
+
+
 .. _manual-speed-comparison:
 
 How fast is dlb?

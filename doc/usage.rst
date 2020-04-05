@@ -175,6 +175,25 @@ did not change. After a modification of the input dependency, dlb again causes a
    I start redo for tool instance 1 [+0.014572s]
 
 
+Control the output verbosity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+dlb is configured by *configuration parameters* in :mod:`dlb.cf`.
+
+You want to know how exactly dlb calls the external tools and like some output after *each* run?
+Add the following lines to :file:`build.py` (before the line ``with dlb.ex.Context():``)::
+
+  import dlb.di
+  import dlb.cf
+
+  dlb.cf.level.HELPER_EXECUTION = dlb.di.INFO
+  dlb.cf.latest_run_summary_max_count = 5
+
+This instructs dlb to use the the log level :data:`dlb.di.INFO` for all future diagnostic messages of the category
+:data:`dlb.cf.level.HELPER_EXECUTION` and to output a summary after each run that compares the run with the
+previous ones.
+
+
 Real stuff
 ^^^^^^^^^^
 
