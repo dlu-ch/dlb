@@ -479,7 +479,7 @@ class _RootSpecifics:
                     _show_summary(summaries + [summary])
             except (TypeError, ValueError):
                 pass  # ignore most common exceptions for invalid cf.latest_run_summary_max_count, cf.level.*
-        self._cleanup()  # seize the the day
+        self._cleanup()  # seize the day
         while True:
             wt = self.working_tree_time_ns
             if wt != wt0:  # guarantee G-T2

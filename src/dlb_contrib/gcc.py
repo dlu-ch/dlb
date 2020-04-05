@@ -83,7 +83,7 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     # Names of warnings to be suppressed (e.g. 'unused-value').
     SUPPRESSED_WARNINGS = ()
 
-    # Names of warnings that should make the the compilation unsuccessful.
+    # Names of warnings that should make the compilation unsuccessful.
     FATAL_WARNINGS = ('all',)
 
     source_file = dlb.ex.Tool.Input.RegularFile(cls=Path)

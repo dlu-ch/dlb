@@ -71,7 +71,7 @@ Path objects
       Constructs a path from another path or a string.
 
       If *path* is a string, it is interpreted as the string representation of a path in Posix style with ``/`` as a
-      component separator. It must not by empty.
+      component separator. It must not be empty.
       If *path* is a :class:`pathlib.Path`, it must be either absolute or relative.
       If *path* is a sequence, all its members are converted to str and are interpreted as path components;
       its first component must be ``''`` for a relative path.

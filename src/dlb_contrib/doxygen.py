@@ -128,7 +128,7 @@ class Doxygen(dlb.ex.Tool):
 
     # Template for Doxygen configuration file, UTF-8 encoded (must contain 'DOXYFILE_ENCODING = UTF-8')
     # Escape $ by $$.
-    # All unescaped  occurences of ${{name}} are replaced by the the content of TEXTUAL_REPLACEMENTS[name].
+    # All unescaped  occurences of ${{name}} are replaced by the content of TEXTUAL_REPLACEMENTS[name].
     configuration_template_file = dlb.ex.Tool.Input.RegularFile()
 
     output_directory = dlb.ex.Tool.Output.Directory(cls=Path)

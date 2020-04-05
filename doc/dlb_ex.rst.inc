@@ -208,7 +208,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       The unique path component starts with a lower-case letter and ends with *suffix*.
       It contains only lower-case letters and decimal digits between its first characters and the suffix.
       If *suffix* is not empty, is must start with a character from strings.punctuation and must not contain ``'/'``.
-      The the unique path component without the *suffix* is at most 12 characters long for the first 2**61 calls.
+      The unique path component without the *suffix* is at most 12 characters long for the first 2**61 calls.
 
       When used as a context manager, an empty regular file or directory with *path* is created when entered and removed
       (with its content) on exit. Raises :exc:`FileExistError` if the regular file or directory exists.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Note: When readthedocs.org builds the documentation with the Sphinx, the the directory containing
+# Note: When readthedocs.org builds the documentation with the Sphinx, the directory containing
 # this file is used as working directory.
 
 import sys
