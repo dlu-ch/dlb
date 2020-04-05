@@ -587,19 +587,6 @@ class ReplaceFsInputsTest(tools_for_test.TemporaryDirectoryTestCase):
                 dlb.ex.rundb.encode_path(dlb.fs.Path('b')): (False, b'1')
             }, rundb.get_fsobject_inputs(tool_dbid))
 
-    # noinspection PyTypeChecker
-    def test_fail_for_invalid_info(self):
-
-        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
-            with self.assertRaises(TypeError):
-                rundb.update_dependencies_and_state(0, info_by_encoded_path={
-                    dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (True, 1)
-                })
-            with self.assertRaises(TypeError):
-                rundb.update_dependencies_and_state(0, info_by_encoded_path={
-                    dlb.ex.rundb.encode_path(dlb.fs.Path('a')): 1
-                })
-
 
 class ReplaceAndGetRedoStateTest(tools_for_test.TemporaryDirectoryTestCase):
 
@@ -640,14 +627,18 @@ class ReplaceAndGetRedoStateTest(tools_for_test.TemporaryDirectoryTestCase):
 
     # noinspection PyTypeChecker
     def test_fails_for_invalid_aspect(self):
-
         with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
-
             with self.assertRaises(TypeError):
                 rundb.update_dependencies_and_state(0, memo_digest_by_aspect={'1': b''})
             with self.assertRaises(TypeError):
                 rundb.update_dependencies_and_state(0, memo_digest_by_aspect={'d': 1})
 
+    # noinspection PyTypeChecker
+    def test_update_fails_for_invalid_memo_digest(self):
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            with self.assertRaises(TypeError):
+                # noinspection PyTypeChecker
+                rundb.update_dependencies_and_state(12, memo_digest_by_aspect={1: ''})
 
 class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
 
