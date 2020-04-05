@@ -12,4 +12,6 @@ the real work is done entirely by the dlb script with the help of the package :m
 - Remembers command-line arguments of the last successful call.
 - Adds ZIP archives to the module search path.
 
-See ``dlb --help`` for details.
+Here is the output of ``dlb --help``:
+
+.. literalinclude:: ../build/out/generateddoc/dlb-help.txt

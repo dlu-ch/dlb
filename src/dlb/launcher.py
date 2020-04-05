@@ -87,40 +87,39 @@ def find_script(script_name):
     return script_abs_path, spec, module, module_name
 
 
-def main():
-    if sys.argv[1:2] == ['--help']:
-        # 80 characters xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        help_msg = \
+def get_help():
+    # 80 characters xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    help_msg = \
         """
         Run a dlb script in the root of the working tree that contains the current
         working directory.
-
+    
         When called with '--help' as the first parameter, displays this help and exits.
-
+    
         When called with a least one parameter and the first parameter is not '--help',
         the first parameter must be a dlb script as a normalized, non-upwards path
         relative to the root of the working tree that does not start with '-'. '.py' is
         appended if it does not end with '.py'. All other parameters are forwarded to
         the dlb script.
-
+    
         When called without a parameter, the parameters from the last successul call of
         this script with the same 'os.name' are used.
-
+    
         Each regular file or symbolic link to a regular file in the directory
         '.dlbroot/u/' of the working tree whose name ends in '.zip' is added to the list
         of module search paths of the Python interpreter.
-
+    
         Exit status:
-
+    
            0  if called with '--help'
            1  if the specified dlb script could not be executed
            2  if no command-line arguments were given and the command-line arguments
               of the last successful call are not available
            e  otherwise, where e is the exit status of the specified dlb script
               (0 if it finished successfully)
-
+    
         Examples:
-
+    
            dlb build/all         # executes the dlb script 'build/all.py' in the
                                  # working tree's root
            dlb                   # same as dlb build/all if the previous call
@@ -128,20 +127,25 @@ def main():
            PYTHONVERBOSE=1 dlb   # when called from a POSIX-compliant shell
            dlb --help
         """
-        import textwrap
-        help_msg = textwrap.dedent(help_msg).strip()
+    import textwrap
+    help_msg = textwrap.dedent(help_msg).strip()
 
-        try:
-            import dlb
-            doc_url = 'https://dlb.readthedocs.io/'
-            if len(dlb.version_info) == 3 and '.dev' not in dlb.__version__:
-                released_version = '.'.join(str(c) for c in dlb.version_info)
-                doc_url += f"en/v{released_version}/"
-            help_msg += f"\n\ndlb version: {dlb.__version__}.\nFull documentation at: <{doc_url}>."
-        except (ImportError, AttributeError):
-            pass
+    try:
+        import dlb
+        doc_url = 'https://dlb.readthedocs.io/'
+        if len(dlb.version_info) == 3 and '.dev' not in dlb.__version__:
+            released_version = '.'.join(str(c) for c in dlb.version_info)
+            doc_url += f"en/v{released_version}/"
+        help_msg += f"\n\ndlb version: {dlb.__version__}.\nFull documentation at: <{doc_url}>."
+    except (ImportError, AttributeError):
+        pass
 
-        print(help_msg)
+    return help_msg
+
+
+def main():
+    if sys.argv[1:2] == ['--help']:
+        print(get_help())
         return 0
 
     try:
