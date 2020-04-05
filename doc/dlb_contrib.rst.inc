@@ -31,8 +31,9 @@ Please see there for details.
 .. dlbcontrib:module:: generic
 .. dlbcontrib:module:: backslashescape
 .. dlbcontrib:module:: zip
-.. dlbcontrib:module:: gnumake
 .. dlbcontrib:module:: git
+.. dlbcontrib:module:: gnumake
+.. dlbcontrib:module:: gnubinutils
 .. dlbcontrib:module:: clike
 .. dlbcontrib:module:: gcc
 .. dlbcontrib:module:: pkgconfig

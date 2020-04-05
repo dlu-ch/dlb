@@ -190,10 +190,14 @@ class PySubModule(sphinx.directives.SphinxDirective):
     def get_summary_from_module(self, fq_modname: str) -> ModuleSummary:
         docstring, comment_blocks, exported_object_by_name = self.get_info_from_module(fq_modname)
 
-        docstring = docstring.strip()
+        # normalize docstring
+        docstring = '\n'.join(docstring.strip().splitlines())
+        docstring = re.sub(r'\n[ \t\r\f\v]*(?=[^\n])', ' ', docstring)  # replace single line separator by ' '
+        docstring = re.sub(r'\n\n+', '\n\n', docstring)
+
         m = DOCSTRING_REGEX.match(docstring)
         if not m:
-            raise self.error(f"no proper '__doc__' in module {fq_modname!r}")
+            raise self.error(f"no proper '__doc__' in module {fq_modname!r}: {docstring!r}")
         description = m.group('summary')
 
         licenses = set()

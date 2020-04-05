@@ -2,9 +2,11 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Compile and link languages of the C family with the GNU Compiler Collection."""
+"""Compile and link languages of the C family with the GNU Compiler Collection (with the help of the
+linker from the GNU Binutils)."""
 
 # GCC: <https://gcc.gnu.org/>
+# GNU Binutils: <https://www.gnu.org/software/binutils/>
 # Tested with: gcc 8.3.0
 # Executable: 'gcc'
 # Executable: 'g++'
