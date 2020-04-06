@@ -29,7 +29,6 @@ __all__ = [
 
 import sys
 import re
-import subprocess
 import collections.abc
 import dlb.fs
 import dlb.ex

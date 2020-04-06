@@ -33,7 +33,6 @@ __all__ = [
 
 import sys
 import re
-import subprocess
 from typing import Optional, Tuple, Dict, Set, Iterable
 import dlb.fs
 import dlb.ex

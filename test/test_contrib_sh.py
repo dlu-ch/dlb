@@ -13,7 +13,7 @@ import dlb.di
 import dlb.ex
 import dlb_contrib.sh
 import unittest
-from typing import Iterable, Union
+from typing import Optional, Iterable, Union
 import tools_for_test
 
 
@@ -36,6 +36,25 @@ class ReadFile(dlb_contrib.sh.ShScriptlet):
         return [s for s in self.source_files]
 
 
+class OutputThreeLinesIncrementally(dlb_contrib.sh.ShScriptlet):
+    SCRIPTLET = """
+        echo first
+        echo second
+        echo third
+        """
+
+    def get_chunk_processor(self) -> Optional[dlb.ex.ChunkProcessor]:
+        class Processor(dlb.ex.ChunkProcessor):
+            def __init__(self):
+                self.result = []
+
+            def process(self, chunk: bytes, is_last: bool):
+                if b'i' in chunk:
+                    self.result.append(chunk)
+
+        return Processor()
+
+
 class QuoteTest(unittest.TestCase):
 
     def test_it(self):
@@ -50,7 +69,12 @@ class ShTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
     def test_line_output(self):
         with dlb.ex.Context():
             output = OutputTwoLines().run().output
-        self.assertEqual('first\nsecond\n', output)
+        self.assertEqual(b'first\nsecond\n', output)
+
+    def test_incremental_line_output(self):
+        with dlb.ex.Context():
+            output = OutputThreeLinesIncrementally().run().output
+        self.assertEqual([b'first', b'third'], output)
 
     def test_read_files(self):
         with open('a', 'xb') as f:
@@ -61,4 +85,4 @@ class ShTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.di.Cluster('let sh output all parameters'), dlb.ex.Context():
             output = ReadFile(source_files=['a', 'o']).run().output
             dlb.di.inform(f"scriptlet returned {output!r}")
-        self.assertEqual("scriptlet\naah... ooh!", output)
+        self.assertEqual(b"scriptlet\naah... ooh!", output)

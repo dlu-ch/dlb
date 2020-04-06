@@ -16,14 +16,13 @@
 #         SCRIPTLET = "echo echoed: " + dlb_contrib.sh.quote('a $ is a $')
 #
 #     with dlb.ex.Context():
-#         ... = PrintString().run().output  # 'echoed: a $ is a $\n'
+#         ... = PrintString().run().output.decode()  # 'echoed: a $ is a $\n'
 
 __all__ = ['quote', 'ShScriptlet']
 
 import sys
-import subprocess
 import textwrap
-from typing import Iterable, Union
+from typing import Optional, Iterable, Union
 import dlb.fs
 import dlb.ex
 assert sys.version_info >= (3, 7)
@@ -41,20 +40,23 @@ class ShScriptlet(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'sh'
 
-    ENCODING = 'utf-8'
-
     NAME = 'scriptlet'
     SCRIPTLET = ''  # this will be executed by sh - overwrite in subclass
 
     output = dlb.ex.Tool.Output.Object(explicit=False)
+
+    # Overwrite this to chunk processor if you want to process the output incrementally.
+    # See dlb.ex.Tool.RedoContext.execute_helper_with_output() for details.
+    def get_chunk_processor(self) -> Optional[dlb.ex.ChunkProcessor]:
+        return None
 
     def get_scriptlet_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return []
 
     async def redo(self, result, context):
         script = '\n'.join(textwrap.dedent(self.SCRIPTLET).strip().splitlines())
-        _, stdout = \
-            await context.execute_helper_with_output(
-                self.EXECUTABLE,
-                ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()])
-        result.output = stdout.decode(self.ENCODING)
+        processor = self.get_chunk_processor()
+        _, output = await context.execute_helper_with_output(
+            self.EXECUTABLE, ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()],
+            chunk_processor=processor)
+        result.output = output
