@@ -194,7 +194,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
             '--long', '--abbrev=41', '--dirty=?',
             f'--candidates={self.MATCHING_TAG_CANDIDATE_COUNT}', '--match', self.TAG_PATTERN
         ]
-        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=subprocess.PIPE)
+        _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
 
         m = GIT_DESCRIPTION_REGEX.match(stdout.strip().decode())
         result.tag = m.group('tag')
@@ -202,7 +202,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         result.commit_number_from_tag_to_latest_commit = int(m.group('commit_number'), 10)
 
         arguments = ['status', '--porcelain=v2', '--untracked-files', '--branch']
-        _, stdout, _ = await context.execute_helper(self.EXECUTABLE, arguments, stdout=subprocess.PIPE)
+        _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
 
         # https://github.com/git/git/blob/v2.20.1/Documentation/i18n.txt:
         # Path names are encoded in UTF-8 normalization form C
@@ -214,9 +214,9 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         result.has_changes_in_tracked_files = bool(m.group('dirty')) or bool(result.modification_by_file)
 
         if potential_branch_refname == 'refs/heads/(detached)':  # detached?
-            returncode, _, _ = \
+            returncode = \
                 await context.execute_helper(self.EXECUTABLE, ['symbolic-ref', '-q', 'HEAD'],
-                                             stdout=subprocess.DEVNULL, expected_returncodes=[0, 1])
+                                             stdout_output=NotImplemented, expected_returncodes=[0, 1])
             if returncode == 1:
                 potential_branch_refname = None  # is detached
 

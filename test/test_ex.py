@@ -22,6 +22,7 @@ class ImportTest(unittest.TestCase):
     def test_all_from_tool_is_correct(self):
         import dlb.ex.tool
         self.assertEqual({
+            'ChunkProcessor',
             'Tool',
             'DefinitionAmbiguityError',
             'DependencyError',

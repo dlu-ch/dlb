@@ -623,14 +623,14 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
 .. class:: Tool.RedoContext
 
-   A redo context is constructed automatically by :meth:`Tool.run()`.
+   A redo context is constructed automatically by :meth:`Tool.run()`. Redo contexts should not be constructed manually.
 
    .. method:: execute_helper(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]),
-                              forced_env={}, stdin=None, stdout=None, stderr=None, limit=2**16)
+                              forced_env={}, stdout_output=None, stderr_output=None)
 
       Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
       its working directory and wait for it to complete.
-      The execution is considered successful if an only if its returncode is one in *expected_returncodes*.
+      The execution is considered successful if and only if its returncode is one in *expected_returncodes*.
 
       If *cwd* is not ``None``, is must be the path of directory in the :term:`managed tree` or in :file:`.dlbroot/t/`
       of the :term:`management tree`.
@@ -656,29 +656,89 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :type expected_returncodes: collection of integers
       :param forced_env: dictionary of values to override in :attr:`env <dlb.ex.Context.env>` or ``None``
       :type forced_env: None | Dict[str, str]
-      :param stdin:
-         If not ``None``:
-         either a file-like object representing a pipe to be connected to the subprocess’s standard input stream using
-         :meth:`asyncio.loop.connect_read_pipe()`, or the :data:`subprocess.PIPE` constant.
-      :param stdout:
-         If not ``None``:
-         either a file-like object representing the pipe to be connected to the subprocess’s standard output stream
-         using :meth:`asyncio.loop.connect_read_pipe()`, or the :data:`subprocess.PIPE` constant.
-      :param stderr:
-         If not ``None``:
-         either a file-like object representing the pipe to be connected to the subprocess’s standard error stream using
-         :meth:`asyncio.loop.connect_read_pipe()`, or one of :data:`subprocess.PIPE` or
-         :data:`subprocess.STDOUT` constants.
-      :param limit:
-         the buffer limit for :class:`python:StreamReader` wrappers for :attr:`python:Process.stdout` and
-         :attr:`python:Process.stderr` (if :data:`python:subprocess.PIPE` is passed to *stdout* and *stderr*
-         arguments).
+      :param stdout_output:
+         If ``None``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
+         If ``NotImplemented``: suppress the output.
+         Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
+         be constructed from (opened with mode ``''wb``).
+      :param stderr_output:
+         If ``None``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
+         If ``NotImplemented``: suppress the output.
+         Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
+         be constructed from (opened with mode ``''wb``).
+      :rtype: int
+      :return: return code of the subprocesses (one of *expected_returncodes*)
 
       :raises HelperExecutionError: if the subprocess exits with a returncode not in *expected_returncodes*.
 
-      Returns the tuple ``(returncode, stdout_data, stderr_data)``. *returncode* is the returncode
-      (contained in *expected_returncodes*). *stdout_data* and *stderr_data* are bytes object with the received data
-      from stdout and stderr, respectively.
+   .. method:: execute_helper_with_output(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]),
+                                          forced_env={}, output_to_process=1, other_output=None,
+                                          chunk_processor=None)
+
+      Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
+      its working directory, wait for it to complete and return its output.
+
+      When *chunk_processor* is ``None``, the entire output of the subprocess to stdout or stderr
+      (as defined by *output_to_process*) is return as ``bytes`` objects.
+      Example::
+
+           _, output = await context.execute_helper_with_output(..., output_to_process=2)  # without *chunk_processor*
+           # output is a 'bytes' objects containing the output of the subprocess to stderr
+
+      When *chunk_processor* is not ``None``, the output of the subprocess is split into chunks separated by
+      the non-empty ``bytes`` object ``chunk_processor.separator`` and ``chunk_processor.process(chunk, is_last)``
+      is called for each of the chunks (without ``chunk_processor.separator``) right after they occur.
+      *is_last* is ``False`` for every call except the last one that was not delimited by ``chunk_processor.separator``
+      but by the end of the stream.
+      This is suitable when a subprocess outputs a lot of data (even unbounded) but only a small part of it is
+      interesting.
+      Example::
+
+          class Processor(dlb.ex.ChunkProcessor):
+              separator = b'\r\n'
+              max_chunk_size = 100  # maximum chunk size (without separator)
+
+              def __init__(self):
+                  self.result = []
+
+              def process(self, chunk: bytes, is_last: bool):  # len(chunk) is <= 100, chunk does not contain '\r\n'
+                  if chunk.startswith('hello'):
+                      self.result.append(chunk)
+
+           _, output = await context.execute_helper_with_output(..., chunk_processor=Processor())
+           # output is a list of 'bytes' objects starting with b'hello'
+
+      See :meth:`execute_helper()` for a description of *cwd*, *arguments*, *expected_returncodes*, and *forced_env*.
+
+      :param helper_file: :term:`dynamic helper` to be executed as a relative path
+      :param arguments: command-line arguments
+      :type arguments: iterable of objects that can be converted to str
+      :param cwd: working directory of the subprocess to be started
+      :type cwd: ``None`` or a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :param expected_returncodes: expected return codes of the :term:`dynamic helper` *helper_file*
+      :type expected_returncodes: collection of integers
+      :param forced_env: dictionary of values to override in :attr:`env <dlb.ex.Context.env>` or ``None``
+      :type forced_env: None | Dict[str, str]
+      :type output_to_process: int
+      :param output_to_process: 1 to return stdout and 2 to return stderr of the subprocess
+      :param other_output:
+         Output for stdout of the subprocess if *output_to_process* is 2 and for *stderr* otherwise.
+         If ``None``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
+         If ``NotImplemented``: suppress the output.
+         Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
+         be constructed from (opened with mode ``''wb``).
+      :type chunk_processor: None | dlb.ex.ChunkProcessor
+      :param chunk_processor:
+         If ``None`` the entire output is returned.
+         Otherwise, ``chunk_processor.result`` after each chunk was fed to *chunk_processor* as described above.
+
+      :raises HelperExecutionError: if the subprocess exits with a returncode not in *expected_returncodes*.
+      :raises asyncio.LimitOverrunError: if *chunk_processor* is not ``None`` and the subprocess output
+         more than ``chunk_processor`` bytes without a ``chunk_processor.separator``.
+
+      Returns a tuple ``(returncode, output)``. *returncode* is the returncode of the subprocess and *output* its
+      output to stdout or stderr --- processed by ``chunk_processor`` if *chunk_processor* is ``None`` ---
+      as described above, .
 
    .. method:: replace_output(path, source):
 

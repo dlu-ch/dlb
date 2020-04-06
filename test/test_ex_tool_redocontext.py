@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
 import dlb.fs
 import dlb.ex
 import dlb.ex.dependaction
+import io
 import asyncio
 import unittest
 import tools_for_test
@@ -45,15 +46,16 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         open(os.path.join('-l', 'content'), 'xb').close()
         with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
-            e = rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout=asyncio.subprocess.PIPE)
-            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+            e = rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output='stdout.txt')
+            returncode = asyncio.get_event_loop().run_until_complete(e)
             self.assertEqual(0, returncode)
             regex = (
                 r"(?m)\A"
                 r".+ 0\n"
                 r".+ .+ .+ .+ 0 .+ .+ .+ content\n\Z"
             )
-            self.assertRegex(stdout.decode(), regex)
+            with open('stdout.txt', 'rb') as f:
+                self.assertRegex(f.read().decode(), regex)
 
     def test_fails_for_directory_helper(self):
         with dlb.ex.Context() as c:
@@ -71,27 +73,48 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             msg = "execution of 'ls' returned unexpected exit code 0"
             self.assertEqual(msg, str(cm.exception))
 
+    def test_fails_for_open_file(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            with self.assertRaises(TypeError) as cm:
+                with open('stdout.txt', 'xb') as f:
+                    asyncio.get_event_loop().run_until_complete(
+                        rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=f))
+            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_pipe(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            with self.assertRaises(TypeError) as cm:
+                asyncio.get_event_loop().run_until_complete(
+                    rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=asyncio.subprocess.PIPE))
+            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+            self.assertEqual(msg, str(cm.exception))
+
     def test_changes_cwd(self):
         os.mkdir('-l')
         open(os.path.join('-l', 'content'), 'xb').close()
         with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
-            e = rd.execute_helper('ls', ['-l'], cwd=dlb.fs.Path('-l'), stdout=asyncio.subprocess.PIPE)
-            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+            e = rd.execute_helper('ls', ['-l'], cwd=dlb.fs.Path('-l'), stdout_output='stdout.txt')
+            asyncio.get_event_loop().run_until_complete(e)
             regex = (
                 r"(?m)\A"
                 r".+ 0\n"
                 r".+ .+ .+ .+ 0 .+ .+ .+ content\n\Z"
             )
-            self.assertRegex(stdout.decode(), regex)
+            with open('stdout.txt', 'rb') as f:
+                self.assertRegex(f.read().decode(), regex)
 
-            e = rd.execute_helper('ls', ['-l'], cwd='.dlbroot/t', stdout=asyncio.subprocess.PIPE)
-            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+            e = rd.execute_helper('ls', ['-l'], cwd='.dlbroot/t', stdout_output='stdout2.txt')
+            asyncio.get_event_loop().run_until_complete(e)
             regex = (
                 r"(?m)\A"
                 r".+ 0\n"
             )
-            self.assertRegex(stdout.decode(), regex)
+            with open('stdout2.txt', 'rb') as f:
+                self.assertRegex(f.read().decode(), regex)
 
     def test_fails_for_cwd_not_in_working_tree(self):
         with dlb.ex.Context() as c:
@@ -134,15 +157,15 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             rd = dlb.ex.tool._RedoContext(c, dict())
             e = rd.execute_helper(
                 'ls', ['-d', dlb.fs.Path('.'), dlb.fs.Path('a/x'), dlb.fs.Path('.dlbroot/t/')],
-                cwd=dlb.fs.Path('a/b/c'),
-                stdout=asyncio.subprocess.PIPE)
-            returncode, stdout, stderr = asyncio.get_event_loop().run_until_complete(e)
+                cwd=dlb.fs.Path('a/b/c'), stdout_output='stdout.txt')
+            asyncio.get_event_loop().run_until_complete(e)
             output = (
                 "../../..\n"
                 "../../../.dlbroot/t\n"
                 "../../x\n"
             )
-            self.assertRegex(output, stdout.decode())
+            with open('stdout.txt', 'rb') as f:
+                self.assertEqual(output, f.read().decode())
 
     def test_fails_for_relative_path_not_in_working_tree(self):
         with dlb.ex.Context() as c:
@@ -150,6 +173,21 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             e = rd.execute_helper('ls', [dlb.fs.Path('..')])
             with self.assertRaises(dlb.ex.WorkingTreePathError):
                 asyncio.get_event_loop().run_until_complete(e)
+
+    def test_can_write_to_open_file(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            e = rd.execute_helper('ls', ['-l'], stdout_output='stdout.txt')
+            asyncio.get_event_loop().run_until_complete(e)
+            with open('stdout.txt', 'rb') as f:
+                self.assertIn(b'\n', f.read())
+
+    def test_can_write_to_devnull(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            e = rd.execute_helper('ls', ['ls --unsupported-option '], stderr_output=NotImplemented,
+                                  expected_returncodes=[2])
+            asyncio.get_event_loop().run_until_complete(e)
 
 
 @unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')
@@ -162,10 +200,217 @@ class ExecuteHelperEnvVarTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             c.env['X'] = 'x'
             c.env['Y'] = 'z'
             rd = dlb.ex.tool._RedoContext(c, dict())
-            e = rd.execute_helper('sh', ['-c', 'echo $X-$Y'], forced_env={'Y': 'zzz...'},
-                                  stdout=asyncio.subprocess.PIPE)
-            _, stdout, _ = asyncio.get_event_loop().run_until_complete(e)
-            self.assertEqual('x-zzz...', stdout.decode().strip())
+            e = rd.execute_helper('sh', ['-c', 'echo $X-$Y'], forced_env={'Y': 'zzz...'}, stdout_output='stdout.txt')
+            _ = asyncio.get_event_loop().run_until_complete(e)
+            with open('stdout.txt', 'rb') as f:
+                self.assertEqual(b'x-zzz...', f.read().strip())
+
+
+@unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')
+class ExecuteHelperWithOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_returns_output_as_bytes_without_processor(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_ >&2; echo 3'],
+                                              output_to_process=1, other_output=NotImplemented)
+            r, output = asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual(0, r)
+            self.assertEqual(b'1_\n3\n', output)
+
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_ >&2; echo 3'],
+                                              output_to_process=2, other_output=NotImplemented)
+            r, output = asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual(0, r)
+            self.assertEqual(b'2_\n', output)
+
+    def test_can_write_to_file(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_ >&2; echo 3'],
+                                              output_to_process=1, other_output='stderr.txt')
+            r, output = asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual(0, r)
+            self.assertEqual(b'1_\n3\n', output)
+            with open('stderr.txt', 'rb') as f:
+                self.assertEqual(b'2_\n', f.read())
+
+    def test_return_processor_result_with_processor(self):
+        with dlb.ex.Context() as c:
+            class ChunkProcessor(dlb.ex.tool.ChunkProcessor):
+                separator = b'_'
+
+                def __init__(self):
+                    self.chunks = []
+
+                def process(self, chunk: bytes, is_last: bool):
+                    self.chunks.append((chunk, is_last))
+
+                @property
+                def result(self):
+                    return self.chunks
+
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_; echo 3'],
+                                              output_to_process=1, chunk_processor=ChunkProcessor())
+            r, output = asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual(0, r)
+            self.assertEqual([(b'1', False), (b'\n2', False), (b'\n3\n', True)], output)
+
+    def test_processor_can_abort(self):
+        with dlb.ex.Context() as c:
+            class ChunkProcessor(dlb.ex.tool.ChunkProcessor):
+                def __init__(self):
+                    self.n = 0
+
+                def process(self, chunk: bytes, is_last: bool):
+                    self.n += 1
+                    if self.n > 1000:
+                        raise ValueError("it's enough!")
+
+                @property
+                def result(self):
+                    return self.n
+
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            e = rd.execute_helper_with_output('sh', ['-c', 'yes'], output_to_process=1, chunk_processor=ChunkProcessor())
+            with self.assertRaises(ValueError) as cm:
+                asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual("it's enough!", str(cm.exception))
+
+    def test_aborts_for_too_large_chunk_with_processor(self):
+        with dlb.ex.Context() as c:
+            class ChunkProcessor(dlb.ex.tool.ChunkProcessor):
+                def __init__(self):
+                    self.chunks = []
+
+                def process(self, chunk: bytes, is_last: bool):
+                    self.chunks.append((chunk, is_last))
+
+                @property
+                def result(self):
+                    return self.chunks
+
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            processor = ChunkProcessor()
+            processor.max_chunk_size = 20
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo 1; echo 01234567890123456789'],
+                                              output_to_process=1, chunk_processor=processor)
+            asyncio.get_event_loop().run_until_complete(e)
+
+            processor = ChunkProcessor()
+            processor.max_chunk_size = 19
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo 1; echo 01234567890123456789'],
+                                              output_to_process=1, chunk_processor=processor)
+            with self.assertRaises(asyncio.LimitOverrunError):
+                asyncio.get_event_loop().run_until_complete(e)
+
+    def test_fails_for_invalid_output_to_process(self):
+        msg = "'output_to_process' must be 1 or 2"
+
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], output_to_process=0)
+            with self.assertRaises(ValueError) as cm:
+                asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual(msg, str(cm.exception))
+
+            # noinspection PyTypeChecker
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], output_to_process='0')
+            with self.assertRaises(ValueError) as cm:
+                asyncio.get_event_loop().run_until_complete(e)
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_invalid_chunk_processor(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+
+            # noinspection PyTypeChecker
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], chunk_processor=1)
+            with self.assertRaises(TypeError) as cm:
+                asyncio.get_event_loop().run_until_complete(e)
+            msg = "'chunk_processor' must be None or a ChunkProcessor object, not <class 'int'>"
+            self.assertEqual(msg, str(cm.exception))
+
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], chunk_processor=dlb.ex.tool.ChunkProcessor())
+            with self.assertRaises(NotImplementedError):
+                asyncio.get_event_loop().run_until_complete(e)
+
+            # noinspection PyAbstractClass
+            class ChunkProcessor(dlb.ex.tool.ChunkProcessor):
+                def process(self, chunk: bytes, is_last: bool):
+                    pass
+
+            ChunkProcessor.separator = '\n'
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], chunk_processor=ChunkProcessor())
+            with self.assertRaises(TypeError) as cm:
+                asyncio.get_event_loop().run_until_complete(e)
+            msg = "'chunk_processor.separator' must be bytes object, not <class 'str'>"
+            self.assertEqual(msg, str(cm.exception))
+
+            ChunkProcessor.separator = b''
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], chunk_processor=ChunkProcessor())
+            with self.assertRaises(ValueError) as cm:
+                asyncio.get_event_loop().run_until_complete(e)
+            msg = "'chunk_processor.separator' must not be empty"
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_invalid_other_output(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=1)
+            with self.assertRaises(TypeError) as cm:
+                asyncio.get_event_loop().run_until_complete(e)
+            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_unexpected_return_code(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            with self.assertRaises(dlb.ex.HelperExecutionError) as cm:
+                e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=NotImplemented,
+                                                  expected_returncodes=[1])
+                asyncio.get_event_loop().run_until_complete(e)
+            msg = "execution of 'sh' returned unexpected exit code 0"
+            self.assertEqual(msg, str(cm.exception))
+
+
+@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+class ExecuteHelperRawTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_works_with_all_arguments(self):
+        async def redo(context):
+            proc = await context.execute_helper_raw(
+                'ls', ['--unsupported-option '],
+                cwd=None, forced_env=None,
+                stdin=None, stdout=None, stderr=asyncio.subprocess.DEVNULL, limit=1024)
+            await proc.communicate()
+            return proc
+
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            proc = asyncio.get_event_loop().run_until_complete(redo(rd))
+            self.assertIsInstance(proc, asyncio.subprocess.Process)
+            self.assertEqual(2, proc.returncode)
+
+    def test_fails_for_byteio(self):
+        async def redo(context):
+            f = io.BytesIO()
+            proc = await context.execute_helper_raw(
+                'ls', ['--unsupported-option '],
+                cwd=None, forced_env=None,
+                stdin=None, stdout=None, stderr=f, limit=1024)
+            await proc.communicate()
+            return proc
+
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            with self.assertRaises(io.UnsupportedOperation) as cm:
+                proc = asyncio.get_event_loop().run_until_complete(redo(rd))
+            self.assertEqual('fileno', cm.exception.args[0])
 
 
 class ReplaceOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCase):

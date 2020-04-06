@@ -53,9 +53,8 @@ class ShScriptlet(dlb.ex.Tool):
 
     async def redo(self, result, context):
         script = '\n'.join(textwrap.dedent(self.SCRIPTLET).strip().splitlines())
-        _, stdout, _ = \
-            await context.execute_helper(
+        _, stdout = \
+            await context.execute_helper_with_output(
                 self.EXECUTABLE,
-                ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()],
-                stdout=subprocess.PIPE)
+                ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()])
         result.output = stdout.decode(self.ENCODING)

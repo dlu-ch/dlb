@@ -5,6 +5,7 @@
 """Dependency-aware tool execution."""
 
 __all__ = [
+    'ChunkProcessor',
     'Tool',
     'DefinitionAmbiguityError',
     'DependencyError',
@@ -20,7 +21,7 @@ import os
 import collections
 import hashlib
 import inspect
-from typing import Type, Optional, Any, Dict, Tuple, Set, Iterable, Collection
+from typing import Union, Type, Optional, Any, Dict, Tuple, List, Set, Iterable, Collection
 from .. import ut
 from .. import fs
 from .. import cf
@@ -74,6 +75,14 @@ class HelperExecutionError(Exception):
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
+class ChunkProcessor:
+    separator = b'\n'
+    max_chunk_size = 2 ** 16  # asyncio.streams._DEFAULT_LIMIT
+
+    def process(self, chunk: bytes, is_last: bool):
+        raise NotImplementedError
+
+
 class _RedoContext(context_.ReadOnlyContext):
 
     def __init__(self, context: context_.Context, dependency_action_by_path: Dict[fs.Path, dependaction.Action]):
@@ -84,10 +93,10 @@ class _RedoContext(context_.ReadOnlyContext):
         self._dependency_action_by_path = dependency_action_by_path
         self._unchanged_paths = set()
 
-    async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
-                             cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
-                             forced_env: Optional[Dict[str, str]] = None,
-                             stdin=None, stdout=None, stderr=None, limit: int = 2**16):
+    def _prepare_for_subprocess(self, helper_file: fs.PathLike, arguments: Iterable[Any],
+                                cwd: Optional[fs.PathLike], forced_env: Optional[Dict[str, str]]) \
+            -> Tuple[fs.Path, List[str], Dict[str, str], fs.Path]:
+
         if not isinstance(helper_file, fs.Path):
             helper_file = fs.Path(helper_file)
 
@@ -132,19 +141,178 @@ class _RedoContext(context_.ReadOnlyContext):
             )
             di.inform(msg, level=cf.level.helper_execution)
 
-        import asyncio
-        proc = await asyncio.create_subprocess_exec(
-            *commandline_tokens,  # must all by str
-            cwd=(self.root_path / cwd).native, env=env,
-            stdin=stdin, stdout=stdout, stderr=stderr, limit=limit)
-        stdout, stderr = await proc.communicate()
-        returncode = proc.returncode
+        # commandline_tokens is to be used by asyncio.create_subprocess_exec():
+        #  - all elements must be str
+        #  - must contain executable as first element
 
+        return helper_file, commandline_tokens, env, cwd
+
+    def _open_potential_file(self, potential_file: Union[None, type(NotImplemented), fs.PathLike]):
+        if potential_file is None:
+            return
+
+        import asyncio
+        if potential_file is NotImplemented:
+            return asyncio.subprocess.DEVNULL
+
+        potential_file = fs.Path(potential_file)
+        if not potential_file.is_absolute():
+            potential_file = self.root_path / potential_file
+        return open(potential_file.native, 'wb')
+
+    @staticmethod
+    def _close_potential_file(f):
+        try:
+            c = f.close
+        except AttributeError:
+            pass
+        else:
+            c()
+
+    async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
+                             cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
+                             forced_env: Optional[Dict[str, str]] = None,
+                             stdout_output: Union[None, type(NotImplemented), fs.PathLike] = None,
+                             stderr_output: Union[None, type(NotImplemented), fs.PathLike] = None) -> int:
+
+        helper_file, commandline_tokens, env, cwd = \
+             self._prepare_for_subprocess(helper_file, arguments, cwd, forced_env)
+
+        import asyncio
+        stdout_file = self._open_potential_file(stdout_output)
+        stderr_file = self._open_potential_file(stderr_output)
+        try:
+            # io.BytesIO() cannot be used for *stdout* or *stderr* because file-like in the sense of
+            # asyncio.create_subprocess_exec() means (as of Python 3.8): has a method fileno()
+            proc = await asyncio.create_subprocess_exec(
+                *commandline_tokens, cwd=(self.root_path / cwd).native, env=env,
+                stdin=None, stdout=stdout_file, stderr=stderr_file)
+
+            await proc.communicate()
+        finally:
+            self._close_potential_file(stderr_file)
+            self._close_potential_file(stdout_file)
+
+        returncode = proc.returncode
         if returncode not in expected_returncodes:
             msg = f"execution of {helper_file.as_string()!r} returned unexpected exit code {proc.returncode}"
             raise HelperExecutionError(msg)
 
-        return returncode, stdout, stderr
+        return returncode
+
+    async def execute_helper_with_output(
+            self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
+            cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
+            forced_env: Optional[Dict[str, str]] = None,
+            output_to_process: int = 1, other_output: Union[None, type(NotImplemented), fs.PathLike] = None,
+            chunk_processor: Optional[ChunkProcessor] = None) -> Tuple[int, Any]:
+
+        import asyncio
+
+        if output_to_process not in (1, 2):
+            raise ValueError(f"'output_to_process' must be 1 or 2")
+
+        if chunk_processor is None:
+            chunk_separator = None
+            max_chunk_size = ChunkProcessor.max_chunk_size
+        else:
+            if not isinstance(chunk_processor, ChunkProcessor):
+                msg = f"'chunk_processor' must be None or a ChunkProcessor object, not {type(chunk_processor)!r}"
+                raise TypeError(msg)
+            chunk_separator = chunk_processor.separator
+            if not isinstance(chunk_separator, bytes):
+                msg = f"'chunk_processor.separator' must be bytes object, not {type(chunk_separator)!r}"
+                raise TypeError(msg)
+            if not chunk_separator:
+                msg = f"'chunk_processor.separator' must not be empty"
+                raise ValueError(msg)
+            max_chunk_size = max(1, int(chunk_processor.max_chunk_size))
+
+        helper_file, commandline_tokens, env, cwd = \
+            self._prepare_for_subprocess(helper_file, arguments, cwd, forced_env)
+
+        other_file = self._open_potential_file(other_output)
+
+        try:
+
+            if output_to_process == 2:
+                stdout = other_file
+                stderr = asyncio.subprocess.PIPE
+            else:
+                stdout = asyncio.subprocess.PIPE
+                stderr = other_file
+
+            # from asyncio.subprocess.create_subprocess_exec() - cannot use create_subprocess_exec() because it does not
+            # expose transport
+            loop = asyncio.events.get_event_loop()
+            protocol_factory = lambda: asyncio.subprocess.SubprocessStreamProtocol(limit=max_chunk_size, loop=loop)
+            transport, protocol = await loop.subprocess_exec(
+                protocol_factory, *commandline_tokens,
+                stdin=None, stdout=stdout, stderr=stderr,
+                cwd=(self.root_path / cwd).native, env=env)
+            proc = asyncio.subprocess.Process(transport, protocol, loop)
+
+            pipe = proc.stderr if output_to_process == 2 else proc.stdout
+            # *pipe* is asyncio.StreamReader(limit=limit, ...) setup for file descriptor *output_to_process*
+
+            if chunk_processor is None:
+                stdout, stderr = await proc.communicate()
+                output: bytes = stderr if output_to_process == 2 else stdout
+            else:
+                # read from pipe until EOF or error
+                reached_eof = False
+
+                try:
+                    while True:
+                        try:
+                            chunk = await pipe.readuntil(chunk_separator)
+                        except asyncio.IncompleteReadError as e:
+                            chunk = e.partial  # EOF reached without *chunk_separator*
+                            reached_eof = True
+
+                        if not reached_eof:
+                            chunk = chunk[:-len(chunk_separator)]
+                        chunk_processor.process(chunk, reached_eof)
+
+                        if reached_eof:
+                            break  # pipe closed
+                except:
+                    # e.g. asyncio.LimitOverrunError:
+                    # more than *max_chunk_size* bytes without *chunk_separator* since last *chunk_separator*,
+                    # e.consumed bytes could be read with pipe.readexactly().
+
+                    # properly read or close the pipe to avoid blocking of the executable
+                    transport.close()
+                    await proc.wait()
+                    raise
+
+                # then wait for subprocess to exit
+                # dot not call before EOF was read from *pipe* to avoid unlimited memory consumption in case of error
+                await proc.wait()
+                output = chunk_processor.result
+
+        finally:
+            self._close_potential_file(other_file)
+
+        returncode = proc.returncode
+        if returncode not in expected_returncodes:
+            msg = f"execution of {helper_file.as_string()!r} returned unexpected exit code {proc.returncode}"
+            raise HelperExecutionError(msg)
+
+        return returncode, output
+
+    # This a part of the (stable) public interface of dlb.ex.Tool.RedoContext, but undocumented on purpose.
+    async def execute_helper_raw(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
+                                 cwd: Optional[fs.PathLike] = None, forced_env: Optional[Dict[str, str]] = None,
+                                 stdin=None, stdout=None, stderr=None, limit: int = 2**16) \
+            -> 'asyncio.subprocess.Process':
+
+        helper_file, commandline_tokens, env, cwd = \
+             self._prepare_for_subprocess(helper_file, arguments, cwd, forced_env)
+
+        import asyncio
+        return await asyncio.create_subprocess_exec(*commandline_tokens, cwd=(self.root_path / cwd).native, env=env,
+                                                    stdin=stdin, stdout=stdout, stderr=stderr, limit=limit)
 
     def replace_output(self, path: fs.PathLike, source: fs.PathLike):
         # *path* may or may not exist.

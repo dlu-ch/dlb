@@ -115,9 +115,8 @@ class PkgConfig(dlb.ex.Tool):
                     library_selection_arguments.append(f'{lib} {c}')
 
         if library_selection_arguments:
-            _, stdout, _ = await context.execute_helper(
-                self.EXECUTABLE, ['--cflags', '--libs'] + library_selection_arguments,
-                stdout=subprocess.PIPE)
+            _, stdout = await context.execute_helper_with_output(
+                self.EXECUTABLE, ['--cflags', '--libs'] + library_selection_arguments)
             arguments_by_option, options = parse_from_output(stdout.decode().strip(), options='ILl')
 
             for p in arguments_by_option.get('-I', []):
