@@ -23,7 +23,7 @@ import os.path
 import stat
 import time
 import datetime
-from typing import Pattern, Type, Optional, Union, Tuple, List, Dict, Collection, Iterable, Hashable
+from typing import Collection, Dict, Hashable, Iterable, List, Optional, Pattern, Tuple, Type, Union
 from .. import ut
 from .. import fs
 from .. import di

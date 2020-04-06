@@ -22,7 +22,7 @@ __all__ = ['quote', 'ShScriptlet']
 
 import sys
 import textwrap
-from typing import Optional, Iterable, Union
+from typing import Iterable, Optional, Union
 import dlb.fs
 import dlb.ex
 assert sys.version_info >= (3, 7)

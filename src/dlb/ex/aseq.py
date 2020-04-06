@@ -9,7 +9,7 @@ __all__ = []
 import sys
 import time
 import asyncio
-from typing import Optional, Any, Dict, Set, Hashable, Callable, Coroutine
+from typing import Any, Callable, Coroutine, Dict, Hashable, Optional, Set
 
 assert sys.version_info >= (3, 7)
 

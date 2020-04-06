@@ -10,7 +10,7 @@
 #
 # Usage example:
 #
-#     from typing import Union, Tuple, List, Iterable
+#     from typing import Iterable, List, Tuple, Union
 #     import dlb.ex
 #     import dlb_contrib.strace
 #
@@ -33,7 +33,7 @@ import re
 import dlb.fs
 import dlb.ex
 from . import backslashescape
-from typing import Optional, Union, List, Tuple, Iterable
+from typing import Iterable, List, Optional, Tuple, Union
 assert sys.version_info >= (3, 7)
 
 SYSCALL_NAME_REGEX = re.compile(rb'^(?P<name>[a-z][a-zA-Z0-9_#]*)')

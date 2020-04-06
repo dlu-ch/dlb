@@ -33,7 +33,7 @@ __all__ = [
 
 import sys
 import re
-from typing import Optional, Tuple, Dict, Set, Iterable
+from typing import Dict, Iterable, Optional, Set, Tuple
 import dlb.fs
 import dlb.ex
 from . import backslashescape

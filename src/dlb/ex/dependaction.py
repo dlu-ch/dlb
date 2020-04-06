@@ -13,7 +13,7 @@ __all__ = [
 
 import os
 import stat
-from typing import Type, Set, Optional, Sequence, Hashable
+from typing import Hashable, Optional, Sequence, Set, Type
 from .. import ut
 from .. import fs
 from . import rundb

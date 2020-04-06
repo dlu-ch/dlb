@@ -11,7 +11,7 @@ import sys
 import marshal
 import dataclasses
 import collections.abc
-from typing import Iterable, Dict, Any
+from typing import Any, Dict, Iterable
 assert sys.version_info >= (3, 7)
 
 

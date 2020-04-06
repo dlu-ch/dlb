@@ -34,7 +34,7 @@ __all__ = [
 import sys
 import os
 import shutil
-from typing import Iterable, Union, Tuple, List
+from typing import Iterable, List, Tuple, Union
 import dlb.fs
 import dlb.di
 import dlb.ex

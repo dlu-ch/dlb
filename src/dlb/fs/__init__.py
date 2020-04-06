@@ -18,7 +18,7 @@ import os
 import collections.abc
 import functools
 import pathlib  # since Python 3.4
-from typing import Pattern, Optional, Union, Tuple, List, Sequence, Iterator
+from typing import Iterator, List, Optional, Pattern, Sequence, Tuple, Union
 assert sys.version_info >= (3, 7)
 
 

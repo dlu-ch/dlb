@@ -26,7 +26,7 @@ __all__ = ['sources_from_rules', 'additional_sources_from_rule']
 
 import sys
 import string
-from typing import List, Iterable
+from typing import Iterable, List
 assert sys.version_info >= (3, 7)
 
 

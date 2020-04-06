@@ -25,7 +25,7 @@ import sys
 import math
 import re
 import time
-from typing import Optional, Dict, List, Tuple, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 from .. import ut
 
 

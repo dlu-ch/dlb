@@ -21,7 +21,7 @@ import os
 import collections
 import hashlib
 import inspect
-from typing import Union, Type, Optional, Any, Dict, Tuple, List, Set, Iterable, Collection
+from typing import Any, Collection, Dict, Iterable, List, Optional, Union, Set, Tuple, Type
 from .. import ut
 from .. import fs
 from .. import cf

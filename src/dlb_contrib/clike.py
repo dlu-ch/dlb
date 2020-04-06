@@ -50,7 +50,7 @@ import string
 import re
 import dlb.fs
 import dlb.ex
-from typing import Optional, Union, Iterable
+from typing import Iterable, Optional, Union
 assert sys.version_info >= (3, 7)
 
 # Identifier of unrestricted length without universal characters.

@@ -10,7 +10,7 @@ __all__ = []
 import re
 import dataclasses
 import copy
-from typing import Pattern, TypeVar, Type, Optional, Iterable, Any, Dict, Hashable, Union, Tuple
+from typing import Any, Dict, Hashable, Iterable, Optional, Pattern, Type, TypeVar, Tuple, Union
 from .. import fs
 from . import mult
 

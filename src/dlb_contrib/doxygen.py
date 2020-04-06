@@ -28,7 +28,7 @@ import sys
 import re
 import string
 import collections.abc
-from typing import Dict, Any
+from typing import Any, Dict
 import dlb.fs
 import dlb.ex
 assert sys.version_info >= (3, 7)
