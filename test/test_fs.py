@@ -149,14 +149,14 @@ class PathFromOtherTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.Path(None)
-        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'NoneType'>"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_int(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.Path(1)
-        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'int'>"
         self.assertEqual(msg, str(cm.exception))
 
 

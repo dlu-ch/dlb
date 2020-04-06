@@ -80,7 +80,10 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 with open('stdout.txt', 'xb') as f:
                     asyncio.get_event_loop().run_until_complete(
                         rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=f))
-            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+            msg = (
+                "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, "
+                "not <class '_io.BufferedWriter'>"
+            )
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_pipe(self):
@@ -89,7 +92,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(TypeError) as cm:
                 asyncio.get_event_loop().run_until_complete(
                     rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=asyncio.subprocess.PIPE))
-            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'int'>"
             self.assertEqual(msg, str(cm.exception))
 
     def test_changes_cwd(self):
@@ -364,7 +367,7 @@ class ExecuteHelperWithOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCa
             e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=1)
             with self.assertRaises(TypeError) as cm:
                 asyncio.get_event_loop().run_until_complete(e)
-            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'int'>"
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_unexpected_return_code(self):

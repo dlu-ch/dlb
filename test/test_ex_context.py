@@ -658,7 +658,7 @@ class ManagedTreePathTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             with self.assertRaises(TypeError) as cm:
                 dlb.ex.Context.working_tree_path_of(3)
-            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence"
+            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'int'>"
             self.assertEqual(msg, str(cm.exception))
 
     def test_isdir_is_respected(self):
