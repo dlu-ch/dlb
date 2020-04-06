@@ -2,12 +2,9 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-import sys
-import os.path
-here = os.path.dirname(__file__) or os.curdir
-sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
-
+import tools_for_test  # also sets up module search paths
 import dlb.fs
+import os.path
 import pathlib
 import copy
 import unittest

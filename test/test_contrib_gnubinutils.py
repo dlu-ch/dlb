@@ -2,17 +2,12 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-import sys
-import os.path
-here = os.path.dirname(__file__) or os.curdir
-sys.path.insert(0, os.path.abspath(os.path.join(here)))
-sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
-
+import tools_for_test  # also sets up module search paths
 import dlb.ex
 import dlb_contrib.gcc
 import dlb_contrib.gnubinutils
+import os.path
 import unittest
-import tools_for_test
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')

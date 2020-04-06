@@ -2,19 +2,14 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-import sys
-import os.path
-here = os.path.dirname(__file__) or os.curdir
-sys.path.insert(0, os.path.abspath(os.path.join(here)))
-sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
-
+import tools_for_test  # also sets up module search paths
 import dlb.fs
 import dlb.ex
 import dlb.ex.dependaction
+import os.path
 import io
 import asyncio
 import unittest
-import tools_for_test
 
 
 class ConstructionTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
@@ -144,7 +139,7 @@ class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             asyncio.get_event_loop().run_until_complete(rd.execute_helper(
-                'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/..'
+                'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c'), stdout_output=NotImplemented))  # 'a/b/..'
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper(
                     'ls', [dlb.fs.Path('a/b'), dlb.fs.Path('a')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/../..'
@@ -412,7 +407,7 @@ class ExecuteHelperRawTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rd = dlb.ex.tool._RedoContext(c, dict())
             with self.assertRaises(io.UnsupportedOperation) as cm:
-                proc = asyncio.get_event_loop().run_until_complete(redo(rd))
+                asyncio.get_event_loop().run_until_complete(redo(rd))
             self.assertEqual('fileno', cm.exception.args[0])
 
 

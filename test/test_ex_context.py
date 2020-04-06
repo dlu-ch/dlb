@@ -2,21 +2,16 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-import sys
-import os.path
-here = os.path.dirname(__file__) or os.curdir
-sys.path.insert(0, os.path.abspath(os.path.join(here)))
-sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
-
+import tools_for_test  # also sets up module search paths
 import dlb.fs
 import dlb.ex
 import dlb.ex.worktree
 import dlb.ex.rundb
+import os.path
 import stat
 import time
 import datetime
 import unittest
-import tools_for_test
 
 
 RUNDB_FILENAME = dlb.ex.worktree.rundb_filename_for_schema_version(dlb.ex.rundb.SCHEMA_VERSION)

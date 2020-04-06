@@ -2,17 +2,13 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-import sys
-import os.path
-here = os.path.dirname(__file__) or os.curdir
-sys.path.insert(0, os.path.abspath(os.path.join(here, '../src')))
-
+import tools_for_test  # also sets up module search paths
 import dlb.fs
 import dlb.ex.mult
 import dlb.ex.depend
 import re
-from typing import Tuple, Type
 import unittest
+from typing import Tuple, Type
 
 
 filesystem_dependency_classes: Tuple[Type[dlb.ex.depend.Dependency], ...] = (

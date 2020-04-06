@@ -4,18 +4,19 @@
 
 import sys
 import os.path
-import io
-
-# make sure sys.path does not a relative path before you import a module inside
-sys.path = [os.path.abspath(p) for p in sys.path]
-
 import os
+import io
 import pathlib
 import tempfile
 import shutil
-from typing import Union
 import unittest
-import dlb.di
+from typing import Union
+
+here = os.path.dirname(__file__) or os.curdir
+sys.path.insert(0, os.path.join(here, '../src'))
+
+# make sure sys.path does not a relative path before you import a module inside
+sys.path = [os.path.abspath(p) for p in sys.path]
 
 
 class DirectoryChanger:  # change directory temporarily
@@ -93,6 +94,7 @@ class TemporaryDirectoryWithChmodTestCase(TemporaryDirectoryTestCase):
 class TemporaryWorkingDirectoryTestCase(TemporaryDirectoryTestCase):
 
     def setUp(self):
+        import dlb.di
         super().setUp()
         os.mkdir('.dlbroot')
         dlb.di.set_threshold_level(dlb.di.INFO)
