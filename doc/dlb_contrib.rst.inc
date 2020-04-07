@@ -28,8 +28,14 @@ reside in your repositories.
 Therefore, their documentation is maintained only in the source files to make them self-contained.
 Please see there for details.
 
-.. dlbcontrib:module:: generic
+.. Order of the modules
+   - module without tool classes before module with tool classes
+   - a before b if b imports a
+   - simple modules before complicated modules
+
 .. dlbcontrib:module:: backslashescape
+.. dlbcontrib:module:: partition
+.. dlbcontrib:module:: generic
 .. dlbcontrib:module:: zip
 .. dlbcontrib:module:: git
 .. dlbcontrib:module:: gnumake
