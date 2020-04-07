@@ -6,7 +6,7 @@ import dlb_contrib.gnubinutils
 from typing import Iterable, Union
 
 
-source_path = dlb.fs.Path('./')
+source_path = dlb.fs.Path('.')
 output_path = dlb.fs.Path('out/')
 
 
@@ -16,7 +16,6 @@ class CplusplusCompiler(dlb_contrib.gcc.CplusplusCompilerGcc):
 
 
 with dlb.ex.Context():
-
     for library_path in source_path.list(name_filter=r'lib_.*'):
 
         with dlb.di.Cluster(f'library in {library_path.as_string()!r}'):

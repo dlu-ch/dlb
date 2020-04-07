@@ -32,9 +32,8 @@ PYTHON3=python3
 
 build_dir="build/"
 build_generated_dir="${build_dir:?}generated/"
-dlb_script="build-all.py"
 result_file="${build_dir:?}result.txt"
-makefile_setup_dir="setup/make2/"
+setup_dir="setup/"
 
 script_dir="$("${READLINK:?}" -e -- "$0")"
 script_dir="${script_dir%/*}"
@@ -52,12 +51,11 @@ function prepare_testdata() {
     "${RM:?}" -rf -- "${build_generated_dir:?}"
     "${PYTHON2:?}" "${build_dir:?}generate_libs.py" "${build_generated_dir:?}" "$@"
 
-    "${CP:?}" -- "${dlb_script:?}" "${build_generated_dir:?}"
     "${MKDIR:?}" -p -- "${build_generated_dir:?}.dlbroot"
 
-    for q in "${makefile_setup_dir:?}"top/* ; do "${CP:?}" -- "${q}" "${build_generated_dir:?}";  done
+    for q in "${setup_dir:?}"top/* ; do "${CP:?}" -- "${q}" "${build_generated_dir:?}";  done
     for p in "${build_generated_dir:?}"lib_* ; do
-        for q in "${makefile_setup_dir:?}"eachlib/* ; do "${CP:?}" -- "${q}" "${p}";  done
+        for q in "${setup_dir:?}"eachlib/* ; do "${CP:?}" -- "${q}" "${p}";  done
     done
 }
 
@@ -114,46 +112,46 @@ function run_builds_return_avg_durations() {
 }
 
 
+function run_build_and_append_results_to_result_file() {
+    # $1 is number of runs to average for empty and partial builds
+    # $2 is number of libraries; must be > 0
+    # $3 is number of classes per library - must be >= max(15, 5) due to limitation of 'generate_libs.py'
+    # $4 name of the test (single word of printable, non-space characters)
+    # $5 ...: build command to run with arguments
+
+    local number_of_runs
+    local number_of_libraries
+    local number_of_classes_per_library
+    local name="$4"
+    declare -i number_of_runs="$1"
+    declare -i number_of_libraries="$2"
+    declare -i number_of_classes_per_library="$3"
+    shift 4
+
+    local file_to_touch="lib_0/class_0.cpp"
+    prepare_testdata "${number_of_libraries}" "${number_of_classes_per_library}" 15 5
+    result_line="${name:?} ${number_of_libraries} ${number_of_classes_per_library}"
+    if run_builds_return_avg_durations "${number_of_runs}" "${file_to_touch}" "$@"; then
+        result_line="${result_line} ${durations[*]}"
+    fi
+    echo  "${result_line}" >> "${result_file:?}"
+}
+
+
 function run_builds_and_append_results_to_result_file() {
     # $1 is number of runs to average for empty and partial builds
     # $2 is number of libraries; must be > 0
     # $3 is number of classes per library - must be >= max(15, 5) due to limitation of 'generate_libs.py'
 
-    local number_of_runs
-    local number_of_libraries
-    local number_of_classes_per_library
-    declare -i number_of_runs="$1"
-    declare -i number_of_libraries="$2"
-    declare -i number_of_classes_per_library="$3"
+    run_build_and_append_results_to_result_file "$1" "$2" "$3" "make" "make"
 
-    local file_to_touch="lib_0/class_0.cpp"
-    local number_of_classes
+    # based on example/c-minimal-gnumake
+    run_build_and_append_results_to_result_file "$1" "$2" "$3" "make2" "./build-all"
 
-    prepare_testdata "${number_of_libraries}" "${number_of_classes_per_library}" 15 5
+    # based on example/c-minimal:
+    run_build_and_append_results_to_result_file "$1" "$2" "$3" "dlb" "dlb" "build-all"
 
-    result_line="make ${number_of_libraries} ${number_of_classes_per_library}"
-    if run_builds_return_avg_durations "${number_of_runs}" "${file_to_touch}" make; then
-        result_line="${result_line} ${durations[*]}"
-    fi
-    echo  "${result_line}" >> "${result_file:?}"
-
-    result_line="make2 ${number_of_libraries} ${number_of_classes_per_library}"
-    if run_builds_return_avg_durations "${number_of_runs}" "${file_to_touch}" ./build-all; then
-        result_line="${result_line} ${durations[*]}"
-    fi
-    echo  "${result_line}" >> "${result_file:?}"
-
-    result_line="dlb ${number_of_libraries} ${number_of_classes_per_library}"
-    if run_builds_return_avg_durations "${number_of_runs}" "${file_to_touch}" dlb build-all; then
-        result_line="${result_line} ${durations[*]}"
-    fi
-    echo  "${result_line}" >> "${result_file:?}"
-
-    result_line="scons ${number_of_libraries} ${number_of_classes_per_library}"
-    if run_builds_return_avg_durations "${number_of_runs}" "${file_to_touch}" scons; then
-        result_line="${result_line} ${durations[*]}"
-    fi
-    echo  "${result_line}" >> "${result_file:?}"
+    run_build_and_append_results_to_result_file "$1" "$2" "$3" "scons" "scons"
 }
 
 

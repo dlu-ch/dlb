@@ -30,15 +30,15 @@ with open(result_file_path, 'r') as result_file:
     for line in result_file:
         line = line.strip()
         if line[:1] == '#':
-            m = re.fullmatch(r'# dlb version: ([0-9a-f.]+)\.', line)
+            m = re.fullmatch(r'# dlb version: ([0-9a-z.+]+)\.', line)
             if m:
                 description_by_tool['dlb'] = f'dlb {m.group(1)}'
                 continue
-            m = re.fullmatch(r'# GNU Make ([0-9a-f.]+).*', line)
+            m = re.fullmatch(r'# GNU Make ([0-9a-z.]+).*', line)
             if m:
                 description_by_tool['make'] = f'GNU Make {m.group(1)}'
                 continue
-            m = re.fullmatch(r'# SCons .* v([0-9][0-9a-f.]+).*', line)
+            m = re.fullmatch(r'# SCons .* v([0-9][0-9a-z.]+).*', line)
             if m:
                 v = m.group(1)
                 if len(v) > 10:
@@ -58,7 +58,15 @@ with open(result_file_path, 'r') as result_file:
 
 description_by_tool['make2'] = '{}\n(complete)'.format(description_by_tool['make'])
 description_by_tool['make'] = '{}\n+ makedepend (simplistic)'.format(description_by_tool['make'])
+
 tools = ['make', 'make2', 'dlb', 'scons']  # as used in file *result_file_path*
+colormap = plt.get_cmap("tab10")
+style_by_tool = {
+    'make': (colormap(2), '-', 'x', 'none'),
+    'make2': (colormap(2), '-', 'v', 'full'),
+    'dlb': (colormap(0), '-', 'o', 'full'),
+    'scons': (colormap(1), '-', 's', 'full')
+}
 
 
 # vary number_of_classes_per_library
@@ -69,34 +77,40 @@ ncls = set(ncls for (t, nlib, ncls), v in durations_by_configuration.items())
 fig.suptitle(f'{number_of_libraries} static libraries with {min(ncls)} to {max(ncls)} C++ source files each')
 
 for tool in tools:
-    # full build (first run)
+    line_color, line_style, marker, marker_fillstyle = style_by_tool[tool]
+    
+    # full build (maximum of first two runs)
     x, y = zip(*[
-        (ncls, v[0])
+        (ncls, max(v[0], v[1]))
         for (t, nlib, ncls), v in durations_by_configuration.items()
         if v and nlib == number_of_libraries and t == tool
     ])
-    axs[0][0].plot(x, y, label=tool, marker='o')
+    axs[0][0].plot(x, y, label=tool, color=line_color, linestyle=line_style,
+                   marker=marker, fillstyle=marker_fillstyle)
     axs[0][0].grid()
     axs[0][0].set_xticklabels([])
-    axs[1][0].semilogy(x, y, label=tool, marker='o')
+    axs[1][0].semilogy(x, y, label=tool, color=line_color, linestyle=line_style,
+                       marker=marker, fillstyle=marker_fillstyle)
     axs[1][0].grid(which='both')
     axs[0][0].set_title('full build\n(each source file compiled, linked)')
     axs[1][0].set_xlabel('number of source files per library')
     axs[1][0].set_ylabel('duration (s)')
 
-    # empty build, vary number_of_classes_per_library
+    # partial build, vary number_of_classes_per_library
     x, y = zip(*[
         (ncls, v[3])
         for (t, nlib, ncls), v in durations_by_configuration.items()
         if v and nlib == 3 and t == tool
     ])
-    axs[0][1].plot(x, y, label=tool, marker='o')
+    axs[0][1].plot(x, y, label=tool, color=line_color, linestyle=line_style,
+                   marker=marker, fillstyle=marker_fillstyle)
     axs[0][1].grid()
     axs[0][1].set_xticklabels([])
     axs[0][1].yaxis.tick_right()
-    axs[1][1].semilogy(x, y, label=tool, marker='o')
+    axs[1][1].semilogy(x, y, label=tool, color=line_color, linestyle=line_style,
+                       marker=marker, fillstyle=marker_fillstyle)
     axs[1][1].grid(which='both')
-    axs[0][1].set_title(f'empty build\n(no source file compiled, not linked)')
+    axs[0][1].set_title(f'partial build\n(after one source file has been changed)')
     axs[1][1].set_xlabel('number of source files per library')
     axs[1][1].set_ylabel('duration (s)')
     axs[1][1].yaxis.tick_right()
@@ -114,35 +128,41 @@ number_of_classes_per_library = 100
 nlib = set(nlib for (t, nlib, ncls), v in durations_by_configuration.items())
 fig.suptitle(f'{min(nlib)} to {max(nlib)} static libraries with {number_of_classes_per_library} C++ source files each')
 
-for tool in tools:
+for tool in style_by_tool:
+    line_color, line_style, marker, marker_fillstyle = style_by_tool[tool]
+
     # full build (first run)
     x, y = zip(*[
         (nlib, v[0])
         for (t, nlib, ncls), v in durations_by_configuration.items()
         if v and ncls == number_of_classes_per_library and t == tool
     ])
-    axs[0][0].plot(x, y, label=tool, marker='o')
+    axs[0][0].plot(x, y, label=tool, color=line_color, linestyle=line_style,
+                   marker=marker, fillstyle=marker_fillstyle)
     axs[0][0].grid()
     axs[0][0].set_xticklabels([])
-    axs[1][0].semilogy(x, y, label=tool, marker='o')
+    axs[1][0].semilogy(x, y, label=tool, color=line_color, linestyle=line_style,
+                       marker=marker, fillstyle=marker_fillstyle)
     axs[1][0].grid(which='both')
     axs[0][0].set_title('full build\n(each source file compiled, linked)')
     axs[1][0].set_xlabel('number of libraries')
     axs[1][0].set_ylabel('duration (s)')
 
-    # empty build, vary number_of_classes_per_library
+    # partial build, vary number_of_classes_per_library
     x, y = zip(*[
         (nlib, v[3])
         for (t, nlib, ncls), v in durations_by_configuration.items()
         if v and ncls == number_of_classes_per_library and t == tool
     ])
-    axs[0][1].plot(x, y, label=tool, marker='o')
+    axs[0][1].plot(x, y, label=tool, color=line_color, linestyle=line_style,
+                   marker=marker, fillstyle=marker_fillstyle)
     axs[0][1].grid()
     axs[0][1].set_xticklabels([])
     axs[0][1].yaxis.tick_right()
-    axs[1][1].semilogy(x, y, label=tool, marker='o')
+    axs[1][1].semilogy(x, y, label=tool, color=line_color, linestyle=line_style,
+                       marker=marker, fillstyle=marker_fillstyle)
     axs[1][1].grid(which='both')
-    axs[0][1].set_title(f'empty build\n(no source file compiled, not linked)')
+    axs[0][1].set_title('partial build\n(after one source file has been changed)')
     axs[1][1].set_xlabel('number of libraries')
     axs[1][1].set_ylabel('duration (s)')
     axs[1][1].yaxis.tick_right()
