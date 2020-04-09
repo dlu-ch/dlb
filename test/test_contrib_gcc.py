@@ -73,12 +73,12 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_threshold_level(dlb.di.DEBUG)
         dlb.di.set_output_file(sys.stderr)
 
-        t = CCompiler(source_file='a.c', object_file='a.o', include_search_directories=['i/'])
+        t = CCompiler(source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/'])
         with dlb.ex.Context():
             result = t.run()
 
         self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
-        self.assertTrue(os.path.isfile(result.object_file.native))
+        self.assertTrue(os.path.isfile(result.object_files[0].native))
         self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
         with dlb.ex.Context():
@@ -90,11 +90,21 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_colon_in_name(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
-            CCompiler(source_file='a:c', object_file='a.o')
+            CCompiler(source_files=['a:c'], object_files=['a.o'])
         msg = (
-            "keyword argument for dependency role 'source_file' is invalid: 'a:c'\n"
+            "keyword argument for dependency role 'source_files' is invalid: ['a:c']\n"
             "  | reason: invalid path for 'Path': 'a:c' (must not contain these characters: '\\n','\\r',':',';')"
         )
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_different_number_of_inputs_and_output(self):
+        open('a.c', 'w').close()
+
+        t = CCompiler(source_files=['a.c'], object_files=['a.o', 'b.o'])
+        with self.assertRaises(ValueError) as cm:
+            with dlb.ex.Context():
+                t.run()
+        msg = "'object_files' must be of same length as 'source_files'"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_multiple_inputs(self):
@@ -104,7 +114,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
                 return ['a.c']
 
-        t = C(source_file='a.c', object_file='a.o')
+        t = C(source_files=['a.c'], object_files=['a.o'])
         with self.assertRaises(dlb.ex.HelperExecutionError):
             with dlb.ex.Context():
                 t.run()
@@ -115,7 +125,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         class C(CCompiler):
             SUPPRESSED_WARNINGS = ('no-all',)
 
-        t = C(source_file='a.c', object_file='a.o')
+        t = C(source_files=['a.c'], object_files=['a.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
                 t.run()
@@ -127,7 +137,7 @@ class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         class C(CCompiler):
             DEFINITIONS = {'a(': None}
 
-        t = C(source_file='a.c', object_file='a.o')
+        t = C(source_files=['a.c'], object_files=['a.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
                 t.run()
@@ -171,12 +181,12 @@ class CplusplusTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_output_file(sys.stderr)
 
         t = dlb_contrib.gcc.CplusplusCompilerGcc(
-            source_file='a.c', object_file='a.o', include_search_directories=['i/'])
+            source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/'])
         with dlb.ex.Context():
             result = t.run()
 
         self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
-        self.assertTrue(os.path.isfile(result.object_file.native))
+        self.assertTrue(os.path.isfile(result.object_files[0].native))
         self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
         with dlb.ex.Context():
@@ -224,9 +234,8 @@ class CLinkerTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
             ))
 
         with dlb.ex.Context():
-            dlb_contrib.gcc.CplusplusCompilerGcc(source_file='a.c', object_file='a.o').run()
-            dlb_contrib.gcc.CplusplusCompilerGcc(source_file='b.c', object_file='b.o').run()
-            dlb_contrib.gcc.CplusplusCompilerGcc(source_file='c.c', object_file='c.o').run()
+            dlb_contrib.gcc.CplusplusCompilerGcc(source_files=['a.c', 'b.c'], object_files=['a.o', 'b.o']).run()
+            dlb_contrib.gcc.CplusplusCompilerGcc(source_files=['c.c'], object_files=['c.o']).run()
 
     def test_fails_without_proper_suffix(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:

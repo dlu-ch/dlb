@@ -21,12 +21,12 @@ with dlb.ex.Context():
         with dlb.di.Cluster(f'library in {library_path.as_string()!r}'):
             with dlb.di.Cluster(f'compile'), dlb.ex.Context():
                 compile_results = [
-                    CplusplusCompiler(source_file=source_file,
-                                      object_file=output_path / source_file[1:].with_appended_suffix('.o'),
+                    CplusplusCompiler(source_files=[source_file],
+                                      object_files=[output_path / source_file[1:].with_appended_suffix('.o')],
                                       include_search_directories=[source_path]).run()
                     for source_file in library_path.list(name_filter=r'.+\.cpp') if not source_file.is_dir()
                 ]
             with dlb.di.Cluster(f'link'):
                 archive_file = output_path / (library_path.components[-1] + '.a')
-                dlb_contrib.gnubinutils.Archive(object_files=[r.object_file for r in compile_results],
+                dlb_contrib.gnubinutils.Archive(object_files=[r.object_files[0] for r in compile_results],
                                                 archive_file=archive_file).run()

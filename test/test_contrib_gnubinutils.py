@@ -30,8 +30,9 @@ class ArTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
         dlb.cf.level.helper_execution = dlb.di.ERROR
 
         with dlb.ex.Context():
-            object_files = [
-                dlb_contrib.gcc.CCompilerGcc(source_file=src_file, object_file=src_file + '.o').run().object_file
+            object_file_groups = [
+                dlb_contrib.gcc.CCompilerGcc(source_files=[src_file], object_files=[src_file + '.o']).run().object_files
                 for src_file in ['a.c', 'b.c']
             ]
-            dlb_contrib.gnubinutils.Archive(object_files=object_files, archive_file='libexample.a').run()
+            dlb_contrib.gnubinutils.Archive(object_files=[o for g in object_file_groups for o in g],
+                                            archive_file='libexample.a').run()

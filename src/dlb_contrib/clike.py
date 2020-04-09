@@ -187,6 +187,8 @@ def identifier_from_path(path: dlb.fs.PathLike, *, to_upper_case: bool = True) -
 
 # noinspection PyAbstractClass
 class ClikeCompiler(dlb.ex.Tool):
+    # Compile one or multiple source file to their corresponding object files.
+
     # Dynamic helper of compiler executable, looked-up in the context.
     EXECUTABLE = ''  # define in subclass
 
@@ -195,8 +197,10 @@ class ClikeCompiler(dlb.ex.Tool):
     # If value is None: "undefine" the definition.
     DEFINITIONS = {}  # e.g. {'VERSION': '1.2.3', 'MAX(a, b)': '(((a) > (b)) ? (a) : (b))'}
 
-    source_file = dlb.ex.Tool.Input.RegularFile()
-    object_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
+    source_files = dlb.ex.Tool.Input.RegularFile[1:]()
+
+    # object_files[i] is object file for source_files[i]
+    object_files = dlb.ex.Tool.Output.RegularFile[1:](replace_by_same_content=False)
 
     # Tuple of paths of directories that are to be searched for include files in addition to the system include files.
     include_search_directories = dlb.ex.Tool.Input.Directory[:](required=False)

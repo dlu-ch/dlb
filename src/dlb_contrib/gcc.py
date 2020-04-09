@@ -75,7 +75,6 @@ def _check_warning_name(name: str) -> str:
     return name
 
 
-# noinspection PyUnresolvedReferences
 class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'gcc'
@@ -86,10 +85,13 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     # Names of warnings that should make the compilation unsuccessful.
     FATAL_WARNINGS = ('all',)
 
-    source_file = dlb.ex.Tool.Input.RegularFile(cls=Path)
+    source_files = dlb.ex.Tool.Input.RegularFile[1:](cls=Path)
     include_search_directories = dlb.ex.Tool.Input.Directory[:](required=False, cls=Path)
 
     async def redo(self, result, context):
+        if len(result.object_files) != len(result.source_files):
+            raise ValueError("'object_files' must be of same length as 'source_files'")
+
         compile_arguments = [c for c in self.get_compile_arguments()]
 
         # https://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html#Directory-Options
@@ -119,27 +121,29 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
                     compile_arguments += ['-D', f'{macro}={replacement}']
 
         # compile
-        with context.temporary() as make_rules_file, context.temporary() as object_file:
-            await context.execute_helper(
-                self.EXECUTABLE,
-                compile_arguments + [
-                    '-x', self.LANGUAGE, '-std=' + self.DIALECT, '-c', '-o', object_file,
-                    '-MMD', '-MT', '_ ', '-MF', make_rules_file,
-                    result.source_file
-                ]
-            )
+        for source_file, object_file in zip(result.source_files, result.object_files):
+            with context.temporary() as make_rules_file, context.temporary() as temp_object_file:
+                await context.execute_helper(
+                    self.EXECUTABLE,
+                    compile_arguments + [
+                        '-x', self.LANGUAGE, '-std=' + self.DIALECT, '-c', '-o', temp_object_file,
+                        '-MMD', '-MT', '_ ', '-MF', make_rules_file,
+                        source_file
+                    ]
+                )
 
-            # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
-            included_files = []
-            with open(make_rules_file.native, 'r', encoding=sys.getfilesystemencoding()) as dep_file:
-                for p in dlb_contrib.gnumake.additional_sources_from_rule(dep_file):
-                    try:
-                        included_files.append(context.working_tree_path_of(p))
-                    except ValueError:
-                        pass
+                # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
+                included_files = set()
+                with open(make_rules_file.native, 'r', encoding=sys.getfilesystemencoding()) as dep_file:
+                    for p in dlb_contrib.gnumake.additional_sources_from_rule(dep_file):
+                        try:
+                            included_files.add(context.working_tree_path_of(p))
+                        except ValueError:
+                            pass
 
-            result.included_files = included_files
-            context.replace_output(result.object_file, object_file)
+                context.replace_output(object_file, temp_object_file)
+
+        result.included_files = sorted(included_files)
 
 
 class CCompilerGcc(_CompilerGcc):
@@ -152,9 +156,11 @@ class CplusplusCompilerGcc(_CompilerGcc):
     DIALECT = 'c++11'  # https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html#C-Dialect-Options
 
 
-# noinspection PyUnresolvedReferences
 class _LinkerGcc(dlb.ex.Tool):
-    # Link with with gcc, gcc subprograms and the GNU linker
+    # Link with with gcc, gcc subprograms and the GNU linker.
+
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = ''  # define in subclass
 
     # Tuple of library name to be searched in the library search directories and linked against.
     # Order matters; if library *b* depends on *a*, *b* should precede *a* in the sequence

@@ -56,17 +56,18 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
     with dlb.di.Cluster('compile'), dlb.ex.Context(max_parallel_redo_count=4):
         compile_results = [
             CCompiler(  # TODO run in src
-                source_file=p,
-                object_file=output_path / p.with_appended_suffix('.o'),
+                source_files=[p],
+                object_files=[output_path / p.with_appended_suffix('.o')],
                 include_search_directories=(source_path, generated_source_path) +
                                            pkgconfig_result.include_search_directories
             ).run()
             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
         ]
 
+    object_files = [r.object_files[0] for r in compile_results]
     with dlb.di.Cluster('link'), dlb.ex.Context():
         application_file = CLinker(
-            object_and_archive_files=[r.object_file for r in compile_results],
+            object_and_archive_files=object_files,
             linked_file=output_path / application_name).run().linked_file
         dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')
 

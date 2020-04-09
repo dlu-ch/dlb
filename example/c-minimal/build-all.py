@@ -20,13 +20,14 @@ with dlb.ex.Context():
 
     compile_results = [
         dlb_contrib.gcc.CCompilerGcc(
-            source_file=p,
-            object_file=output_path / p.with_appended_suffix('.o'),
+            source_files=[p],
+            object_files=[output_path / p.with_appended_suffix('.o')],
             include_search_directories=[source_path]
         ).run()
         for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
     ]
 
+    object_files = [r.object_files[0] for r in compile_results]
     dlb_contrib.gcc.CLinkerGcc(
-        object_and_archive_files=[r.object_file for r in compile_results],
+        object_and_archive_files=object_files,
         linked_file=output_path / 'application').run()
