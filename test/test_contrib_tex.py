@@ -253,7 +253,7 @@ class LatexTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 dlb.di.set_output_file(output)
                 dlb_contrib.tex.Latex(toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
                                       state_files=[]).run()
-            regex= (
+            regex = (
                 r"(?m).*\n"
                 r"W 1 file\(s\) were read and written \(consider adding them to 'state_files'\): \n"
                 r"  \| '\.dlbroot/t/a/report\.aux'\n\Z"

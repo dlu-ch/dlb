@@ -153,7 +153,6 @@ class RunStraced(dlb.ex.Tool):
         raise NotImplementedError
 
     async def redo(self, result, context):
-        # noinspection PyUnresolvedReferences
         straced_helper = context.helper[self.EXECUTABLE]
 
         with context.temporary() as strace_output_file:

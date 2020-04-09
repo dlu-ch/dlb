@@ -272,7 +272,8 @@ class ExecuteHelperWithOutputTest(tools_for_test.TemporaryWorkingDirectoryTestCa
                     return self.n
 
             rd = dlb.ex.tool._RedoContext(c, dict())
-            e = rd.execute_helper_with_output('sh', ['-c', 'yes'], output_to_process=1, chunk_processor=ChunkProcessor())
+            e = rd.execute_helper_with_output('sh', ['-c', 'yes'], output_to_process=1,
+                                              chunk_processor=ChunkProcessor())
             with self.assertRaises(ValueError) as cm:
                 asyncio.get_event_loop().run_until_complete(e)
             self.assertEqual("it's enough!", str(cm.exception))

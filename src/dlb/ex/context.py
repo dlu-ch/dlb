@@ -23,7 +23,7 @@ import os.path
 import stat
 import time
 import datetime
-from typing import Collection, Dict, Hashable, Iterable, List, Optional, Pattern, Tuple, Type, Union
+from typing import Collection, Dict, Hashable, Iterable, List, Mapping, Optional, Pattern, Tuple, Type, Union
 from .. import ut
 from .. import fs
 from .. import di
@@ -79,7 +79,7 @@ class ContextModificationError(Exception):
 
 class _BaseEnvVarDict:
 
-    def __init__(self, context: 'Context', top_value_by_name: Dict[str, str]):
+    def __init__(self, context: 'Context', top_value_by_name: Mapping[str, str]):
         # these objects must not be replaced once constructed (only modified)
         # reason: read-only view
 

@@ -27,7 +27,7 @@ assert sys.version_info >= (3, 7)
 
 
 def by_working_tree_path(paths: Sequence[dlb.fs.PathLike], *, number_of_groups: int, collapsable=False) \
-        -> List[List[dlb.fs.Path]]:
+        -> List[List[dlb.fs.PathLike]]:
 
     # Partition *paths* into *number_of_groups* groups based on their working tree path in a stable and portable way
     # (the result is the same for the same paths on all supported platforms, Python versions and dlb runs).
@@ -57,7 +57,7 @@ def by_working_tree_path(paths: Sequence[dlb.fs.PathLike], *, number_of_groups: 
         return []
 
     if number_of_groups <= 1:
-        return [paths]
+        return [list(paths)]
 
     groups = [[] for _ in range(number_of_groups)]
     for i in range(len(paths)):

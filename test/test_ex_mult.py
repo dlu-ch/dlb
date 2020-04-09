@@ -171,6 +171,7 @@ class MultiplicityHolderTest(unittest.TestCase):
         self.assertIsNone(m.multiplicity)
 
     def test_has_multiplicity_when_constructed_by_slice(self):
+        # noinspection PyTypeChecker
         m = MultiplicityHolderTest.M[:3](1, b=2)
         self.assertIsInstance(m, MultiplicityHolderTest.M)
         self.assertEqual(dlb.ex.mult.MultiplicityRange(slice(0, 3)), m.multiplicity)
