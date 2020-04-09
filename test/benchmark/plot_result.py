@@ -58,13 +58,15 @@ with open(result_file_path, 'r') as result_file:
 
 description_by_tool['make2'] = '{}\n(complete)'.format(description_by_tool['make'])
 description_by_tool['make'] = '{}\n+ makedepend (simplistic)'.format(description_by_tool['make'])
+description_by_tool['dlb2'] = '{}\n(5 sources files\nper tool instance)'.format(description_by_tool['dlb'])
 
-tools = ['make', 'make2', 'dlb', 'scons']  # as used in file *result_file_path*
+tools = ['make', 'make2', 'dlb2', 'dlb', 'scons']  # as used in file *result_file_path*
 colormap = plt.get_cmap("tab10")
 style_by_tool = {
     'make': (colormap(2), '-', 'x', 'none'),
     'make2': (colormap(2), '-', 'v', 'full'),
     'dlb': (colormap(0), '-', 'o', 'full'),
+    'dlb2': (colormap(0), '-', 'o', 'none'),
     'scons': (colormap(1), '-', 's', 'full')
 }
 

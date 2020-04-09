@@ -151,6 +151,9 @@ function run_builds_and_append_results_to_result_file() {
     # based on example/c-minimal:
     run_build_and_append_results_to_result_file "$1" "$2" "$3" "dlb" "dlb" "build-all"
 
+    # based on example/c-huge:
+    run_build_and_append_results_to_result_file "$1" "$2" "$3" "dlb2" "dlb" "build-all2"
+
     run_build_and_append_results_to_result_file "$1" "$2" "$3" "scons" "scons"
 }
 
@@ -163,10 +166,12 @@ run_builds_and_append_results_to_result_file 8 3 100
 run_builds_and_append_results_to_result_file 4 3 500
 run_builds_and_append_results_to_result_file 2 3 1000
 run_builds_and_append_results_to_result_file 1 3 2000
+run_builds_and_append_results_to_result_file 1 3 3500
 run_builds_and_append_results_to_result_file 1 3 5000
 
 run_builds_and_append_results_to_result_file 4 10 100
 run_builds_and_append_results_to_result_file 2 20 100
+run_builds_and_append_results_to_result_file 2 35 100
 
 # orginal setup of http://gamesfromwithin.com/the-quest-for-the-perfect-build-system:
 #
