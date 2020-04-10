@@ -256,6 +256,8 @@ class Aspect(enum.Enum):
 
 class Database:
 
+    MAXIMUM_NUMBER_OF_UNCOMMITTED_OPERATIONS = 2000
+
     def __init__(self, rundb_path: Union[str, os.PathLike],
                  max_dependency_age: Optional[datetime.timedelta] = None,
                  suggestion_if_database_error: str = ''):
@@ -391,11 +393,12 @@ class Database:
             self._run_dbid = cursor.fetchone()[0]
             self._start_time_ns = time.monotonic_ns()  # since Python 3.7
 
-            if not did_exist:
-                # make sure tables exist afterwards
-                connection.commit()
-
+        self._modifying_operations_since_commit = 1
         self._connection = connection
+
+        if not did_exist:
+            # make sure tables exist afterwards
+            self.commit()
 
     @property
     def run_dbid(self) -> int:
@@ -532,6 +535,8 @@ class Database:
                 self._connection.rollback()
                 raise
 
+            self._modifying_operations_since_commit += 1
+
     def get_latest_successful_run_summaries(self, max_count: int) -> List[Tuple[datetime.datetime, int, int, int]]:
         # Without the run that opened this run-database.
         # Note: There is no guaranteed that all the datetimes differ.
@@ -564,12 +569,20 @@ class Database:
                 "UPDATE Run SET duration_ns = ?, nonredo_count = ?, redo_count = ? WHERE run_dbid = ?",
                 (duration_ns, successful_nonredo_run_count, successful_redo_run_count, self.run_dbid))
 
+        self._modifying_operations_since_commit += 1
+
         return self._start_datetime, duration_ns, \
                successful_nonredo_run_count + successful_redo_run_count, successful_redo_run_count
 
     def commit(self):
         with self._cursor_with_exception_mapping('commit failed'):
             self._connection.commit()
+        self._modifying_operations_since_commit = 0
+
+    def commit_if_overdue(self):
+        # regular calls prevents unbounded growth of database journal
+        if self._modifying_operations_since_commit > self.MAXIMUM_NUMBER_OF_UNCOMMITTED_OPERATIONS:
+            self.commit()
 
     def cleanup(self):
         with self._cursor_with_exception_mapping('clean-up failed') as cursor:
@@ -581,6 +594,8 @@ class Database:
                         "LEFT OUTER JOIN ToolInstRedoState AS do ON ti.tool_inst_dbid = do.tool_inst_dbid "
                     "WHERE fs.tool_inst_dbid IS NULL AND do.tool_inst_dbid IS NULL"
                 ")")
+
+        self._modifying_operations_since_commit += 1
 
     def close(self):
         # note: uncommitted changes are lost!

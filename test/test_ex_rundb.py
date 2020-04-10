@@ -640,6 +640,39 @@ class ReplaceAndGetRedoStateTest(tools_for_test.TemporaryDirectoryTestCase):
                 # noinspection PyTypeChecker
                 rundb.update_dependencies_and_state(12, memo_digest_by_aspect={1: ''})
 
+
+class CommitTest(tools_for_test.TemporaryDirectoryTestCase):
+
+    def test_update_counts_as_modifying_operation(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i0')
+            n = rundb._modifying_operations_since_commit
+            rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path={
+                dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1')
+            })
+            self.assertGreater(rundb._modifying_operations_since_commit, n)
+
+    def test_commits_after_between_100_and_10000_modifying_operation(self):
+
+        with contextlib.closing(dlb.ex.rundb.Database('runs.sqlite')) as rundb:
+            tool_dbid = rundb.get_and_register_tool_instance_dbid(b't', b'i0')
+
+            oldn = rundb._modifying_operations_since_commit
+            for i in range(10000):
+                rundb.update_dependencies_and_state(tool_dbid, info_by_encoded_path={
+                    dlb.ex.rundb.encode_path(dlb.fs.Path('a')): (False, b'1')
+                })
+                rundb.commit_if_overdue()
+                n = rundb._modifying_operations_since_commit
+                if n == 0:
+                    break
+                self.assertGreater(n, oldn)
+                oldn = n
+            self.assertEqual(0, n)
+            self.assertGreaterEqual(i, 100)
+
+
 class CleanupTest(tools_for_test.TemporaryDirectoryTestCase):
 
     def test_scenario1(self):

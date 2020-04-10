@@ -990,6 +990,7 @@ class _ToolBase:
                     for encoded_path in encoded_paths_of_nonexplicit_input_dependencies - set(info_by_fsobject_dbid)
                 })
 
+                db.commit_if_overdue()
                 db.update_dependencies_and_state(
                     tool_instance_dbid,
                     info_by_encoded_path=info_by_fsobject_dbid,
