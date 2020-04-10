@@ -5,12 +5,16 @@ Explicit is better than implicit
 
 |batch-unittest| |batch-doc| |batch-cov|
 
-dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_ build tool that does not try to mimic
-`Make <https://en.wikipedia.org/wiki/Make_%28software%29>`_, but brings the benefits of object-oriented languages
-to the build process.
-It is inspired by `djb's redo <https://cr.yp.to/redo.html>`_.
+dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_
+`build tool <https://en.wikipedia.org/wiki/Build_tool>`_ that does not try to mimic
+`Make <https://en.wikipedia.org/wiki/Make_%28software%29>`_ but to leverage the power of object-oriented languages.
 
-dlb requires at least Python 3.7 (and nothing else).
+It requires at least Python 3.7 (and nothing else).
+
+Who should use dlb?
+
+- Short answer: you.
+- Long answer: `here <https://dlb.readthedocs.io/en/latest/faq.html#who-should-use-dlb>`_.
 
 See here for more:
 
