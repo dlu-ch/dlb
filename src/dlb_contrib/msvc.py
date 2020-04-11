@@ -1,0 +1,379 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# dlb - a Pythonic build tool
+# Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
+
+"""Compile and link the Microsoft dialects of C and C++ with Microsoft Visual Studio platform toolset."""
+
+# Microsoft Visual Studio Community: <https://visualstudio.microsoft.com/de/thank-you-downloading-visual-studio/?sku=Community>
+# Visual Studio platform toolset: <https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=vs-2019>
+# cl: <https://docs.microsoft.com/en-us/cpp/build/reference/compiling-a-c-cpp-program?view=vs-2019>
+# link: <https://docs.microsoft.com/en-us/cpp/build/reference/linking?view=vs-2019>
+# Tested with: MSVC v142 (part of Microsoft Visual Studio Community 2019)
+# Executable: 'cl.exe'
+# Executable: 'link.exe'
+#
+# Usage example:
+#
+#     import dlb.fs
+#     import dlb.ex
+#     import dlb_contrib.msvc
+#
+#     with dlb.ex.Context():
+#         # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
+#         dlb.ex.Context.active.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
+#         dlb.ex.Context.active.env.import_from_outer('LIB', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
+#         dlb.ex.Context.active.env.import_from_outer(
+#             'VCTOOLSINSTALLDIR', restriction=r'.+',
+#             example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.25.28610\\')
+#         dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
+#
+#         install_dir_path = dlb.fs.Path(dlb.fs.Path.Native(dlb.ex.Context.active.env['VCTOOLSINSTALLDIR']), is_dir=True)
+#         binary_path = install_dir_path / 'bin/Hostx64/x64/'
+#         dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
+#         dlb.ex.Context.active.helper['link.exe'] = binary_path / 'link.exe'
+#
+#         source_path = dlb.fs.Path('src/')
+#         output_path = dlb.fs.Path('build/out/')
+#
+#         compile_results = [
+#             dlb_contrib.msvc.CCompilerMsvc(
+#                 source_files=[p],
+#                 object_files=[output_path / p.with_appended_suffix('.o')],
+#                 include_search_directories=[source_path]
+#             ).run()
+#             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
+#         ]
+#
+#         object_files = [r.object_files[0] for r in compile_results]
+#         dlb_contrib.msvc.LinkerMsvc(
+#              linkable_files=object_files,
+#              linked_file=output_path / 'application.exe').run()
+
+__all__ = ['CCompilerMsvc', 'CplusplusCompilerMsvc', 'LinkerMsvc', 'list2cmdline']
+
+import sys
+import os.path
+import re
+from typing import Iterable, Set, Tuple, Union
+import dlb.ex
+import dlb_contrib.clike
+assert sys.version_info >= (3, 7)
+
+
+INCLUDE_LINE_REGEX = re.compile(rb'^[^ \t][^:]*: [^ \t][^:]*: +')
+assert INCLUDE_LINE_REGEX.match(b'Note: including file: D:\dir\included_file.h')
+
+
+# Unmodified copy of subprocess.list2cmdline of Python 3.8.0
+# (considered an undocumented implementation detail of the *subprocess* module).
+# Do not modify - replace by newer version if necessary.
+def list2cmdline(seq):
+    """
+    Translate a sequence of arguments into a command line
+    string, using the same rules as the MS C runtime:
+
+    1) Arguments are delimited by white space, which is either a
+       space or a tab.
+
+    2) A string surrounded by double quotation marks is
+       interpreted as a single argument, regardless of white space
+       contained within.  A quoted string can be embedded in an
+       argument.
+
+    3) A double quotation mark preceded by a backslash is
+       interpreted as a literal double quotation mark.
+
+    4) Backslashes are interpreted literally, unless they
+       immediately precede a double quotation mark.
+
+    5) If backslashes immediately precede a double quotation mark,
+       every pair of backslashes is interpreted as a literal
+       backslash.  If the number of backslashes is odd, the last
+       backslash escapes the next double quotation mark as
+       described in rule 3.
+    """
+
+    # See
+    # http://msdn.microsoft.com/en-us/library/17w5ykft.aspx
+    # or search http://msdn.microsoft.com for
+    # "Parsing C++ Command-Line Arguments"
+    result = []
+    needquote = False
+    for arg in map(os.fsdecode, seq):
+        bs_buf = []
+
+        # Add a space to separate this argument from the others
+        if result:
+            result.append(' ')
+
+        needquote = (" " in arg) or ("\t" in arg) or not arg
+        if needquote:
+            result.append('"')
+
+        for c in arg:
+            if c == '\\':
+                # Don't know if we need to double yet.
+                bs_buf.append(c)
+            elif c == '"':
+                # Double backslashes.
+                result.append('\\' * len(bs_buf)*2)
+                bs_buf = []
+                result.append('\\"')
+            else:
+                # Normal char
+                if bs_buf:
+                    result.extend(bs_buf)
+                    bs_buf = []
+                result.append(c)
+
+        # Add remaining backslashes, if any.
+        if bs_buf:
+            result.extend(bs_buf)
+
+        if needquote:
+            result.extend(bs_buf)
+            result.append('"')
+
+    return ''.join(result)
+
+
+async def _detect_include_line_representation(compiler_executable, context) -> Tuple[bytes, bytes, str]:
+    try:
+        # https://docs.microsoft.com/en-us/windows/console/getconsoleoutputcp
+        import ctypes
+        codepage: int = ctypes.windll.kernel32.GetConsoleOutputCP()
+        assert codepage > 0
+    except Exception:
+        raise RuntimeError('failed to get ANSI codepage of process') from None
+
+    try:
+        import codecs
+        encoding = f'cp{codepage:03}'  # _not_ the one returned by locale.getpreferredencoding()
+        codecs.lookup(encoding)
+    except LookupError:
+        raise RuntimeError(f'ANSI codepage of process not supported: {encoding!r}') from None
+
+    # MS Windows/MSVC do not provide a way to set the message language (UI culture) without changing global
+    # settings that would affect other processes as well.
+    # Therefore: Query the message for the current message language.
+    with context.temporary(is_dir=True) as temp_dir:
+        probe_file = temp_dir / 'include_probe_file.h'
+        open(probe_file.native, 'xb').close()
+        temp_source_file = temp_dir / 'm.c'
+        with open(temp_source_file.native, 'xb') as f:
+            f.write(b'#include "include_probe_file.h"\n')
+        _, output = await context.execute_helper_with_output(
+            compiler_executable, ['/nologo', '/showIncludes', '/c', temp_source_file],
+            cwd=temp_dir, other_output=NotImplemented
+        )
+        native_path_suffix = str(context.working_tree_path_of(probe_file, existing=True, collapsable=True,
+                                                              allow_temporary=True).native)
+    assert native_path_suffix[0] == '.'
+    native_path_suffix = native_path_suffix[1:].encode('ascii')
+
+    include_line_prefix = None
+    for line in output.splitlines():
+        if line.endswith(native_path_suffix):
+            m = INCLUDE_LINE_REGEX.match(line)
+            if not m:
+                raise RuntimeError(f"unexpected include line for '/showIncludes': {line!r}")
+            include_line_prefix = m.group()
+            working_tree_native_path_prefix = line[len(include_line_prefix):][:-len(native_path_suffix) + 1]
+            if not len(working_tree_native_path_prefix) > 2:  # C:\
+                raise RuntimeError(f"cannot get working tree's root from this: {line!r}")
+            break
+    if not include_line_prefix:
+        raise RuntimeError("failed to detect include line for '/showIncludes'")
+
+    return include_line_prefix, working_tree_native_path_prefix, encoding
+
+
+class IncludeLineProcessor(dlb.ex.ChunkProcessor):
+    separator = b'\r\n'
+    max_chunk_size = 16 * 1024  # maximum chunk size (without separator)
+
+    def __init__(self, include_line_prefix: bytes, working_tree_native_path_prefix: bytes, encoding: str):
+        self.include_line_prefix = include_line_prefix
+        self.working_tree_native_path_prefix = working_tree_native_path_prefix
+        self.encoding = encoding
+        self.result = set()
+
+    def process(self, chunk: bytes, is_last: bool):
+        # Note about the output due to /showIncludes:
+        # - The file paths start with a directory path as given in INCLUDES or with /D (relative or absolute).
+        # - When a characters in the path is not part of the process's ANSI codepage it is replaced by a
+        #   similar character.
+        # - Hence the file path representation of the MSVC compiler is ambiguous - there is no way of accessing the
+        #   missing information.
+
+        is_include_line = chunk.startswith(self.include_line_prefix)
+        if is_include_line:
+            # https://docs.microsoft.com/en-us/cpp/build/reference/unicode-support-in-the-compiler-and-linker?view=vs-2019:
+            # During compilation, the compiler outputs diagnostics to the console in UTF-16.
+            # The characters that can be displayed at your console depend on the console window properties.
+            # Compiler output redirected to a file is in the current ANSI console codepage.
+            path = chunk[len(self.include_line_prefix):].lstrip()
+            if path.startswith(self.working_tree_native_path_prefix):
+                # each path for a file in the working tree starts with *working_tree_native_path_prefix*
+                # (but - due to ambiguity in ANSI path representation - a file outside the working tree can
+                # also start with *working_tree_native_path_prefix*)
+                path = path[len(self.working_tree_native_path_prefix):].lstrip(b'\\/')
+            elif os.path.isabs(path):
+                path = None
+            if path:
+                self.result.add(path.decode(self.encoding))
+        elif chunk:
+            sys.stdout.write(chunk.decode(self.encoding) + '\r\n')
+
+
+class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'cl.exe'
+
+    system_root_directory_path = dlb.ex.Tool.Input.EnvVar(
+        name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
+        required=True, explicit=False)
+    system_include_search_directories = dlb.ex.Tool.Input.EnvVar(
+        name='INCLUDE', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y',
+        required=True, explicit=False)
+
+    async def redo(self, result, context):
+        if len(result.object_files) != len(result.source_files):
+            raise ValueError("'object_files' must be of same length as 'source_files'")
+
+        if self.LANGUAGE == 'c':
+            language_option = '/Tc'
+        elif self.LANGUAGE == 'c++':
+            language_option = '/Tp'
+        else:
+            raise ValueError(f"invalid 'LANGUAGE': {self.LANGUAGE!r}")
+
+        compile_arguments = [c for c in self.get_compile_arguments()]
+
+        if self.include_search_directories:
+            for p in self.include_search_directories:
+                compile_arguments.extend(['/I', p])
+
+        # https://docs.microsoft.com/en-us/cpp/build/reference/d-preprocessor-definitions?view=vs-2019:
+        # The /D option doesn't support function-like macro definitions.
+        for macro, replacement in self.DEFINITIONS.items():
+            if not dlb_contrib.clike.SIMPLE_IDENTIFIER.match(macro):
+                raise ValueError(f"not an object-like macro: {macro!r}")
+            # *macro* is a string that does not start with '/' and does not contain '=' or '#'
+            if replacement is None:
+                # https://docs.microsoft.com/en-us/cpp/build/reference/u-u-undefine-symbols?view=vs-2019:
+                # Neither the /U or /u option can undefine a symbol created by using the #define directive.
+                # The /U option can undefine a symbol that was previously defined by using the /D option.
+                compile_arguments += ['/U', macro]
+            else:
+                replacement = str(replacement).strip()
+                if replacement == '1':
+                    compile_arguments += ['/D', macro]
+                else:
+                    compile_arguments += ['/D', f'{macro}={replacement}']
+
+        include_line_prefix, working_tree_native_path_prefix, encoding = \
+            await _detect_include_line_representation(self.EXECUTABLE, context)
+        # each line emitted due to '/showIncludes' starts with *include_line_prefix*
+
+        # compile
+        included_file_native_paths: Set[bytes] = set()
+        with context.temporary(is_dir=True) as temp_dir:
+            for source_file, object_file in zip(result.source_files, result.object_files):
+                processor = IncludeLineProcessor(include_line_prefix, working_tree_native_path_prefix, encoding)
+                with context.temporary(suffix='.o') as temp_object_file:
+                    _, included_file_paths = await context.execute_helper_with_output(
+                        self.EXECUTABLE,
+                        compile_arguments + [
+                            '/nologo', '/showIncludes', '/c',
+
+                            # must have a suffix, otherwise '.obj' is appended:
+                            '/Fo' + str(temp_object_file.native),
+
+                            language_option, source_file
+                        ], forced_env={'TMP': str(temp_dir.native)},
+                        chunk_processor=processor
+                    )
+                    included_file_native_paths |= included_file_paths
+                    context.replace_output(object_file, temp_object_file)
+
+        included_file_paths = []
+        for p in included_file_native_paths:
+            p = dlb.fs.Path(dlb.fs.Path.Native(p))
+            try:
+                included_file_paths.append(context.working_tree_path_of(p))
+            except dlb.ex.WorkingTreePathError as e:
+                if isinstance(e.oserror, OSError):
+                    msg = (
+                        f"reportedly included file not found: {p.as_string()!r}\n"
+                        f"  | ambiguity in the ANSI encoding ({encoding!r}) of its path?"
+                    )
+                    raise FileNotFoundError(msg)
+        included_file_paths.sort()
+        result.included_files = included_file_paths
+
+
+class CCompilerMsvc(_CompilerMsvc):
+    LANGUAGE = 'c'
+
+
+class CplusplusCompilerMsvc(_CompilerMsvc):
+    LANGUAGE = 'c++'
+
+
+class LinkerMsvc(dlb.ex.Tool):
+    # Link with with MSVC.
+
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'link.exe'
+
+    system_root_directory_path = dlb.ex.Tool.Input.EnvVar(
+        name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
+        required=True, explicit=False)
+    system_library_search_directories = dlb.ex.Tool.Input.EnvVar(
+        name='LIB', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y',
+        required=True, explicit=False)
+
+    # Object files and static libraries to link.
+    linkable_files = dlb.ex.Tool.Input.RegularFile[1:]()
+
+    linked_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
+
+    # Tuple of paths of directories that are to be searched for libraries in addition to the standard system directories
+    library_search_directories = dlb.ex.Tool.Input.Directory[:](required=False)
+
+    def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+        return []  # e.g. '/DLL'
+
+    async def redo(self, result, context):
+        link_arguments = ['/NOLOGO'] + [c for c in self.get_link_arguments()]
+
+        if self.library_search_directories:
+            for p in self.library_search_directories:
+                # https://docs.microsoft.com/en-us/cpp/build/reference/libpath-additional-libpath?view=vs-2019
+                link_arguments.extend(['/LIBPATH:' + str(p.native)])
+
+        # link
+        with context.temporary() as response_file, context.temporary() as linked_file, \
+                context.temporary(is_dir=True) as temp_dir:
+
+            # https://docs.microsoft.com/en-us/cpp/build/reference/out-output-file-name?view=vs-2019
+            link_arguments += [
+                '/OUT:' + str(linked_file.native),
+
+                *result.linkable_files
+                # https://docs.microsoft.com/en-us/cpp/build/reference/link-input-files?view=vs-2019:
+                # LINK does not use file extensions to make assumptions about the contents of a file.
+                # Instead, LINK examines each input file to determine what kind of file it is.
+            ]
+
+            for a in link_arguments:
+                if a[:1] == '@':
+                    raise ValueError(f"argument must not start with '@': {a!r}")
+            with open(response_file.native, 'w', encoding='utf-16') as f:
+                link_arguments, _ = context.prepare_arguments(link_arguments)
+                f.write(list2cmdline(link_arguments))
+
+            await context.execute_helper(self.EXECUTABLE, ['@' + str(response_file.native)],
+                                         forced_env={'TMP': str(temp_dir.native)})
+            context.replace_output(result.linked_file, linked_file)

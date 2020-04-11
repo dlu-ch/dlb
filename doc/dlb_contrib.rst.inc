@@ -42,6 +42,7 @@ Please see there for details.
 .. dlbcontrib:module:: gnubinutils
 .. dlbcontrib:module:: clike
 .. dlbcontrib:module:: gcc
+.. dlbcontrib:module:: msvc
 .. dlbcontrib:module:: pkgconfig
 .. dlbcontrib:module:: doxygen
 .. dlbcontrib:module:: sh
