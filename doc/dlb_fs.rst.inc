@@ -66,7 +66,7 @@ Path objects
 
    The :class:`dlb.fs.Path` class supports the following methods and attributes:
 
-   .. method:: Path(path[, is_dir=None])
+   .. method:: Path(path, *, is_dir=None)
 
       Constructs a path from another path or a string.
 
@@ -135,7 +135,7 @@ Path objects
                (i.e. it contains no ``'..'`` components)
       :rtype: bool
 
-   .. method:: relative_to(other, collapsable=False):
+   .. method:: relative_to(other, *, collapsable=False):
 
       Returns a version of this path relative to the directory path represented by *other*.
 

@@ -46,7 +46,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
         ...
 
 
-.. class:: Context(path_cls=dlb.fs.Path, max_parallel_redo_count=1, find_helpers=None)
+.. class:: Context(*, path_cls=dlb.fs.Path, max_parallel_redo_count=1, find_helpers=None)
 
    An instance does nothing unless used as a :term:`python:context manager`.
 
@@ -189,7 +189,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: temporary(suffix='', is_dir=False)
+   .. method:: temporary(*, suffix='', is_dir=False)
 
       Return a :class:`dlb.ex.Temporary` object, representing a temporary regular file (for *is_dir* = ``False``) or a
       temporary directory (for *is_dir* = ``True``) in the :term:`management tree` with a unique path.
@@ -223,7 +223,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       :raises FileExistsError: if the regular file or directory exists (when used as content manager)
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: working_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False,
+   .. method:: working_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False, \
                                     allow_nontemporary_management=False, allow_temporary=False)
 
       Return the :term:`managed tree path` of the *path* of a filesystem object in the :term:`managed tree`.
@@ -364,7 +364,7 @@ Example::
 
 Environment variable dictionary object support the following methods and attributes:
 
-.. method:: EnvVarDict.import_from_outer(name, restriction, value_if_undefined=None, example=None)
+.. method:: EnvVarDict.import_from_outer(name, *, restriction, value_if_undefined=None, example=None)
 
    Sets the value of the environment variable named *name* from the innermost outer :term:`context` that
    defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
@@ -625,8 +625,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
    A redo context is constructed automatically by :meth:`Tool.run()`. Redo contexts should not be constructed manually.
 
-   .. method:: execute_helper(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]),
-                              forced_env={}, stdout_output=None, stderr_output=None)
+   .. method:: execute_helper(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]), \
+               forced_env={}, stdout_output=None, stderr_output=None)
 
       Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
       its working directory and wait for it to complete.
@@ -645,7 +645,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of the :term:`management tree`.
 
       :attr:`env <dlb.ex.Context.env>` of this object, modified by *forced_env*, forms the environment for the
-      subprocess.
+      subprocess. Note: On Windows, in order to run a side-by-side assembly the specified *env* must include a valid
+      :envvar:`SYSTEMROOT`.
 
       :param helper_file: :term:`dynamic helper` to be executed as a relative path
       :param arguments: command-line arguments
@@ -671,8 +672,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
       :raises HelperExecutionError: if the subprocess exits with a returncode not in *expected_returncodes*.
 
-   .. method:: execute_helper_with_output(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]),
-                                          forced_env={}, output_to_process=1, other_output=None,
+   .. method:: execute_helper_with_output(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]), \
+                                          forced_env={}, output_to_process=1, other_output=None, \
                                           chunk_processor=None)
 
       Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
@@ -1053,11 +1054,11 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    Constructs a dependency role for a environment variable named *name*.
    It must not have a multiplicity (other than ``None``).
 
-   If *explicit* is ``False``, the value assign in the constructor of the :term:`tool instance` is used for all
+   If *explicit* is ``True``, the value assigned in the constructor of the :term:`tool instance` is used for all
    future runs of the tool instance.
    Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.run()` is called.
 
-   The value of the environment variable is valid if it a string that matches the regular expression *restriction*,
+   The value of the environment variable is valid if it is a string that matches the regular expression *restriction*,
    or if it is ``None`` and *required* is ``False``.
 
    The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
