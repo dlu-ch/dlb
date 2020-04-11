@@ -120,6 +120,8 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
                 else:
                     compile_arguments += ['-D', f'{macro}={replacement}']
 
+        included_files = set()
+
         # compile
         for source_file, object_file in zip(result.source_files, result.object_files):
             with context.temporary() as make_rules_file, context.temporary() as temp_object_file:
