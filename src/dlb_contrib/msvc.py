@@ -18,19 +18,26 @@
 #     import dlb.ex
 #     import dlb_contrib.msvc
 #
-#     with dlb.ex.Context():
-#         # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
-#         dlb.ex.Context.active.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-#         dlb.ex.Context.active.env.import_from_outer('LIB', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-#         dlb.ex.Context.active.env.import_from_outer(
-#             'VCTOOLSINSTALLDIR', restriction=r'.+',
-#             example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.25.28610\\')
-#         dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
+#     def setup_paths_for_msvc(context):
+#         # VCINSTALLDIR must be defined, the other environment variables are set by build/setup.bat with the help of
+#         # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
+#         context.env.import_from_outer('VCINSTALLDIR', restriction=r'.+\\',
+#                                       example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\')
+#         environment = dlb_contrib.msbatch.RunEnvBatch(batch_file='build/setup.bat').run().environment
 #
-#         install_dir_path = dlb.fs.Path(dlb.fs.Path.Native(dlb.ex.Context.active.env['VCTOOLSINSTALLDIR']), is_dir=True)
+#         install_dir_path = dlb.fs.Path(dlb.fs.Path.Native(environment['VCTOOLSINSTALLDIR']), is_dir=True)
 #         binary_path = install_dir_path / 'bin/Hostx64/x64/'
-#         dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
-#         dlb.ex.Context.active.helper['link.exe'] = binary_path / 'link.exe'
+#         context.helper['cl.exe'] = binary_path / 'cl.exe'
+#         context.helper['link.exe'] = binary_path / 'link.exe'
+#
+#         context.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
+#         context.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+#         context.env.import_from_outer('LIB', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+#         context.env['INCLUDE'] = environment['INCLUDE']
+#         context.env['LIB'] = environment['LIB']
+#
+#     with dlb.ex.Context():
+#         setup_paths_for_msvc(dlb.ex.Context.active)
 #
 #         source_path = dlb.fs.Path('src/')
 #         output_path = dlb.fs.Path('build/out/')
@@ -49,7 +56,7 @@
 #              linkable_files=object_files,
 #              linked_file=output_path / 'application.exe').run()
 
-__all__ = ['CCompilerMsvc', 'CplusplusCompilerMsvc', 'LinkerMsvc', 'list2cmdline']
+__all__ = ['CCompilerMsvc', 'CplusplusCompilerMsvc', 'LinkerMsvc']
 
 import sys
 import os.path
@@ -57,84 +64,12 @@ import re
 from typing import Iterable, Set, Tuple, Union
 import dlb.ex
 import dlb_contrib.clike
+import dlb_contrib.mscrt
 assert sys.version_info >= (3, 7)
 
 
 INCLUDE_LINE_REGEX = re.compile(rb'^[^ \t][^:]*: [^ \t][^:]*: +')
 assert INCLUDE_LINE_REGEX.match(b'Note: including file: D:\dir\included_file.h')
-
-
-# Unmodified copy of subprocess.list2cmdline of Python 3.8.0
-# (considered an undocumented implementation detail of the *subprocess* module).
-# Do not modify - replace by newer version if necessary.
-def list2cmdline(seq):
-    """
-    Translate a sequence of arguments into a command line
-    string, using the same rules as the MS C runtime:
-
-    1) Arguments are delimited by white space, which is either a
-       space or a tab.
-
-    2) A string surrounded by double quotation marks is
-       interpreted as a single argument, regardless of white space
-       contained within.  A quoted string can be embedded in an
-       argument.
-
-    3) A double quotation mark preceded by a backslash is
-       interpreted as a literal double quotation mark.
-
-    4) Backslashes are interpreted literally, unless they
-       immediately precede a double quotation mark.
-
-    5) If backslashes immediately precede a double quotation mark,
-       every pair of backslashes is interpreted as a literal
-       backslash.  If the number of backslashes is odd, the last
-       backslash escapes the next double quotation mark as
-       described in rule 3.
-    """
-
-    # See
-    # http://msdn.microsoft.com/en-us/library/17w5ykft.aspx
-    # or search http://msdn.microsoft.com for
-    # "Parsing C++ Command-Line Arguments"
-    result = []
-    needquote = False
-    for arg in map(os.fsdecode, seq):
-        bs_buf = []
-
-        # Add a space to separate this argument from the others
-        if result:
-            result.append(' ')
-
-        needquote = (" " in arg) or ("\t" in arg) or not arg
-        if needquote:
-            result.append('"')
-
-        for c in arg:
-            if c == '\\':
-                # Don't know if we need to double yet.
-                bs_buf.append(c)
-            elif c == '"':
-                # Double backslashes.
-                result.append('\\' * len(bs_buf)*2)
-                bs_buf = []
-                result.append('\\"')
-            else:
-                # Normal char
-                if bs_buf:
-                    result.extend(bs_buf)
-                    bs_buf = []
-                result.append(c)
-
-        # Add remaining backslashes, if any.
-        if bs_buf:
-            result.extend(bs_buf)
-
-        if needquote:
-            result.extend(bs_buf)
-            result.append('"')
-
-    return ''.join(result)
 
 
 async def _detect_include_line_representation(compiler_executable, context) -> Tuple[bytes, bytes, str]:
@@ -234,7 +169,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
         required=True, explicit=False)
     system_include_search_directories = dlb.ex.Tool.Input.EnvVar(
-        name='INCLUDE', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y',
+        name='INCLUDE', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
         required=True, explicit=False)
 
     async def redo(self, result, context):
@@ -331,7 +266,7 @@ class LinkerMsvc(dlb.ex.Tool):
         name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
         required=True, explicit=False)
     system_library_search_directories = dlb.ex.Tool.Input.EnvVar(
-        name='LIB', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y',
+        name='LIB', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
         required=True, explicit=False)
 
     # Object files and static libraries to link.
@@ -372,7 +307,7 @@ class LinkerMsvc(dlb.ex.Tool):
                     raise ValueError(f"argument must not start with '@': {a!r}")
             with open(response_file.native, 'w', encoding='utf-16') as f:
                 link_arguments, _ = context.prepare_arguments(link_arguments)
-                f.write(list2cmdline(link_arguments))
+                f.write(dlb_contrib.mscrt.list2cmdline(link_arguments))
 
             await context.execute_helper(self.EXECUTABLE, ['@' + str(response_file.native)],
                                          forced_env={'TMP': str(temp_dir.native)})

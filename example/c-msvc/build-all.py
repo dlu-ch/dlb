@@ -11,21 +11,27 @@
 import dlb.fs
 import dlb.ex
 import dlb_contrib.msvc
+import dlb_contrib.msbatch
 
 
 def setup_paths_for_msvc(context):
-    # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
-    context.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-    context.env.import_from_outer('LIB', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-    context.env.import_from_outer('VCTOOLSINSTALLDIR', restriction=r'.+',
-                                  example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\'
-                                          'VC\\Tools\\MSVC\\14.25.28610\\')
-    context.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
+    # VCINSTALLDIR must be defined, the other environment variables are set by build/setup.bat with the help of
+    # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
+    context.env.import_from_outer('VCINSTALLDIR', restriction=r'.+\\',
+                                  example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\')
+    assert context.env['VCINSTALLDIR']  # TODO replace with 'required' parameter of import_from_outer()
+    environment = dlb_contrib.msbatch.RunEnvBatch(batch_file='build/setup.bat').run().environment
 
-    install_dir_path = dlb.fs.Path(dlb.fs.Path.Native(context.env['VCTOOLSINSTALLDIR']), is_dir=True)
+    install_dir_path = dlb.fs.Path(dlb.fs.Path.Native(environment['VCTOOLSINSTALLDIR']), is_dir=True)
     binary_path = install_dir_path / 'bin/Hostx64/x64/'
     context.helper['cl.exe'] = binary_path / 'cl.exe'
     context.helper['link.exe'] = binary_path / 'link.exe'
+
+    context.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
+    context.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+    context.env.import_from_outer('LIB', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+    context.env['INCLUDE'] = environment['INCLUDE']
+    context.env['LIB'] = environment['LIB']
 
 
 # compile and link application written in C
