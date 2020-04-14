@@ -93,21 +93,11 @@ class _RedoContext(context_.ReadOnlyContext):
         self._dependency_action_by_path = dependency_action_by_path
         self._unchanged_paths = set()
 
-    def _prepare_for_subprocess(self, helper_file: fs.PathLike, arguments: Iterable[Any],
-                                cwd: Optional[fs.PathLike], forced_env: Optional[Dict[str, str]]) \
-            -> Tuple[fs.Path, List[str], Dict[str, str], fs.Path]:
-
-        if not isinstance(helper_file, fs.Path):
-            helper_file = fs.Path(helper_file)
-
+    def prepare_arguments(self, arguments: Iterable[Any], *, cwd: Optional[fs.PathLike] = None) -> List[str]:
         cwd = fs.Path('.') if cwd is None else self.working_tree_path_of(cwd, is_dir=True, allow_temporary=True)
+
         longest_dotdot_prefix = ()
-
-        if helper_file.is_dir():
-            raise ValueError(f"cannot execute directory: {helper_file.as_string()!r}")
-
-        helper_file_path = self.helper[helper_file]
-        commandline_tokens = [str(helper_file_path.native)]
+        str_arguments = []
         for a in arguments:
             if isinstance(a, fs.Path):
                 if not a.is_absolute():
@@ -118,11 +108,27 @@ class _RedoContext(context_.ReadOnlyContext):
                         while len(longest_dotdot_prefix) < len(c) and c[len(longest_dotdot_prefix)] == '..':
                             longest_dotdot_prefix += ('..',)
                 a = a.native
-            commandline_tokens.append(str(a))
+            str_arguments.append(str(a))
 
         if longest_dotdot_prefix:
             worktree.normalize_dotdot_native_components(cwd.components[1:] + longest_dotdot_prefix,
                                                         ref_dir_path=str(self.root_path.native))
+        return str_arguments, cwd
+
+    def _prepare_for_subprocess(self, helper_file: fs.PathLike, arguments: Iterable[Any],
+                                cwd: Optional[fs.PathLike], forced_env: Optional[Dict[str, str]]) \
+            -> Tuple[fs.Path, List[str], Dict[str, str], fs.Path]:
+
+        if not isinstance(helper_file, fs.Path):
+            helper_file = fs.Path(helper_file)
+
+        if helper_file.is_dir():
+            raise ValueError(f"cannot execute directory: {helper_file.as_string()!r}")
+
+        helper_file_path = self.helper[helper_file]
+
+        commandline_tokens, cwd = self.prepare_arguments(arguments, cwd=cwd)
+        commandline_tokens.insert(0, str(helper_file_path.native))
 
         if forced_env is None:
             forced_env = {}

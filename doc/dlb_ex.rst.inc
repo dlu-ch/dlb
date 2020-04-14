@@ -636,13 +636,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       of the :term:`management tree`.
       Otherwise the working tree's root is used as the working directory.
 
-      All members of *arguments* are converted to str objects.
-
-      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``True``, is is
-      replaced by ``str(p.native)``.
-      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``False``, is is
-      replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory. Is must denote
-      a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of the :term:`management tree`.
+      All members of *arguments* are converted to str objects with
+      :meth:`prepare_arguments(arguments, cwd=cwd) <prepare_arguments()>`.
 
       :attr:`env <dlb.ex.Context.env>` of this object, modified by *forced_env*, forms the environment for the
       subprocess. Note: On Windows, in order to run a side-by-side assembly the specified *env* must include a valid
@@ -739,9 +734,29 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
       Returns a tuple ``(returncode, output)``. *returncode* is the returncode of the subprocess and *output* its
       output to stdout or stderr --- processed by ``chunk_processor`` if *chunk_processor* is ``None`` ---
-      as described above, .
+      as described above.
 
-   .. method:: replace_output(path, source):
+   .. method:: prepare_arguments(self, arguments, cwd=None)
+
+      Convert all members of *arguments* to str objects.
+
+      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``True``, is is
+      replaced by ``str(p.native)``.
+      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``False``, is is
+      replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory. Is must denote
+      a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of the :term:`management tree`.
+
+      If *cwd* is not ``None``, is must be the path of directory in the :term:`managed tree` or in :file:`.dlbroot/t/`
+      of the :term:`management tree`.
+      Otherwise the working tree's root is used as the working directory.
+
+      :param arguments: command-line arguments
+      :type arguments: iterable of objects that can be converted to str
+      :param cwd: working directory of the subprocess to be started
+      :type cwd: ``None`` or a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :return: List of strings
+
+   .. method:: replace_output(path, source)
 
       Replace the --- existing or non-existent --- filesystem object *path* by *source*.
       *path* must be contained in a dependency of the tool instance.

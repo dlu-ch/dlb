@@ -33,6 +33,34 @@ class ConstructionTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.tool._RedoContext(c, ['a'])
 
 
+class PrepareArgumentsTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
+
+    def test_int_is_converted_to_str(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            arguments, cwd = rd.prepare_arguments([1])
+        self.assertEqual(['1'], arguments)
+
+    def test_path_is_converted_to_str(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            arguments, cwd = rd.prepare_arguments([dlb.fs.Path('src/a.c')])
+        self.assertEqual([str(dlb.fs.Path('src/a.c').native)], arguments)
+
+    def test_native_path_is_converted_to_str(self):
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            arguments, cwd = rd.prepare_arguments([dlb.fs.Path('src/a.c').native])
+        self.assertEqual([str(dlb.fs.Path('src/a.c').native)], arguments)
+
+    def test_relative_path_is_relative_to_cwd(self):
+        os.mkdir('src')
+        with dlb.ex.Context() as c:
+            rd = dlb.ex.tool._RedoContext(c, dict())
+            arguments, cwd = rd.prepare_arguments([dlb.fs.Path('src/a.c')], cwd='src/')
+        self.assertEqual([str(dlb.fs.Path('a.c').native)], arguments)
+
+
 @unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
 class ExecuteHelperTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 
