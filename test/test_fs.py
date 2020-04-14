@@ -700,6 +700,21 @@ class CopyTest(unittest.TestCase):
             copy.deepcopy(p)
 
 
+class PickleTest(unittest.TestCase):
+
+    def test_can_be_pickled(self):
+        import pickle
+        f = dlb.fs.Path('a/b/c')
+
+        pf = pickle.dumps(f)
+        f.native
+        pfn = pickle.dumps(pf)
+        pd = pickle.dumps(dlb.fs.Path('a/b/c/'))
+
+        self.assertNotEqual(pf, pfn)  # includes native representation
+        self.assertNotEqual(pf, pd)
+
+
 class RelativeRestrictionsTest(unittest.TestCase):
 
     def test_relative_permitted(self):
