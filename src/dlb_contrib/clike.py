@@ -29,15 +29,17 @@
 #         EXECUTABLE = 'specific-cc'
 #
 #         async def redo(self, result, context):
-#             with context.temporary() as object_file:
-#                 await context.execute_helper(self.EXECUTABLE, ..., '-o', object_file, result.source_file)
-#                 included_files = ...
-#                 result.included_files = included_files
-#                 context.replace_output(result.object_file, object_file)
+#             included_files = set()
+#             for source_file, object_file in zip(result.source_files, result.object_files):
+#                 with context.temporary() as temp_object_file:
+#                     await context.execute_helper(self.EXECUTABLE, ..., '-o', temp_object_file, source_file)
+#                     included_files |= ...
+#                     context.replace_output(object_file, temp_object_file)
+#             result.included_files = sorted(included_files)
 #
 #     with dlb.ex.Context():
 #         GenerateVersionFile(file='Version.h').run()
-#         CCompiler(source_file='main.c', object_file='main.c.o').run()
+#         CCompiler(source_files=['main.c'], object_files=['main.c.o']).run()
 
 __all__ = [
     'SIMPLE_IDENTIFIER', 'IDENTIFIER', 'PORTABLE_C_IDENTIFIER', 'FUNCTIONLIKE_MACRO',

@@ -22,15 +22,15 @@ linker from the GNU Binutils)."""
 #
 #         compile_results = [
 #             dlb_contrib.gcc.CCompilerGcc(
-#                 source_file=p,
-#                 object_file=output_path / p.with_appended_suffix('.o'),
+#                 source_files=[p],
+#                 object_files=[output_path / p.with_appended_suffix('.o')],
 #                 include_search_directories=[source_path]
 #             ).run()
 #             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
 #         ]
 #
 #         dlb_contrib.gcc.CLinkerGcc(
-#             object_and_archive_files=[r.object_file for r in compile_results],
+#             object_and_archive_files=[r.object_files[0] for r in compile_results],
 #             linked_file=output_path / 'application').run()
 
 __all__ = [
@@ -135,7 +135,6 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
                 )
 
                 # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
-                included_files = set()
                 with open(make_rules_file.native, 'r', encoding=sys.getfilesystemencoding()) as dep_file:
                     for p in dlb_contrib.gnumake.additional_sources_from_rule(dep_file):
                         try:
