@@ -35,6 +35,7 @@ Please see there for details.
 
 .. dlbcontrib:module:: backslashescape
 .. dlbcontrib:module:: partition
+.. dlbcontrib:module:: exportenv
 .. dlbcontrib:module:: generic
 .. dlbcontrib:module:: zip
 .. dlbcontrib:module:: git
