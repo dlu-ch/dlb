@@ -9,7 +9,7 @@ import os.path
 import matplotlib.pyplot as plt
 import matplotlib.pylab
 
-build_dir_path = 'build/'
+build_dir_path = os.path.join('..', '..', 'build', 'out', 'benchmark')
 result_file_path = os.path.join(build_dir_path, 'result.txt')
 
 

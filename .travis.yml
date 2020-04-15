@@ -4,5 +4,5 @@ python:
   - "3.8"
   - "nightly"
 install: pip3 install coverage coveralls
-script: ./run-unittests.bash
-after_success: cd test && coveralls
+script: ./run-unittests.bash dlb
+after_success: cd test/dlb/ && coveralls

@@ -30,7 +30,7 @@ CURL=curl
 PYTHON2=python2
 PYTHON3=python3
 
-build_dir="build/"
+build_dir="../../build/out/benchmark/"
 build_generated_dir="${build_dir:?}generated/"
 result_file="${build_dir:?}result.txt"
 setup_dir="setup/"
