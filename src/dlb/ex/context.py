@@ -169,9 +169,8 @@ class _EnvVarDict(_BaseEnvVarDict):
         else:
             value_name = 'current'
 
-        if value is not None:
-            if not restriction.fullmatch(value):
-                raise ValueError(f"{value_name} value invalid with respect to 'restriction': {value!r}")
+        if value is not None and not restriction.fullmatch(value):
+            raise ValueError(f"{value_name} value invalid with respect to 'restriction': {value!r}")
 
         self._restriction_by_name[name] = restriction  # cannot be removed, once defined!
         if value is not None:

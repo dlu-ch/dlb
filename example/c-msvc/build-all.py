@@ -19,7 +19,7 @@ def setup_paths_for_msvc(context):
     # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
     context.env.import_from_outer('VCINSTALLDIR', restriction=r'.+\\',
                                   example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\')
-    assert context.env['VCINSTALLDIR']  # TODO replace with 'required' parameter of import_from_outer()
+    assert context.env['VCINSTALLDIR']
     environment = dlb_contrib.msbatch.RunEnvBatch(batch_file='build/setup.bat').run().environment
 
     install_dir_path = dlb.fs.Path(dlb.fs.Path.Native(environment['VCTOOLSINSTALLDIR']), is_dir=True)
