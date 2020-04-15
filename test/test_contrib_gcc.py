@@ -25,6 +25,24 @@ class CCompiler(dlb_contrib.gcc.CCompilerGcc):
     DIALECT = 'c11'
 
 
+class PathTest(unittest.TestCase):
+    def test_fails_for_invalid_source_file(self):
+        with self.assertRaises(ValueError):
+            dlb_contrib.gcc.ObjectOrArchivePath('a:b.src')
+
+    def test_fails_for_invalid_linkable_file(self):
+        with self.assertRaises(ValueError):
+            dlb_contrib.gcc.ObjectOrArchivePath('')
+        with self.assertRaises(ValueError):
+            dlb_contrib.gcc.ObjectOrArchivePath('.o')
+        with self.assertRaises(ValueError):
+            dlb_contrib.gcc.ObjectOrArchivePath('.a')
+        with self.assertRaises(ValueError):
+            dlb_contrib.gcc.ObjectOrArchivePath('..o')
+        with self.assertRaises(ValueError):
+            dlb_contrib.gcc.ObjectOrArchivePath('..a')
+
+
 @unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
 class CTest(tools_for_test.TemporaryWorkingDirectoryTestCase):
 

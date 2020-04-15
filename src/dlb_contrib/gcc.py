@@ -41,6 +41,7 @@ __all__ = [
 
 
 import sys
+import os.path
 from typing import Iterable, Union
 import dlb.fs
 import dlb.ex
@@ -63,8 +64,8 @@ class Path(dlb.fs.PosixPath):
 class ObjectOrArchivePath(Path):
     def check_restriction_to_base(self, components_checked: bool):
         if not self.is_dir() and self.parts:
-            p = self.parts[-1]
-            if not (p.endswith('.o') or p.endswith('.a')):
+            _, ext = os.path.splitext(self.parts[-1])
+            if ext not in ('.o', '.a'):
                 raise ValueError("must end with '.o' or '.a'")
 
 
