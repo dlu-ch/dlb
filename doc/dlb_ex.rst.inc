@@ -204,6 +204,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       The *path* attribute of the returned object is an absolute path in the same directory for all calls in the
       :term:`root context`, as a :class:`dlb.fs.Path` object. Its last component is unique among all calls
       in the :term:`root context`. ``path.is_dir()`` is *is_dir*.
+      The path of the :term:`working tree's root <working tree>` is ``path[:-3]``.
 
       The unique path component starts with a lower-case letter and ends with *suffix*.
       It contains only lower-case letters and decimal digits between its first characters and the suffix.
