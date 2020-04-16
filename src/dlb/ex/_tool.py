@@ -408,7 +408,7 @@ class _ToolBase:
 
         return result
 
-    async def redo(self, result: _toolrun.RunResult, context: _toolrun.RedoContext) -> Optional[bool]:
+    async def redo(self, result: 'dlb.ex.RunResult', context: 'dlb.ex.RedoContext') -> Optional[bool]:
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):
