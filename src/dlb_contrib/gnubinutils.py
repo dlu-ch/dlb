@@ -20,9 +20,12 @@
 
 __all__ = ['Archive']
 
+import sys
 import os
 
 import dlb.ex
+
+assert sys.version_info >= (3, 7)
 
 
 class Archive(dlb.ex.Tool):

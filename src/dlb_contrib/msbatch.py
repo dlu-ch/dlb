@@ -35,10 +35,13 @@
 
 __all__ = ['RunEnvBatch']
 
+import sys
 import os.path
 
 import dlb.ex
 import dlb_contrib.exportenv
+
+assert sys.version_info >= (3, 7)
 
 
 class BatchFilePath(dlb.fs.WindowsPath):

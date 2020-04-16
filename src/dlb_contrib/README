@@ -13,7 +13,11 @@ Each module in this package must contain the following:
     - a complete usage example, starting with '# Usage example:' and indented by 4 spaces
       (this is extracted for the documentation)
 
-  - A list '__all__' of all exported?? objects, grouped by their type.
+  - A list '__all__' of all objects intended to be used by dlb scripts, grouped by their type.
+
+  - A Python version check based on sys.version_info.
+    Example:
+       assert sys.version_info >= (3, 7)
 
 A comment block consists of consecutive lines starting with '#'.
 

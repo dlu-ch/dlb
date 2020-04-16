@@ -36,6 +36,8 @@ import dlb.fs
 import dlb.di
 import dlb.ex
 
+assert sys.version_info >= (3, 7)
+
 
 def _check_option(option: str) -> str:
     option = str(option)

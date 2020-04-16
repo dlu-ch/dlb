@@ -17,9 +17,12 @@ To be used by batch files and shell scripts (see dlb_contrib.msbatch)."""
 
 __all__ = ['export', 'read_exported']
 
+import sys
 import os
 import json
 from typing import Dict
+
+assert sys.version_info >= (3, 7)
 
 FILE_NAME = 'env.json'
 
