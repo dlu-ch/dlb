@@ -495,15 +495,9 @@ class ValueOfNonAbstractDependencyTest(unittest.TestCase):
 
 class CoverageTest(unittest.TestCase):
     def test_all_concrete_dependency_is_complete(self):
-        public_dependency_classes_except_abstract_ones = {  # TODO simplify
-            v for n, v in dlb.ex._depend.__dict__.items()
-            if isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency) and
-               v is not dlb.ex._depend.Dependency and not n.startswith('_')
-        } | {
-            v for n, v in dlb.ex.input.__dict__.items()
-            if isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency)
-        } | {
-            v for n, v in dlb.ex.output.__dict__.items()
+        public_dependency_classes_except_abstract_ones = {
+            v for m in [dlb.ex._depend, dlb.ex.input, dlb.ex.output]
+            for n, v in m.__dict__.items()
             if isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency)
         }
 
@@ -511,6 +505,7 @@ class CoverageTest(unittest.TestCase):
             dlb.ex.input.EnvVar, dlb.ex.output.Object)
 
         covered_abstract_dependencies = (
+            dlb.ex._depend.Dependency,
             dlb.ex._depend.InputDependency,
             dlb.ex._depend.OutputDependency
         )

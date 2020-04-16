@@ -48,7 +48,7 @@ class ShScriptlet(dlb.ex.Tool):
     output = dlb.ex.output.Object(explicit=False)
 
     # Overwrite this to chunk processor if you want to process the output incrementally.
-    # See dlb.ex.Tool.RedoContext.execute_helper_with_output() for details.
+    # See dlb.ex.RedoContext.execute_helper_with_output() for details.
     def get_chunk_processor(self) -> Optional[dlb.ex.ChunkProcessor]:
         return None
 

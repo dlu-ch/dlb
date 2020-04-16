@@ -522,7 +522,7 @@ class RedoResultRepr(testenv.TemporaryWorkingDirectoryTestCase):
             imcomplete_repr = repr(r)
         complete_repr = repr(r)
 
-        self.assertEqual("<proxy object for future <class 'dlb.ex.Tool.RunResult'> result>", imcomplete_repr)
+        self.assertEqual("<proxy object for future <class 'dlb.ex.RunResult'> result>", imcomplete_repr)
         s = (
             "<proxy object for RunResult(included_files=(Path('a.h'), Path('b.h')), source_file=Path('a.cpp'), "
             "object_file=Path('a.o')) result>"

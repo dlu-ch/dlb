@@ -5,6 +5,7 @@
 import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.ex
+import dlb.ex._toolrun
 import dlb.ex._dependaction
 import os.path
 import io
@@ -22,45 +23,45 @@ class ConstructionTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             with self.assertRaises(TypeError):
                 # noinspection PyTypeChecker
-                dlb.ex._tool._RedoContext('c', dict())
+                dlb.ex._toolrun.RedoContext('c', dict())
 
     def test_fails_for_none(self):
         with dlb.ex.Context() as c:
             with self.assertRaises(TypeError):
                 # noinspection PyTypeChecker
-                dlb.ex._tool._RedoContext(c, None)
+                dlb.ex._toolrun.RedoContext(c, None)
 
     def test_fails_for_sequence(self):
         with dlb.ex.Context() as c:
             with self.assertRaises(TypeError):
                 # noinspection PyTypeChecker
-                dlb.ex._tool._RedoContext(c, ['a'])
+                dlb.ex._toolrun.RedoContext(c, ['a'])
 
 
 class PrepareArgumentsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_int_is_converted_to_str(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             arguments, cwd = rd.prepare_arguments([1])
         self.assertEqual(['1'], arguments)
 
     def test_path_is_converted_to_str(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             arguments, cwd = rd.prepare_arguments([dlb.fs.Path('src/a.c')])
         self.assertEqual([str(dlb.fs.Path('src/a.c').native)], arguments)
 
     def test_native_path_is_converted_to_str(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             arguments, cwd = rd.prepare_arguments([dlb.fs.Path('src/a.c').native])
         self.assertEqual([str(dlb.fs.Path('src/a.c').native)], arguments)
 
     def test_relative_path_is_relative_to_cwd(self):
         os.mkdir('src')
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             arguments, cwd = rd.prepare_arguments([dlb.fs.Path('src/a.c')], cwd='src/')
         self.assertEqual([str(dlb.fs.Path('a.c').native)], arguments)
 
@@ -72,7 +73,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
         os.mkdir('-l')
         open(os.path.join('-l', 'content'), 'xb').close()
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output='stdout.txt')
             returncode = asyncio.get_event_loop().run_until_complete(e)
             self.assertEqual(0, returncode)
@@ -86,7 +87,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_directory_helper(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(ValueError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls/', expected_returncodes=[1, 3]))
             msg = "cannot execute directory: 'ls/'"
@@ -94,7 +95,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_unexpected_return_code(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(dlb.ex.HelperExecutionError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', expected_returncodes=[1, 3]))
             msg = "execution of 'ls' returned unexpected exit code 0"
@@ -102,7 +103,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_open_file(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(TypeError) as cm:
                 with open('stdout.txt', 'xb') as f:
                     asyncio.get_event_loop().run_until_complete(
@@ -115,7 +116,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_pipe(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(TypeError) as cm:
                 asyncio.get_event_loop().run_until_complete(
                     rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=asyncio.subprocess.PIPE))
@@ -126,7 +127,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
         os.mkdir('-l')
         open(os.path.join('-l', 'content'), 'xb').close()
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper('ls', ['-l'], cwd=dlb.fs.Path('-l'), stdout_output='stdout.txt')
             asyncio.get_event_loop().run_until_complete(e)
             regex = (
@@ -148,13 +149,13 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_cwd_not_in_working_tree(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(dlb.ex.WorkingTreePathError):
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('..')))
 
     def test_fails_for_nonexistent_cwd(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper('ls', cwd=dlb.fs.Path('ups')))
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
@@ -169,7 +170,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             raise unittest.SkipTest from None
 
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             asyncio.get_event_loop().run_until_complete(rd.execute_helper(
                 'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c'), stdout_output=NotImplemented))  # 'a/b/..'
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
@@ -184,7 +185,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
         os.mkdir(os.path.join('a', 'x'))
 
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper(
                 'ls', ['-d', dlb.fs.Path('.'), dlb.fs.Path('a/x'), dlb.fs.Path('.dlbroot/t/')],
                 cwd=dlb.fs.Path('a/b/c'), stdout_output='stdout.txt')
@@ -199,14 +200,14 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_relative_path_not_in_working_tree(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper('ls', [dlb.fs.Path('..')])
             with self.assertRaises(dlb.ex.WorkingTreePathError):
                 asyncio.get_event_loop().run_until_complete(e)
 
     def test_can_write_to_open_file(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper('ls', ['-l'], stdout_output='stdout.txt')
             asyncio.get_event_loop().run_until_complete(e)
             with open('stdout.txt', 'rb') as f:
@@ -214,7 +215,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_can_write_to_devnull(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper('ls', ['ls --unsupported-option '], stderr_output=NotImplemented,
                                   expected_returncodes=[2])
             asyncio.get_event_loop().run_until_complete(e)
@@ -229,7 +230,7 @@ class ExecuteHelperEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
             c.env.import_from_outer('Y', restriction='.*', example='')
             c.env['X'] = 'x'
             c.env['Y'] = 'z'
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper('sh', ['-c', 'echo $X-$Y'], forced_env={'Y': 'zzz...'}, stdout_output='stdout.txt')
             _ = asyncio.get_event_loop().run_until_complete(e)
             with open('stdout.txt', 'rb') as f:
@@ -241,7 +242,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_returns_output_as_bytes_without_processor(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
 
             e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_ >&2; echo 3'],
                                               output_to_process=1, other_output=NotImplemented)
@@ -257,7 +258,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_can_write_to_file(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_ >&2; echo 3'],
                                               output_to_process=1, other_output='stderr.txt')
             r, output = asyncio.get_event_loop().run_until_complete(e)
@@ -268,7 +269,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_return_processor_result_with_processor(self):
         with dlb.ex.Context() as c:
-            class ChunkProcessor(dlb.ex._tool.ChunkProcessor):
+            class ChunkProcessor(dlb.ex._toolrun.ChunkProcessor):
                 separator = b'_'
 
                 def __init__(self):
@@ -281,7 +282,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 def result(self):
                     return self.chunks
 
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_; echo 3'],
                                               output_to_process=1, chunk_processor=ChunkProcessor())
             r, output = asyncio.get_event_loop().run_until_complete(e)
@@ -290,7 +291,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_processor_can_abort(self):
         with dlb.ex.Context() as c:
-            class ChunkProcessor(dlb.ex._tool.ChunkProcessor):
+            class ChunkProcessor(dlb.ex._toolrun.ChunkProcessor):
                 def __init__(self):
                     self.n = 0
 
@@ -303,7 +304,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 def result(self):
                     return self.n
 
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper_with_output('sh', ['-c', 'yes'], output_to_process=1,
                                               chunk_processor=ChunkProcessor())
             with self.assertRaises(ValueError) as cm:
@@ -312,7 +313,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_aborts_for_too_large_chunk_with_processor(self):
         with dlb.ex.Context() as c:
-            class ChunkProcessor(dlb.ex._tool.ChunkProcessor):
+            class ChunkProcessor(dlb.ex._toolrun.ChunkProcessor):
                 def __init__(self):
                     self.chunks = []
 
@@ -323,7 +324,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 def result(self):
                     return self.chunks
 
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             processor = ChunkProcessor()
             processor.max_chunk_size = 20
             e = rd.execute_helper_with_output('sh', ['-c', 'echo 1; echo 01234567890123456789'],
@@ -341,7 +342,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
         msg = "'output_to_process' must be 1 or 2"
 
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
 
             e = rd.execute_helper_with_output('sh', ['-c', 'echo'], output_to_process=0)
             with self.assertRaises(ValueError) as cm:
@@ -356,7 +357,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_invalid_chunk_processor(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
 
             # noinspection PyTypeChecker
             e = rd.execute_helper_with_output('sh', ['-c', 'echo'], chunk_processor=1)
@@ -365,12 +366,12 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             msg = "'chunk_processor' must be None or a ChunkProcessor object, not <class 'int'>"
             self.assertEqual(msg, str(cm.exception))
 
-            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], chunk_processor=dlb.ex._tool.ChunkProcessor())
+            e = rd.execute_helper_with_output('sh', ['-c', 'echo'], chunk_processor=dlb.ex._toolrun.ChunkProcessor())
             with self.assertRaises(NotImplementedError):
                 asyncio.get_event_loop().run_until_complete(e)
 
             # noinspection PyAbstractClass
-            class ChunkProcessor(dlb.ex._tool.ChunkProcessor):
+            class ChunkProcessor(dlb.ex._toolrun.ChunkProcessor):
                 def process(self, chunk: bytes, is_last: bool):
                     pass
 
@@ -390,7 +391,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_invalid_other_output(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
 
             e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=1)
             with self.assertRaises(TypeError) as cm:
@@ -400,7 +401,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_unexpected_return_code(self):
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(dlb.ex.HelperExecutionError) as cm:
                 e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=NotImplemented,
                                                   expected_returncodes=[1])
@@ -422,7 +423,7 @@ class ExecuteHelperRawTest(testenv.TemporaryWorkingDirectoryTestCase):
             return proc
 
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             proc = asyncio.get_event_loop().run_until_complete(redo(rd))
             self.assertIsInstance(proc, asyncio.subprocess.Process)
             self.assertEqual(2, proc.returncode)
@@ -438,7 +439,7 @@ class ExecuteHelperRawTest(testenv.TemporaryWorkingDirectoryTestCase):
             return proc
 
         with dlb.ex.Context() as c:
-            rd = dlb.ex._tool._RedoContext(c, dict())
+            rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(io.UnsupportedOperation) as cm:
                 asyncio.get_event_loop().run_until_complete(redo(rd))
             self.assertEqual('fileno', cm.exception.args[0])
@@ -449,7 +450,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_nonoutput_dependency(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a/b'): action})
 
             with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b/', 'c')
@@ -462,7 +463,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.output.RegularFile(), 'test_file')
             directory_action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.Directory(), 'test_directory')
-            rd = dlb.ex._tool._RedoContext(c, {
+            rd = dlb.ex._toolrun.RedoContext(c, {
                 dlb.fs.Path('a/b'): file_action,
                 dlb.fs.Path('c/'): directory_action
             })
@@ -480,7 +481,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_if_source_does_not_exist(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a/b'): action})
 
             with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b', dlb.fs.Path('a/b'))
@@ -494,7 +495,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_if_source_is_destination(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a/b'): action})
 
             os.mkdir('a')
             open(os.path.join('a', 'b'), 'wb').close()
@@ -510,7 +511,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_replaces(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
 
             with open('a', 'wb') as f:
                 f.write(b'A')
@@ -530,7 +531,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
 
             with open('a', 'wb') as f:
                 f.write(b'A')
@@ -550,7 +551,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
 
             with open('a', 'wb') as f:
                 f.write(b'AA')
@@ -570,7 +571,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
 
             with open('b', 'wb') as f:
                 f.write(b'BB')
@@ -588,7 +589,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('x/y/a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('x/y/a'): action})
 
             with open('b', 'wb') as f:
                 f.write(b'BB')
@@ -603,7 +604,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
 
             with open('a', 'wb') as f:
                 f.write(b'AA')
@@ -621,7 +622,7 @@ class ReplaceDirectoryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_replaces_nonempty(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.DirectoryOutputAction(dlb.ex.output.Directory(), 'test_directory')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a/'): action})
 
             os.makedirs('a/b/c')
             os.makedirs('u/v')
@@ -636,7 +637,7 @@ class ReplaceDirectoryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.DirectoryOutputAction(dlb.ex.output.Directory(), 'test_directory')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('x/y/a/'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('x/y/a/'): action})
 
             os.makedirs('u/v')
 
@@ -649,7 +650,7 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
     def test_replaces_symlink(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.output.NonRegularFile(), 'test')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
 
             try:
                 os.symlink('/x/y', 'a')
@@ -668,7 +669,7 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.output.NonRegularFile(), 'test')
-            rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('x/y/a'): action})
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('x/y/a'): action})
 
             try:
                 os.symlink('/u/v', 'b')

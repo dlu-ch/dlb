@@ -540,10 +540,10 @@ Tools are customized by inheritance and defining class attributes.
       Overwrite this method to implement a new :class:`Tool`.
 
       *result* is the result object that will by returned by the calling :meth:`run()`.
-      *context* is the redo context (see :class:`Tool.RedoContext`).
+      *context* is the redo context as an instance of :class:`RedoContext`.
 
-      Use :meth:`context.execute_helper() <Tool.RedoContext.execute_helper()>` and
-      :meth:`context.replace_output() <Tool.RedoContext.replace_output()>`.
+      Use :meth:`context.execute_helper() <RedoContext.execute_helper()>` and
+      :meth:`context.replace_output() <RedoContext.replace_output()>`.
 
       Assign to attributes of *result* to define a non-explicit concrete dependency for the dependency role with the
       same name.
@@ -622,7 +622,7 @@ Redo context
 A redo context is a read-only view for a :class:`dlb.ex.Context` with some additional
 methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
-.. class:: Tool.RedoContext
+.. class:: RedoContext
 
    A redo context is constructed automatically by :meth:`Tool.run()`. Redo contexts should not be constructed manually.
 

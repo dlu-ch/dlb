@@ -13,20 +13,46 @@ import unittest
 
 class ImportTest(unittest.TestCase):
 
-    def test_all_from_tool_is_correct(self):
-        import dlb.ex._tool
-        self.assertEqual({'ChunkProcessor', 'Tool', 'is_complete'}, set(dlb.ex._tool.__all__))
-        self.assertTrue('Tool' in dir(dlb.ex))
-        for n in dlb.ex._tool.__all__:
-            self.assertEqual('dlb.ex', dlb.ex._tool.__dict__[n].__module__)
+    def test_all_is_correct(self):
+        expected_names = {
+            'DefinitionAmbiguityError',
+            'DependencyError',
+            'ExecutionParameterError',
+            'RedoError',
+            'HelperExecutionError',
+            'ContextNestingError',
+            'NotRunningError',
+            'ManagementTreeError',
+            'NoWorkingTreeError',
+            'WorkingTreeTimeError',
+            'ContextModificationError',
+            'WorkingTreePathError',
+            'DatabaseError',
 
-    def test_all_from_context_is_correct(self):
-        import dlb.ex._context
-        self.assertEqual({'Context', 'ReadOnlyContext',}, set(dlb.ex._context.__all__))
-        self.assertTrue('Context' in dir(dlb.ex))
+            'Context',
+            'ReadOnlyContext',
 
-        for n in dlb.ex._context.__all__:
-            self.assertEqual('dlb.ex', dlb.ex._context.__dict__[n].__module__)
+            'Dependency',
+            'InputDependency',
+            'OutputDependency',
+
+            'ChunkProcessor',
+            'RedoContext',
+            'RunResult',
+            'Tool',
+            'is_complete',
+
+            'input',
+            'output'
+        }
+
+        names = set(n for n in dir(dlb.ex) if not n.startswith('_'))
+        self.assertEqual(expected_names, names)
+
+        for n in expected_names:
+            o = dlb.ex.__dict__[n]
+            if hasattr(o, '__module__'):
+                self.assertEqual('dlb.ex', o.__module__)
 
 
 class RunSummaryTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -139,4 +165,3 @@ class RunSummaryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual("", output.getvalue())
         finally:
             dlb.cf.latest_run_summary_max_count = orig
-

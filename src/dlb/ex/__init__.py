@@ -5,6 +5,7 @@
 from ._error import *
 from ._context import *
 from ._depend import *
+from ._toolrun import *
 from ._tool import *
 from . import input
 from . import output

@@ -2,7 +2,8 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Execution contexts for tool instances."""
+"""Execution contexts for tool instances.
+This is an implementation detail - do not import it unless you know what you are doing."""
 
 __all__ = ['Context', 'ReadOnlyContext']
 
