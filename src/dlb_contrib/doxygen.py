@@ -19,18 +19,17 @@
 #             source_directories=['src/'],  # replaces '${{source_directories}}' in Doxyfile
 #             output_directory='build/out/').run()
 
-__all__ = [
-    'PLACEHOLDER_NAME', 'Template',
-    'Path', 'Doxygen'
-]
+__all__ = ['PLACEHOLDER_NAME', 'Template', 'Path', 'Doxygen']
 
 import sys
 import re
 import string
 import collections.abc
 from typing import Any, Dict
+
 import dlb.fs
 import dlb.ex
+
 assert sys.version_info >= (3, 7)
 
 PLACEHOLDER_NAME = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*$')

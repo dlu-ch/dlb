@@ -50,9 +50,11 @@ __all__ = [
 import sys
 import string
 import re
+from typing import Iterable, Optional, Union
+
 import dlb.fs
 import dlb.ex
-from typing import Iterable, Optional, Union
+
 assert sys.version_info >= (3, 7)
 
 # Identifier of unrestricted length without universal characters.

@@ -16,6 +16,7 @@ __all__ = ['PYTHON_ESCAPES', 'unquote']
 import sys
 import string
 from typing import AnyStr, Dict, Optional
+
 assert sys.version_info >= (3, 7)
 
 

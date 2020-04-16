@@ -23,17 +23,16 @@
 #     with dlb.ex.Context():
 #         ... = ShowContent().run().read_files
 
-__all__ = [
-    'SYSCALL_NAME_REGEX', 'syscall_from_line',
-    'RunStraced'
-]
+__all__ = ['SYSCALL_NAME_REGEX', 'syscall_from_line', 'RunStraced']
 
 import sys
 import re
+from typing import Iterable, List, Optional, Tuple, Union
+
 import dlb.fs
 import dlb.ex
-from . import backslashescape
-from typing import Iterable, List, Optional, Tuple, Union
+import dlb_contrib.backslashescape
+
 assert sys.version_info >= (3, 7)
 
 SYSCALL_NAME_REGEX = re.compile(rb'^(?P<name>[a-z][a-zA-Z0-9_#]*)')
@@ -79,7 +78,7 @@ def _scan_argument_list(argument_list_str, closing_character):
                     if v is not None:
                         try:
                             # https://github.com/strace/strace/blob/v5.5/util.c#L634
-                            potential_path_argument = backslashescape.unquote(v, opening=None)
+                            potential_path_argument = dlb_contrib.backslashescape.unquote(v, opening=None)
                         except ValueError:
                             raise ValueError(f"invalid quoting in argument: {raw_argument!r}") from None
                     rest = rest[len(raw_argument):]

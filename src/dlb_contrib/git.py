@@ -25,18 +25,16 @@
 #             dlb.di.inform(f'repository contains {len(result.untracked_files)} untracked file(s): {s}',
 #                           level=dlb.di.WARNING)
 
-__all__ = [
-    'GIT_DESCRIPTION_REGEX', 'modifications_from_status',
-    'GitDescribeWorkingDirectory'
-]
-
+__all__ = ['GIT_DESCRIPTION_REGEX', 'modifications_from_status', 'GitDescribeWorkingDirectory']
 
 import sys
 import re
 from typing import Dict, Iterable, Optional, Set, Tuple
+
 import dlb.fs
 import dlb.ex
-from . import backslashescape
+import dlb_contrib.backslashescape
+
 assert sys.version_info >= (3, 7)
 
 
@@ -77,7 +75,7 @@ def _unquote_path(optionally_quoted_path):
     m = C_ESCAPED_PATH_REGEX.match(optionally_quoted_path)
     if not m:
         return optionally_quoted_path
-    return backslashescape.unquote(m.group(0))
+    return dlb_contrib.backslashescape.unquote(m.group(0))
 
 
 def modifications_from_status(lines: Iterable[str]) \

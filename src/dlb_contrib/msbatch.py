@@ -35,16 +35,8 @@
 
 __all__ = ['RunEnvBatch']
 
-# To query an environment variable 'v' that may contain a line separator:
-#
-#   cmd.exe /e:on /u /c set v^&set v=^&set v>t
-#
-# If an environment variable 'v' exists and does not contain a line separator, this sets %errorlevel% to 0 and creates
-# an UTF-16LE encoded textfile that starts with 'v=', followed by an even number of lines where the first half and the
-# second half are equal.
-# If no environment variable 'v' exists, it sets %errorlevel% to 1.
-
 import os.path
+
 import dlb.ex
 import dlb_contrib.exportenv
 
@@ -101,3 +93,13 @@ class RunEnvBatch(dlb.ex.Tool):
             result.environment = environment
 
         return True
+
+
+# To query an environment variable 'v' that may contain a line separator:
+#
+#   cmd.exe /e:on /u /c set v^&set v=^&set v>t
+#
+# If an environment variable 'v' exists and does not contain a line separator, this sets %errorlevel% to 0 and creates
+# an UTF-16LE encoded textfile that starts with 'v=', followed by an even number of lines where the first half and the
+# second half are equal.
+# If no environment variable 'v' exists, it sets %errorlevel% to 1.

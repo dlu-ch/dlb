@@ -19,6 +19,7 @@ __all__ = ['Check']
 
 import sys
 import dlb.ex
+
 assert sys.version_info >= (3, 7)
 
 

@@ -20,9 +20,11 @@ __all__ = ['by_working_tree_path', 'split_longer']
 
 import sys
 import zlib
+from typing import Any, Iterable, List, Sequence
+
 import dlb.fs
 import dlb.ex
-from typing import Any, Iterable, List, Sequence
+
 assert sys.version_info >= (3, 7)
 
 

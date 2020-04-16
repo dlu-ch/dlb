@@ -21,17 +21,15 @@
 #         result = PkgConfig().run()
 #         ... = result.library_filenames
 
-__all__ = [
-    'LIBRARY_NAME_REGEX', 'VERSION_CONSTRAINT_REGEX',
-    'parse_from_output',
-    'PkgConfig'
-]
+__all__ = ['LIBRARY_NAME_REGEX', 'VERSION_CONSTRAINT_REGEX', 'parse_from_output', 'PkgConfig']
 
 import sys
 import re
 import collections.abc
+
 import dlb.fs
 import dlb.ex
+
 assert sys.version_info >= (3, 7)
 
 LIBRARY_NAME_REGEX = re.compile(r'^[A-Za-z_][^ \t\n\r]*$')

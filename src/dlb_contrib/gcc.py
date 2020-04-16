@@ -43,10 +43,12 @@ __all__ = [
 import sys
 import os.path
 from typing import Iterable, Union
+
 import dlb.fs
 import dlb.ex
 import dlb_contrib.gnumake
 import dlb_contrib.clike
+
 assert sys.version_info >= (3, 7)
 
 

@@ -25,16 +25,13 @@
 #             input_search_paths=['src/'],
 #             state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
 
-__all__ = [
-    'KpathseaPath', 'TexPath',
-    'accessed_files_from_recorded',
-    'Tex', 'Latex'
-]
+__all__ = ['KpathseaPath', 'TexPath', 'accessed_files_from_recorded', 'Tex', 'Latex']
 
 import sys
 import os
 import shutil
 from typing import Iterable, List, Tuple, Union
+
 import dlb.fs
 import dlb.di
 import dlb.ex

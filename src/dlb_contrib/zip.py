@@ -20,7 +20,9 @@ __all__ = ['ZipDirectory']
 import sys
 import os.path
 import zipfile
+
 import dlb.ex
+
 assert sys.version_info >= (3, 7)
 
 
