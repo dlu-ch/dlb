@@ -36,8 +36,8 @@ class Check(dlb.ex.Tool):
     #
     # For GNU Make lovers: This is the equivalent to using a .PHONY target as a source.
 
-    input_files = dlb.ex.Tool.Input.RegularFile[:]()
-    input_directories = dlb.ex.Tool.Input.Directory[:]()
+    input_files = dlb.ex.input.RegularFile[:]()
+    input_directories = dlb.ex.input.Directory[:]()
 
     async def redo(self, result, context):
         pass

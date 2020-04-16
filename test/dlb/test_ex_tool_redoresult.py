@@ -13,9 +13,9 @@ import unittest
 
 
 class ATool(dlb.ex.Tool):
-    source_file = dlb.ex.Tool.Input.RegularFile()
-    object_file = dlb.ex.Tool.Output.RegularFile()
-    included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+    source_file = dlb.ex.input.RegularFile()
+    object_file = dlb.ex.output.RegularFile()
+    included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
     async def redo(self, result, context):
         dlb.di.inform(f"redoing right now for {self.object_file.as_string()}")
@@ -263,8 +263,8 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_redo_that_does_not_assign_required_input(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+            object_file = dlb.ex.output.RegularFile()
+            included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
             async def redo(self, result, context):
                 pass
@@ -281,8 +281,8 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_redo_that_does_not_assign_required_output(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False)
+            object_file = dlb.ex.output.RegularFile()
+            log_file = dlb.ex.output.RegularFile(explicit=False)
 
             async def redo(self, result, context):
                 pass
@@ -299,8 +299,8 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_if_input_dependency_if_relative_and_not_in_managed_tree(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+            object_file = dlb.ex.output.RegularFile()
+            included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
             async def redo(self, result, context):
                 result.included_files = ['a/../b']
@@ -317,7 +317,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_if_output_dependency_not_in_managed_tree(self):
         class CTool(dlb.ex.Tool):
-            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False)
+            log_file = dlb.ex.output.RegularFile(explicit=False)
 
             async def redo(self, result, context):
                 result.log_file = '/tmp/x'
@@ -334,8 +334,8 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_if_redo_assigns_none_to_required(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+            object_file = dlb.ex.output.RegularFile()
+            included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
             async def redo(self, result, context):
                 result.included_files = None
@@ -349,9 +349,9 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_nonrequired_is_none_if_redo_does_not_assign(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
-            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False, required=False)
+            object_file = dlb.ex.output.RegularFile()
+            included_files = dlb.ex.input.RegularFile[:](explicit=False, required=False)
+            log_file = dlb.ex.output.RegularFile(explicit=False, required=False)
 
             # noinspection PyShadowingNames
             async def redo(self, result, context):
@@ -365,8 +365,8 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_silently_ignores_input_dependency_if_absolute_and_not_in_managed_tree(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+            object_file = dlb.ex.output.RegularFile()
+            included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
             async def redo(self, result, context):
                 result.included_files = ['/x/y']
@@ -377,7 +377,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_can_assign_output_dependency_in_managed_tree(self):
         class CTool(dlb.ex.Tool):
-            log_file = dlb.ex.Tool.Output.RegularFile(explicit=False)
+            log_file = dlb.ex.output.RegularFile(explicit=False)
 
             async def redo(self, result, context):
                 result.log_file = 'x'
@@ -389,8 +389,8 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_can_assigns_none_to_nonrequired(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False, required=False)
+            object_file = dlb.ex.output.RegularFile()
+            included_files = dlb.ex.input.RegularFile[:](explicit=False, required=False)
 
             # noinspection PyShadowingNames
             async def redo(self, result, context):
@@ -406,11 +406,11 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_explicit_envvar_are_assigned_on_tool_instance(self):
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            language = dlb.ex.Tool.Input.EnvVar(name='LANG',
-                                                restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
-                                                example='sv_SE')
-            cflags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction='.+', example='-O2', required=False)
+            object_file = dlb.ex.output.RegularFile()
+            language = dlb.ex.input.EnvVar(name='LANG',
+                                           restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                           example='sv_SE')
+            cflags = dlb.ex.input.EnvVar(name='CFLAGS', restriction='.+', example='-O2', required=False)
 
             async def redo(self, result, context):
                 pass
@@ -434,13 +434,13 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
             pass
 
         class CTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
-            language = dlb.ex.Tool.Input.EnvVar(name='LANG',
-                                                restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
-                                                example='sv_SE',
-                                                explicit=False)
-            cflags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction='.+', example='-O2',
-                                              required=False, explicit=False)
+            object_file = dlb.ex.output.RegularFile()
+            language = dlb.ex.input.EnvVar(name='LANG',
+                                           restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                           example='sv_SE',
+                                           explicit=False)
+            cflags = dlb.ex.input.EnvVar(name='CFLAGS', restriction='.+', example='-O2',
+                                         required=False, explicit=False)
 
             # noinspection PyShadowingNames
             async def redo(self, result, context):
@@ -496,7 +496,7 @@ class RedoResultObjectTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_nonexplicit_object_is_assigned_on_result(self):
         class CTool(dlb.ex.Tool):
-            calculated = dlb.ex.Tool.Output.Object(explicit=False)
+            calculated = dlb.ex.output.Object(explicit=False)
 
             async def redo(self, result, context):
                 result.calculated = 42

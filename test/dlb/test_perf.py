@@ -16,9 +16,9 @@ included_files = [f"a{i}.h" for i in range(20)]
 
 
 class ATool(dlb.ex.Tool):
-    source_file = dlb.ex.Tool.Input.RegularFile()
-    object_file = dlb.ex.Tool.Output.RegularFile()
-    included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+    source_file = dlb.ex.input.RegularFile()
+    object_file = dlb.ex.output.RegularFile()
+    included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
     async def redo(self, result, context):
         with (context.root_path / self.object_file).native.raw.open('wb'):
@@ -162,8 +162,8 @@ class ImportantImportBenchmark(testenv.TemporaryWorkingDirectoryTestCase):
             PARAMETER = ()
             PARAMETER2 = 123
 
-            input = dlb.ex.Tool.Input.RegularFile()
-            output = dlb.ex.Tool.Output.RegularFile()
+            input = dlb.ex.input.RegularFile()
+            output = dlb.ex.output.RegularFile()
 
             def redo(self, result, context):
                 pass
@@ -173,7 +173,7 @@ class ImportantImportBenchmark(testenv.TemporaryWorkingDirectoryTestCase):
             PARAMETER = (1, 2, 3)
             PARAMETER3 = ''
 
-            output2 = dlb.ex.Tool.Output.RegularFile()
+            output2 = dlb.ex.output.RegularFile()
 
             def redo(self, result, context):
                 pass

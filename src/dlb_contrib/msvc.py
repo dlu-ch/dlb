@@ -167,10 +167,10 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'cl.exe'
 
-    system_root_directory_path = dlb.ex.Tool.Input.EnvVar(
+    system_root_directory_path = dlb.ex.input.EnvVar(
         name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
         required=True, explicit=False)
-    system_include_search_directories = dlb.ex.Tool.Input.EnvVar(
+    system_include_search_directories = dlb.ex.input.EnvVar(
         name='INCLUDE', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
         required=True, explicit=False)
 
@@ -264,20 +264,20 @@ class LinkerMsvc(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'link.exe'
 
-    system_root_directory_path = dlb.ex.Tool.Input.EnvVar(
+    system_root_directory_path = dlb.ex.input.EnvVar(
         name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
         required=True, explicit=False)
-    system_library_search_directories = dlb.ex.Tool.Input.EnvVar(
+    system_library_search_directories = dlb.ex.input.EnvVar(
         name='LIB', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
         required=True, explicit=False)
 
     # Object files and static libraries to link.
-    linkable_files = dlb.ex.Tool.Input.RegularFile[1:]()
+    linkable_files = dlb.ex.input.RegularFile[1:]()
 
-    linked_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
+    linked_file = dlb.ex.output.RegularFile(replace_by_same_content=False)
 
     # Tuple of paths of directories that are to be searched for libraries in addition to the standard system directories
-    library_search_directories = dlb.ex.Tool.Input.Directory[:](required=False)
+    library_search_directories = dlb.ex.input.Directory[:](required=False)
 
     def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return []  # e.g. '/DLL'

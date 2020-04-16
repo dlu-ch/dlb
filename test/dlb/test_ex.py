@@ -87,9 +87,9 @@ class RunSummaryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.di.set_threshold_level(dlb.di.ERROR)
 
             class ATool(dlb.ex.Tool):
-                source_file = dlb.ex.Tool.Input.RegularFile()
-                object_file = dlb.ex.Tool.Output.RegularFile()
-                included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+                source_file = dlb.ex.input.RegularFile()
+                object_file = dlb.ex.output.RegularFile()
+                included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
                 async def redo(self, result, context):
                     dlb.di.inform("redoing right now")

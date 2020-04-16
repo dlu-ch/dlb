@@ -448,7 +448,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonoutput_dependency(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
+            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
             with self.assertRaises(ValueError) as cm:
@@ -459,9 +459,9 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_isdir_discrepancy(self):
         with dlb.ex.Context() as c:
             file_action = dlb.ex._dependaction.RegularFileOutputAction(
-                dlb.ex.Tool.Output.RegularFile(), 'test_file')
+                dlb.ex.output.RegularFile(), 'test_file')
             directory_action = dlb.ex._dependaction.RegularFileOutputAction(
-                dlb.ex.Tool.Output.Directory(), 'test_directory')
+                dlb.ex.output.Directory(), 'test_directory')
             rd = dlb.ex._tool._RedoContext(c, {
                 dlb.fs.Path('a/b'): file_action,
                 dlb.fs.Path('c/'): directory_action
@@ -479,7 +479,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_if_source_does_not_exist(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
+            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
             with self.assertRaises(ValueError) as cm:
@@ -493,7 +493,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_if_source_is_destination(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
+            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/b'): action})
 
             os.mkdir('a')
@@ -509,7 +509,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_replaces(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.Tool.Output.RegularFile(), 'test_file')
+            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
             with open('a', 'wb') as f:
@@ -528,7 +528,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_replaces_if_different_size(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(
-                dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
+                dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
@@ -548,7 +548,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_replaces_if_different_content_of_same_size(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(
-                dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
+                dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
@@ -568,7 +568,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_replaces_if_nonexistent(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(
-                dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
+                dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
@@ -586,7 +586,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(
-                dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
+                dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('x/y/a'): action})
 
@@ -601,7 +601,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_does_not_replace__if_same_content(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(
-                dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False),
+                dlb.ex.output.RegularFile(replace_by_same_content=False),
                 'test_file')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
@@ -620,7 +620,7 @@ class ReplaceDirectoryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_replaces_nonempty(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.DirectoryOutputAction(dlb.ex.Tool.Output.Directory(), 'test_directory')
+            action = dlb.ex._dependaction.DirectoryOutputAction(dlb.ex.output.Directory(), 'test_directory')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a/'): action})
 
             os.makedirs('a/b/c')
@@ -635,7 +635,7 @@ class ReplaceDirectoryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.DirectoryOutputAction(dlb.ex.Tool.Output.Directory(), 'test_directory')
+            action = dlb.ex._dependaction.DirectoryOutputAction(dlb.ex.output.Directory(), 'test_directory')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('x/y/a/'): action})
 
             os.makedirs('u/v')
@@ -648,7 +648,7 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
 
     def test_replaces_symlink(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.Tool.Output.NonRegularFile(), 'test')
+            action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.output.NonRegularFile(), 'test')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('a'): action})
 
             try:
@@ -667,7 +667,7 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
 
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.Tool.Output.NonRegularFile(), 'test')
+            action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.output.NonRegularFile(), 'test')
             rd = dlb.ex._tool._RedoContext(c, {dlb.fs.Path('x/y/a'): action})
 
             try:

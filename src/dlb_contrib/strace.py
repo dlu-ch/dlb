@@ -144,8 +144,8 @@ class RunStraced(dlb.ex.Tool):
     # Dynamic helper of executable to  be traced by *TRACING_EXECUTABLE*, looked-up in the context.
     EXECUTABLE = ''  # define in subclass
 
-    read_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
-    written_files = dlb.ex.Tool.Output.RegularFile[:](explicit=False)
+    read_files = dlb.ex.input.RegularFile[:](explicit=False)
+    written_files = dlb.ex.output.RegularFile[:](explicit=False)
 
     def get_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         # Return iterable of commandline arguments for *EXECUTABLE*.

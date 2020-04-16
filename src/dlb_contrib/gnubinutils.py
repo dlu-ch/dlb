@@ -35,8 +35,8 @@ class Archive(dlb.ex.Tool):
     # String of operation modifiers for operation 'r' (each modifier is a ASCII letter).
     OPERATION_MODIFIERS = ''
 
-    object_files = dlb.ex.Tool.Input.RegularFile[1:]()
-    archive_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
+    object_files = dlb.ex.input.RegularFile[1:]()
+    archive_file = dlb.ex.output.RegularFile(replace_by_same_content=False)
 
     async def redo(self, result, context):
         with context.temporary() as archive_file:

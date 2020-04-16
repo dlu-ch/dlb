@@ -121,16 +121,16 @@ class Doxygen(dlb.ex.Tool):
     TEXTUAL_REPLACEMENTS = {}
 
     # When any if these change: redo.
-    source_files_to_watch = dlb.ex.Tool.Input.RegularFile[:](required=False, cls=Path)
+    source_files_to_watch = dlb.ex.input.RegularFile[:](required=False, cls=Path)
 
-    source_directories = dlb.ex.Tool.Input.Directory[1:](cls=Path)
+    source_directories = dlb.ex.input.Directory[1:](cls=Path)
 
     # Template for Doxygen configuration file, UTF-8 encoded (must contain 'DOXYFILE_ENCODING = UTF-8')
     # Escape $ by $$.
     # All unescaped  occurences of ${{name}} are replaced by the content of TEXTUAL_REPLACEMENTS[name].
-    configuration_template_file = dlb.ex.Tool.Input.RegularFile()
+    configuration_template_file = dlb.ex.input.RegularFile()
 
-    output_directory = dlb.ex.Tool.Output.Directory(cls=Path)
+    output_directory = dlb.ex.output.Directory(cls=Path)
 
     async def redo(self, result, context):
 

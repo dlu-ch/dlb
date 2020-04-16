@@ -28,8 +28,8 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
     def test_can_define_dependency(self):
         # noinspection PyUnusedLocal,PyAbstractClass
         class ATool(dlb.ex.Tool):
-            source_file = dlb.ex.Tool.Input.RegularFile()
-            object_file = dlb.ex.Tool.Output.RegularFile()
+            source_file = dlb.ex.input.RegularFile()
+            object_file = dlb.ex.output.RegularFile()
         del ATool
 
     def test_can_define_classmethod(self):
@@ -76,7 +76,7 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
     def test_lowercase_noncallable_attribute_must_be_concrete_dependency(self):
-        msg = "the value of 'x_y_z' must be callable or an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
+        msg = "the value of 'x_y_z' must be callable or an instance of a concrete subclass of 'dlb.ex.Dependency'"
 
         with self.assertRaises(TypeError) as cm:
             class ATool(dlb.ex.Tool):
@@ -85,12 +85,12 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
 
         with self.assertRaises(TypeError) as cm:
             class ATool(dlb.ex.Tool):
-                x_y_z = dlb.ex.Tool.Dependency()
+                x_y_z = dlb.ex.Dependency()
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             class ATool(dlb.ex.Tool):
-                x_y_z = dlb.ex.Tool.Dependency[:]()
+                x_y_z = dlb.ex.Dependency[:]()
         self.assertEqual(msg, str(cm.exception))
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
@@ -103,7 +103,7 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
             async def u_v(self):  # ok, not in a base class
                 return 0
 
-            a = dlb.ex.Tool.Input.RegularFile()
+            a = dlb.ex.input.RegularFile()
 
         class BTool(ATool):
             def x_y_z(self, s: str) -> int:  # ok, same signature in base class
@@ -133,7 +133,7 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
 
         with self.assertRaises(TypeError) as cm:
             class FTool(ATool):
-                u_v = dlb.ex.Tool.Input.RegularFile()
+                u_v = dlb.ex.input.RegularFile()
         regex = r"\A()the value of 'u_v' must be callable since it is callable in <.*>\Z"
         self.assertRegex(str(cm.exception), regex)
 
@@ -147,7 +147,7 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             class HTool(ATool):
                 u_v = 27
-        msg = "the value of 'u_v' must be callable or an instance of a concrete subclass of 'dlb.ex.Tool.Dependency'"
+        msg = "the value of 'u_v' must be callable or an instance of a concrete subclass of 'dlb.ex.Dependency'"
         self.assertEqual(msg, str(cm.exception))
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
@@ -195,7 +195,7 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
     def test_class_attributes_are_not_writable(self):
         class ATool(dlb.ex.Tool):
             A = 1
-            x_y_z = dlb.ex.Tool.Input.RegularFile()
+            x_y_z = dlb.ex.input.RegularFile()
 
         t = dlb.ex.Tool()
 
@@ -238,40 +238,40 @@ class ExecutionParameterOverrideTest(unittest.TestCase):
             "attribute 'X' of base class may only be overridden with a value which is a <class 'int'>")
 
 
-class DependencyRuleOverrideTest(unittest.TestCase):
+class DependencyRoleOverrideTest(unittest.TestCase):
 
     # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_override_with_same(self):
         class ATool(dlb.ex.Tool):
-            source_file = dlb.ex.Tool.Input.RegularFile()
+            source_file = dlb.ex.input.RegularFile()
 
         class BTool(ATool):
-            source_file = dlb.ex.Tool.Input.RegularFile()
+            source_file = dlb.ex.input.RegularFile()
 
     # noinspection PyUnusedLocal,PyAbstractClass
     def test_cannot_override_input_with_output(self):
         class ATool(dlb.ex.Tool):
-            source_file = dlb.ex.Tool.Input.RegularFile()
+            source_file = dlb.ex.input.RegularFile()
 
         with self.assertRaises(TypeError) as cm:
             class BTool(ATool):
-                source_file = dlb.ex.Tool.Output.RegularFile()
+                source_file = dlb.ex.output.RegularFile()
         self.assertEqual(
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            "<class 'dlb.ex.input.RegularFile'> at least as restrictive",
             str(cm.exception))
 
     # noinspection PyUnusedLocal,PyAbstractClass
     def test_cannot_override_file_with_director(self):
         class ATool(dlb.ex.Tool):
-            source_file = dlb.ex.Tool.Input.RegularFile()
+            source_file = dlb.ex.input.RegularFile()
 
         with self.assertRaises(TypeError) as cm:
             class BTool(ATool):
-                source_file = dlb.ex.Tool.Input.Directory()
+                source_file = dlb.ex.input.Directory()
         self.assertEqual(
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            "<class 'dlb.ex.input.RegularFile'> at least as restrictive",
             str(cm.exception))
 
     # noinspection PyUnusedLocal,PyAbstractClass
@@ -279,55 +279,55 @@ class DependencyRuleOverrideTest(unittest.TestCase):
         import dlb.fs
 
         class ATool(dlb.ex.Tool):
-            source_file = dlb.ex.Tool.Input.RegularFile()
+            source_file = dlb.ex.input.RegularFile()
 
         class BTool(ATool):  # ok, cls is more restrictive
-            source_file = dlb.ex.Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath)
+            source_file = dlb.ex.input.RegularFile(cls=dlb.fs.NoSpacePath)
 
         with self.assertRaises(TypeError) as cm:
             class DTool(BTool):  # cls is less restrictive
-                source_file = dlb.ex.Tool.Input.RegularFile()
+                source_file = dlb.ex.input.RegularFile()
         self.assertEqual(
             "attribute 'source_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            "<class 'dlb.ex.input.RegularFile'> at least as restrictive",
             str(cm.exception))
 
     # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_only_override_nonrequired_with_required(self):
         class ATool(dlb.ex.Tool):
-            source_file = dlb.ex.Tool.Input.RegularFile(required=False)
+            source_file = dlb.ex.input.RegularFile(required=False)
 
         class BTool(ATool):  # ok, required=True is more restrictive than required=False
-            source_file = dlb.ex.Tool.Input.RegularFile(required=True)
+            source_file = dlb.ex.input.RegularFile(required=True)
 
         with self.assertRaises(TypeError) as cm:
             class CTool(BTool):
-                source_file = dlb.ex.Tool.Input.RegularFile(required=False)
+                source_file = dlb.ex.input.RegularFile(required=False)
         self.assertRegex(
             r"^attribute 'source_file' of base class may only be overridden by a "
-            r"<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive$",
+            r"<class 'dlb.ex.input.RegularFile'> at least as restrictive$",
             str(cm.exception))
 
     # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_only_override_with_similar_multiplicity(self):
         class ATool(dlb.ex.Tool):
-            source_files = dlb.ex.Tool.Input.RegularFile[1:]()
-            linked_file = dlb.ex.Tool.Output.RegularFile()
+            source_files = dlb.ex.input.RegularFile[1:]()
+            linked_file = dlb.ex.output.RegularFile()
 
         with self.assertRaises(TypeError) as cm:
             class BTool(ATool):
-                source_files = dlb.ex.Tool.Input.RegularFile()
+                source_files = dlb.ex.input.RegularFile()
         self.assertEqual(
             "attribute 'source_files' of base class may only be overridden by a "
-            "<class 'dlb.ex.Tool.Input.RegularFile'> at least as restrictive",
+            "<class 'dlb.ex.input.RegularFile'> at least as restrictive",
             str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             class CTool(ATool):
-                linked_file = dlb.ex.Tool.Output.RegularFile[:]()
+                linked_file = dlb.ex.output.RegularFile[:]()
         self.assertEqual(
             "attribute 'linked_file' of base class may only be overridden by a "
-            "<class 'dlb.ex.Tool.Output.RegularFile'> at least as restrictive",
+            "<class 'dlb.ex.output.RegularFile'> at least as restrictive",
             str(cm.exception))
 
 
@@ -335,16 +335,16 @@ class ToolReprTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     class ATool(dlb.ex.Tool):
-        source_file = dlb.ex.Tool.Input.RegularFile()
-        object_file = dlb.ex.Tool.Output.RegularFile()
+        source_file = dlb.ex.input.RegularFile()
+        object_file = dlb.ex.output.RegularFile()
 
     # noinspection PyAbstractClass
     class BTool(ATool):
-        map_file = dlb.ex.Tool.Output.RegularFile(required=False)
+        map_file = dlb.ex.output.RegularFile(required=False)
 
     # noinspection PyAbstractClass
     class CTool(dlb.ex.Tool):
-        source_file = dlb.ex.Tool.Input.RegularFile()
+        source_file = dlb.ex.input.RegularFile()
 
     class X:
         _X_y_Z = None
@@ -352,13 +352,13 @@ class ToolReprTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     class DTool(CTool, X):
-        object_file = dlb.ex.Tool.Output.RegularFile()
+        object_file = dlb.ex.output.RegularFile()
 
     def test_repr_name_reflects_recommended_module(self):
         self.assertEqual(repr(dlb.ex.Tool), "<class 'dlb.ex.Tool'>")
 
     # noinspection PyAbstractClass
-    def test_shows_name_and_dependency_rules(self):
+    def test_shows_name_and_dependency_roles(self):
         self.assertEqual(repr(dlb.ex.Tool()), 'Tool()')
 
         t = ToolReprTest.BTool(source_file='x.cpp', object_file='x.cpp.o')
@@ -368,7 +368,7 @@ class ToolReprTest(unittest.TestCase):
         class CTool(dlb.ex.Tool):
             pass
 
-        self.assertEqual("ToolReprTest.test_shows_name_and_dependency_rules.<locals>.CTool()", repr(CTool()))
+        self.assertEqual("ToolReprTest.test_shows_name_and_dependency_roles.<locals>.CTool()", repr(CTool()))
 
     def test_inherit_invalid_from_nontool(self):
         t = ToolReprTest.DTool(source_file='x.cpp', object_file='x.cpp.o')
@@ -538,21 +538,21 @@ class ToolInstanceConstructionTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     class ATool(dlb.ex.Tool):
-        source_file = dlb.ex.Tool.Input.RegularFile()
-        object_file = dlb.ex.Tool.Output.RegularFile()
+        source_file = dlb.ex.input.RegularFile()
+        object_file = dlb.ex.output.RegularFile()
 
     # noinspection PyAbstractClass
     class BTool(ATool):
-        map_file = dlb.ex.Tool.Output.RegularFile(required=False)
-        log_file = dlb.ex.Tool.Output.RegularFile(required=True, explicit=False)
+        map_file = dlb.ex.output.RegularFile(required=False)
+        log_file = dlb.ex.output.RegularFile(required=True, explicit=False)
 
     # noinspection PyAbstractClass
     class CTool(dlb.ex.Tool):
-        envvar = dlb.ex.Tool.Input.EnvVar(name='n', restriction='.*', example='', required=False)
+        envvar = dlb.ex.input.EnvVar(name='n', restriction='.*', example='', required=False)
 
     # noinspection PyAbstractClass
     class DTool(BTool):
-        include_directories = dlb.ex.Tool.Input.Directory[:](required=False)
+        include_directories = dlb.ex.input.Directory[:](required=False)
 
     def test_tool_can_be_constructed_without_arguments(self):
         dlb.ex.Tool()
@@ -569,10 +569,10 @@ class ToolInstanceConstructionTest(unittest.TestCase):
                                                include_directories=['src/a/', 'src/b/c/'])
         self.assertEqual((dlb.fs.Path('src/a/'), dlb.fs.Path('src/b/c/')), t.include_directories)
 
-        self.assertIsInstance(ToolInstanceConstructionTest.DTool.source_file, dlb.ex.Tool.Input)
-        self.assertIsInstance(ToolInstanceConstructionTest.DTool.object_file, dlb.ex.Tool.Output)
-        self.assertIsInstance(ToolInstanceConstructionTest.DTool.include_directories, dlb.ex.Tool.Input)
-        self.assertIsInstance(ToolInstanceConstructionTest.DTool.map_file, dlb.ex.Tool.Output)
+        self.assertIsInstance(ToolInstanceConstructionTest.DTool.source_file, dlb.ex.InputDependency)
+        self.assertIsInstance(ToolInstanceConstructionTest.DTool.object_file, dlb.ex.OutputDependency)
+        self.assertIsInstance(ToolInstanceConstructionTest.DTool.include_directories, dlb.ex.InputDependency)
+        self.assertIsInstance(ToolInstanceConstructionTest.DTool.map_file, dlb.ex.OutputDependency)
 
     def test_must_have_argument_for_required_explicit_dependency(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -637,9 +637,9 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     class ATool(dlb.ex.Tool):
-        source_file = dlb.ex.Tool.Input.RegularFile[:]()
-        object_file = dlb.ex.Tool.Output.RegularFile(required=False)
-        map_file = dlb.ex.Tool.Output.RegularFile(required=False)
+        source_file = dlb.ex.input.RegularFile[:]()
+        object_file = dlb.ex.output.RegularFile(required=False)
+        map_file = dlb.ex.output.RegularFile(required=False)
 
     def test_is_equal_for_same_concrete_dependencies(self):
         tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'],
@@ -759,41 +759,11 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
         del sys.path[0]
 
 
-class DependencyInheritanceTest(unittest.TestCase):
-
-    def test_hierarchy_matches_nesting(self):
-        self.assertTrue(issubclass(dlb.ex.Tool.Input, dlb.ex.Tool.Dependency))
-        self.assertTrue(issubclass(dlb.ex.Tool.Input.RegularFile, dlb.ex.Tool.Input))
-        self.assertTrue(issubclass(dlb.ex.Tool.Input.NonRegularFile, dlb.ex.Tool.Input))
-        self.assertTrue(issubclass(dlb.ex.Tool.Input.Directory, dlb.ex.Tool.Input))
-        self.assertTrue(issubclass(dlb.ex.Tool.Input.EnvVar, dlb.ex.Tool.Input))
-
-        self.assertTrue(issubclass(dlb.ex.Tool.Output, dlb.ex.Tool.Dependency))
-        self.assertTrue(issubclass(dlb.ex.Tool.Output.RegularFile, dlb.ex.Tool.Output))
-        self.assertTrue(issubclass(dlb.ex.Tool.Output.NonRegularFile, dlb.ex.Tool.Output))
-        self.assertTrue(issubclass(dlb.ex.Tool.Output.Directory, dlb.ex.Tool.Output))
-
-
-class DependencyReprTest(unittest.TestCase):
-    def test_name_matches_class(self):
-        self.assertEqual(dlb.ex.Tool.__name__, 'Tool')
-        self.assertEqual(dlb.ex.Tool.Dependency.__name__, 'Dependency')
-        self.assertEqual(dlb.ex.Tool.Input.__name__, 'Input')
-        self.assertEqual(dlb.ex.Tool.Output.__name__, 'Output')
-
-    def test_repr_name_reflects_nesting(self):
-        self.assertEqual(repr(dlb.ex.Tool.Dependency), "<class 'dlb.ex.Tool.Dependency'>")
-        self.assertEqual(repr(dlb.ex.Tool.Input), "<class 'dlb.ex.Tool.Input'>")
-        self.assertEqual(repr(dlb.ex.Tool.Input.RegularFile), "<class 'dlb.ex.Tool.Input.RegularFile'>")
-        self.assertEqual(repr(dlb.ex.Tool.Output), "<class 'dlb.ex.Tool.Output'>")
-        self.assertEqual(repr(dlb.ex.Tool.Output.RegularFile), "<class 'dlb.ex.Tool.Output.RegularFile'>")
-
-
 class DependencyActionRegistrationTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     def test_fails_for_unregistered_dependency_class(self):
-        class D(dlb.ex.Tool.Input.RegularFile):
+        class D(dlb.ex.input.RegularFile):
             pass
 
         class T(dlb.ex.Tool):

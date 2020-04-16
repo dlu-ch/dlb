@@ -15,6 +15,8 @@ from .. import fs
 from . import _rundb
 from . import _worktree
 from . import _depend
+from . import input
+from . import output
 
 
 # this prevents actions to be exposed to the user via dependency classes
@@ -246,11 +248,11 @@ def get_action(dependency: _depend.Dependency, name: str) -> Action:
     return a(dependency, name)
 
 
-register_action(0, _depend.RegularFileInputDependency, RegularFileInputAction)
-register_action(1, _depend.NonRegularFileInputDependency, NonRegularFileInputAction)
-register_action(2, _depend.DirectoryInputDependency, DirectoryInputAction)
-register_action(3, _depend.EnvVarInputDependency, EnvVarInputAction)
-register_action(4, _depend.RegularFileOutputDependency, RegularFileOutputAction)
-register_action(5, _depend.NonRegularFileOutputDependency, NonRegularFileOutputAction)
-register_action(6, _depend.DirectoryOutputDependency, DirectoryOutputAction)
-register_action(7, _depend.ObjectOutputDependency, ObjectOutputAction)
+register_action(0, input.RegularFile, RegularFileInputAction)
+register_action(1, input.NonRegularFile, NonRegularFileInputAction)
+register_action(2, input.Directory, DirectoryInputAction)
+register_action(3, input.EnvVar, EnvVarInputAction)
+register_action(4, output.RegularFile, RegularFileOutputAction)
+register_action(5, output.NonRegularFile, NonRegularFileOutputAction)
+register_action(6, output.Directory, DirectoryOutputAction)
+register_action(7, output.Object, ObjectOutputAction)

@@ -33,9 +33,9 @@ class ZipDirectory(dlb.ex.Tool):
     # The regular files in this directory (with all its subdirectories) build the content of the archive.
     # Symbolic links are not followed.
     # Filesystem that are no directories or regular files are ignored.
-    content_directory = dlb.ex.Tool.Input.Directory()
+    content_directory = dlb.ex.input.Directory()
 
-    archive_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
+    archive_file = dlb.ex.output.RegularFile(replace_by_same_content=False)
 
     async def redo(self, result, context):
         with context.temporary() as archive_file:

@@ -4,7 +4,10 @@
 
 from ._error import *
 from ._context import *
+from ._depend import *
 from ._tool import *
+from . import input
+from . import output
 
 # inter-dependencies and import order of modules of this package
 # (later line may depend on earlier lines, import import in the following order):

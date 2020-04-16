@@ -5,12 +5,10 @@
 """Dependency classes for tools.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = []
+__all__ = ['Dependency', 'InputDependency', 'OutputDependency']
 
-import re
-import dataclasses
-import copy
-from typing import Any, Dict, Hashable, Iterable, Optional, Pattern, Type, TypeVar, Tuple, Union
+from typing import Hashable, Iterable, Optional, Type, TypeVar, Tuple, Union
+from .. import ut
 from .. import fs
 from . import _mult
 
@@ -122,7 +120,7 @@ class OutputDependency(Dependency):
     pass
 
 
-class _FilesystemObjectMixin:
+class FilesystemObjectMixin:
     Value = fs.Path
 
     def __init__(self, *, cls: Type[fs.Path] = fs.Path, **kwargs):
@@ -147,7 +145,7 @@ class _FilesystemObjectMixin:
         return self._path_cls(value)
 
 
-class _NonDirectoryMixin(_FilesystemObjectMixin):
+class NonDirectoryMixin(FilesystemObjectMixin):
     def validate_single(self, value) -> fs.Path:
         value = super().validate_single(value)
         if value.is_dir():
@@ -155,7 +153,7 @@ class _NonDirectoryMixin(_FilesystemObjectMixin):
         return value
 
 
-class _DirectoryMixin(_FilesystemObjectMixin):
+class DirectoryMixin(FilesystemObjectMixin):
     def validate_single(self, value) -> fs.Path:
         value = super().validate_single(value)
         if not value.is_dir():
@@ -163,137 +161,4 @@ class _DirectoryMixin(_FilesystemObjectMixin):
         return value
 
 
-class RegularFileInputDependency(_NonDirectoryMixin, InputDependency):
-    pass
-
-
-class NonRegularFileInputDependency(_NonDirectoryMixin, InputDependency):
-    pass
-
-
-class DirectoryInputDependency(_DirectoryMixin, InputDependency):
-    pass
-
-
-class RegularFileOutputDependency(_NonDirectoryMixin, OutputDependency):
-
-    def __init__(self, *, replace_by_same_content: bool = True, **kwargs):
-        super().__init__(**kwargs)
-        self._replace_by_same_content = bool(replace_by_same_content)  # ignore in compatible_and_no_less_restrictive()
-
-    @property
-    def replace_by_same_content(self):
-        return self._replace_by_same_content
-
-
-class NonRegularFileOutputDependency(_NonDirectoryMixin, OutputDependency):
-    pass
-
-
-class DirectoryOutputDependency(_DirectoryMixin, OutputDependency):
-    pass
-
-
-class EnvVarInputDependency(InputDependency):
-    @dataclasses.dataclass(frozen=True, eq=True)
-    class Value:
-        name: str
-        raw: str
-        groups: Dict[str, str]
-
-    def __init__(self, *, name: str, restriction: Union[str, Pattern], example: str, **kwargs):
-        super().__init__(**kwargs)
-
-        if not isinstance(name, str):
-            raise TypeError("'name' must be a str")
-        if not name:
-            raise ValueError("'name' must not be empty")
-
-        if isinstance(restriction, str):
-            restriction = re.compile(restriction)
-        if not isinstance(restriction, Pattern):
-            raise TypeError("'restriction' must be regular expression (compiled or str)")
-        if not isinstance(example, str):
-            raise TypeError("'example' must be a str")
-
-        if not restriction.fullmatch(example):
-            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
-
-        if self.multiplicity is not None:
-            raise ValueError("must not have a multiplicity")
-
-        self._name = name
-        self._restriction: Pattern = restriction
-        self._example = example
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def restriction(self) -> Pattern:
-        return self._restriction
-
-    @property
-    def example(self) -> str:
-        return self._example
-
-    def compatible_and_no_less_restrictive(self, other) -> bool:
-        if not super().compatible_and_no_less_restrictive(other):
-            return False
-
-        return self.name == other.name and self.restriction == other.restriction  # ignore example
-
-    def validate_single(self, value) -> 'EnvVarInputDependency.Value':
-        # value is used to defined the content of a (future) environment variable
-        value = super().validate_single(value)
-
-        if not isinstance(value, str):
-            raise TypeError("'value' must be a str")
-
-        m = self._restriction.fullmatch(value)
-        if not m:
-            raise ValueError(f"value is invalid with respect to restriction: {value!r}")
-
-        # noinspection PyCallByClass
-        return EnvVarInputDependency.Value(name=self.name, raw=value, groups=m.groupdict())
-
-
-class ObjectOutputDependency(OutputDependency):
-    Value = Any  # except None and NotImplemented
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if self.explicit:
-            raise ValueError("must not be explicit")
-
-    def validate_single(self, value) -> Any:
-        value = super().validate_single(value)
-        if value is NotImplemented:
-            raise ValueError(f"value is invalid: {value!r}")
-        return copy.deepcopy(value)
-
-
-def _inject_into(owner, owner_name, owner_module):
-    def _inject_nested_class_into(parent, cls, name, owner_qualname=None):
-        setattr(parent, name, cls)
-        cls.__module__ = owner_module
-        cls.__name__ = name
-        if owner_qualname is None:
-            owner_qualname = parent.__qualname__
-        cls.__qualname__ = owner_qualname + '.' + name
-
-    _inject_nested_class_into(owner, Dependency, 'Dependency', owner_name)
-
-    _inject_nested_class_into(owner, InputDependency, 'Input', owner_name)
-    _inject_nested_class_into(owner, OutputDependency, 'Output', owner_name)
-
-    _inject_nested_class_into(owner.Input, RegularFileInputDependency, 'RegularFile')
-    _inject_nested_class_into(owner.Input, NonRegularFileInputDependency, 'NonRegularFile')
-    _inject_nested_class_into(owner.Input, DirectoryInputDependency, 'Directory')
-    _inject_nested_class_into(owner.Input, EnvVarInputDependency, 'EnvVar')
-
-    _inject_nested_class_into(owner.Output, RegularFileOutputDependency, 'RegularFile')
-    _inject_nested_class_into(owner.Output, NonRegularFileOutputDependency, 'NonRegularFile')
-    _inject_nested_class_into(owner.Output, DirectoryOutputDependency, 'Directory')
-    _inject_nested_class_into(owner.Output, ObjectOutputDependency, 'Object')
+ut.set_module_name_to_parent_by_name(vars(), __all__)

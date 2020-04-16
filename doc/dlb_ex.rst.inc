@@ -471,7 +471,7 @@ Tools are customized by inheritance and defining class attributes.
    (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file_dependency``),
    while the execution parameters are the same of all instances of the some tool.
 
-   Dependency roles are instances of subclasses of :class:`Tool.Dependency`.
+   Dependency roles are instances of subclasses of :class:`Dependency`.
 
    A new tool can be defined by inheriting from one or more other tools.
    When overriding a dependency roles, its overriding value must be of the same type as the overridden value
@@ -486,13 +486,13 @@ Tools are customized by inheritance and defining class attributes.
 
       class Compiler(dlb.ex.Tool):
          WARNINGS = ('all',)
-         source_file = dlb.ex.Tool.Input.RegularFile()
-         object_file = dlb.ex.Tool.Output.RegularFile()
+         source_file = dlb.ex.input.RegularFile()
+         object_file = dlb.ex.output.RegularFile()
 
       class Linker(dlb.ex.Tool):
-         object_files = dlb.ex.Tool.Input.RegularFile[1:]()
-         linked_file = dlb.ex.Tool.Output.RegularFile()
-         map_file = dlb.ex.Tool.Output.RegularFile(required=False)
+         object_files = dlb.ex.input.RegularFile[1:]()
+         linked_file = dlb.ex.output.RegularFile()
+         map_file = dlb.ex.output.RegularFile(required=False)
 
       compiler = Compiler(source_file='main.cpp', object_file='main.cpp.o')
       linker = Linker(object_files=[compiler.object_file], linked_file='main')
@@ -501,10 +501,10 @@ Tools are customized by inheritance and defining class attributes.
    At construction of a tool, the dependencies given as keyword arguments to the constructor are validated by the
    tool's dependency roles and made accessible (for reading only) as an attribute with the name of the corresponding
    dependency role and a type determined by the dependency role
-   (e.g. :class:`dlb.fs.Path` for :class:`Tool.Input.RegularFile`)::
+   (e.g. :class:`dlb.fs.Path` for :class:`input.RegularFile`)::
 
       >>> Compiler.object_file  # dependency role
-      <dlb.ex.Tool.Input.RegularFile object at ...>
+      <dlb.ex.input.RegularFile object at ...>
 
       >>> compiler.object_file  # dependency
       Path('main.cpp.o')
@@ -572,9 +572,9 @@ Tools are customized by inheritance and defining class attributes.
          class ATool(dlb.ex.Tool):
             EXECUTABLE = 'atool'
 
-            source_file = dlb.ex.Tool.Input.RegularFile()
-            output_file = dlb.ex.Tool.Output.RegularFile()
-            included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+            source_file = dlb.ex.input.RegularFile()
+            output_file = dlb.ex.output.RegularFile()
+            included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
             async def redo(self, result, context):
                 if ...:
@@ -768,8 +768,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       If the parent directory of *path* does not exist, it is created (with all its parent directories).
 
       The actual operation depends on the corresponding dependency role.
-      If is it a :class:`dlb.ex.Tool.Output.RegularFile` with
-      :attr:`replace_by_same_content <dlb.ex.Tool.Output.RegularFile.replace_by_same_content>` = ``False`` and *path*
+      If is it a :class:`dlb.ex.output.RegularFile` with
+      :attr:`replace_by_same_content <dlb.ex.output.RegularFile.replace_by_same_content>` = ``False`` and *path*
       and *source* both exist with the same content, *path* is no replaced and treated as unchanged.
 
       If *path* is replaced, this is always done by an atomic operation. If it fails, *path* is either *source*
@@ -789,10 +789,10 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 Dependency classes
 ------------------
 
-A dependency class is a subclass of :class:`Tool.Dependency`.
+A dependency class is a subclass of :class:`Dependency`.
 Its instances describe *dependency roles* (as attributes of a :class:`Tool`).
 
-The :meth:`Tool.Dependency.validate()` methods of dependency classes are used by :term:`tool instances <tool instance>`
+The :meth:`Dependency.validate()` methods of dependency classes are used by :term:`tool instances <tool instance>`
 to create *concrete dependencies* from their constructor arguments.
 
 Each dependency role has an *multiplicity specification*:
@@ -811,8 +811,8 @@ Example::
 
     class Tool(dlb.ex.Tool):
         # these are dependency roles of the tool 'Tool':
-        include_search_paths = dlb.ex.Tool.Input.Directory[1:]()  # a sequence of at least one dlb.ex.Tool.Input.Directory
-        cache_dir_path = dlb.ex.Tool.Input.Directory()  # a single dlb.ex.Tool.Input.Directory
+        include_search_paths = dlb.ex.input.Directory[1:]()  # a sequence of at least one dlb.ex.input.Directory
+        cache_dir_path = dlb.ex.input.Directory()  # a single dlb.ex.input.Directory
 
     tool = Tool(include_search_paths=['build/out/Generated/', 'src/Implementation/'])
 
@@ -831,13 +831,13 @@ following abstract classes:
        node [height=0.25];
        edge [arrowhead=empty];
 
-       "dlb.ex.Tool.Input" -> "dlb.ex.Tool.Dependency";
-       "dlb.ex.Tool.Output" -> "dlb.ex.Tool.Dependency";
+       "dlb.ex.InputDependency" -> "dlb.ex.Dependency";
+       "dlb.ex.OutputDependency" -> "dlb.ex.Dependency";
    }
 
-.. class:: Tool.Input
+.. class:: InputDependency
 
-   A :class:`Tool.Dependency` that describes an input dependency of a tool.
+   A :class:`Dependency` that describes an input dependency of a tool.
 
    The :term:`tool instance` must be :term:`redone <redo>` if it (e.g. the :term:`mtime` of a file) has changed compared
    to the state before the last successful redo of the :term:`tool instance`.
@@ -845,53 +845,16 @@ following abstract classes:
    An redo *must not* modify it, successful or not (the same object can be an output dependency of the same tool
    instance though which *can* be modified).
 
-.. class:: Tool.Output
+.. class:: OutputDependency
 
-   A :class:`Tool.Dependency` that describes an output dependency of a tool.
+   A :class:`Dependency` that describes an output dependency of a tool.
 
    A successful redo *must* generate it (e.g. create a regular file).
 
 
-These are all abstract classes and contain inner classes derived from them.
-Example: :class:`Tool.Output.Directory` is a non-abstract dependency class derived
-from :class:`Tool.Output`.
-
-.. graphviz::
-
-   digraph foo {
-       graph [rankdir=BT];
-       node [height=0.25];
-       edge [arrowhead=empty];
-
-       "dlb.ex.Tool.Input.RegularFile" -> "dlb.ex.Tool.Input";
-       "dlb.ex.Tool.Input.NonRegularFile" -> "dlb.ex.Tool.Input";
-       "dlb.ex.Tool.Input.Directory" -> "dlb.ex.Tool.Input";
-       "dlb.ex.Tool.Input.EnvVar" -> "dlb.ex.Tool.Input";
-
-       "dlb.ex.Tool.Output.RegularFile" -> "dlb.ex.Tool.Output";
-       "dlb.ex.Tool.Output.NonRegularFile" -> "dlb.ex.Tool.Output";
-       "dlb.ex.Tool.Output.Directory" -> "dlb.ex.Tool.Output";
-       "dlb.ex.Tool.Output.Object" -> "dlb.ex.Tool.Output";
-
-       "dlb.ex.Tool.Input" -> "dlb.ex.Tool.Dependency";
-       "dlb.ex.Tool.Output" -> "dlb.ex.Tool.Dependency";
-   }
-
-.. note::
-
-   dlb identifies filesystem objects by their :term:`managed tree path`. It assumes that different managed tree paths
-   point to different filesystem objects.
-
-   If a filesystem object serves as an output dependency of one :term:`tool instance` and as an input dependency
-   of another: Make sure both dependencies use the same path.
-   A :term:`redo miss` could happen otherwise.
-
-   You are always safe without hard links, symbolic links and case-insensitive filesystems.
-
-
 Dependency role classes support the following methods and attributes:
 
-.. class:: Tool.Dependency(required=True, explicit=True)
+.. class:: Dependency(required=True, explicit=True)
 
    If *required* is ``True``, a concrete dependency of this dependency role will never be ``None``.
 
@@ -930,7 +893,7 @@ Dependency role classes support the following methods and attributes:
       restrictive than the ones of *other*?
 
       :param other: reference dependency role
-      :type other: Tool.Dependency
+      :type other: Dependency
       :rtype: bool
 
    .. attribute:: multiplicity
@@ -949,6 +912,41 @@ Dependency role classes support the following methods and attributes:
          >>> v = t.tuple_from_value(t.validate(...))
 
 
+Each non-abstract dependency role class is derived from :class:`InputDependency` or from from :class:`InputDependency`:
+
+.. graphviz::
+
+   digraph foo {
+       graph [rankdir=BT];
+       node [height=0.25];
+       edge [arrowhead=empty];
+
+       "dlb.ex.input.RegularFile" -> "dlb.ex.InputDependency";
+       "dlb.ex.input.NonRegularFile" -> "dlb.ex.InputDependency";
+       "dlb.ex.input.Directory" -> "dlb.ex.InputDependency";
+       "dlb.ex.input.EnvVar" -> "dlb.ex.InputDependency";
+
+       "dlb.ex.output.RegularFile" -> "dlb.ex.OutputDependency";
+       "dlb.ex.output.NonRegularFile" -> "dlb.ex.OutputDependency";
+       "dlb.ex.output.Directory" -> "dlb.ex.OutputDependency";
+       "dlb.ex.output.Object" -> "dlb.ex.OutputDependency";
+
+       "dlb.ex.InputDependency" -> "dlb.ex.Dependency";
+       "dlb.ex.OutputDependency" -> "dlb.ex.Dependency";
+   }
+
+.. note::
+
+   dlb identifies filesystem objects by their :term:`managed tree path`. It assumes that different managed tree paths
+   point to different filesystem objects.
+
+   If a filesystem object serves as an output dependency of one :term:`tool instance` and as an input dependency
+   of another: Make sure both dependencies use the same path.
+   A :term:`redo miss` could happen otherwise.
+
+   You are always safe without hard links, symbolic links and case-insensitive filesystems.
+
+
 Input dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -957,13 +955,13 @@ Input dependency role classes
 |                                     +-----------------------+----------------------------+
 |                                     | Name                  | Default value              |
 +=====================================+=======================+============================+
-| :class:`Tool.Input.RegularFile`     | *cls*                 | :class:`dlb.fs.Path`       |
+| :class:`input.RegularFile`          | *cls*                 | :class:`dlb.fs.Path`       |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Input.NonRegularFile`  | *cls*                 | :class:`dlb.fs.Path`       |
+| :class:`input.NonRegularFile`       | *cls*                 | :class:`dlb.fs.Path`       |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Input.Directory`       | *cls*                 | :class:`dlb.fs.Path`       |
+| :class:`input.Directory`            | *cls*                 | :class:`dlb.fs.Path`       |
 +-------------------------------------+-----------------------+----------------------------+
-| :class:`Tool.Input.EnvVar`          | *name*                |                            |
+| :class:`input.EnvVar`               | *name*                |                            |
 |                                     +-----------------------+----------------------------+
 |                                     | *restriction*         |                            |
 |                                     +-----------------------+----------------------------+
@@ -971,10 +969,10 @@ Input dependency role classes
 +-------------------------------------+-----------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
-keyword arguments of the constructor of :class:`Tool.Dependency`.
+keyword arguments of the constructor of :class:`Dependency`.
 
 
-.. class:: Tool.Input.RegularFile(cls=dlb.fs.Path, required=True, explicit=True)
+.. class:: input.RegularFile(cls=dlb.fs.Path, required=True, explicit=True)
 
    Constructs a dependency role for a regular files, identified by their paths.
 
@@ -985,14 +983,14 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
-   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
    otherwise.
 
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    source_files = dlb.ex.Tool.Input.RegularFile[1:](cls=dlb.fs.NoSpacePath)
+      >>>    source_files = dlb.ex.input.RegularFile[1:](cls=dlb.fs.NoSpacePath)
       >>> tool = Tool(source_files=['src/main.cpp'])
       >>> tool.source_files
       (NoSpacePath('src/main.cpp'),)
@@ -1004,7 +1002,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       Is :class:`dlb.fs.Path`.
 
-.. class:: Tool.Input.NonRegularFile(cls=dlb.fs.Path, required=True, explicit=True)
+.. class:: input.NonRegularFile(cls=dlb.fs.Path, required=True, explicit=True)
 
    Constructs a dependency role for filesystem objects that are neither directories nor regular files,
    identified by their paths.
@@ -1016,14 +1014,14 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
-   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
    otherwise.
 
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    symlinks = dlb.ex.Tool.Input.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
+      >>>    symlinks = dlb.ex.input.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
       >>> tool = Tool(symlinks=['src/current'])
       >>> tool.symlinks
       (NoSpacePath('src/current'),)
@@ -1035,7 +1033,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       Is :class:`dlb.fs.Path`.
 
-.. class:: Tool.Input.Directory(cls=dlb.fs.Path, required=True, explicit=True)
+.. class:: input.Directory(cls=dlb.fs.Path, required=True, explicit=True)
 
    Constructs a dependency role for directories, identified by their paths.
 
@@ -1046,14 +1044,14 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
    Directories outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the directory's path as an
-   instance of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the directory's path as an
+   instance of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the
    directory's paths otherwise.
 
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    cache_directory = dlb.ex.Tool.Input.Directory(required=False)
+      >>>    cache_directory = dlb.ex.input.Directory(required=False)
       >>> tool = Tool(cache_directory='/tmp/')
       >>> tool.cache_directory
       Path('tmp/')
@@ -1065,7 +1063,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       Is :class:`dlb.fs.Path`.
 
-.. class:: Tool.Input.EnvVar(name, restriction, example, required=True, explicit=True)
+.. class:: input.EnvVar(name, restriction, example, required=True, explicit=True)
 
    Constructs a dependency role for a environment variable named *name*.
    It must not have a multiplicity (other than ``None``).
@@ -1077,23 +1075,23 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    The value of the environment variable is valid if it is a string that matches the regular expression *restriction*,
    or if it is ``None`` and *required* is ``False``.
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
    with the environment variable's name and value.
 
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    language = dlb.ex.Tool.Input.EnvVar(
+      >>>    language = dlb.ex.input.EnvVar(
       >>>                   name='LANG',
       >>>                   restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
       >>>                   example='sv_SE')
-      >>>     flags = dlb.ex.Tool.Input.EnvVar(name='CFLAGS', restriction=r'.+', example='-Wall')
+      >>>     flags = dlb.ex.input.EnvVar(name='CFLAGS', restriction=r'.+', example='-Wall')
       >>> tool = Tool(language='de_CH')  # use 'de_CH' as value of the environment variable for all
-      >>> tool.language.value['territory']
+      >>> tool.language.groups['territory']
       'CH'
       >>> tool.flags
       NotImplemented
-      >>> tool.run().flags.value  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
+      >>> tool.run().flags.raw  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
       '-O2'
 
    :param restriction: regular expression
@@ -1126,22 +1124,22 @@ Output dependency role classes
 |                                     +---------------------------+----------------------------+
 |                                     | Name                      | Default value              |
 +=====================================+===========================+============================+
-| :class:`Tool.Output.RegularFile`    | *cls*                     | :class:`dlb.fs.Path`       |
+| :class:`output.RegularFile`         | *cls*                     | :class:`dlb.fs.Path`       |
 +                                     +---------------------------+----------------------------+
 |                                     | *replace_by_same_content* | ``True``                   |
 +-------------------------------------+---------------------------+----------------------------+
-| :class:`Tool.Output.NonRegularFile` | *cls*                     | :class:`dlb.fs.Path`       |
+| :class:`output.NonRegularFile`      | *cls*                     | :class:`dlb.fs.Path`       |
 +-------------------------------------+---------------------------+----------------------------+
-| :class:`Tool.Output.Directory`      | *cls*                     | :class:`dlb.fs.Path`       |
+| :class:`output.Directory`           | *cls*                     | :class:`dlb.fs.Path`       |
 +-------------------------------------+---------------------------+----------------------------+
-| :class:`Tool.Output.Object`         |                           |                            |
+| :class:`output.Object`              |                           |                            |
 +-------------------------------------+---------------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
-keyword arguments of the constructor of :class:`Tool.Dependency`.
+keyword arguments of the constructor of :class:`Dependency`.
 
 
-.. class:: Tool.Output.RegularFile(cls=dlb.fs.Path, replace_by_same_content=True, required=True, explicit=True)
+.. class:: output.RegularFile(cls=dlb.fs.Path, replace_by_same_content=True, required=True, explicit=True)
 
    Constructs a dependency role for regular files in the :term:`managed tree`, identified by their paths.
 
@@ -1150,8 +1148,8 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
    are met).
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
-   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
    otherwise.
 
    If *replace_by_same_content* is ``False`` for a dependency role containing *p*, ``context.replace_output(p, q)``
@@ -1161,7 +1159,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    object_file = dlb.ex.Tool.Output.RegularFile(cls=dlb.fs.NoSpacePath)
+      >>>    object_file = dlb.ex.output.RegularFile(cls=dlb.fs.NoSpacePath)
       >>> tool = Tool(object_file=['main.cpp.o'])
       >>> tool.object_file
       (NoSpacePath('main.cpp.o'),)
@@ -1173,7 +1171,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       Is :class:`dlb.fs.Path`.
 
-.. class:: Tool.Output.NonRegularFile(cls=dlb.fs.Path, required=True, explicit=True)
+.. class:: output.NonRegularFile(cls=dlb.fs.Path, required=True, explicit=True)
 
    Constructs a dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor
    regular files, identified by their paths.
@@ -1183,14 +1181,14 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
    are met).
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the file's path as an instance
-   of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
    otherwise.
 
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    symlinks = dlb.ex.Tool.Output.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
+      >>>    symlinks = dlb.ex.output.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
       >>> tool = Tool(symlinks=['dist'])
       >>> tool.symlinks
       (NoSpacePath('src/current'),)
@@ -1202,7 +1200,7 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       Is :class:`dlb.fs.Path`.
 
-.. class:: Tool.Output.Directory(cls=dlb.fs.Path, required=True, explicit=True)
+.. class:: output.Directory(cls=dlb.fs.Path, required=True, explicit=True)
 
    Constructs a dependency role for directories in the :term:`managed tree`, identified by their paths.
 
@@ -1211,14 +1209,14 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
    :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
    are met).
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is the directory's path as an
-   instance of *cls* if :attr:`multiplicity <Tool.Dependency.multiplicity>` is ``None`` and a tuple of the
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the directory's path as an
+   instance of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the
    directory's paths otherwise.
 
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    html_root_directory = dlb.ex.Tool.Output.Directory(required=False)
+      >>>    html_root_directory = dlb.ex.output.Directory(required=False)
       >>> tool = Tool(html_root_directory='html/')
       >>> tool.html_root_directory
       Path('html/')
@@ -1230,12 +1228,12 @@ keyword arguments of the constructor of :class:`Tool.Dependency`.
 
       Is :class:`dlb.fs.Path`.
 
-.. class:: Tool.Output.Object(required=True, explicit=True)
+.. class:: output.Object(required=True, explicit=True)
 
    Constructs a dependency role for any Python object other than ``None`` and ``NotImplemented``.
    *explicit* must be ``False``.
 
-   The :meth:`validated value <Tool.Dependency.validate()>` of a concrete dependency is a
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a
    :func:`deep copy <python:copy.deepcopy()>` of the value.
 
    .. class:: Value

@@ -25,7 +25,7 @@ class ReadFile(dlb_contrib.sh.ShScriptlet):
         cat -- "$@"
         """
 
-    source_files = dlb.ex.Tool.Input.RegularFile[:]()
+    source_files = dlb.ex.input.RegularFile[:]()
 
     def get_scriptlet_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return [s for s in self.source_files]

@@ -22,6 +22,7 @@ from . import _rundb
 from . import _worktree
 from . import _context
 from . import _depend
+from . import input
 from . import _dependaction
 assert sys.version_info >= (3, 7)
 
@@ -550,7 +551,7 @@ def _check_envvar_dependencies(tool, dependency_actions: Tuple[_dependaction.Act
 
     for action in dependency_actions:
         d = action.dependency
-        if d.Value is _depend.EnvVarInputDependency.Value:
+        if d.Value is input.EnvVar.Value:
             a = action_by_envvar_name.get(d.name)
             if a is not None:
                 msg = (
@@ -870,7 +871,7 @@ class _ToolBase:
 
         result = _RunResult(self, True)
         for action in dependency_actions:
-            if not action.dependency.explicit and action.dependency.Value is _depend.EnvVarInputDependency.Value:
+            if not action.dependency.explicit and action.dependency.Value is input.EnvVar.Value:
                 try:
                     value = envvar_value_by_name.get(action.dependency.name)
                     setattr(result, action.name, value)  # validates on assignment
@@ -1005,10 +1006,6 @@ class _ToolBase:
         return '{}({})'.format(self.__class__.__qualname__, ', '.join(dependency_tokens))
 
 
-# noinspection PyProtectedMember
-_depend._inject_into(_ToolBase, 'Tool', '.'.join(_ToolBase.__module__.split('.')[:-1]))
-
-
 class _ToolMeta(type):
 
     OVERRIDEABLE_ATTRIBUTES = frozenset(('redo', '__doc__', '__module__', '__annotations__'))
@@ -1138,10 +1135,10 @@ class _ToolMeta(type):
                             raise TypeError(msg)
                 else:
                     # noinspection PyUnresolvedReferences
-                    if not (isinstance(value, _ToolBase.Dependency) and hasattr(value.__class__, 'Value')):
+                    if not (isinstance(value, _depend.Dependency) and hasattr(value.__class__, 'Value')):
                         msg = (
                             f"the value of {name!r} must be callable or an instance of a concrete subclass of "
-                            f"'dlb.ex.Tool.Dependency'"
+                            f"'dlb.ex.Dependency'"
                         )
                         raise TypeError(msg)
                     for base_class in defining_base_classes:

@@ -69,20 +69,20 @@ class PkgConfig(dlb.ex.Tool):
     # Order matters; if library *b* depends on *a*, *b* should precede *a* in the sequence.
     # Each element has the form LIBRARY_FILENAME_PATTERN.format(n) with an appropriate *n*.
     # E.g. ('libgtk-3.so', 'libgdk-3.so').
-    library_filenames = dlb.ex.Tool.Output.Object[:](explicit=False)
+    library_filenames = dlb.ex.output.Object[:](explicit=False)
 
     # Duplicate-free tuple of paths of directories that are to be searched for libraries in addition to the standard
     # system directories in order to find all libraries in *library_filenames*.
     # E.g. (dlb.fs.Path('/usr/lib/x86_64-linux-gnu/openmpi/lib'),)
-    library_search_directories = dlb.ex.Tool.Output.Object[:](explicit=False)
+    library_search_directories = dlb.ex.output.Object[:](explicit=False)
 
     # Duplicate-free tuple of paths of directories that are to be searched for include files in addition to the system
     # include files in order to find any of the include files of the libraries in *library_filenames*.
     # E.g. (dlb.fs.Path('/usr/include/gtk-3.0'),)
-    include_search_directories = dlb.ex.Tool.Output.Object[:](explicit=False)
+    include_search_directories = dlb.ex.output.Object[:](explicit=False)
 
     # Options returned by pkg-config other than '-I...', '-L...', '-l...'.
-    options = dlb.ex.Tool.Output.Object[:](explicit=False)
+    options = dlb.ex.output.Object[:](explicit=False)
 
     async def redo(self, result, context):
         library_selection_arguments = []

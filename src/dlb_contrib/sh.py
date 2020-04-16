@@ -45,7 +45,7 @@ class ShScriptlet(dlb.ex.Tool):
     NAME = 'scriptlet'
     SCRIPTLET = ''  # this will be executed by sh - overwrite in subclass
 
-    output = dlb.ex.Tool.Output.Object(explicit=False)
+    output = dlb.ex.output.Object(explicit=False)
 
     # Overwrite this to chunk processor if you want to process the output incrementally.
     # See dlb.ex.Tool.RedoContext.execute_helper_with_output() for details.

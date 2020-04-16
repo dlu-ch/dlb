@@ -104,8 +104,8 @@ Replace the content of :file:`build.py` by this::
        PATTERN = 'xxx'
        REPLACEMENT = 'hello'
 
-       template = dlb.ex.Tool.Input.RegularFile()
-       output = dlb.ex.Tool.Output.RegularFile()
+       template = dlb.ex.input.RegularFile()
+       output = dlb.ex.output.RegularFile()
 
        async def redo(self, result, context):
            with open(self.template.native, 'r') as i:

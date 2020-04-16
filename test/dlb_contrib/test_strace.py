@@ -157,8 +157,8 @@ class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
         class ShowContent(dlb_contrib.strace.RunStraced):
             EXECUTABLE = 'cp'
 
-            source_file = dlb.ex.Tool.Input.RegularFile()
-            target_file = dlb.ex.Tool.Output.RegularFile()
+            source_file = dlb.ex.input.RegularFile()
+            target_file = dlb.ex.output.RegularFile()
 
             def get_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
                 return [self.source_file, self.target_file]

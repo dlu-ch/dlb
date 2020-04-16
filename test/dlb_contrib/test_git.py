@@ -136,10 +136,10 @@ class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):
 
     # working directory version
     # examples: '1.2.3', '1.2.3c4-dev5+deadbeef?'
-    wd_version = dlb.ex.Tool.Output.Object(explicit=False)
+    wd_version = dlb.ex.output.Object(explicit=False)
 
     # tuple of the version according to the version tag
-    version_components = dlb.ex.Tool.Output.Object(explicit=False)
+    version_components = dlb.ex.output.Object(explicit=False)
 
     async def redo(self, result, context):
         await super().redo(result, context)

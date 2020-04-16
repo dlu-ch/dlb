@@ -201,16 +201,16 @@ class ClikeCompiler(dlb.ex.Tool):
     # If value is None: "undefine" the definition.
     DEFINITIONS = {}  # e.g. {'VERSION': '1.2.3', 'MAX(a, b)': '(((a) > (b)) ? (a) : (b))'}
 
-    source_files = dlb.ex.Tool.Input.RegularFile[1:]()
+    source_files = dlb.ex.input.RegularFile[1:]()
 
     # object_files[i] is object file for source_files[i]
-    object_files = dlb.ex.Tool.Output.RegularFile[1:](replace_by_same_content=False)
+    object_files = dlb.ex.output.RegularFile[1:](replace_by_same_content=False)
 
     # Tuple of paths of directories that are to be searched for include files in addition to the system include files.
-    include_search_directories = dlb.ex.Tool.Input.Directory[:](required=False)
+    include_search_directories = dlb.ex.input.Directory[:](required=False)
 
     # Paths of all files in the managed tree directly or indirectly included by *source_file*.
-    included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+    included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
     def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         # Return iterable of additional commandline arguments for *EXECUTABLE*.
@@ -226,7 +226,7 @@ class GenerateHeaderFile(dlb.ex.Tool):
 
     PATH_COMPONENTS_TO_STRIP = 0  # number of leading path component to strip for include guard
 
-    file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
+    file = dlb.ex.output.RegularFile(replace_by_same_content=False)
 
     def write_preamble(self, file):
         file.write('// This file was created automatically.\n// Do not modify it manually.\n')

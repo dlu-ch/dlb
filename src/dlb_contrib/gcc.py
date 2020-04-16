@@ -88,8 +88,8 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     # Names of warnings that should make the compilation unsuccessful.
     FATAL_WARNINGS = ('all',)
 
-    source_files = dlb.ex.Tool.Input.RegularFile[1:](cls=Path)
-    include_search_directories = dlb.ex.Tool.Input.Directory[:](required=False, cls=Path)
+    source_files = dlb.ex.input.RegularFile[1:](cls=Path)
+    include_search_directories = dlb.ex.input.Directory[:](required=False, cls=Path)
 
     async def redo(self, result, context):
         if len(result.object_files) != len(result.source_files):
@@ -172,16 +172,16 @@ class _LinkerGcc(dlb.ex.Tool):
 
     # Object files and static libraries to link.
     # Order matters; if file *b* depends on *a*, *b* should precede *a* in the sequence.
-    object_and_archive_files = dlb.ex.Tool.Input.RegularFile[1:](cls=ObjectOrArchivePath)
+    object_and_archive_files = dlb.ex.input.RegularFile[1:](cls=ObjectOrArchivePath)
 
-    linked_file = dlb.ex.Tool.Output.RegularFile(replace_by_same_content=False)
+    linked_file = dlb.ex.output.RegularFile(replace_by_same_content=False)
 
     # Tuple of paths of directories that are to be searched for libraries in addition to the standard system directories
-    library_search_directories = dlb.ex.Tool.Input.Directory[:](required=False, cls=Path)
+    library_search_directories = dlb.ex.input.Directory[:](required=False, cls=Path)
 
     # Subprograms like 'ld', 'collect2' are searched in this directory.
     # If not set, the directory of EXECUTABLE is used. See GCC_EXEC_PREFIX in gcc documentation for details.
-    subprogram_directory = dlb.ex.Tool.Input.Directory(required=False, cls=Path)
+    subprogram_directory = dlb.ex.input.Directory(required=False, cls=Path)
 
     def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return []  # e.g. '-shared'

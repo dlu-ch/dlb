@@ -56,8 +56,8 @@ class RunEnvBatch(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'cmd.exe'
 
-    batch_file = dlb.ex.Tool.Input.RegularFile(cls=BatchFilePath)
-    environment = dlb.ex.Tool.Output.Object(explicit=False)
+    batch_file = dlb.ex.input.RegularFile(cls=BatchFilePath)
+    environment = dlb.ex.output.Object(explicit=False)
 
     async def redo(self, result, context):
         batch_file = result.batch_file

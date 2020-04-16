@@ -16,12 +16,12 @@ import unittest
 
 
 class ATool(dlb.ex.Tool):
-    source_file = dlb.ex.Tool.Input.RegularFile()
-    object_file = dlb.ex.Tool.Output.RegularFile()
-    log_file = dlb.ex.Tool.Output.RegularFile(required=False, explicit=False)
-    include_directories = dlb.ex.Tool.Input.Directory[:](required=False)
-    dummy_file = dlb.ex.Tool.Input.NonRegularFile(required=False)
-    dummy_dir = dlb.ex.Tool.Output.Directory(required=False)
+    source_file = dlb.ex.input.RegularFile()
+    object_file = dlb.ex.output.RegularFile()
+    log_file = dlb.ex.output.RegularFile(required=False, explicit=False)
+    include_directories = dlb.ex.input.Directory[:](required=False)
+    dummy_file = dlb.ex.input.NonRegularFile(required=False)
+    dummy_dir = dlb.ex.output.Directory(required=False)
 
     async def redo(self, result, context):
         dlb.di.inform("redoing right now")
@@ -29,9 +29,9 @@ class ATool(dlb.ex.Tool):
 
 
 class FTool(dlb.ex.Tool):
-    source_file = dlb.ex.Tool.Input.RegularFile()
-    object_file = dlb.ex.Tool.Output.RegularFile()
-    included_files = dlb.ex.Tool.Input.RegularFile[:](explicit=False)
+    source_file = dlb.ex.input.RegularFile()
+    object_file = dlb.ex.output.RegularFile()
+    included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
     async def redo(self, result, context):
         dlb.di.inform("redoing right now")
@@ -52,7 +52,7 @@ class FailsWithoutRedoTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_without_redo(self):
 
         class BTool(dlb.ex.Tool):
-            object_file = dlb.ex.Tool.Output.RegularFile()
+            object_file = dlb.ex.output.RegularFile()
 
         with self.assertRaises(NotImplementedError):
             with dlb.ex.Context():
@@ -147,9 +147,9 @@ class FailsWithExplicitWithDifferentOutputDependenciesForSamePathTest(testenv.Te
 
     # noinspection PyAbstractClass
     class BTool(dlb.ex.Tool):
-        object_file = dlb.ex.Tool.Output.RegularFile(required=False)
-        temp_dir = dlb.ex.Tool.Output.Directory(required=False)
-        log_files = dlb.ex.Tool.Output.RegularFile[:](required=False)
+        object_file = dlb.ex.output.RegularFile(required=False)
+        temp_dir = dlb.ex.output.Directory(required=False)
+        log_files = dlb.ex.output.RegularFile[:](required=False)
 
     def test_fails_for_two_files(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -175,8 +175,8 @@ class FailsWithDifferentInputDependenciesForSameEnvVarTest(testenv.TemporaryWork
     def test_fails(self):
         # noinspection PyAbstractClass
         class BTool(dlb.ex.Tool):
-            a = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='')
-            b = dlb.ex.Tool.Input.EnvVar(name='XY', restriction='.*', example='', explicit=False)
+            a = dlb.ex.input.EnvVar(name='XY', restriction='.*', example='')
+            b = dlb.ex.input.EnvVar(name='XY', restriction='.*', example='', explicit=False)
 
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
@@ -498,9 +498,9 @@ class RedoIfInputSwitchesTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         class BTool(dlb.ex.Tool):
-            input_a = dlb.ex.Tool.Output.RegularFile()
-            input_b = dlb.ex.Tool.Output.RegularFile()
-            object_file = dlb.ex.Tool.Output.RegularFile()
+            input_a = dlb.ex.output.RegularFile()
+            input_b = dlb.ex.output.RegularFile()
+            object_file = dlb.ex.output.RegularFile()
 
             async def redo(self, result, context):
                 dlb.di.inform("redoing right now")
@@ -529,8 +529,8 @@ class RedoIfInputIsRemovedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         class BTool(dlb.ex.Tool):
-            inputs = dlb.ex.Tool.Output.RegularFile[:]()
-            object_file = dlb.ex.Tool.Output.RegularFile()
+            inputs = dlb.ex.output.RegularFile[:]()
+            object_file = dlb.ex.output.RegularFile()
 
             async def redo(self, result, context):
                 dlb.di.inform("redoing right now")
@@ -559,8 +559,8 @@ class RedoIfInputOrderIsChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         class BTool(dlb.ex.Tool):
-            inputs = dlb.ex.Tool.Output.RegularFile[:]()
-            object_file = dlb.ex.Tool.Output.RegularFile()
+            inputs = dlb.ex.output.RegularFile[:]()
+            object_file = dlb.ex.output.RegularFile()
 
             async def redo(self, result, context):
                 dlb.di.inform("redoing right now")
@@ -593,7 +593,7 @@ class RedoIfExecutionParameterModifiedTest(testenv.TemporaryWorkingDirectoryTest
         class BTool(dlb.ex.Tool):
             XYZ = a_list
 
-            object_file = dlb.ex.Tool.Output.RegularFile()
+            object_file = dlb.ex.output.RegularFile()
 
             async def redo(self, result, context):
                 dlb.di.inform("redoing right now")
@@ -619,7 +619,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
     def test_redo_for_explicit(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH')
+            language = dlb.ex.input.EnvVar(name='LANG', restriction=r'.+', example='de_CH')
 
             async def redo(self, result, context):
                 pass
@@ -640,7 +640,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
     def test_redo_for_nonexplicit(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'.+', example='de_CH', explicit=False)
+            language = dlb.ex.input.EnvVar(name='LANG', restriction=r'.+', example='de_CH', explicit=False)
 
             async def redo(self, result, context):
                 pass
@@ -671,8 +671,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
     def test_fails_for_nonexplicit_with_invalid_envvar_value(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.Tool.Input.EnvVar(name='LANG', restriction=r'[a-z]+_[A-Z]+',
-                                                example='de_CH', explicit=False)
+            language = dlb.ex.input.EnvVar(name='LANG', restriction=r'[a-z]+_[A-Z]+', example='de_CH', explicit=False)
 
             async def redo(self, result, context):
                 pass

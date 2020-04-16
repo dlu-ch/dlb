@@ -6,19 +6,48 @@ import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.ex._mult
 import dlb.ex._depend
+import dlb.ex.input
+import dlb.ex.output
 import re
+import inspect
 import unittest
 from typing import Tuple, Type
 
 
 filesystem_dependency_classes: Tuple[Type[dlb.ex._depend.Dependency], ...] = (
-    dlb.ex._depend.RegularFileInputDependency,
-    dlb.ex._depend.NonRegularFileInputDependency,
-    dlb.ex._depend.DirectoryInputDependency,
-    dlb.ex._depend.RegularFileOutputDependency,
-    dlb.ex._depend.NonRegularFileOutputDependency,
-    dlb.ex._depend.DirectoryOutputDependency
+    dlb.ex.input.RegularFile,
+    dlb.ex.input.NonRegularFile,
+    dlb.ex.input.Directory,
+    dlb.ex.output.RegularFile,
+    dlb.ex.output.NonRegularFile,
+    dlb.ex.output.Directory
 )
+
+
+class ReprTest(unittest.TestCase):
+    def test_reflects_module(self):
+        self.assertEqual(repr(dlb.ex.Dependency), "<class 'dlb.ex.Dependency'>")
+        self.assertEqual(repr(dlb.ex.InputDependency), "<class 'dlb.ex.InputDependency'>")
+        self.assertEqual(repr(dlb.ex.OutputDependency), "<class 'dlb.ex.OutputDependency'>")
+        self.assertEqual(repr(dlb.ex.input.RegularFile), "<class 'dlb.ex.input.RegularFile'>")
+        self.assertEqual(repr(dlb.ex.output.RegularFile), "<class 'dlb.ex.output.RegularFile'>")
+
+
+class InheritanceTest(unittest.TestCase):
+
+    def test_abstract(self):
+        self.assertTrue(issubclass(dlb.ex.InputDependency, dlb.ex.Dependency))
+        self.assertTrue(issubclass(dlb.ex.OutputDependency, dlb.ex.Dependency))
+
+    def test_all_in_input_are_input_dependencies(self):
+        for k, v in dlb.ex.input.__dict__.items():
+            if inspect.isclass(v):
+                self.assertTrue(issubclass(v, dlb.ex.InputDependency))
+
+    def test_all_in_output_are_input_dependencies(self):
+        for k, v in dlb.ex.output.__dict__.items():
+            if inspect.isclass(v):
+                self.assertTrue(issubclass(v, dlb.ex.OutputDependency))
 
 
 class BaseDependencyTest(unittest.TestCase):
@@ -29,7 +58,7 @@ class BaseDependencyTest(unittest.TestCase):
 
     def test_validate_fail_with_meaningful_message(self):
         msg = (
-            "<class 'dlb.ex.Tool.Dependency'> is an abstract dependency class\n"
+            "<class 'dlb.ex.Dependency'> is an abstract dependency class\n"
             "  | use one of its documented subclasses instead"
         )
 
@@ -47,7 +76,7 @@ class BaseDependencyTest(unittest.TestCase):
 class CommonOfConcreteValidationTest(unittest.TestCase):
 
     # stands for any non-abstract subclass of Dependency:
-    D = dlb.ex._depend.RegularFileInputDependency
+    D = dlb.ex.input.RegularFile
 
     # noinspection PyPep8Naming
     def test_fails_for_none(self):
@@ -120,7 +149,7 @@ class CommonOfConcreteFilesystemObjectTest(unittest.TestCase):
 
     def test_fails_for_nonpath_cls(self):
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.Tool.Input.RegularFile(cls=str)
+            dlb.ex.input.RegularFile(cls=str)
         msg = "'cls' is not a subclass of 'dlb.fs.Path'"
         self.assertEqual(str(cm.exception), msg)
 
@@ -138,16 +167,16 @@ class AbstractDependencyValidationTest(unittest.TestCase):
         )
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Dependency().validate(0)
-        self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Dependency'))
+            dlb.ex.Dependency().validate(0)
+        self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Dependency'))
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Input().validate(0)
-        self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Input'))
+            dlb.ex.InputDependency().validate(0)
+        self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.InputDependency'))
 
         with self.assertRaises(NotImplementedError) as cm:
-            dlb.ex.Tool.Output().validate(0)
-        self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.Tool.Output'))
+            dlb.ex.OutputDependency().validate(0)
+        self.assertEqual(str(cm.exception), msg_tmpl.format('dlb.ex.OutputDependency'))
 
 
 class SingleInputValidationTest(unittest.TestCase):
@@ -156,42 +185,38 @@ class SingleInputValidationTest(unittest.TestCase):
         msg = "'value' must not be None"
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex._depend.RegularFileInputDependency().validate(None)
+            dlb.ex.input.RegularFile().validate(None)
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex._depend.RegularFileInputDependency(required=False).validate(None)
+            dlb.ex.input.RegularFile(required=False).validate(None)
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_invalid_path_conversion(self):
         with self.assertRaises(ValueError):
-            dlb.ex._depend.RegularFileInputDependency(cls=dlb.fs.NoSpacePath).validate('a /b')
+            dlb.ex.input.RegularFile(cls=dlb.fs.NoSpacePath).validate('a /b')
 
     def test_regular_file_returns_path(self):
-        v = dlb.ex._depend.RegularFileInputDependency(cls=dlb.fs.NoSpacePath).validate('a/b')
+        v = dlb.ex.input.RegularFile(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_nonregular_file_returns_path(self):
-        v = dlb.ex._depend.NonRegularFileInputDependency(cls=dlb.fs.NoSpacePath).validate('a/b')
+        v = dlb.ex.input.NonRegularFile(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_directory_returns_path(self):
-        v = dlb.ex._depend.DirectoryInputDependency(cls=dlb.fs.NoSpacePath).validate('a/b/')
+        v = dlb.ex.input.Directory(cls=dlb.fs.NoSpacePath).validate('a/b/')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
     def test_envvar_returns_str_or_dict(self):
-        d = dlb.ex._depend.EnvVarInputDependency(name='number', restriction=r'[0-9]+[a-z]+', example='42s')
+        d = dlb.ex.input.EnvVar(name='number', restriction=r'[0-9]+[a-z]+', example='42s')
         # noinspection PyCallByClass
-        self.assertEqual(dlb.ex._depend.EnvVarInputDependency.Value(name='number', raw='123mm', groups={}),
-                         d.validate('123mm'))
+        self.assertEqual(dlb.ex.input.EnvVar.Value(name='number', raw='123mm', groups={}), d.validate('123mm'))
 
-        d = dlb.ex._depend.EnvVarInputDependency(
-            name='number',
-            restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s')
+        d = dlb.ex.input.EnvVar(name='number', restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s')
 
         # noinspection PyCallByClass
-        self.assertEqual(dlb.ex._depend.EnvVarInputDependency.Value(name='number', raw='123mm',
-                                                                    groups={'num': '123', 'unit': 'mm'}),
+        self.assertEqual(dlb.ex.input.EnvVar.Value(name='number', raw='123mm', groups={'num': '123', 'unit': 'mm'}),
                          d.validate('123mm'))
 
         with self.assertRaises(TypeError) as cm:
@@ -202,34 +227,34 @@ class SingleInputValidationTest(unittest.TestCase):
 class PropertyTest(unittest.TestCase):
 
     def test_filesystem_input_dependency_has_cls(self):
-        d = dlb.ex._depend.RegularFileInputDependency()
+        d = dlb.ex.input.RegularFile()
         self.assertIs(d.cls, dlb.fs.Path)
 
-        d = dlb.ex._depend.RegularFileInputDependency(cls=dlb.fs.NoSpacePath)
+        d = dlb.ex.input.RegularFile(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
-        d = dlb.ex._depend.NonRegularFileInputDependency(cls=dlb.fs.NoSpacePath)
+        d = dlb.ex.input.NonRegularFile(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
-        d = dlb.ex._depend.DirectoryInputDependency(cls=dlb.fs.NoSpacePath)
+        d = dlb.ex.input.Directory(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
     def test_filesystem_output_dependency_has_cls(self):
-        d = dlb.ex._depend.RegularFileOutputDependency(cls=dlb.fs.NoSpacePath)
+        d = dlb.ex.output.RegularFile(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
-        d = dlb.ex._depend.NonRegularFileOutputDependency(cls=dlb.fs.NoSpacePath)
+        d = dlb.ex.output.NonRegularFile(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
-        d = dlb.ex._depend.DirectoryOutputDependency(cls=dlb.fs.NoSpacePath)
+        d = dlb.ex.output.Directory(cls=dlb.fs.NoSpacePath)
         self.assertIs(d.cls, dlb.fs.NoSpacePath)
 
     def test_regularfile_output_dependency_has_replace_by_same_content(self):
-        d = dlb.ex._depend.RegularFileOutputDependency(replace_by_same_content=False)
+        d = dlb.ex.output.RegularFile(replace_by_same_content=False)
         self.assertFalse(d.replace_by_same_content)
 
     def test_envvar_intput_dependency_has_name_restriction_and_example(self):
-        d = dlb.ex._depend.EnvVarInputDependency(name='n', restriction=r'.', example='!')
+        d = dlb.ex.input.EnvVar(name='n', restriction=r'.', example='!')
         self.assertEqual('n', d.name)
         self.assertEqual(re.compile(r'.'), d.restriction)
         self.assertEqual('!', d.example)
@@ -239,11 +264,11 @@ class FileInputValidationTest(unittest.TestCase):
 
     def test_fails_for_directory(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.RegularFileInputDependency().validate('a/b/')
+            dlb.ex.input.RegularFile().validate('a/b/')
         self.assertEqual(str(cm.exception), "directory path not valid for non-directory dependency: Path('a/b/')")
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.NonRegularFileInputDependency().validate('a/b/')
+            dlb.ex.input.NonRegularFile().validate('a/b/')
         self.assertEqual(str(cm.exception), "directory path not valid for non-directory dependency: Path('a/b/')")
 
 
@@ -252,7 +277,7 @@ class DirectoryInputValidationTest(unittest.TestCase):
     def test_fails_for_file(self):
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.DirectoryInputDependency().validate('a/b')
+            dlb.ex.input.Directory().validate('a/b')
         self.assertEqual(str(cm.exception), "non-directory path not valid for directory dependency: Path('a/b')")
 
 
@@ -261,41 +286,40 @@ class EnvVarInputValidationTest(unittest.TestCase):
     def test_fails_if_name_not_str(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex._depend.EnvVarInputDependency(name=1, restriction=r'[0-9]+', example='42')
+            dlb.ex.input.EnvVar(name=1, restriction=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "'name' must be a str")
 
     def test_fails_if_name_empty(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.EnvVarInputDependency(name='', restriction=r'[0-9]+', example='42')
+            dlb.ex.input.EnvVar(name='', restriction=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "'name' must not be empty")
 
     def test_fails_if_restriction_is_bytes(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex._depend.EnvVarInputDependency(name='number', restriction=b'42', example='42')
+            dlb.ex.input.EnvVar(name='number', restriction=b'42', example='42')
         self.assertEqual(str(cm.exception), "'restriction' must be regular expression (compiled or str)")
 
     def test_fails_if_example_is_none(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex._depend.EnvVarInputDependency(name='number', restriction='42', example=None)
+            dlb.ex.input.EnvVar(name='number', restriction='42', example=None)
         self.assertEqual(str(cm.exception), "'example' must be a str")
 
     def test_fails_with_nonmatching_example(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.EnvVarInputDependency(name='number', restriction=r'[0-9]+', example='42s')
+            dlb.ex.input.EnvVar(name='number', restriction=r'[0-9]+', example='42s')
         self.assertEqual(str(cm.exception), "'example' is invalid with respect to 'restriction': '42s'")
 
     def test_invalid_if_value_does_not_match_all_the_value(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.EnvVarInputDependency(name='number', restriction=r'[0-9]+[a-z]+',
-                                                 example='42s').validate('123mm2')
+            dlb.ex.input.EnvVar(name='number', restriction=r'[0-9]+[a-z]+', example='42s').validate('123mm2')
         msg = "value is invalid with respect to restriction: '123mm2'"
         self.assertEqual(str(cm.exception), msg)
 
     def test_fails_with_multiplicity(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.EnvVarInputDependency[1](name='number', restriction=r'[0-9]+', example='42')
+            dlb.ex.input.EnvVar[1](name='number', restriction=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "must not have a multiplicity")
 
 
@@ -305,55 +329,55 @@ class SingleOutputValidationTest(unittest.TestCase):
         msg = "'value' must not be None"
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex._depend.RegularFileOutputDependency().validate(None)
+            dlb.ex.output.RegularFile().validate(None)
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex._depend.RegularFileOutputDependency(required=False).validate(None)
+            dlb.ex.output.RegularFile(required=False).validate(None)
         self.assertEqual(msg, str(cm.exception))
 
     def test_regular_file_returns_path(self):
-        v = dlb.ex._depend.RegularFileOutputDependency(cls=dlb.fs.NoSpacePath).validate('a/b')
+        v = dlb.ex.output.RegularFile(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_nonregular_file_returns_path(self):
-        v = dlb.ex._depend.NonRegularFileOutputDependency(cls=dlb.fs.NoSpacePath).validate('a/b')
+        v = dlb.ex.output.NonRegularFile(cls=dlb.fs.NoSpacePath).validate('a/b')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b'))
 
     def test_directory_returns_path(self):
-        v = dlb.ex._depend.DirectoryOutputDependency(cls=dlb.fs.NoSpacePath).validate('a/b/')
+        v = dlb.ex.output.Directory(cls=dlb.fs.NoSpacePath).validate('a/b/')
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
 
 class ObjectOutputValidationTest(unittest.TestCase):
 
     def test_validated_value_is_equal_to_value(self):
-        d = dlb.ex._depend.ObjectOutputDependency(explicit=False)
+        d = dlb.ex.output.Object(explicit=False)
         values = ['iu', 123.0, ({}, [None, dlb.fs.Path('42')])]
         for v in values:
             self.assertEqual(v, d.validate(v), repr(v))
 
     def test_validated_list_value_is_copy(self):
-        d = dlb.ex._depend.ObjectOutputDependency(explicit=False)
+        d = dlb.ex.output.Object(explicit=False)
         li = [1, 2, 3]
         v = d.validate(li)
         li.append(4)
         self.assertEqual([1, 2, 3], v)
 
     def test_fails_for_none(self):
-        d = dlb.ex._depend.ObjectOutputDependency(explicit=False)
+        d = dlb.ex.output.Object(explicit=False)
         with self.assertRaises(TypeError):
             d.validate(None)
 
     def test_fails_for_notimplemented(self):
-        d = dlb.ex._depend.ObjectOutputDependency(explicit=False)
+        d = dlb.ex.output.Object(explicit=False)
         with self.assertRaises(ValueError) as cm:
             d.validate(NotImplemented)
         self.assertEqual(str(cm.exception), "value is invalid: NotImplemented")
 
     def test_fails_with_explicit(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex._depend.ObjectOutputDependency(explicit=True)
+            dlb.ex.output.Object(explicit=True)
         self.assertEqual(str(cm.exception), "must not be explicit")
 
 
@@ -361,13 +385,13 @@ class ObjectOutputValidationTest(unittest.TestCase):
 class TupleFromValueTest(unittest.TestCase):
 
     def test_returns_none_or_tuple(self):
-        D = dlb.ex._depend.RegularFileInputDependency(required=False)
+        D = dlb.ex.input.RegularFile(required=False)
 
         self.assertEqual((), D.tuple_from_value(None))
 
         self.assertEqual((dlb.fs.Path('a/b'),), D.tuple_from_value(D.validate('a/b')))
 
-        D = dlb.ex._depend.RegularFileInputDependency[:]()
+        D = dlb.ex.input.RegularFile[:]()
         self.assertEqual((dlb.fs.Path('a/b'),), D.tuple_from_value(D.validate(['a/b'])))
         self.assertEqual((dlb.fs.Path('a/b'), dlb.fs.Path('c'),), D.tuple_from_value(D.validate(['a/b', 'c'])))
 
@@ -379,73 +403,73 @@ class CompatibilityTest(unittest.TestCase):
         for D in filesystem_dependency_classes:
             self.assertTrue(D().compatible_and_no_less_restrictive(D()))
 
-        d1 = dlb.ex._depend.EnvVarInputDependency(name='n', restriction=r'.*', example='')
-        d2 = dlb.ex._depend.EnvVarInputDependency(name='n', restriction=r'.*', example='')
+        d1 = dlb.ex.input.EnvVar(name='n', restriction=r'.*', example='')
+        d2 = dlb.ex.input.EnvVar(name='n', restriction=r'.*', example='')
         self.assertTrue(d1.compatible_and_no_less_restrictive(d2))
 
-        d1 = dlb.ex._depend.ObjectOutputDependency(explicit=False)
-        d2 = dlb.ex._depend.ObjectOutputDependency(explicit=False)
+        d1 = dlb.ex.output.Object(explicit=False)
+        d2 = dlb.ex.output.Object(explicit=False)
         self.assertTrue(d1.compatible_and_no_less_restrictive(d2))
 
     def test_different_dependency_classes_are_not_compatible(self):
-        A = dlb.ex._depend.RegularFileInputDependency
-        B = dlb.ex._depend.NonRegularFileInputDependency
+        A = dlb.ex.input.RegularFile
+        B = dlb.ex.input.NonRegularFile
         self.assertFalse(A().compatible_and_no_less_restrictive(B()))
 
     def test_single_and_nonsingle_multiplicity_are_not_compatible(self):
-        A = dlb.ex._depend.RegularFileInputDependency
-        B = dlb.ex._depend.RegularFileInputDependency[:]
+        A = dlb.ex.input.RegularFile
+        B = dlb.ex.input.RegularFile[:]
         self.assertFalse(B().compatible_and_no_less_restrictive(A()))
 
     def test_smaller_multiplicity_with_same_step_is_compatible(self):
-        A = dlb.ex._depend.RegularFileInputDependency[1:5]
-        B = dlb.ex._depend.RegularFileInputDependency[2:4]
+        A = dlb.ex.input.RegularFile[1:5]
+        B = dlb.ex.input.RegularFile[2:4]
         self.assertFalse(A().compatible_and_no_less_restrictive(B()))
         self.assertTrue(B().compatible_and_no_less_restrictive(A()))
 
     def test_multiplicity_with_different_step_is_not_compatible(self):
-        A = dlb.ex._depend.RegularFileInputDependency[1:5]
-        B = dlb.ex._depend.RegularFileInputDependency[1:5:2]
+        A = dlb.ex.input.RegularFile[1:5]
+        B = dlb.ex.input.RegularFile[1:5:2]
         self.assertFalse(A().compatible_and_no_less_restrictive(B()))
         self.assertFalse(B().compatible_and_no_less_restrictive(A()))
 
     def test_multiplicity_without_stop_less_restrictive_than_with_stop(self):
-        A = dlb.ex._depend.RegularFileInputDependency[1:5]
-        B = dlb.ex._depend.RegularFileInputDependency[1:]
+        A = dlb.ex.input.RegularFile[1:5]
+        B = dlb.ex.input.RegularFile[1:]
         self.assertTrue(A().compatible_and_no_less_restrictive(B()))
         self.assertFalse(B().compatible_and_no_less_restrictive(A()))
 
     def test_multiplicity_with_larger_stop_less_restrictive(self):
-        A = dlb.ex._depend.RegularFileInputDependency[1:5]
-        B = dlb.ex._depend.RegularFileInputDependency[1:6]
+        A = dlb.ex.input.RegularFile[1:5]
+        B = dlb.ex.input.RegularFile[1:6]
         self.assertTrue(A().compatible_and_no_less_restrictive(B()))
         self.assertFalse(B().compatible_and_no_less_restrictive(A()))
 
     def test_different_explicit_are_not_compatible(self):
-        C = dlb.ex._depend.RegularFileInputDependency
+        C = dlb.ex.input.RegularFile
         self.assertFalse(C().compatible_and_no_less_restrictive(C(explicit=False)))
         self.assertFalse(C(explicit=False).compatible_and_no_less_restrictive(C()))
 
     def test_required_is_more_restrictive_than_notrequired(self):
-        C = dlb.ex._depend.RegularFileInputDependency
+        C = dlb.ex.input.RegularFile
         self.assertTrue(C().compatible_and_no_less_restrictive(C(required=False)))
         self.assertFalse(C(required=False).compatible_and_no_less_restrictive(C()))
 
     def test_envvar_and_file_are_not_compatible(self):
-        d1 = dlb.ex._depend.RegularFileInputDependency()
-        d2 = dlb.ex._depend.EnvVarInputDependency(name='n1', restriction=r'.*', example='')
+        d1 = dlb.ex.input.RegularFile()
+        d2 = dlb.ex.input.EnvVar(name='n1', restriction=r'.*', example='')
         self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
         self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 
     def test_envvar_with_different_names_are_not_compatible(self):
-        d1 = dlb.ex._depend.EnvVarInputDependency(name='n1', restriction=r'.*', example='')
-        d2 = dlb.ex._depend.EnvVarInputDependency(name='n2', restriction=r'.*', example='')
+        d1 = dlb.ex.input.EnvVar(name='n1', restriction=r'.*', example='')
+        d2 = dlb.ex.input.EnvVar(name='n2', restriction=r'.*', example='')
         self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
         self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 
     def test_envvar_with_different_restrictions_are_not_compatible(self):
-        d1 = dlb.ex._depend.EnvVarInputDependency(name='n', restriction=r'', example='')
-        d2 = dlb.ex._depend.EnvVarInputDependency(name='n', restriction=r'.*', example='')
+        d1 = dlb.ex.input.EnvVar(name='n', restriction=r'', example='')
+        d2 = dlb.ex.input.EnvVar(name='n', restriction=r'.*', example='')
         self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
         self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 
@@ -471,14 +495,20 @@ class ValueOfNonAbstractDependencyTest(unittest.TestCase):
 
 class CoverageTest(unittest.TestCase):
     def test_all_concrete_dependency_is_complete(self):
-        public_dependency_classes_except_abstract_ones = {
+        public_dependency_classes_except_abstract_ones = {  # TODO simplify
             v for n, v in dlb.ex._depend.__dict__.items()
             if isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency) and
                v is not dlb.ex._depend.Dependency and not n.startswith('_')
+        } | {
+            v for n, v in dlb.ex.input.__dict__.items()
+            if isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency)
+        } | {
+            v for n, v in dlb.ex.output.__dict__.items()
+            if isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency)
         }
 
         covered_concrete_dependencies = filesystem_dependency_classes + (
-            dlb.ex._depend.EnvVarInputDependency, dlb.ex._depend.ObjectOutputDependency)
+            dlb.ex.input.EnvVar, dlb.ex.output.Object)
 
         covered_abstract_dependencies = (
             dlb.ex._depend.InputDependency,

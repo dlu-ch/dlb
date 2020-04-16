@@ -13,8 +13,8 @@ import unittest
 class GetActionTest(unittest.TestCase):
 
     def test_has_dependency_and_name(self):
-        a = dlb.ex._dependaction.get_action(dlb.ex._depend.RegularFileInputDependency(), 'a')
-        self.assertIsInstance(a.dependency, dlb.ex._depend.RegularFileInputDependency)
+        a = dlb.ex._dependaction.get_action(dlb.ex.input.RegularFile(), 'a')
+        self.assertIsInstance(a.dependency, dlb.ex.input.RegularFile)
         self.assertEqual('a', a.name)
 
 
@@ -27,15 +27,14 @@ class RegisterTest(unittest.TestCase):
 
     def test_fails_for_registered_action(self):
         with self.assertRaises(ValueError):
-            dlb.ex._dependaction.register_action(0, dlb.ex._depend.RegularFileInputDependency,
-                                                 dlb.ex._dependaction.DirectoryInputAction)
+            dlb.ex._dependaction.register_action(0, dlb.ex.input.RegularFile, dlb.ex._dependaction.DirectoryInputAction)
 
     def test_fails_for_registered_dependency_id(self):
         with self.assertRaises(ValueError):
             dlb.ex._dependaction.register_action(3, RegisterTest.DummyDependency, RegisterTest.DummyAction)
 
         with self.assertRaises(ValueError):
-            dlb.ex._dependaction.register_action(3, dlb.ex._depend.RegularFileInputDependency,
+            dlb.ex._dependaction.register_action(3, dlb.ex.input.RegularFile,
                                                  dlb.ex._dependaction.RegularFileInputAction)
 
     def test_fails_for_abstract_dependency_class(self):
@@ -46,22 +45,22 @@ class RegisterTest(unittest.TestCase):
 class RegularFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
 
     def test_is_equal_for_different_instances_with_same_arguments(self):
-        d1 = dlb.ex.Tool.Input.RegularFile()
-        d2 = dlb.ex.Tool.Input.RegularFile[:]()
+        d1 = dlb.ex.input.RegularFile()
+        d2 = dlb.ex.input.RegularFile[:]()
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
 
     def test_is_equal_for_different_require(self):
-        d1 = dlb.ex.Tool.Input.RegularFile(required=False)
-        d2 = dlb.ex.Tool.Input.RegularFile[:]()
+        d1 = dlb.ex.input.RegularFile(required=False)
+        d2 = dlb.ex.input.RegularFile[:]()
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
 
     def test_is_equal_for_different_cls(self):
-        d1 = dlb.ex.Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath)
-        d2 = dlb.ex.Tool.Input.RegularFile[:]()
+        d1 = dlb.ex.input.RegularFile(cls=dlb.fs.NoSpacePath)
+        d2 = dlb.ex.input.RegularFile[:]()
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
@@ -70,29 +69,29 @@ class RegularFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
 class EnvVarFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
 
     def test_is_equal_for_different_instances_with_same_arguments(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        d1 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xy')
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
 
     def test_is_different_for_different_names(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(name='d1', restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar(name='d2', restriction='x.', example='xy')
+        d1 = dlb.ex.input.EnvVar(name='d1', restriction='x.', example='xy')
+        d2 = dlb.ex.input.EnvVar(name='d2', restriction='x.', example='xy')
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertNotEqual(plii1, plii2)
 
     def test_is_equal_for_different_restriction(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='.y', example='xy')
+        d1 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.input.EnvVar(name='d', restriction='.y', example='xy')
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
 
     def test_is_equal_for_different_example(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xz')
+        d1 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xz')
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
@@ -101,8 +100,8 @@ class EnvVarFileInputPermanentLocalInstanceIdTest(unittest.TestCase):
 class RegularFileOutputPermanentLocalInstanceIdTest(unittest.TestCase):
 
     def test_is_equal_for_different_instances_with_same_arguments(self):
-        d1 = dlb.ex.Tool.Output.RegularFile()
-        d2 = dlb.ex.Tool.Output.RegularFile[:]()
+        d1 = dlb.ex.output.RegularFile()
+        d2 = dlb.ex.output.RegularFile[:]()
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertEqual(plii1, plii2)
@@ -110,8 +109,8 @@ class RegularFileOutputPermanentLocalInstanceIdTest(unittest.TestCase):
 
 class DifferentInputPermanentLocalInstanceIdTest(unittest.TestCase):
     def test_is_different_for_different_classes_with_same_arguments(self):
-        d1 = dlb.ex.Tool.Output.RegularFile()
-        d2 = dlb.ex.Tool.Output.NonRegularFile()
+        d1 = dlb.ex.output.RegularFile()
+        d2 = dlb.ex.output.NonRegularFile()
         plii1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_instance_id()
         plii2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_instance_id()
         self.assertNotEqual(plii1, plii2)
@@ -120,16 +119,16 @@ class DifferentInputPermanentLocalInstanceIdTest(unittest.TestCase):
 class RegularFileInputPermanentLocalValueIdTest(unittest.TestCase):
 
     def test_is_different_for_different_value(self):
-        d1 = dlb.ex.Tool.Input.RegularFile()
-        d2 = dlb.ex.Tool.Input.RegularFile()
+        d1 = dlb.ex.input.RegularFile()
+        d2 = dlb.ex.input.RegularFile()
         plvi1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_value_id(
             d1.tuple_from_value(d1.validate('x')))
         plvi2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_value_id(
             d2.tuple_from_value(d2.validate('x/y')))
         self.assertNotEqual(plvi1, plvi2)
 
-        d1 = dlb.ex.Tool.Input.RegularFile[:]()
-        d2 = dlb.ex.Tool.Input.RegularFile[:]()
+        d1 = dlb.ex.input.RegularFile[:]()
+        d2 = dlb.ex.input.RegularFile[:]()
         plvi1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_value_id(
             d1.tuple_from_value(d1.validate(['x', 'y'])))
         plvi2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_value_id(
@@ -137,8 +136,8 @@ class RegularFileInputPermanentLocalValueIdTest(unittest.TestCase):
         self.assertNotEqual(plvi1, plvi2)
 
     def test_is_equal_for_different_cls(self):
-        d1 = dlb.ex.Tool.Input.RegularFile(cls=dlb.fs.NoSpacePath)
-        d2 = dlb.ex.Tool.Input.RegularFile()
+        d1 = dlb.ex.input.RegularFile(cls=dlb.fs.NoSpacePath)
+        d2 = dlb.ex.input.RegularFile()
         plvi1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_value_id(
             d1.tuple_from_value(d1.validate('x/y')))
         plvi2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_value_id(
@@ -149,15 +148,15 @@ class RegularFileInputPermanentLocalValueIdTest(unittest.TestCase):
 class EnvVarInputPermanentLocalValueIdTest(unittest.TestCase):
 
     def test_is_different_for_different_value(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
+        d1 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xy')
         plvi1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate('xy'))
         plvi2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate('x_'))
         self.assertNotEqual(plvi1, plvi2)
 
     def test_is_equal_for_different_restriction(self):
-        d1 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='x.', example='xy')
-        d2 = dlb.ex.Tool.Input.EnvVar(name='d', restriction='.y', example='xy')
+        d1 = dlb.ex.input.EnvVar(name='d', restriction='x.', example='xy')
+        d2 = dlb.ex.input.EnvVar(name='d', restriction='.y', example='xy')
         plvi1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate('xy'))
         plvi2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate('xy'))
         self.assertEqual(plvi1, plvi2)
@@ -166,7 +165,7 @@ class EnvVarInputPermanentLocalValueIdTest(unittest.TestCase):
 class EnvVarInputFilesystemOperationTest(unittest.TestCase):
 
     def test_fails_on_filesystem_operations(self):
-        d = dlb.ex.Tool.Input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False, required=False)
+        d = dlb.ex.input.EnvVar(name='AB', restriction='x.', example='xy', explicit=False, required=False)
         a = dlb.ex._dependaction.get_action(d, 'd')
 
         with self.assertRaises(ValueError):
