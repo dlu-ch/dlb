@@ -4,6 +4,8 @@
 
 import testenv  # also sets up module search paths
 import dlb.fs
+import dlb.di
+import dlb.cf
 import dlb.ex
 import dlb.ex._toolrun
 import dlb.ex._dependaction
@@ -219,6 +221,32 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             e = rd.execute_helper('ls', ['ls --unsupported-option '], stderr_output=NotImplemented,
                                   expected_returncodes=[2])
             asyncio.get_event_loop().run_until_complete(e)
+
+    def test_informs(self):
+        orig = dlb.cf.level.helper_execution
+
+        try:
+            dlb.cf.level.helper_execution = dlb.di.INFO
+
+            with dlb.ex.Context() as c:
+                rd = dlb.ex._toolrun.RedoContext(c, dict())
+                e = rd.execute_helper('ls', ['-l'], stdout_output=NotImplemented)
+
+                output = io.StringIO()
+                dlb.di.set_output_file(output)
+                asyncio.get_event_loop().run_until_complete(e)
+
+            msg = (
+                "I execute helper 'ls' \n" 
+                "  | path:        '/bin/ls' \n" 
+                "  | arguments:   '-l' \n"
+                "  | directory:   './' \n"
+                "  | environment: {}\n"
+            )
+            self.assertEqual(msg, output.getvalue())
+
+        finally:
+            dlb.cf.level.helper_execution = orig
 
 
 @unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')

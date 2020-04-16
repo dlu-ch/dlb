@@ -86,7 +86,7 @@ class RedoContext(_context.ReadOnlyContext):
         env.update(forced_env)
 
         if di.is_unsuppressed_level(cf.level.helper_execution):
-            argument_list_str = ', '.join([repr(t) for t in commandline_tokens[1:]])  # TODO test
+            argument_list_str = ', '.join([repr(t) for t in commandline_tokens[1:]])
             env_str = repr(env)
             msg = (
                 f'execute helper {helper_file.as_string()!r}\n'

@@ -588,7 +588,7 @@ class RedoIfInputOrderIsChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
 class RedoIfExecutionParameterModifiedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
-        a_list = ['a', 2]
+        a_list = ['a', 2] * 10
 
         class BTool(dlb.ex.Tool):
             XYZ = a_list

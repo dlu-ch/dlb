@@ -27,24 +27,14 @@ from . import _dependaction
 from . import _toolrun
 assert sys.version_info >= (3, 7)
 
-
 UPPERCASE_WORD_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
-assert UPPERCASE_WORD_NAME_REGEX.match('A')  # TODO to test
-assert UPPERCASE_WORD_NAME_REGEX.match('A2_B')
-assert not UPPERCASE_WORD_NAME_REGEX.match('_A')
-
 LOWERCASE_WORD_NAME_REGEX = re.compile('^[a-z][a-z0-9]*(_[a-z][a-z0-9]*)*$')
-assert LOWERCASE_WORD_NAME_REGEX.match('object_file')
-assert not LOWERCASE_WORD_NAME_REGEX.match('_object_file_')
-assert not LOWERCASE_WORD_NAME_REGEX.match('Object_file_')
-
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
 _tool_class_by_definition_location = {}
 
 # key: dlb.ex.Tool, value: ToolInfo
 _registered_info_by_tool = {}
-
 
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
@@ -158,7 +148,7 @@ class _ToolBase:
                     )
                     raise _error.ExecutionParameterError(msg) from None
             if len(execution_parameter_digest) >= 20:
-                execution_parameter_digest = hashlib.sha1(execution_parameter_digest).digest()  # TODO test
+                execution_parameter_digest = hashlib.sha1(execution_parameter_digest).digest()
 
             db = _context._get_rundb()
 

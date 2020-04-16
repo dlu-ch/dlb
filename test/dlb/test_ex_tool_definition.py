@@ -14,6 +14,21 @@ import zipfile
 import unittest
 
 
+class RegexTest(unittest.TestCase):
+
+    def test_uppercase_word(self):
+        import dlb.ex._tool
+        self.assertTrue(dlb.ex._tool.UPPERCASE_WORD_NAME_REGEX.match('A'))
+        self.assertTrue(dlb.ex._tool.UPPERCASE_WORD_NAME_REGEX.match('A2_B'))
+        self.assertFalse(dlb.ex._tool.UPPERCASE_WORD_NAME_REGEX.match('_A'))
+
+    def test_lowercase_word(self):
+        import dlb.ex._tool
+        self.assertTrue(dlb.ex._tool.LOWERCASE_WORD_NAME_REGEX.match('object_file'))
+        self.assertFalse(dlb.ex._tool.LOWERCASE_WORD_NAME_REGEX.match('_object_file_'))
+        self.assertFalse(dlb.ex._tool.LOWERCASE_WORD_NAME_REGEX.match('Object_file_'))
+
+
 class ToolClassAttributeDefineTest(unittest.TestCase):
 
     def test_can_define_execution_parameter(self):
@@ -379,7 +394,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 382  # of this line
+        lineno = 397  # of this line
 
         class A(dlb.ex.Tool):
             pass
