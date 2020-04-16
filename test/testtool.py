@@ -34,6 +34,7 @@ class DirectoryChanger:  # change directory temporarily
             print(f'changed current working directory of process to {str(self._path)!r}')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # noinspection PyTypeChecker
         os.chdir(os.fspath(self._original_path))
         if self._show_dir_change:
             print(f'changed current working directory of process back to {str(self._original_path)!r}')

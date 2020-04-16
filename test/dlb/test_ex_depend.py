@@ -149,6 +149,7 @@ class CommonOfConcreteFilesystemObjectTest(unittest.TestCase):
 
     def test_fails_for_nonpath_cls(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex.input.RegularFile(cls=str)
         msg = "'cls' is not a subclass of 'dlb.fs.Path'"
         self.assertEqual(str(cm.exception), msg)

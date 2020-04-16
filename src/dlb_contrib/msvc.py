@@ -71,7 +71,7 @@ assert sys.version_info >= (3, 7)
 
 
 INCLUDE_LINE_REGEX = re.compile(rb'^[^ \t][^:]*: [^ \t][^:]*: +')
-assert INCLUDE_LINE_REGEX.match(b'Note: including file: D:\dir\included_file.h')
+assert INCLUDE_LINE_REGEX.match(b'Note: including file: D:\\dir\\included_file.h')
 
 
 async def _detect_include_line_representation(compiler_executable, context) -> Tuple[bytes, bytes, str]:
@@ -83,9 +83,9 @@ async def _detect_include_line_representation(compiler_executable, context) -> T
     except Exception:
         raise RuntimeError('failed to get ANSI codepage of process') from None
 
+    encoding = f'cp{codepage:03}'  # _not_ the one returned by locale.getpreferredencoding()
     try:
         import codecs
-        encoding = f'cp{codepage:03}'  # _not_ the one returned by locale.getpreferredencoding()
         codecs.lookup(encoding)
     except LookupError:
         raise RuntimeError(f'ANSI codepage of process not supported: {encoding!r}') from None

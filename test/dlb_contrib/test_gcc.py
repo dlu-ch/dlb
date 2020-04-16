@@ -214,6 +214,7 @@ class CplusplusTest(testenv.TemporaryWorkingDirectoryTestCase):
 @unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
 class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 
+    # noinspection PyPep8Naming
     def setUp(self):
         super().setUp()
 

@@ -91,7 +91,7 @@ class UnquoteBytesTest(unittest.TestCase):
             dlb_contrib.backslashescape.unquote(b'<a<>', with_oct=False, opening='<', closing='>')
         self.assertEqual("'literal' must not contain an unescaped '<': b'<a<>'", str(cm.exception))
         self.assertEqual(b'a<', dlb_contrib.backslashescape.unquote(b'<a\\<>', {'<': ord('<')},
-                                                                   opening='<', closing='>'))
+                                                                    opening='<', closing='>'))
 
 
 class UnquoteStrTest(unittest.TestCase):

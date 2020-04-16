@@ -176,7 +176,8 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
             with dlb.ex.Context():
                 # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
                 dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
-                dlb.ex.Context.active.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
+                dlb.ex.Context.active.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*',
+                                                            example='C:\\X;D:\\Y')
                 dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
                 dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
                 t.run()
