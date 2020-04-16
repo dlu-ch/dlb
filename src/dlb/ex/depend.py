@@ -114,11 +114,11 @@ class Dependency(mult.MultiplicityHolder):
         return tuple(v for v in value)
 
 
-class Input(Dependency):
+class InputDependency(Dependency):
     pass
 
 
-class Output(Dependency):
+class OutputDependency(Dependency):
     pass
 
 
@@ -163,19 +163,19 @@ class _DirectoryMixin(_FilesystemObjectMixin):
         return value
 
 
-class RegularFileInput(_NonDirectoryMixin, Input):
+class RegularFileInputDependency(_NonDirectoryMixin, InputDependency):
     pass
 
 
-class NonRegularFileInput(_NonDirectoryMixin, Input):
+class NonRegularFileInputDependency(_NonDirectoryMixin, InputDependency):
     pass
 
 
-class DirectoryInput(_DirectoryMixin, Input):
+class DirectoryInputDependency(_DirectoryMixin, InputDependency):
     pass
 
 
-class RegularFileOutput(_NonDirectoryMixin, Output):
+class RegularFileOutputDependency(_NonDirectoryMixin, OutputDependency):
 
     def __init__(self, *, replace_by_same_content: bool = True, **kwargs):
         super().__init__(**kwargs)
@@ -186,15 +186,15 @@ class RegularFileOutput(_NonDirectoryMixin, Output):
         return self._replace_by_same_content
 
 
-class NonRegularFileOutput(_NonDirectoryMixin, Output):
+class NonRegularFileOutputDependency(_NonDirectoryMixin, OutputDependency):
     pass
 
 
-class DirectoryOutput(_DirectoryMixin, Output):
+class DirectoryOutputDependency(_DirectoryMixin, OutputDependency):
     pass
 
 
-class EnvVarInput(Input):
+class EnvVarInputDependency(InputDependency):
     @dataclasses.dataclass(frozen=True, eq=True)
     class Value:
         name: str
@@ -244,7 +244,7 @@ class EnvVarInput(Input):
 
         return self.name == other.name and self.restriction == other.restriction  # ignore example
 
-    def validate_single(self, value) -> 'EnvVarInput.Value':
+    def validate_single(self, value) -> 'EnvVarInputDependency.Value':
         # value is used to defined the content of a (future) environment variable
         value = super().validate_single(value)
 
@@ -256,10 +256,10 @@ class EnvVarInput(Input):
             raise ValueError(f"value is invalid with respect to restriction: {value!r}")
 
         # noinspection PyCallByClass
-        return EnvVarInput.Value(name=self.name, raw=value, groups=m.groupdict())
+        return EnvVarInputDependency.Value(name=self.name, raw=value, groups=m.groupdict())
 
 
-class ObjectOutput(Output):
+class ObjectOutputDependency(OutputDependency):
     Value = Any  # except None and NotImplemented
 
     def __init__(self, **kwargs):
@@ -285,15 +285,15 @@ def _inject_into(owner, owner_name, owner_module):
 
     _inject_nested_class_into(owner, Dependency, 'Dependency', owner_name)
 
-    _inject_nested_class_into(owner, Input, 'Input', owner_name)
-    _inject_nested_class_into(owner, Output, 'Output', owner_name)
+    _inject_nested_class_into(owner, InputDependency, 'Input', owner_name)
+    _inject_nested_class_into(owner, OutputDependency, 'Output', owner_name)
 
-    _inject_nested_class_into(owner.Input, RegularFileInput, 'RegularFile')
-    _inject_nested_class_into(owner.Input, NonRegularFileInput, 'NonRegularFile')
-    _inject_nested_class_into(owner.Input, DirectoryInput, 'Directory')
-    _inject_nested_class_into(owner.Input, EnvVarInput, 'EnvVar')
+    _inject_nested_class_into(owner.Input, RegularFileInputDependency, 'RegularFile')
+    _inject_nested_class_into(owner.Input, NonRegularFileInputDependency, 'NonRegularFile')
+    _inject_nested_class_into(owner.Input, DirectoryInputDependency, 'Directory')
+    _inject_nested_class_into(owner.Input, EnvVarInputDependency, 'EnvVar')
 
-    _inject_nested_class_into(owner.Output, RegularFileOutput, 'RegularFile')
-    _inject_nested_class_into(owner.Output, NonRegularFileOutput, 'NonRegularFile')
-    _inject_nested_class_into(owner.Output, DirectoryOutput, 'Directory')
-    _inject_nested_class_into(owner.Output, ObjectOutput, 'Object')
+    _inject_nested_class_into(owner.Output, RegularFileOutputDependency, 'RegularFile')
+    _inject_nested_class_into(owner.Output, NonRegularFileOutputDependency, 'NonRegularFile')
+    _inject_nested_class_into(owner.Output, DirectoryOutputDependency, 'Directory')
+    _inject_nested_class_into(owner.Output, ObjectOutputDependency, 'Object')

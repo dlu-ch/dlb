@@ -436,7 +436,7 @@ def _check_and_memorize_explicit_fs_input_dependencies(tool, dependency_actions:
 
     for action in dependency_actions:
         # read memo of each filesystem object of a explicit input dependency in a repeatable order
-        if action.dependency.explicit and isinstance(action.dependency, depend.Input) \
+        if action.dependency.explicit and isinstance(action.dependency, depend.InputDependency) \
                 and action.dependency.Value is fs.Path:
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
             for p in validated_value_tuple:  # p is a dlb.fs.Path
@@ -522,7 +522,7 @@ def _check_explicit_fs_output_dependencies(tool, dependency_actions: Tuple[depen
     for action in dependency_actions:
 
         # read memo of each filesystem object of a explicit input dependency in a repeatable order
-        if action.dependency.explicit and isinstance(action.dependency, depend.Output) and \
+        if action.dependency.explicit and isinstance(action.dependency, depend.OutputDependency) and \
                 action.dependency.Value is fs.Path:
 
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
@@ -578,7 +578,7 @@ def _check_envvar_dependencies(tool, dependency_actions: Tuple[dependaction.Acti
 
     for action in dependency_actions:
         d = action.dependency
-        if d.Value is depend.EnvVarInput.Value:
+        if d.Value is depend.EnvVarInputDependency.Value:
             a = action_by_envvar_name.get(d.name)
             if a is not None:
                 msg = (
@@ -898,7 +898,7 @@ class _ToolBase:
 
         result = _RunResult(self, True)
         for action in dependency_actions:
-            if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInput.Value:
+            if not action.dependency.explicit and action.dependency.Value is depend.EnvVarInputDependency.Value:
                 try:
                     value = envvar_value_by_name.get(action.dependency.name)
                     setattr(result, action.name, value)  # validates on assignment
@@ -949,7 +949,7 @@ class _ToolBase:
                         validated_value = None
                         setattr(result, action.name, validated_value)
                     if action.dependency.Value is fs.Path:
-                        if isinstance(action.dependency, depend.Input):
+                        if isinstance(action.dependency, depend.InputDependency):
                             paths = action.dependency.tuple_from_value(validated_value)
                             for p in paths:
                                 try:
@@ -964,7 +964,7 @@ class _ToolBase:
                                 # absolute paths to the management tree are silently ignored
                                 if not p.is_absolute():
                                     encoded_paths_of_nonexplicit_input_dependencies.add(rundb.encode_path(p))
-                        elif isinstance(action.dependency, depend.Output):
+                        elif isinstance(action.dependency, depend.OutputDependency):
                             paths = action.dependency.tuple_from_value(validated_value)
                             for p in paths:
                                 try:
@@ -1201,7 +1201,7 @@ class _ToolMeta(type):
 
         dependencies = [(n, getattr(cls, n)) for n in names if LOWERCASE_WORD_NAME_REGEX.match(n)]
         dependency_infos = [
-            (not isinstance(d, depend.Input), not d.required, n)
+            (not isinstance(d, depend.InputDependency), not d.required, n)
             for n, d in dependencies if isinstance(d, depend.Dependency)
         ]
         dependency_infos.sort()
