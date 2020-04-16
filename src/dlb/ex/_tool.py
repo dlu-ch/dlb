@@ -28,8 +28,6 @@ from . import input
 from . import _dependaction
 from . import _toolrun
 
-assert sys.version_info >= (3, 7)
-
 UPPERCASE_WORD_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
 LOWERCASE_WORD_NAME_REGEX = re.compile('^[a-z][a-z0-9]*(_[a-z][a-z0-9]*)*$')
 

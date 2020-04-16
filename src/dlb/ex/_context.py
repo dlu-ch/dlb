@@ -24,9 +24,6 @@ from . import _error
 from . import _rundb
 from . import _worktree
 
-assert sys.version_info >= (3, 7)
-
-
 _contexts: List['Context'] = []
 
 

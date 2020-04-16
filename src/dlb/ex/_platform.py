@@ -12,8 +12,6 @@ import sys
 from .. import version
 from .. import ut
 
-assert sys.version_info >= (3, 7)
-
 # changes whenever the platform, the Python version or the dlb version changes
 PERMANENT_PLATFORM_ID = ut.to_permanent_local_bytes((
     # increase this when the information sources for this tuple change (e.g. sys.platform instead of

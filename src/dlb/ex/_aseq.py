@@ -12,8 +12,6 @@ import time
 import asyncio
 from typing import Any, Callable, Coroutine, Dict, Hashable, Optional, Set
 
-assert sys.version_info >= (3, 7)
-
 
 class IdError(ValueError):
     pass
