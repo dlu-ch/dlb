@@ -158,9 +158,9 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
                         r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
-                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
+                    with self.assertRaisesRegex(dlb.ex._error.ContextModificationError, regex):
                         env0.import_from_outer('A_B_C', restriction=r'X.*Z', example='XZ')
-                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
+                    with self.assertRaisesRegex(dlb.ex._error.ContextModificationError, regex):
                         env1.import_from_outer('A_B_C', restriction=r'X.*Z', example='XZ')
 
 
@@ -177,7 +177,7 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_env_returns_env_of_active_context(self):
         c0 = dlb.ex.Context()
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             c0.env
         with c0:
             env0 = c0.env
@@ -196,7 +196,7 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
                     self.assertIs(c2.env, env2)
                     self.assertIs(dlb.ex.Context.env, env2)
                     self.assertIs(dlb.ex.Context.active.env, env2)
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             c0.env
 
     def test_deletion_fails_if_undefined(self):
@@ -235,9 +235,9 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
                         r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
-                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
+                    with self.assertRaisesRegex(dlb.ex._error.ContextModificationError, regex):
                         env0['A_B_C'] = 'XYYZ'
-                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
+                    with self.assertRaisesRegex(dlb.ex._error.ContextModificationError, regex):
                         env1['A_B_C'] = 'XYYZ'
 
     def test_deletion_fails_on_inactive_context(self):
@@ -253,9 +253,9 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
                         r"'env' of an inactive context must not be modified\n"
                         r"  \| use 'dlb\.ex\.Context\.active\.env' to get 'env' of the active context\Z"
                     )
-                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
+                    with self.assertRaisesRegex(dlb.ex._error.ContextModificationError, regex):
                         del env0['A_B_C']
-                    with self.assertRaisesRegex(dlb.ex.context.ContextModificationError, regex):
+                    with self.assertRaisesRegex(dlb.ex._error.ContextModificationError, regex):
                         del env1['A_B_C']
 
 

@@ -67,7 +67,7 @@ def make_fundamental(obj, repeatable=False):
 
 def to_permanent_local_bytes(obj) -> bytes:
     # For the same *obj*, the return value is the same for different interpreter processes as long as
-    # the components of 'dlb.ex.platform.PERMANENT_PLATFORM_ID' do not change.
+    # the components of 'dlb.ex._platform.PERMANENT_PLATFORM_ID' do not change.
     #
     # The following types of objects are not (the types on each line are represented indistinguishably):
     #
@@ -79,7 +79,7 @@ def to_permanent_local_bytes(obj) -> bytes:
     return marshal.dumps(make_fundamental(obj, True), 4)
 
 
-def set_module_name_to_parent(cls):  # e.g. dlb.ex.context.Context -> dlb.ex.Context
+def set_module_name_to_parent(cls):  # e.g. dlb.ex._context.Context -> dlb.ex.Context
     cls.__module__ = '.'.join(cls.__module__.split('.')[:-1])
 
 

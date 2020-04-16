@@ -5,20 +5,16 @@
 """Actions for dependency classes for tools to be used by tool instances.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = [
-    'Action',
-    'register_action',
-    'get_action'
-]
+__all__ = []
 
 import os
 import stat
 from typing import Hashable, Optional, Sequence, Set, Type
 from .. import ut
 from .. import fs
-from . import rundb
-from . import worktree
-from . import depend
+from . import _rundb
+from . import _worktree
+from . import _depend
 
 
 # this prevents actions to be exposed to the user via dependency classes
@@ -28,7 +24,7 @@ _dependency_class_ids: Set[int] = set()  # contains the first element of each va
 
 # noinspection PyMethodMayBeStatic
 class Action:
-    def __init__(self, dependency: depend.Dependency, name: str):
+    def __init__(self, dependency: _depend.Dependency, name: str):
         self._dependency = dependency
         self._name = name
 
@@ -74,7 +70,7 @@ class Action:
         return ut.to_permanent_local_bytes((dependency_id, d.explicit))
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
-    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         raise ValueError("is not a filesystem object")
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
@@ -92,19 +88,19 @@ class _FilesystemObjectMixin(Action):
         # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
         return ut.to_permanent_local_bytes(validated_values)
 
-    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         pass
 
 
 class _RegularFileMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISREG(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a regular file")
 
 
 class _NonRegularFileMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if stat.S_ISREG(memo.stat.mode):
             raise ValueError("filesystem object exists, but is a regular file")
@@ -113,7 +109,7 @@ class _NonRegularFileMixin(_FilesystemObjectMixin):
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
-    def check_filesystem_object_memo(self, memo: rundb.FilesystemObjectMemo):
+    def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISDIR(memo.stat.mode):
             raise ValueError("filesystem object exists, but is not a directory")
@@ -211,7 +207,7 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
 
         with context.temporary(is_dir=True) as tmp_dir:
             os.makedirs((r / destination[:-1]).native, exist_ok=True)
-            worktree.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
+            _worktree.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
             os.replace(src=src, dst=dst)
 
         return True
@@ -221,13 +217,13 @@ class ObjectOutputAction(Action):
     pass
 
 
-def register_action(dependency_id: int, dependency: Type[depend.Dependency], action: Type[Action]):
+def register_action(dependency_id: int, dependency: Type[_depend.Dependency], action: Type[Action]):
     # Registers the concrete dependency class 'dependency' and assigns it an action 'action' as well as the
     # dependency id 'dependency_id'.
     # 'dependency_id' must be an integer unique among all registered dependency class and must not change between
     # different dlb run.
 
-    if not (issubclass(dependency, depend.Dependency) and hasattr(dependency, 'Value')):
+    if not (issubclass(dependency, _depend.Dependency) and hasattr(dependency, 'Value')):
         raise TypeError
 
     dependency_id = int(dependency_id)
@@ -245,16 +241,16 @@ def register_action(dependency_id: int, dependency: Type[depend.Dependency], act
         _action_by_dependency[dependency] = (dependency_id, action)
 
 
-def get_action(dependency: depend.Dependency, name: str) -> Action:
+def get_action(dependency: _depend.Dependency, name: str) -> Action:
     _, a = _action_by_dependency[dependency.__class__]
     return a(dependency, name)
 
 
-register_action(0, depend.RegularFileInputDependency, RegularFileInputAction)
-register_action(1, depend.NonRegularFileInputDependency, NonRegularFileInputAction)
-register_action(2, depend.DirectoryInputDependency, DirectoryInputAction)
-register_action(3, depend.EnvVarInputDependency, EnvVarInputAction)
-register_action(4, depend.RegularFileOutputDependency, RegularFileOutputAction)
-register_action(5, depend.NonRegularFileOutputDependency, NonRegularFileOutputAction)
-register_action(6, depend.DirectoryOutputDependency, DirectoryOutputAction)
-register_action(7, depend.ObjectOutputDependency, ObjectOutputAction)
+register_action(0, _depend.RegularFileInputDependency, RegularFileInputAction)
+register_action(1, _depend.NonRegularFileInputDependency, NonRegularFileInputAction)
+register_action(2, _depend.DirectoryInputDependency, DirectoryInputAction)
+register_action(3, _depend.EnvVarInputDependency, EnvVarInputAction)
+register_action(4, _depend.RegularFileOutputDependency, RegularFileOutputAction)
+register_action(5, _depend.NonRegularFileOutputDependency, NonRegularFileOutputAction)
+register_action(6, _depend.DirectoryOutputDependency, DirectoryOutputAction)
+register_action(7, _depend.ObjectOutputDependency, ObjectOutputAction)

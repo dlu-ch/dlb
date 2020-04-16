@@ -3,7 +3,7 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 import testenv  # also sets up module search paths
-import dlb.ex.aseq
+import dlb.ex._aseq
 import asyncio
 import random
 import unittest
@@ -27,7 +27,7 @@ class LimitingCoroutineSequencerTest(unittest.TestCase):
 
         random.seed(0)
 
-        sequencer = dlb.ex.aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
 
         n = 5
         for i in range(n):
@@ -53,7 +53,7 @@ class LimitingCoroutineSequencerTest(unittest.TestCase):
             await asyncio.sleep(10.0)
             return 42
 
-        sequencer = dlb.ex.aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
 
         n = 3
         for i in range(n):
@@ -83,7 +83,7 @@ class LimitingCoroutineSequencerTest(unittest.TestCase):
                 print('p', t)
             return t
 
-        sequencer = dlb.ex.aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
 
         sequencer.wait_then_start(3, 0.0, sleep, 0.5)
         sequencer.wait_then_start(3, 0.0, sleep, 2.5)
@@ -108,7 +108,7 @@ class LimitingCoroutineSequencerTest(unittest.TestCase):
             assert t > 0.0
             await asyncio.sleep(t)
 
-        sequencer = dlb.ex.aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
 
         sequencer.wait_then_start(3, None, sleep_or_raise, 0.5)
         sequencer.wait_then_start(3, None, sleep_or_raise, 0.0)  # raise AssertionError
@@ -127,7 +127,7 @@ class LimitingCoroutineSequencerTest(unittest.TestCase):
             await asyncio.sleep(t)
             return t
 
-        sequencer = dlb.ex.aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingCoroutineSequencer(asyncio.get_event_loop())
 
         tid = sequencer.wait_then_start(3, None, sleep_or_raise, 0.5)
         sequencer.wait_then_start(3, None, sleep_or_raise, 1.0)
@@ -165,7 +165,7 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
     def test_result_attributes_are_readonly(self):
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
@@ -175,25 +175,25 @@ class LimitingResultSequencerTest(unittest.TestCase):
         sequencer.cancel_all(timeout=None)
 
     def test_fails_for_nonunique_uid(self):
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid1 = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
         tid2 = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.75)
 
         proxy = sequencer.create_result_proxy(tid1, uid=1)
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
 
-        with self.assertRaises(dlb.ex.aseq.IdError) as cm:
+        with self.assertRaises(dlb.ex._aseq.IdError) as cm:
             sequencer.create_result_proxy(tid1, uid=2)
         self.assertEqual("tid is not unique", str(cm.exception))
 
-        with self.assertRaises(dlb.ex.aseq.IdError) as cm:
+        with self.assertRaises(dlb.ex._aseq.IdError) as cm:
             sequencer.create_result_proxy(tid2, uid=1)
         self.assertEqual("id(uid) is not unique", str(cm.exception))
 
         with proxy:
             pass
 
-        with self.assertRaises(dlb.ex.aseq.IdError) as cm:
+        with self.assertRaises(dlb.ex._aseq.IdError) as cm:
             sequencer.create_result_proxy(tid1, uid=1)
         self.assertEqual("nothing to consume for tid", str(cm.exception))
 
@@ -203,59 +203,59 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
     def test_attribute_access_completes(self):
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
 
         uid = 1
         proxy = sequencer.create_result_proxy(tid, uid)
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
 
         p = sequencer.get_result_proxy(uid)
         self.assertIs(proxy, p)
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
 
         self.assertEqual(0.5, proxy.value)  # waits for completion
-        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
+        self.assertTrue(dlb.ex._aseq.is_complete(proxy))
 
         self.assertIsNone(sequencer.get_result_proxy(uid))
 
     def test_context_manager_completes(self):
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
 
         uid = 1
         proxy = sequencer.create_result_proxy(tid, uid)
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
 
         with proxy:
             pass
 
-        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
+        self.assertTrue(dlb.ex._aseq.is_complete(proxy))
         self.assertEqual(0.5, proxy.value)
 
     def test_consume_all_completes(self):
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
 
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
         sequencer.cancel_all(timeout=None)
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
 
         sequencer.consume_all()
-        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
+        self.assertTrue(dlb.ex._aseq.is_complete(proxy))
 
     def test_attribute_before_completion_access_raises_exception(self):
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.0)
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
 
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
         with self.assertRaises(AssertionError):
             proxy.value
 
@@ -264,17 +264,17 @@ class LimitingResultSequencerTest(unittest.TestCase):
 
     def test_attribute_after_completion_access_raises_exception(self):
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.0)
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
 
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
         sequencer.complete_all(timeout=None)
-        self.assertFalse(dlb.ex.aseq.is_complete(proxy))
+        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
 
         sequencer.consume_all()
-        self.assertTrue(dlb.ex.aseq.is_complete(proxy))
+        self.assertTrue(dlb.ex._aseq.is_complete(proxy))
 
         with self.assertRaises(AssertionError):
             proxy.value
@@ -290,7 +290,7 @@ class ResultProxyReprTest(unittest.TestCase):
         async def return_int():
             return 42
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, return_int)
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
@@ -308,7 +308,7 @@ class ResultProxyReprTest(unittest.TestCase):
         async def return_int():
             return 42
 
-        sequencer = dlb.ex.aseq.LimitingResultSequencer(asyncio.get_event_loop())
+        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, return_int)
 
         proxy = sequencer.create_result_proxy(tid, uid=1, expected_class=int)

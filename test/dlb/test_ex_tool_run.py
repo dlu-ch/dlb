@@ -337,9 +337,9 @@ class RedoIfRegularFileInputModifiedTest(testenv.TemporaryWorkingDirectoryTestCa
         with dlb.ex.Context():
             self.assertFalse(t.run())
             # replace memo by invalid memo
-            rundb = dlb.ex.context._get_rundb()
+            rundb = dlb.ex._context._get_rundb()
             rundb.update_dependencies_and_state(1, info_by_encoded_path={
-                dlb.ex.rundb.encode_path(dlb.fs.Path('src/a.cpp')): (True, marshal.dumps(42))
+                dlb.ex._rundb.encode_path(dlb.fs.Path('src/a.cpp')): (True, marshal.dumps(42))
             })
 
             output = io.StringIO()
@@ -349,10 +349,10 @@ class RedoIfRegularFileInputModifiedTest(testenv.TemporaryWorkingDirectoryTestCa
 
         with dlb.ex.Context():
             # replace memo by invalid memo
-            rundb = dlb.ex.context._get_rundb()
+            rundb = dlb.ex._context._get_rundb()
             rundb.update_dependencies_and_state(1, info_by_encoded_path={
-                dlb.ex.rundb.encode_path(dlb.fs.Path('src/a.cpp')):
-                    (True, dlb.ex.rundb.encode_fsobject_memo(dlb.ex.rundb.FilesystemObjectMemo()))
+                dlb.ex._rundb.encode_path(dlb.fs.Path('src/a.cpp')):
+                    (True, dlb.ex._rundb.encode_fsobject_memo(dlb.ex._rundb.FilesystemObjectMemo()))
             })
 
             output = io.StringIO()
@@ -808,9 +808,9 @@ class RedoIfExplicitInputDependencyChangedTest(testenv.TemporaryWorkingDirectory
 
         with dlb.ex.Context():
             # replace memo by invalid memo
-            rundb = dlb.ex.context._get_rundb()
+            rundb = dlb.ex._context._get_rundb()
             info_by_encoded_path = rundb.get_fsobject_inputs(1)
-            info_by_encoded_path[dlb.ex.rundb.encode_path(dlb.fs.Path('a.h'))] = (False, marshal.dumps(42))
+            info_by_encoded_path[dlb.ex._rundb.encode_path(dlb.fs.Path('a.h'))] = (False, marshal.dumps(42))
             rundb.update_dependencies_and_state(1, info_by_encoded_path=info_by_encoded_path)
 
             output = io.StringIO()
@@ -826,7 +826,7 @@ class RedoIfExplicitInputDependencyChangedTest(testenv.TemporaryWorkingDirectory
 
         with dlb.ex.Context():
             # add dependency with invalid encoded path
-            rundb = dlb.ex.context._get_rundb()
+            rundb = dlb.ex._context._get_rundb()
             info_by_encoded_path = rundb.get_fsobject_inputs(1)
             info_by_encoded_path['a/../'] = (False, None)
             rundb.update_dependencies_and_state(1, info_by_encoded_path=info_by_encoded_path)
@@ -846,7 +846,7 @@ class RedoIfExplicitInputDependencyChangedTest(testenv.TemporaryWorkingDirectory
 
         with dlb.ex.Context():
             # add non-existent dependency with invalid memo
-            rundb = dlb.ex.context._get_rundb()
+            rundb = dlb.ex._context._get_rundb()
             info_by_encoded_path = rundb.get_fsobject_inputs(1)
             info_by_encoded_path['d.h/'] = (False, marshal.dumps(42))
             rundb.update_dependencies_and_state(1, info_by_encoded_path=info_by_encoded_path)
@@ -879,7 +879,7 @@ class RedoIfExplicitInputDependencyChangedChmodTest(testenv.TemporaryDirectoryWi
         try:
             with dlb.ex.Context():
                 # add inaccessible dependency
-                rundb = dlb.ex.context._get_rundb()
+                rundb = dlb.ex._context._get_rundb()
                 info_by_encoded_path = rundb.get_fsobject_inputs(1)
                 info_by_encoded_path['t/d.h/'] = (False, None)
                 rundb.update_dependencies_and_state(1, info_by_encoded_path=info_by_encoded_path)

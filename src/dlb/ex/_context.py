@@ -4,17 +4,7 @@
 
 """Execution contexts for tool instances."""
 
-__all__ = [
-    'Context',
-    'ReadOnlyContext',
-    'ContextNestingError',
-    'NotRunningError',
-    'ManagementTreeError',
-    'NoWorkingTreeError',
-    'WorkingTreeTimeError',
-    'ContextModificationError',
-    'WorkingTreePathError'
-]
+__all__ = ['Context', 'ReadOnlyContext']
 
 import sys
 import re
@@ -28,9 +18,9 @@ from .. import ut
 from .. import fs
 from .. import di
 from .. import cf
-from . import rundb
-from . import worktree
-from .worktree import *
+from . import _error
+from . import _rundb
+from . import _worktree
 assert sys.version_info >= (3, 7)
 
 
@@ -39,12 +29,12 @@ _contexts: List['Context'] = []
 
 def _get_root_specifics() -> '_RootSpecifics':
     if not _contexts:
-        raise NotRunningError
+        raise _error.NotRunningError
     # noinspection PyProtectedMember
     return _contexts[0]._root_specifics
 
 
-def _get_rundb() -> rundb.Database:
+def _get_rundb() -> _rundb.Database:
     # use this to access the database from dlb.ex.Tool
     # noinspection PyProtectedMember,PyUnresolvedReferences
     db = _get_root_specifics()._rundb
@@ -59,22 +49,6 @@ def _register_successful_run(with_redo: bool):
     else:
         # noinspection PyProtectedMember
         rs._successful_nonredo_run_count += 1
-
-
-class ContextNestingError(Exception):
-    pass
-
-
-class NotRunningError(Exception):
-    pass
-
-
-class WorkingTreeTimeError(Exception):
-    pass
-
-
-class ContextModificationError(Exception):
-    pass
 
 
 class _BaseEnvVarDict:
@@ -182,7 +156,7 @@ class _EnvVarDict(_BaseEnvVarDict):
                 "'env' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
             )
-            raise ContextModificationError(msg)
+            raise _error.ContextModificationError(msg)
         self._context.complete_pending_redos()
 
     # dictionary methods
@@ -319,7 +293,7 @@ class _HelperDict(_BaseHelperDict):
                 "'helper' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.helper' to get 'helper' of the active context"
             )
-            raise ContextModificationError(msg)
+            raise _error.ContextModificationError(msg)
         self._context.complete_pending_redos()
 
     def __setitem__(self, helper_path: fs.PathLike, abs_path: fs.PathLike):
@@ -365,7 +339,7 @@ class _ContextMeta(type):
                 raise
         if refer:
             if not _contexts:
-                raise NotRunningError
+                raise _error.NotRunningError
             a = getattr(_contexts[-1], name)  # delegate to active context
 
         # noinspection PyUnboundLocalVariable
@@ -415,7 +389,7 @@ class _RootSpecifics:
 
         # 1. check if the process' working directory is a working tree`s root
 
-        self._root_path = worktree.get_checked_root_path_from_cwd(os.getcwd(), path_cls)
+        self._root_path = _worktree.get_checked_root_path_from_cwd(os.getcwd(), path_cls)
         root_path = str(self._root_path.native)
         self._root_path_native_str = root_path
         # TODO make sure the "calling" source file is in the managed tree
@@ -437,7 +411,7 @@ class _RootSpecifics:
 
         # 2. if yes: lock it
 
-        worktree.lock_working_tree(self._root_path)
+        _worktree.lock_working_tree(self._root_path)
 
         # 3. then prepare it
 
@@ -450,7 +424,7 @@ class _RootSpecifics:
             if not cf.max_dependency_age > datetime.timedelta(0):
                 raise ValueError("'dlb.cf.max_dependency_age' must be positive")
             self._temp_path_provider, self._mtime_probe, self._rundb, self._is_working_tree_case_sensitive = \
-                worktree.prepare_locked_working_tree(self._root_path, rundb.SCHEMA_VERSION, cf.max_dependency_age)
+                _worktree.prepare_locked_working_tree(self._root_path, _rundb.SCHEMA_VERSION, cf.max_dependency_age)
         except BaseException:
             self._close_and_unlock_if_open()
             raise
@@ -464,7 +438,7 @@ class _RootSpecifics:
     def _cleanup(self):
         self._rundb.cleanup()
         self._rundb.commit()
-        worktree.remove_filesystem_object(str(self._temp_path_provider.root_path.native), ignore_non_existent=True)
+        _worktree.remove_filesystem_object(str(self._temp_path_provider.root_path.native), ignore_non_existent=True)
 
     def _cleanup_and_delay_to_working_tree_time_change(self, was_successful: bool):
         t0 = time.monotonic_ns()  # since Python 3.7
@@ -488,7 +462,7 @@ class _RootSpecifics:
                     'working tree time did not change for at least 10 s of system time\n'
                     '  | was the system time adjusted in this moment?'
                 )
-                raise WorkingTreeTimeError(msg)
+                raise _error.WorkingTreeTimeError(msg)
             time.sleep(0.015)  # typical effective working tree time resolution: 10 ms
 
     def _close_and_unlock_if_open(self):  # safe to call multiple times
@@ -510,7 +484,7 @@ class _RootSpecifics:
             self._rundb = None
 
         try:
-            worktree.unlock_working_tree(self._root_path)
+            _worktree.unlock_working_tree(self._root_path)
         except BaseException as e:
             if most_serious_exception is None:
                 most_serious_exception = e
@@ -537,7 +511,7 @@ class _RootSpecifics:
                 f'failed to cleanup management tree for {str(self._root_path.native)!r}\n'
                 f'  | reason: {ut.exception_to_line(first_exception)}'
             )
-            raise ManagementTreeError(msg) from None
+            raise _error.ManagementTreeError(msg) from None
 
 
 class _BaseContext(metaclass=_ContextMeta):
@@ -632,28 +606,28 @@ class _BaseContext(metaclass=_ContextMeta):
             # may raise PathNormalizationError
             normalized_native_components = \
                 (native_components[0],) + \
-                worktree.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
+                _worktree.normalize_dotdot_native_components(native_components[1:], ref_dir_path=native_components[0])
 
             native_root_path_components = self._root_path.native.components
             n = len(native_root_path_components)
             if normalized_native_components[:n] != native_root_path_components:
-                raise worktree.WorkingTreePathError("does not start with the working tree's root path")
+                raise _error.WorkingTreePathError("does not start with the working tree's root path")
 
             rel_components = ('',) + normalized_native_components[n:]
         else:
             # 'collapsable' means only the part relative to the working tree's root
             ref_dir_path = None if collapsable else self._root_path_native_str
-            rel_components = ('',) + worktree.normalize_dotdot_native_components(
+            rel_components = ('',) + _worktree.normalize_dotdot_native_components(
                 path.components[1:], ref_dir_path=ref_dir_path)
 
-        if len(rel_components) > 1 and rel_components[1] == worktree.MANAGEMENTTREE_DIR_NAME:
-            if len(rel_components) > 2 and rel_components[2] == worktree.TEMPORARY_DIR_NAME:
+        if len(rel_components) > 1 and rel_components[1] == _worktree.MANAGEMENTTREE_DIR_NAME:
+            if len(rel_components) > 2 and rel_components[2] == _worktree.TEMPORARY_DIR_NAME:
                 permitted = allow_temporary
             else:
                 permitted = allow_nontemporary_management
             if not permitted:
                 msg = f"path in non-permitted part of the working tree: {path.as_string()!r}"
-                raise worktree.WorkingTreePathError(msg)
+                raise _error.WorkingTreePathError(msg)
 
         # may raise ValueError
         rel_path = path.__class__(rel_components, is_dir=path.is_dir()) if path.components != rel_components else path
@@ -666,16 +640,16 @@ class _BaseContext(metaclass=_ContextMeta):
                 sr = os.lstat(os.path.sep.join([self._root_path_native_str, s]))
                 is_dir = stat.S_ISDIR(sr.st_mode)
             except OSError as e:
-                raise worktree.WorkingTreePathError(oserror=e) from None
+                raise _error.WorkingTreePathError(oserror=e) from None
             if is_dir != rel_path.is_dir():
                 rel_path = path.__class__(rel_components, is_dir=is_dir)
 
         return rel_path
 
     @staticmethod
-    def temporary(*, suffix: str = '', is_dir: bool = False) -> worktree.Temporary:
+    def temporary(*, suffix: str = '', is_dir: bool = False) -> _worktree.Temporary:
         self = _get_root_specifics()
-        return worktree.Temporary(path_provider=self._temp_path_provider, suffix=suffix, is_dir=is_dir)
+        return _worktree.Temporary(path_provider=self._temp_path_provider, suffix=suffix, is_dir=is_dir)
 
     def __setattr__(self, key, value):
         if not key.startswith('_'):
@@ -699,8 +673,8 @@ class Context(_BaseContext):
     @property
     def _redo_sequencer(self):
         if self._optional_redo_sequencer is None:
-            from . import aseq
-            self._optional_redo_sequencer = aseq.LimitingResultSequencer()
+            from . import _aseq
+            self._optional_redo_sequencer = _aseq.LimitingResultSequencer()
         return self._optional_redo_sequencer
 
     def _get_pending_result_proxy_for(self, tool_instance_dbid: Hashable):
@@ -711,7 +685,7 @@ class Context(_BaseContext):
     @property
     def active(self) -> 'Context':
         if not _contexts:
-            raise NotRunningError
+            raise _error.NotRunningError
         return _contexts[-1]
 
     @property
@@ -795,7 +769,7 @@ class Context(_BaseContext):
                 redo_finisher(timeout=None)  # may raise BaseException that is not an Exception (e.g. KeyboardInterrupt)
         finally:
             if not (_contexts and _contexts[-1] == self):
-                raise ContextNestingError from None
+                raise _error.ContextNestingError from None
             _contexts.pop()
 
             self._parent = None

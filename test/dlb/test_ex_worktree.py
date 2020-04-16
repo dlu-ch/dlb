@@ -4,7 +4,7 @@
 
 import testenv  # also sets up module search paths
 import dlb.fs
-import dlb.ex.worktree
+import dlb.ex._worktree
 import os.path
 import string
 import tempfile
@@ -15,9 +15,9 @@ class FilenamePortabilityTest(unittest.TestCase):
 
     def test_management_tree_paths_are_portable(self):
         import dlb.fs
-        dlb.fs.PortablePath(dlb.ex.worktree.MANAGEMENTTREE_DIR_NAME)
-        dlb.fs.PortablePath(dlb.ex.worktree.MTIME_PROBE_FILE_NAME)
-        dlb.fs.PortablePath(dlb.ex.worktree.RUNDB_FILE_NAME_TEMPLATE.format('1'))
+        dlb.fs.PortablePath(dlb.ex._worktree.MANAGEMENTTREE_DIR_NAME)
+        dlb.fs.PortablePath(dlb.ex._worktree.MTIME_PROBE_FILE_NAME)
+        dlb.fs.PortablePath(dlb.ex._worktree.RUNDB_FILE_NAME_TEMPLATE.format('1'))
 
 
 class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
@@ -36,22 +36,22 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
         open('x', 'wb').close()
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.worktree.remove_filesystem_object('x')
+            dlb.ex._worktree.remove_filesystem_object('x')
         self.assertEqual("not an absolute path: 'x'", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.worktree.remove_filesystem_object(dlb.fs.Path('x'))
+            dlb.ex._worktree.remove_filesystem_object(dlb.fs.Path('x'))
         escaped_sep = '\\\\' if os.path.sep == '\\' else '/'
         self.assertEqual("not an absolute path: '.{}x'".format(escaped_sep), str(cm.exception))
 
         self.assertTrue(os.path.isfile('x'))  # still exists
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.worktree.remove_filesystem_object('')
+            dlb.ex._worktree.remove_filesystem_object('')
         self.assertEqual("not an absolute path: ''", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.worktree.remove_filesystem_object(dlb.fs.Path('.'))
+            dlb.ex._worktree.remove_filesystem_object(dlb.fs.Path('.'))
         self.assertEqual("not an absolute path: '.'", str(cm.exception))
 
     # noinspection PyTypeChecker
@@ -59,25 +59,25 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
         open('x', 'wb').close()
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.worktree.remove_filesystem_object(b'x')
+            dlb.ex._worktree.remove_filesystem_object(b'x')
         self.assertEqual("'abs_path' must be a str or dlb.fs.Path object, not bytes", str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.worktree.remove_filesystem_object('/tmp/x', abs_empty_dir_path=b'x')
+            dlb.ex._worktree.remove_filesystem_object('/tmp/x', abs_empty_dir_path=b'x')
         msg = "'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes"
         self.assertEqual(msg, str(cm.exception))
 
     def test_removes_existing_regular_file(self):
         open('f', 'wb').close()
 
-        dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'f'))
+        dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'f'))
 
         self.assertFalse(os.path.exists('f'))
 
     def test_removes_empty_directory(self):
         os.mkdir('d')
 
-        dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'd'))
+        dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'd'))
 
         self.assertFalse(os.path.exists('d'))
 
@@ -91,38 +91,38 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
-        dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 's'))
+        dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 's'))
         self.assertFalse(os.path.exists('s'))
         self.assertTrue(os.path.exists('f'))  # still exists
 
     def test_fails_for_nonexistent(self):
         with self.assertRaises(FileNotFoundError):
-            dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'n'))
+            dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'n'))
 
     def test_ignores_for_nonexistent_if_required(self):
-        dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'n'), ignore_non_existent=True)
+        dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'n'), ignore_non_existent=True)
 
     def test_fails_for_relative_tmp(self):
         self.create_dir_a_in_cwd()
         with self.assertRaises(ValueError):
-            dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'a'), abs_empty_dir_path='a')
+            dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'a'), abs_empty_dir_path='a')
 
     def test_removes_nonempty_directory_in_place(self):
         self.create_dir_a_in_cwd()
-        dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'a'))
+        dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'a'))
         self.assertFalse(os.path.exists('a'))
 
     def test_removes_nonempty_directory_in_tmp(self):
         self.create_dir_a_in_cwd()
         with tempfile.TemporaryDirectory(dir='.') as abs_temp_dir_path:
-            dlb.ex.worktree.remove_filesystem_object(
+            dlb.ex._worktree.remove_filesystem_object(
                 os.path.join(os.getcwd(), 'a'),
                 abs_empty_dir_path=os.path.abspath(abs_temp_dir_path))
         self.assertFalse(os.path.exists('a'))
 
         self.create_dir_a_in_cwd()
         with tempfile.TemporaryDirectory(dir='.') as abs_temp_dir_path:
-            dlb.ex.worktree.remove_filesystem_object(
+            dlb.ex._worktree.remove_filesystem_object(
                 os.path.join(os.getcwd(), 'a'),
                 abs_empty_dir_path=dlb.fs.Path(dlb.fs.Path.Native(os.path.abspath(abs_temp_dir_path))))
         self.assertFalse(os.path.exists('a'))
@@ -131,11 +131,11 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
         self.create_dir_a_in_cwd()
 
         with self.assertRaises(FileNotFoundError):
-            dlb.ex.worktree.remove_filesystem_object(
+            dlb.ex._worktree.remove_filesystem_object(
                 os.path.join(os.getcwd(), 'a'),
                 abs_empty_dir_path=os.path.join(os.getcwd(), 'does', 'not', 'exist'))
 
-        dlb.ex.worktree.remove_filesystem_object(
+        dlb.ex._worktree.remove_filesystem_object(
             os.path.join(os.getcwd(), 'a'),
             abs_empty_dir_path=os.path.join(os.getcwd(), 'does', 'not', 'exist'),
             ignore_non_existent=True)
@@ -145,7 +145,7 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
 
         with self.assertRaises(PermissionError):
             try:
-                dlb.ex.worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'a'))
+                dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 'a'))
             finally:
                 os.chmod(os.path.join('a', 'b1', 'c'), 0o777)
 
@@ -155,7 +155,7 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
         self.create_dir_a_in_cwd(all_writable=False)
 
         with tempfile.TemporaryDirectory(dir='.') as abs_temp_dir_path:
-            dlb.ex.worktree.remove_filesystem_object(
+            dlb.ex._worktree.remove_filesystem_object(
                 os.path.join(os.getcwd(), 'a'),
                 abs_empty_dir_path=os.path.abspath(abs_temp_dir_path))
             os.chmod(os.path.join(abs_temp_dir_path, 't', 'b1', 'c'), 0o777)
@@ -169,11 +169,11 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
         open('x', 'wb').close()
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.worktree.read_filesystem_object_memo('x')
+            dlb.ex._worktree.read_filesystem_object_memo('x')
         self.assertEqual("not an absolute path: 'x'", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.worktree.read_filesystem_object_memo(dlb.fs.Path('x'))
+            dlb.ex._worktree.read_filesystem_object_memo(dlb.fs.Path('x'))
         escaped_sep = '\\\\' if os.path.sep == '\\' else '/'
         self.assertEqual("not an absolute path: '.{}x'".format(escaped_sep), str(cm.exception))
 
@@ -182,20 +182,20 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
 
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex.worktree.read_filesystem_object_memo(b'x')
+            dlb.ex._worktree.read_filesystem_object_memo(b'x')
         self.assertEqual("'abs_path' must be a str or path, not bytes", str(cm.exception))
 
     def test_fails_for_nonexistent(self):
         with self.assertRaises(FileNotFoundError):
-            dlb.ex.worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
+            dlb.ex._worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
 
     def test_return_stat_for_existing_regular(self):
         open('x', 'wb').close()
 
         sr0 = os.lstat('x')
 
-        m = dlb.ex.worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
-        self.assertIsInstance(m, dlb.ex.rundb.FilesystemObjectMemo)
+        m = dlb.ex._worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 'x'))
+        self.assertIsInstance(m, dlb.ex._rundb.FilesystemObjectMemo)
 
         self.assertEqual(sr0.st_mode, m.stat.mode)
         self.assertEqual(sr0.st_size, m.stat.size)
@@ -216,8 +216,8 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
                 raise unittest.SkipTest from None
 
             sr0 = os.lstat('s')
-            m = dlb.ex.worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
-            self.assertIsInstance(m, dlb.ex.rundb.FilesystemObjectMemo)
+            m = dlb.ex._worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
+            self.assertIsInstance(m, dlb.ex._rundb.FilesystemObjectMemo)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertEqual(m.symlink_target, 'd' + os.path.sep)
@@ -236,8 +236,8 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
                 raise unittest.SkipTest from None
 
             sr0 = os.lstat('s')
-            m = dlb.ex.worktree.read_filesystem_object_memo(dlb.fs.Path(os.path.join(os.getcwd(), 's')))
-            self.assertIsInstance(m, dlb.ex.rundb.FilesystemObjectMemo)
+            m = dlb.ex._worktree.read_filesystem_object_memo(dlb.fs.Path(os.path.join(os.getcwd(), 's')))
+            self.assertIsInstance(m, dlb.ex._rundb.FilesystemObjectMemo)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertIsInstance(m.symlink_target, str)
@@ -249,29 +249,29 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
 class NormalizeDotDotWithoutReference(unittest.TestCase):
 
     def test_is_correct(self):
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', 'b', 'c'))
+        c = dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b', 'c'))
         self.assertEqual(('a', 'b', 'c'), c)
 
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'b', 'c', '..'))
+        c = dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'b', 'c', '..'))
         self.assertEqual(('b',), c)
 
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', 'b', '..', '..'))
+        c = dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b', '..', '..'))
         self.assertEqual((), c)
 
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', 'b', '..', '..', 'a'))
+        c = dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b', '..', '..', 'a'))
         self.assertEqual(('a',), c)
 
     def test_fails_for_upwards_path(self):
-        with self.assertRaises(dlb.ex.worktree.WorkingTreePathError) as cm:
-            dlb.ex.worktree.normalize_dotdot_native_components(('..',))
+        with self.assertRaises(dlb.ex._error.WorkingTreePathError) as cm:
+            dlb.ex._worktree.normalize_dotdot_native_components(('..',))
         self.assertEqual("is an upwards path: '../'", str(cm.exception))
 
-        with self.assertRaises(dlb.ex.worktree.WorkingTreePathError) as cm:
-            dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', '..', 'b', 'a', 'b'))
+        with self.assertRaises(dlb.ex._error.WorkingTreePathError) as cm:
+            dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', '..', 'b', 'a', 'b'))
         self.assertEqual("is an upwards path: 'a/../../b/a/b'", str(cm.exception))
 
-        with self.assertRaises(dlb.ex.worktree.WorkingTreePathError) as cm:
-            dlb.ex.worktree.normalize_dotdot_native_components(('tmp', '..', '..'))
+        with self.assertRaises(dlb.ex._error.WorkingTreePathError) as cm:
+            dlb.ex._worktree.normalize_dotdot_native_components(('tmp', '..', '..'))
         self.assertEqual("is an upwards path: 'tmp/../../'", str(cm.exception))
 
 
@@ -280,11 +280,11 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
     def test_without_symlink_is_correct(self):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd', 'e'))
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+        c = dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
                                                                ref_dir_path=os.getcwd())
         self.assertEqual(('c', 'd'), c)
 
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='/tmp')
+        c = dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='/tmp')
         self.assertEqual(('a', 'b'), c)
 
     def test_with_nonparent_symlink_is_correct(self):
@@ -297,27 +297,27 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
-        c = dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+        c = dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
                                                                ref_dir_path=os.getcwd())
         self.assertEqual(('c', 'd'), c)
 
     def test_fails_for_relative_ref_dir(self):
         with self.assertRaises(ValueError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex.worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='.')
+            dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='.')
         self.assertEqual("'ref_dir_path' must be None or absolute", str(cm.exception))
 
     def test_fails_for_bytes(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex.worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path=b'/tmp')
+            dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path=b'/tmp')
         self.assertEqual("'ref_dir_path' must be a str", str(cm.exception))
 
     def test_fails_for_nonexistent_symlink(self):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd'))
-        with self.assertRaises(dlb.ex.worktree.WorkingTreePathError) as cm:
-            dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+        with self.assertRaises(dlb.ex._error.WorkingTreePathError) as cm:
+            dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
                                                                ref_dir_path=os.getcwd())
         self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
@@ -332,9 +332,9 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
             raise unittest.SkipTest from None
 
         regex = r"\A()not a collapsable path, since this is a symbolic link: '.+'\Z"
-        with self.assertRaisesRegex(dlb.ex.worktree.WorkingTreePathError, regex):
-            dlb.ex.worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
-                                                               ref_dir_path=os.getcwd())
+        with self.assertRaisesRegex(dlb.ex._error.WorkingTreePathError, regex):
+            dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
+                                                                ref_dir_path=os.getcwd())
 
 
 class GetCheckRootPathFromCwdTest(testenv.TemporaryDirectoryTestCase):
@@ -350,8 +350,8 @@ class GetCheckRootPathFromCwdTest(testenv.TemporaryDirectoryTestCase):
             raise unittest.SkipTest from None
 
         os.mkdir(os.path.join('a', 'b', 'y', '.dlbroot'))
-        with self.assertRaises(dlb.ex.worktree.NoWorkingTreeError) as cm:
-            dlb.ex.worktree.get_checked_root_path_from_cwd(
+        with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
+            dlb.ex._worktree.get_checked_root_path_from_cwd(
                 os.path.abspath(os.path.join('a', 'b', 'y')), path_cls=dlb.fs.Path)
         msg = (
             "supposedly equivalent forms of current directory's path point to different filesystem objects\n"
@@ -364,14 +364,14 @@ class GetCheckRootPathFromCwdTest(testenv.TemporaryDirectoryTestCase):
 class UniquePathProviderTest(unittest.TestCase):
 
     def test_generates_prefixed_unique(self):
-        pp = dlb.ex.worktree.UniquePathProvider('x/y/')
+        pp = dlb.ex._worktree.UniquePathProvider('x/y/')
         self.assertEqual(dlb.fs.Path('x/y/'), pp.root_path)
         self.assertEqual(dlb.fs.Path('x/y/a'), pp.generate())
         self.assertEqual(dlb.fs.Path('x/y/b/'), pp.generate(is_dir=True))
         self.assertEqual(dlb.fs.Path('x/y/c'), pp.generate())
 
     def test_generated_name_is_valid(self):
-        pp = dlb.ex.worktree.UniquePathProvider('.')
+        pp = dlb.ex._worktree.UniquePathProvider('.')
         regex = '^[a-z][a-z0-9]*$'
         p = None
         for i in range(26 + 26 * 36 + 26 * 36 * 36):
@@ -380,14 +380,14 @@ class UniquePathProviderTest(unittest.TestCase):
         self.assertEqual("z99", p.parts[0])
 
     def test_fails_for_suffix_with_slash(self):
-        pp = dlb.ex.worktree.UniquePathProvider('.')
+        pp = dlb.ex._worktree.UniquePathProvider('.')
         with self.assertRaises(ValueError) as cm:
             pp.generate(suffix='_/_')
         msg = "'suffix' must not contain '/': '_/_'"
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_suffix_with_leading_letter(self):
-        pp = dlb.ex.worktree.UniquePathProvider('.')
+        pp = dlb.ex._worktree.UniquePathProvider('.')
         with self.assertRaises(ValueError) as cm:
             pp.generate(suffix='A')
         msg = "non-empty 'suffix' must start with character from strings.punctuation, not 'A'"
@@ -397,36 +397,36 @@ class UniquePathProviderTest(unittest.TestCase):
 class TemporaryTest(testenv.TemporaryDirectoryTestCase):
 
     def test_provides_path_with_out_creating(self):
-        pp = dlb.ex.worktree.UniquePathProvider('/tmp/does/not/exist/')
-        t = dlb.ex.worktree.Temporary(path_provider=pp)
+        pp = dlb.ex._worktree.UniquePathProvider('/tmp/does/not/exist/')
+        t = dlb.ex._worktree.Temporary(path_provider=pp)
         self.assertIsInstance(t.path, dlb.fs.Path)
         self.assertTrue(t.path.is_absolute())
 
     def test_fails_for_relative_root_path(self):
-        pp = dlb.ex.worktree.UniquePathProvider('.')
+        pp = dlb.ex._worktree.UniquePathProvider('.')
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.worktree.Temporary(path_provider=pp)
+            dlb.ex._worktree.Temporary(path_provider=pp)
         msg = "'root_path' of 'path_provider' must be absolute"
         self.assertEqual(msg, str(cm.exception))
 
     def test_contentmanager_creates_and_removes_file(self):
-        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
-        with dlb.ex.worktree.Temporary(path_provider=pp, is_dir=False) as p:
+        pp = dlb.ex._worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        with dlb.ex._worktree.Temporary(path_provider=pp, is_dir=False) as p:
             self.assertIsInstance(p, dlb.fs.Path)
             self.assertTrue(os.path.isfile(p.native))
         self.assertFalse(os.path.exists(p.native))
 
     def test_contentmanager_creates_and_removes_directory(self):
-        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
-        with dlb.ex.worktree.Temporary(path_provider=pp, is_dir=True) as p:
+        pp = dlb.ex._worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        with dlb.ex._worktree.Temporary(path_provider=pp, is_dir=True) as p:
             self.assertIsInstance(p, dlb.fs.Path)
             self.assertTrue(os.path.isdir(p.native))
             open('f', 'xb').close()
         self.assertFalse(os.path.exists(p.native))
 
     def test_contentmanager_fails_on_existing_file(self):
-        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
-        t = dlb.ex.worktree.Temporary(path_provider=pp, is_dir=False)
+        pp = dlb.ex._worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        t = dlb.ex._worktree.Temporary(path_provider=pp, is_dir=False)
         open(t.path.native, 'xb').close()
         with self.assertRaises(FileExistsError):
             with t:
@@ -434,8 +434,8 @@ class TemporaryTest(testenv.TemporaryDirectoryTestCase):
         self.assertTrue(os.path.exists(t.path.native))  # not removed
 
     def test_contentmanager_fails_on_existing_directory(self):
-        pp = dlb.ex.worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
-        t = dlb.ex.worktree.Temporary(path_provider=pp, is_dir=True)
+        pp = dlb.ex._worktree.UniquePathProvider(dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True))
+        t = dlb.ex._worktree.Temporary(path_provider=pp, is_dir=True)
         os.mkdir(t.path.native)
         with self.assertRaises(FileExistsError):
             with t:

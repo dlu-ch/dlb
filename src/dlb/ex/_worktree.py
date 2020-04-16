@@ -5,12 +5,7 @@
 """Filesystem manipulations in the working tree.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = [
-    'Temporary',
-    'NoWorkingTreeError',
-    'ManagementTreeError',
-    'WorkingTreePathError'
-]
+__all__ = []
 
 import string
 import os
@@ -18,7 +13,8 @@ import stat
 from typing import Optional, Tuple, Type, Union
 from .. import ut
 from .. import fs
-from . import rundb
+from . import _error
+from . import _rundb
 
 
 # a directory containing a directory with this name is considered a working tree of dlb
@@ -31,20 +27,6 @@ assert MTIME_PROBE_FILE_NAME.upper() != MTIME_PROBE_FILE_NAME
 LOCK_DIRNAME = 'lock'
 TEMPORARY_DIR_NAME = 't'
 RUNDB_FILE_NAME_TEMPLATE = 'runs-{}.sqlite'
-
-
-class NoWorkingTreeError(Exception):
-    pass
-
-
-class ManagementTreeError(Exception):
-    pass
-
-
-class WorkingTreePathError(ValueError):
-    def __init__(self, *args, oserror: Optional[OSError] = None):
-        super().__init__(*args)
-        self.oserror = oserror
 
 
 class _KeepFirstRmTreeException:
@@ -220,7 +202,7 @@ class Temporary:
             remove_filesystem_object(self._path.native, ignore_non_existent=True)
 
 
-def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> rundb.FilesystemObjectMemo:
+def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> _rundb.FilesystemObjectMemo:
     # Returns the summary of the filesystem's meta-information for a filesystem object with absolute path *abs_path*
     # as a ``FilesystemObjectMemo`` object.
     #
@@ -252,9 +234,9 @@ def read_filesystem_object_memo(abs_path: Union[str, fs.Path]) -> rundb.Filesyst
 
     sr = os.lstat(abs_path)
 
-    memo = rundb.FilesystemObjectMemo()
-    memo.stat = rundb.FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
-                                            uid=sr.st_uid, gid=sr.st_gid)
+    memo = _rundb.FilesystemObjectMemo()
+    memo.stat = _rundb.FilesystemStatSummary(mode=sr.st_mode, size=sr.st_size, mtime_ns=sr.st_mtime_ns,
+                                             uid=sr.st_uid, gid=sr.st_gid)
 
     if not stat.S_ISLNK(sr.st_mode):
         return memo
@@ -302,18 +284,18 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
 
             if i == 0:
                 path = fs.Path(('',) + components)
-                raise WorkingTreePathError(f"is an upwards path: {path.as_string()!r}")
+                raise _error.WorkingTreePathError(f"is an upwards path: {path.as_string()!r}")
 
             if ref_dir_path is not None:
                 p = os.path.sep.join((ref_dir_path,) + normalized_components[:i])
                 sr = os.lstat(p)
                 if stat.S_ISLNK(sr.st_mode):
                     msg = f"not a collapsable path, since this is a symbolic link: {p!r}"
-                    raise WorkingTreePathError(msg) from None
+                    raise _error.WorkingTreePathError(msg) from None
 
             normalized_components = normalized_components[:i - 1] + normalized_components[i + 1:]
     except OSError as e:
-        raise WorkingTreePathError(oserror=e) from None
+        raise _error.WorkingTreePathError(oserror=e) from None
 
     return normalized_components
 
@@ -345,7 +327,7 @@ def get_checked_root_path_from_cwd(cwd: str, path_cls: Type[fs.Path]):
             "  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n"
             "  | try again?"
         )
-        raise NoWorkingTreeError(msg) from None
+        raise _error.NoWorkingTreeError(msg) from None
 
     msg = (
         f'current directory is no working tree: {root_path.as_string()!r}\n'
@@ -355,9 +337,9 @@ def get_checked_root_path_from_cwd(cwd: str, path_cls: Type[fs.Path]):
     try:
         mode = os.lstat(os.path.join(root_path_str, MANAGEMENTTREE_DIR_NAME)).st_mode
     except Exception:
-        raise NoWorkingTreeError(msg) from None
+        raise _error.NoWorkingTreeError(msg) from None
     if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
-        raise NoWorkingTreeError(msg) from None
+        raise _error.NoWorkingTreeError(msg) from None
 
     return root_path
 
@@ -379,7 +361,7 @@ def lock_working_tree(root_path: fs.Path):
             f'  | to break the lock (if you are sure no other dlb process is running): '
             f'remove {lock_dir_path!r}'
         )
-        raise ManagementTreeError(msg) from None
+        raise _error.ManagementTreeError(msg) from None
 
 
 def unlock_working_tree(root_path: fs.Path):
@@ -425,20 +407,20 @@ def prepare_locked_working_tree(root_path: fs.Path, rundb_schema_version: Tuple[
             else:
                 is_working_tree_case_sensitive = not os.path.samestat(probe_stat, probeu_stat)
 
-            db = rundb.Database(rundb_path, max_dependency_age,
-                                f"if you suspect database corruption, remove the run-database file(s): {rundb_path!r}")
+            db = _rundb.Database(rundb_path, max_dependency_age,
+                                 f"if you suspect database corruption, remove the run-database file(s): {rundb_path!r}")
         except:
             mtime_probe.close()
             raise
 
-    except rundb.DatabaseError as e:
-        # rundb.DatabaseError on error may have multi-line message
-        raise ManagementTreeError(str(e)) from None
+    except _error.DatabaseError as e:
+        # _rundb.DatabaseError on error may have multi-line message
+        raise _error.ManagementTreeError(str(e)) from None
     except OSError as e:
         msg = (
             f'failed to setup management tree for {root_path.as_string()!r}\n'
             f'  | reason: {ut.exception_to_line(e)}'  # only first line
         )
-        raise ManagementTreeError(msg) from None
+        raise _error.ManagementTreeError(msg) from None
 
     return temp_path_provider, mtime_probe, db, is_working_tree_case_sensitive

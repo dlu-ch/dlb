@@ -518,7 +518,7 @@ class RedoResultRepr(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             r = t.run()
             self.assertTrue(r)
-            self.assertFalse(dlb.ex.aseq.is_complete(r))
+            self.assertFalse(dlb.ex._aseq.is_complete(r))
             imcomplete_repr = repr(r)
         complete_repr = repr(r)
 

@@ -5,7 +5,7 @@
 """Abstraction of run-database.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = ['DatabaseError']
+__all__ = []
 
 import os.path
 import enum
@@ -18,7 +18,8 @@ import sqlite3
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 from .. import ut
 from .. import fs
-from . import platform
+from . import _platform
+from . import _error
 
 
 # Why 'marshal'?
@@ -220,10 +221,6 @@ def compare_fsobject_memo_to_encoded_from_last_redo(memo: FilesystemObjectMemo, 
         return 'permissions or owner have changed'
 
 
-class DatabaseError(Exception):
-    pass
-
-
 class _CursorWithExceptionMapping:
     def __init__(self, connection: sqlite3.Connection, summary_message_line: str, solution_message_line: str):
         self._connection = connection
@@ -244,7 +241,7 @@ class _CursorWithExceptionMapping:
                 lines.append(self._solution_message_line)
 
             msg = '\n  | '.join(lines)
-            raise DatabaseError(msg) from None
+            raise _error.DatabaseError(msg) from None
 
 
 @enum.unique
@@ -293,7 +290,7 @@ class Database:
                 f"  | reason: {reason}\n"
                 f"  | check access permissions"
             )
-            raise DatabaseError(msg) from None
+            raise _error.DatabaseError(msg) from None
 
         cursor_with_exception_mapping = _CursorWithExceptionMapping(
             connection,
@@ -413,7 +410,7 @@ class Database:
         #
         # When called more than one before the next cleanup() on this object, this always returns the same value.
 
-        t = (platform.PERMANENT_PLATFORM_ID, permanent_local_tool_id, permanent_local_tool_instance_fingerprint)
+        t = (_platform.PERMANENT_PLATFORM_ID, permanent_local_tool_id, permanent_local_tool_instance_fingerprint)
         with self._cursor_with_exception_mapping() as cursor:
             # assign tool_inst_dbid by AUTOINCREMENT:
             cursor.execute("INSERT OR IGNORE INTO ToolInst VALUES (NULL, ?, ?, ?)", t)
@@ -429,7 +426,7 @@ class Database:
         with self._cursor_with_exception_mapping() as cursor:
             n = cursor.execute(
                 "SELECT COUNT(*) FROM ToolInst WHERE pl_platform_id = ?",
-                (platform.PERMANENT_PLATFORM_ID,)
+                (_platform.PERMANENT_PLATFORM_ID,)
             ).fetchall()[0][0]
 
         return n
@@ -609,6 +606,3 @@ class Database:
             summary_message_line,
             self._suggestion_if_database_error
         )
-
-
-ut.set_module_name_to_parent_by_name(vars(), __all__)

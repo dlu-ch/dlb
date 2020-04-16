@@ -3,7 +3,7 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 import testenv  # also sets up module search paths
-import dlb.ex.mult
+import dlb.ex._mult
 import unittest
 import random
 
@@ -11,74 +11,74 @@ import random
 class ConstructionTest(unittest.TestCase):
 
     def test_succeeds_from_nonnegative_int(self):
-        m = dlb.ex.mult.MultiplicityRange(3)
+        m = dlb.ex._mult.MultiplicityRange(3)
         self.assertEqual(slice(3, 3 + 1, 1), m.as_slice)
 
-        m = dlb.ex.mult.MultiplicityRange(0)
+        m = dlb.ex._mult.MultiplicityRange(0)
         self.assertEqual(slice(0, 1, 1), m.as_slice)
 
     def test_succeeds_from_slice(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(1, 20, 3))
+        m = dlb.ex._mult.MultiplicityRange(slice(1, 20, 3))
         self.assertEqual(slice(1, 20, 3), m.as_slice)
 
     def test_fails_from_none(self):
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.mult.MultiplicityRange(None)
+            dlb.ex._mult.MultiplicityRange(None)
         self.assertEqual("'multiplicity' must be int or slice of int, not None", str(cm.exception))
 
     def test_fails_from_negative_int(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.mult.MultiplicityRange(-1)
+            dlb.ex._mult.MultiplicityRange(-1)
         self.assertEqual("minimum multiplicity (start of slice) must be non-negative, not -1", str(cm.exception))
 
     def test_fails_from_slice_with_negative_elementstart_stop_or_step(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.mult.MultiplicityRange(slice(-1, 20, 3))
+            dlb.ex._mult.MultiplicityRange(slice(-1, 20, 3))
         self.assertEqual("minimum multiplicity (start of slice) must be non-negative, not -1", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.mult.MultiplicityRange(slice(1, -20, 3))
+            dlb.ex._mult.MultiplicityRange(slice(1, -20, 3))
         self.assertEqual("upper multiplicity bound (stop of slice) must be non-negative, not -20", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.mult.MultiplicityRange(slice(1, 20, -3))
+            dlb.ex._mult.MultiplicityRange(slice(1, 20, -3))
         self.assertEqual("slice step must be positive, not -3", str(cm.exception))
 
     def test_fails_from_noninteger_slice(self):
         with self.assertRaises(TypeError) as cm:
-            dlb.ex.mult.MultiplicityRange('-3')
+            dlb.ex._mult.MultiplicityRange('-3')
         self.assertEqual("'multiplicity' must be int or slice of int, not '-3'", str(cm.exception))
 
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex.mult.MultiplicityRange(slice('1', 20, 3))
+            dlb.ex._mult.MultiplicityRange(slice('1', 20, 3))
         self.assertEqual("'multiplicity' must be int or slice of int, not slice('1', 20, 3)", str(cm.exception))
 
     def test_normalizes_empty_slice(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(3, 3, 20))
+        m = dlb.ex._mult.MultiplicityRange(slice(3, 3, 20))
         self.assertEqual(m.as_slice, slice(0, 0, 1))
 
     def test_normalizes_slice_with_only_one_member(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(3, 23, 20))
+        m = dlb.ex._mult.MultiplicityRange(slice(3, 23, 20))
         self.assertEqual(m.as_slice, slice(3, 4, 1))
 
 
 class CompareTest(unittest.TestCase):
 
     def test_normalized_equal_are_equal(self):
-        m1 = dlb.ex.mult.MultiplicityRange(slice(2, 2))
-        m2 = dlb.ex.mult.MultiplicityRange(slice(5, 2, 7))
+        m1 = dlb.ex._mult.MultiplicityRange(slice(2, 2))
+        m2 = dlb.ex._mult.MultiplicityRange(slice(5, 2, 7))
         self.assertTrue(m1 == m2)
         self.assertFalse(m1 != m2)
 
-        m1 = dlb.ex.mult.MultiplicityRange(5)
-        m2 = dlb.ex.mult.MultiplicityRange(slice(5, 6, 7))
+        m1 = dlb.ex._mult.MultiplicityRange(5)
+        m2 = dlb.ex._mult.MultiplicityRange(slice(5, 6, 7))
         self.assertTrue(m1 == m2)
         self.assertFalse(m1 != m2)
 
     def test_different_are_not_equal(self):
-        m1 = dlb.ex.mult.MultiplicityRange(3)
-        m2 = dlb.ex.mult.MultiplicityRange(4)
+        m1 = dlb.ex._mult.MultiplicityRange(3)
+        m2 = dlb.ex._mult.MultiplicityRange(4)
         self.assertTrue(m1 != m2)
         self.assertFalse(m1 == m2)
 
@@ -86,41 +86,41 @@ class CompareTest(unittest.TestCase):
 class StrTest(unittest.TestCase):
 
     def test_empty_is_correct(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(2, 2))
+        m = dlb.ex._mult.MultiplicityRange(slice(2, 2))
         self.assertEqual('[:0]', str(m))
 
     def test_single_is_correct(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(2, 3))
+        m = dlb.ex._mult.MultiplicityRange(slice(2, 3))
         self.assertEqual('[2]', str(m))
 
     def test_minimum_is_correct(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(3, None))
+        m = dlb.ex._mult.MultiplicityRange(slice(3, None))
         self.assertEqual('[3:]', str(m))
 
     def test_upper_bound_is_correct(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(None, 4))
+        m = dlb.ex._mult.MultiplicityRange(slice(None, 4))
         self.assertEqual('[:4]', str(m))
 
     def test_step_is_correct(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(3, 42, 5))
+        m = dlb.ex._mult.MultiplicityRange(slice(3, 42, 5))
         self.assertEqual('[3:39:5]', str(m))
 
     def test_unrestricted_is_correct(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(None))
+        m = dlb.ex._mult.MultiplicityRange(slice(None))
         self.assertEqual('[:]', str(m))
 
 
 class ReprTest(unittest.TestCase):
 
     def test_upper_bound_is_correct(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(None, 4))
+        m = dlb.ex._mult.MultiplicityRange(slice(None, 4))
         self.assertEqual('MultiplicityRange(slice(0, 4, 1))', repr(m))
 
 
 class MatchesCountTest(unittest.TestCase):
 
     def test_fails_for_nonint(self):
-        m = dlb.ex.mult.MultiplicityRange(2)
+        m = dlb.ex._mult.MultiplicityRange(2)
 
         with self.assertRaises(TypeError):
             None in m
@@ -129,13 +129,13 @@ class MatchesCountTest(unittest.TestCase):
             '1' in m
 
     def test_integer_matches_exact_count(self):
-        m = dlb.ex.mult.MultiplicityRange(2)
+        m = dlb.ex._mult.MultiplicityRange(2)
         self.assertTrue(2 in m)
         self.assertFalse(1 in m)
         self.assertFalse(3 in m)
 
     def test_empty_slice_matches_nothing(self):
-        m = dlb.ex.mult.MultiplicityRange(slice(0, 0, 4))
+        m = dlb.ex._mult.MultiplicityRange(slice(0, 0, 4))
         self.assertFalse(0 in m)
         self.assertFalse(2 in m)
 
@@ -149,7 +149,7 @@ class MatchesCountTest(unittest.TestCase):
             i = tuple(i for i in range(top + 1))
             try:
                 s = slice(start, stop, step)
-                m = dlb.ex.mult.MultiplicityRange(s)
+                m = dlb.ex._mult.MultiplicityRange(s)
                 for j in range(100):
                     n = random.randrange(start, stop + 1)
                     self.assertEqual(n in i[s], n in m, f'{n} in {s}?')
@@ -160,7 +160,7 @@ class MatchesCountTest(unittest.TestCase):
 # noinspection PyPep8Naming
 class MultiplicityHolderTest(unittest.TestCase):
 
-    class M(dlb.ex.mult.MultiplicityHolder):
+    class M(dlb.ex._mult.MultiplicityHolder):
         # noinspection PyUnusedLocal
         def __init__(self, a, b=1):
             super().__init__()
@@ -174,7 +174,7 @@ class MultiplicityHolderTest(unittest.TestCase):
         # noinspection PyTypeChecker
         m = MultiplicityHolderTest.M[:3](1, b=2)
         self.assertIsInstance(m, MultiplicityHolderTest.M)
-        self.assertEqual(dlb.ex.mult.MultiplicityRange(slice(0, 3)), m.multiplicity)
+        self.assertEqual(dlb.ex._mult.MultiplicityRange(slice(0, 3)), m.multiplicity)
 
     def test_fails_for_nested_multiplicity(self):
         with self.assertRaises(TypeError) as cm:
@@ -200,7 +200,7 @@ class MultiplicityHolderTest(unittest.TestCase):
 
         r = repr(MultiplicityHolderTest.M[:3])
         regex = (
-            r"\A<dlb\.ex\.mult\._MultiplicityHolderProxy object at 0x[0-9a-fA-F]+ for "
+            r"\A<dlb\.ex\._mult\._MultiplicityHolderProxy object at 0x[0-9a-fA-F]+ for "
             r"<class '.+\.MultiplicityHolderTest\.M'> with multiplicity \[:3\]>\Z"
         )
         self.assertRegex(r, regex)

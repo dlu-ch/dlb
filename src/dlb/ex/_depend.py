@@ -12,14 +12,14 @@ import dataclasses
 import copy
 from typing import Any, Dict, Hashable, Iterable, Optional, Pattern, Type, TypeVar, Tuple, Union
 from .. import fs
-from . import mult
+from . import _mult
 
 
 V = TypeVar('V', bound=Hashable)
 
 
 # noinspection PyUnresolvedReferences
-class Dependency(mult.MultiplicityHolder):
+class Dependency(_mult.MultiplicityHolder):
     # Each instance d represents a dependency role.
     # The return value of d.validate() is a concrete dependency, if d.multiplicity is None and
     # a tuple of concrete dependencies otherwise.

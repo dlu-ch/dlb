@@ -5,8 +5,8 @@
 import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.ex
-import dlb.ex.worktree
-import dlb.ex.rundb
+import dlb.ex._worktree
+import dlb.ex._rundb
 import os.path
 import stat
 import time
@@ -14,14 +14,14 @@ import datetime
 import unittest
 
 
-RUNDB_FILENAME = dlb.ex.worktree.rundb_filename_for_schema_version(dlb.ex.rundb.SCHEMA_VERSION)
+RUNDB_FILENAME = dlb.ex._worktree.rundb_filename_for_schema_version(dlb.ex._rundb.SCHEMA_VERSION)
 
 
 class AttributeNameTest(unittest.TestCase):
 
     def test_attributes_of_contextmeta_and_rootsspecifics_to_not_clash(self):
-        rs = set(n for n in dlb.ex.context._RootSpecifics.__dict__ if not n.startswith('_'))
-        mc = set(n for n in dlb.ex.context._ContextMeta.__dict__ if not n.startswith('_'))
+        rs = set(n for n in dlb.ex._context._RootSpecifics.__dict__ if not n.startswith('_'))
+        mc = set(n for n in dlb.ex._context._ContextMeta.__dict__ if not n.startswith('_'))
         self.assertEqual(set(), rs.intersection(mc))
 
 
@@ -46,7 +46,7 @@ class AccessTest(unittest.TestCase):
 class NestingTestNotRunning(unittest.TestCase):
 
     def test_fails_if_not_running(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.active
 
 
@@ -63,17 +63,17 @@ class NestingTest(testenv.TemporaryWorkingDirectoryTestCase):
 
             self.assertIs(dlb.ex.Context.active, c1)
 
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.active
 
     def test_nesting_error_is_detected(self):
         with dlb.ex.Context():
-            with self.assertRaises(dlb.ex.context.ContextNestingError):
+            with self.assertRaises(dlb.ex._error.ContextNestingError):
                 with dlb.ex.Context():
-                    dlb.ex.context._contexts.pop()
+                    dlb.ex._context._contexts.pop()
 
     def test_meaningful_exception_on_attribute_error(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.non_existent_attribute
 
         with dlb.ex.Context() as c:
@@ -109,7 +109,7 @@ class ReuseTest(testenv.TemporaryWorkingDirectoryTestCase):
 class WorkingTreeRequirementTest(testenv.TemporaryDirectoryTestCase):
 
     def test_fails_if_dlbroot_does_not_exist(self):
-        with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
+        with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
             with dlb.ex.Context():
                 pass
 
@@ -119,7 +119,7 @@ class WorkingTreeRequirementTest(testenv.TemporaryDirectoryTestCase):
     def test_fails_if_dlbroot_is_file(self):
         open('.dlbroot', 'wb').close()
 
-        with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
+        with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
             with dlb.ex.Context():
                 pass
 
@@ -136,7 +136,7 @@ class WorkingTreeRequirementTest(testenv.TemporaryDirectoryTestCase):
             self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
             raise unittest.SkipTest from None
 
-        with self.assertRaises(dlb.ex.context.NoWorkingTreeError) as cm:
+        with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
             with dlb.ex.Context():
                 pass
 
@@ -230,7 +230,7 @@ class ManagementTreeSetupWithPermissionProblemTest(testenv.TemporaryDirectoryWit
             r"failed to setup management tree for '.*'\n"
             r"  \| reason: .*'.+[\/\]+\.dlbroot[\\/]+t'.*\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+        with self.assertRaisesRegex(dlb.ex._error.ManagementTreeError, regex):
             with dlb.ex.Context():
                 pass
 
@@ -248,7 +248,7 @@ class ManagementTreeCleanupWithPermissionProblemTest(testenv.TemporaryDirectoryW
             r"failed to cleanup management tree for '.*'\n"
             r"  \| reason: .*'.+[/\\]+\.dlbroot[/\\]+.*'.*\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+        with self.assertRaisesRegex(dlb.ex._error.ManagementTreeError, regex):
             with dlb.ex.Context():
                 os.mkdir(os.path.join(temp_path, 'c'))
                 os.chmod(temp_path, 0o000)
@@ -273,11 +273,11 @@ class ManagementTreeCleanupTest(testenv.TemporaryWorkingDirectoryTestCase):
 class RootContextPathTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_root_is_unavailable_if_not_running(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.root_path
 
         c = dlb.ex.Context()
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             c.root_path
 
     def test_root_is_correct(self):
@@ -340,7 +340,7 @@ class RootContextInvalidPathTest(testenv.TemporaryDirectoryTestCase):
 class WorkingTreeTimeTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_time_is_unavailable_if_not_running(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.working_tree_time_ns
 
     def test_time_does_change_after_at_most_15secs(self):
@@ -380,8 +380,8 @@ class WorkingTreeTimeTest(testenv.TemporaryWorkingDirectoryTestCase):
 class RunDatabaseNotRunningTest(unittest.TestCase):
 
     def test_access_fails_if_not_running(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
-            dlb.ex.context._get_rundb()
+        with self.assertRaises(dlb.ex._error.NotRunningError):
+            dlb.ex._context._get_rundb()
 
 
 class RunDatabaseTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -392,7 +392,7 @@ class RunDatabaseTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_access_is_possible_in_nonobvious_way_when_running(self):
         with dlb.ex.Context():
-            self.assertIsInstance(dlb.ex.context._get_rundb(), dlb.ex.rundb.Database)
+            self.assertIsInstance(dlb.ex._context._get_rundb(), dlb.ex._rundb.Database)
 
     def test_access_not_possible_in_obvious_way(self):
         with dlb.ex.Context():
@@ -424,7 +424,7 @@ class ProcessLockTest(testenv.TemporaryWorkingDirectoryTestCase):
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[\\/]+\.dlbroot[\\/]+lock'\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+        with self.assertRaisesRegex(dlb.ex._error.ManagementTreeError, regex):
             with dlb.ex.Context():
                 pass
 
@@ -447,7 +447,7 @@ class ProcessLockPermissionProblemTest(testenv.TemporaryDirectoryWithChmodTestCa
             r"  \| to break the lock \(if you are sure no other dlb process is running\): "
             r"remove '.*[\\/]+\.dlbroot[\\/]+lock'\Z"
         )
-        with self.assertRaisesRegex(dlb.ex.context.ManagementTreeError, regex):
+        with self.assertRaisesRegex(dlb.ex._error.ManagementTreeError, regex):
             with dlb.ex.Context():
                 pass
 
@@ -469,9 +469,9 @@ class ProcessLockPermissionProblemTest(testenv.TemporaryDirectoryWithChmodTestCa
 class TemporaryNotRunningTest(unittest.TestCase):
 
     def test_fails_for_if_not_running(self):
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.temporary(is_dir=False)
-        with self.assertRaises(dlb.ex.context.NotRunningError):
+        with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.temporary(is_dir=True)
 
 
@@ -693,7 +693,7 @@ class ReprTest(unittest.TestCase):
 
     def test_repr_name_reflects_recommended_module(self):
         self.assertEqual(repr(dlb.ex.Context), "<class 'dlb.ex.Context'>")
-        self.assertEqual(repr(dlb.ex.context._EnvVarDict), "<class 'dlb.ex.Context.EnvVarDict'>")
+        self.assertEqual(repr(dlb.ex._context._EnvVarDict), "<class 'dlb.ex.Context.EnvVarDict'>")
 
 
 class ReadOnlyAccessTest(testenv.TemporaryWorkingDirectoryTestCase):

@@ -14,40 +14,19 @@ import unittest
 class ImportTest(unittest.TestCase):
 
     def test_all_from_tool_is_correct(self):
-        import dlb.ex.tool
-        self.assertEqual({
-            'ChunkProcessor',
-            'Tool',
-            'DefinitionAmbiguityError',
-            'DependencyError',
-            'DependencyError',
-            'ExecutionParameterError',
-            'RedoError',
-            'HelperExecutionError',
-            'is_complete'},
-            set(dlb.ex.tool.__all__))
+        import dlb.ex._tool
+        self.assertEqual({'ChunkProcessor', 'Tool', 'is_complete'}, set(dlb.ex._tool.__all__))
         self.assertTrue('Tool' in dir(dlb.ex))
-
-        for n in dlb.ex.tool.__all__:
-            self.assertEqual('dlb.ex', dlb.ex.tool.__dict__[n].__module__)
+        for n in dlb.ex._tool.__all__:
+            self.assertEqual('dlb.ex', dlb.ex._tool.__dict__[n].__module__)
 
     def test_all_from_context_is_correct(self):
-        import dlb.ex.context
-        self.assertEqual({
-            'Context',
-            'ReadOnlyContext',
-            'ContextNestingError',
-            'NotRunningError',
-            'ManagementTreeError',
-            'NoWorkingTreeError',
-            'WorkingTreeTimeError',
-            'ContextModificationError',
-            'WorkingTreePathError'},
-            set(dlb.ex.context.__all__))
+        import dlb.ex._context
+        self.assertEqual({'Context', 'ReadOnlyContext',}, set(dlb.ex._context.__all__))
         self.assertTrue('Context' in dir(dlb.ex))
 
-        for n in dlb.ex.context.__all__:
-            self.assertEqual('dlb.ex', dlb.ex.context.__dict__[n].__module__)
+        for n in dlb.ex._context.__all__:
+            self.assertEqual('dlb.ex', dlb.ex._context.__dict__[n].__module__)
 
 
 class RunSummaryTest(testenv.TemporaryWorkingDirectoryTestCase):

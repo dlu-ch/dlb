@@ -75,7 +75,7 @@ class RunBenchmark(testenv.TemporaryWorkingDirectoryTestCase):
 class ImportantRunExecutionPathBenchmark(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_read_filesystem_object_memo_from_path(self):
-        import dlb.ex.worktree
+        import dlb.ex._worktree
 
         os.makedirs(os.path.join('a', 'b'))
         open(os.path.join('a', 'b', 'c'), 'xb').close()
@@ -99,7 +99,7 @@ class ImportantRunExecutionPathBenchmark(testenv.TemporaryWorkingDirectoryTestCa
             #   90 ms (current - without pathlib)
 
             for i in range(10000):
-                dlb.ex.worktree.read_filesystem_object_memo(
+                dlb.ex._worktree.read_filesystem_object_memo(
                     c.root_path / c.working_tree_path_of(p, existing=True, collapsable=False))
 
             profile.disable()
@@ -118,7 +118,7 @@ class ImportantRunExecutionPathBenchmark(testenv.TemporaryWorkingDirectoryTestCa
         # times for comparison: 405 ms
 
         for i in range(100000):
-            dlb.ex.rundb.decode_encoded_path('a/b2/c33/d42/')
+            dlb.ex._rundb.decode_encoded_path('a/b2/c33/d42/')
 
         profile.disable()
         dump_profile_stats(profile, self, 2)
