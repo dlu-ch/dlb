@@ -4,8 +4,8 @@
 
 """Configuration parameters."""
 
-from . import level
 import datetime
+from . import level
 
 # When > 0, a summary of the latest *latest_run_summary_max_count* dlb runs is output when a root context exits.
 latest_run_summary_max_count: int = 0

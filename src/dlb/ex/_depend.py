@@ -8,6 +8,7 @@ This is an implementation detail - do not import it unless you know what you are
 __all__ = ['Dependency', 'InputDependency', 'OutputDependency']
 
 from typing import Hashable, Iterable, Optional, Type, TypeVar, Tuple, Union
+
 from .. import ut
 from .. import fs
 from . import _mult

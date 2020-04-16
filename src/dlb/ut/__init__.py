@@ -12,8 +12,8 @@ import marshal
 import dataclasses
 import collections.abc
 from typing import Any, Dict, Iterable
-assert sys.version_info >= (3, 7)
 
+assert sys.version_info >= (3, 7)
 
 non_container_fundamental_types = (bool, int, float, complex, str, bytes)
 

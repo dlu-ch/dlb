@@ -8,8 +8,10 @@ This is an implementation detail - do not import it unless you know what you are
 __all__ = []
 
 import sys
+
 from .. import version
 from .. import ut
+
 assert sys.version_info >= (3, 7)
 
 # changes whenever the platform, the Python version or the dlb version changes

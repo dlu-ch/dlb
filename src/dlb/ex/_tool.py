@@ -2,7 +2,8 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Dependency-aware tool execution."""
+"""Dependency-aware tool execution.
+This is an implementation detail - do not import it unless you know what you are doing."""
 
 __all__ = ['Tool', 'is_complete']
 
@@ -13,6 +14,7 @@ import collections
 import hashlib
 import inspect
 from typing import Dict, Optional, Tuple, Type
+
 from .. import ut
 from .. import fs
 from .. import cf
@@ -25,6 +27,7 @@ from . import _depend
 from . import input
 from . import _dependaction
 from . import _toolrun
+
 assert sys.version_info >= (3, 7)
 
 UPPERCASE_WORD_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
