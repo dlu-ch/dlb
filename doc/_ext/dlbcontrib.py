@@ -501,11 +501,18 @@ def process_moduleindex_nodes(app, doctree, fromdocname):
             paragraphs_in_row: List[docutils.nodes.table] = []  # a single table row
 
             # link to module
-            url = '{}#{}'.format(app.builder.get_relative_uri(fromdocname, module_info.docname), module_info.id)
             paragraph = docutils.nodes.paragraph()
-            reference = docutils.nodes.reference('', '', internal=False, refuri=url)
-            reference += docutils.nodes.literal(fq_modname, fq_modname, classes=['xref', 'py', 'py-mod'])
-            paragraph += reference
+            literalreference = docutils.nodes.literal(fq_modname, fq_modname, classes=['xref', 'py', 'py-mod'])
+            try:
+                url = '{}#{}'.format(app.builder.get_relative_uri(fromdocname, module_info.docname), module_info.id)
+            except sphinx.environment.NoUri:
+                url = None
+            if url is None:
+                paragraph += literalreference
+            else:
+                reference = docutils.nodes.reference('', '', internal=False, refuri=url)
+                reference += literalreference
+                paragraph += reference
             paragraphs_in_row += [paragraph, executables, tools]
 
             paragraphs_in_rows.append(paragraphs_in_row)
