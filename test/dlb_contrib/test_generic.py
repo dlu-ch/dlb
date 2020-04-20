@@ -38,3 +38,30 @@ class CheckTest(testenv.TemporaryWorkingDirectoryTestCase):
             os.mkdir(os.path.join('b', 'c'))
             self.assertTrue(ATool().run(force_redo=check.run()))
             self.assertFalse(ATool().run(force_redo=check.run()))
+
+
+class ResultRemoverTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_scenario1(self):
+        t = dlb_contrib.generic.ResultRemover(result_file='build/out/r')
+
+        with dlb.ex.Context():
+            r = t.run()  # usually with force_redo=...
+            self.assertTrue(r)
+            if r:
+                self.assertFalse(r.result_file.native.raw.exists())
+                # ... perform the actual task
+                self.assertTrue(r.result_file[:-1].native.raw.is_dir())
+                r.result_file.native.raw.touch()  # mark as completed
+
+        with dlb.ex.Context():
+            r = t.run()
+            self.assertFalse(r)
+
+        with dlb.ex.Context():
+            r = t.run(force_redo=True)
+            self.assertTrue(r)
+            if r:
+                self.assertTrue(r.result_file[:-1].native.raw.is_dir())
+                self.assertFalse(r.result_file.native.raw.exists())
+                r.result_file.native.raw.touch()  # mark as completed
