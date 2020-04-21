@@ -22,7 +22,7 @@ with dlb.ex.Context():
             with dlb.di.Cluster(f'compile'), dlb.ex.Context():
                 compile_results = [
                     CplusplusCompiler(source_files=[source_file],
-                                      object_files=[output_path / source_file[1:].with_appended_suffix('.o')],
+                                      object_files=[output_path / source_file.with_appended_suffix('.o')],
                                       include_search_directories=[source_path]).run()
                     for source_file in library_path.iterdir(name_filter=r'.+\.cpp', is_dir=False)
                 ]

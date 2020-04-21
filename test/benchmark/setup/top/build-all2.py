@@ -35,7 +35,7 @@ with dlb.ex.Context():
                 compile_results = [
                     CplusplusCompiler(
                         source_files=g,
-                        object_files=[output_path / p[1:].with_appended_suffix('.o') for p in g],
+                        object_files=[output_path / p.with_appended_suffix('.o') for p in g],
                         include_search_directories=[source_path]
                     ).run()
                     for g in source_file_groups
