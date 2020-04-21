@@ -68,7 +68,7 @@ Path objects
 
    .. method:: Path(path, *, is_dir=None)
 
-      Constructs a path from another path or a string.
+      Construct a path from another path or a string.
 
       If *path* is a string, it is interpreted as the string representation of a path in Posix style with ``/`` as a
       component separator. It must not be empty.
@@ -135,9 +135,9 @@ Path objects
                (i.e. it contains no ``'..'`` components)
       :rtype: bool
 
-   .. method:: relative_to(other, *, collapsable=False):
+   .. method:: relative_to(other, *, collapsable=False)
 
-      Returns a version of this path relative to the directory path represented by *other*.
+      Return a version of this path relative to the directory path represented by *other*.
 
       If *collapsable* is ``False``, this path must be a prefix of *other*.
       If *collapsable* is ``True``, *other* is treated as a :term:`collapsable path` and the minimum of necessary
@@ -150,9 +150,9 @@ Path objects
 
    .. method:: iterdir(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
-      Yields all path objects of the directory contents denoted by this path and matched by the
+      Yield all path objects of the directory contents denoted by this path and matched by the
       name filters.
-      The paths are duplicate-free and in a defined and repeatable order, but not necessarily sorted.
+      The paths are duplicate-free and in a platform-independent and deterministic order, but not necessarily sorted.
       Their class is the class of this object if *cls* is ``None`` and *cls* otherwise.
 
       The path *p* of an existing filesystem object is eventually yielded if and only if
@@ -207,14 +207,33 @@ Path objects
 
    .. method:: list_r(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
-      Returns all paths yielded by :meth:`iterdir_r` as a sorted list.
+      Return all paths yielded by :meth:`iterdir_r` as a sorted list.
 
       Example::
 
           >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
           [NoSpacePath('Clock.cpp'), NoSpacePath('main.cpp')]
 
-   .. method:: __getitem__(key):
+   .. method:: find_latest_mtime(*, name_filter='', is_dir=None, recurse_name_filter=None, \
+                                 follow_symlinks=True, cls=None)
+
+      Return the path of the filesystem object with the latest :term:`mtime` among all paths yielded by :meth:`iterdir`
+      or ``None`` if there is no such path.
+
+      If more than one filesystem object with a path yielded by :meth:`iterdir` has the same mtime, one of them is
+      chosen in a platform-independent and deterministic manner.
+
+   .. method:: propagate_mtime(*, name_filter='', is_dir=None, recurse_name_filter='')
+
+      For each path yielded by :meth:`iterdir(..., follow_symlinks=False) <iterdir>` with an :term:`mtime`
+      later than the mtime of its containing directory, update the mtime of the containing directory (and its parents up
+      to and including this directory if the resulting mtime is later than their mtime).
+      Return the resulting mtime of this directory in nanoseconds or ``None`` if it was not updated.
+
+      Note that in contrast to :meth:`iterdir` the default value for recurse_name_filter is ``''`` which means that
+      by default no subdirectory is ignored.
+
+   .. method:: __getitem__(key)
 
       A subpath (a slice of the path).
 

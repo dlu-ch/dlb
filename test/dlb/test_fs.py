@@ -980,3 +980,171 @@ class PortableWindowsRestrictionsTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.PortableWindowsPath('/C:/' + 'a/' * (dlb.fs.PortableWindowsPath.MAX_PATH_LENGTH // 2) + 'b/')
         self.assertTrue(str(cm.exception).endswith(" (must not contain more than 259 characters)"))
+
+
+def sleep_until_mtime_change():
+    import time
+    import tempfile
+
+    t0 = time.monotonic_ns()
+    with tempfile.TemporaryDirectory() as tmp_dir_path:
+        p = os.path.join(tmp_dir_path, 't')
+        open(p, 'x').close()
+
+        mtime0 = os.lstat(p).st_mtime_ns
+        while True:
+            assert (time.monotonic_ns() - t0) / 1e9 <= 10.0
+            time.sleep(15e-3)
+            with open(p, 'w') as f:
+                f.write('1')
+            mtime = os.lstat(p).st_mtime_ns
+            if mtime != mtime0:
+                break
+
+
+class PropagateMtimeTest(testenv.TemporaryDirectoryTestCase):
+
+    def test_scenario1(self):
+        os.mkdir('d')
+        os.mkdir(os.path.join('d', 'a'))
+        os.mkdir(os.path.join('d', 'b'))
+        open(os.path.join('d', 'b', 'c'), 'x').close()
+        open(os.path.join('d', 'b', 'd'), 'x').close()
+        dlb.fs.Path('d/').propagate_mtime()  # may or may not update mtime
+
+        self.assertIsNone(dlb.fs.Path('d/').propagate_mtime())
+
+        sleep_until_mtime_change()
+        with open(os.path.join('d', 'b', 'd'), 'w') as f:
+            f.write('1')
+        sleep_until_mtime_change()
+        with open(os.path.join('d', 'b', 'c'), 'w') as f:
+            f.write('2')
+        mtime_ns = os.lstat(os.path.join('d', 'b', 'c')).st_mtime_ns
+
+        self.assertEqual(mtime_ns, dlb.fs.Path('d/').propagate_mtime())
+        self.assertEqual(mtime_ns, os.lstat('d').st_mtime_ns)
+        self.assertEqual(mtime_ns, os.lstat(os.path.join('d', 'b')).st_mtime_ns)
+
+        self.assertIsNone(dlb.fs.Path('d/').propagate_mtime())
+
+    def test_none_for_empty(self):
+        os.mkdir('d')
+        self.assertIsNone(dlb.fs.Path('d/').propagate_mtime())
+
+    def test_ignores_filtered(self):
+        os.mkdir('d')
+        os.mkdir(os.path.join('d', 'a'))
+        open(os.path.join('d', 'a', 'c'), 'x').close()
+        os.mkdir(os.path.join('d', 'b'))
+        open(os.path.join('d', 'b', 'd'), 'x').close()
+        dlb.fs.Path('d/').propagate_mtime()  # may or may not update mtime
+
+        sleep_until_mtime_change()
+        with open(os.path.join('d', 'a', 'c'), 'w') as f:
+            f.write('1')
+        self.assertIsNone(dlb.fs.Path('d/').propagate_mtime(recurse_name_filter='b.*'))
+
+        os.mkdir(os.path.join('d', 'a', 'e'))  # updates directory itself
+        self.assertIsNotNone(dlb.fs.Path('d/').propagate_mtime(recurse_name_filter='b.*'))
+
+        sleep_until_mtime_change()
+        with open(os.path.join('d', 'a', 'c'), 'w') as f:
+            f.write('2')
+        self.assertIsNone(dlb.fs.Path('d/').propagate_mtime(name_filter='[^c].*'))
+        self.assertIsNotNone(dlb.fs.Path('d/').propagate_mtime())
+
+    def test_ignores_subdirectory_without_match(self):
+        os.mkdir('d')
+        sleep_until_mtime_change()
+        os.mkdir(os.path.join('d', 'b'))
+        open(os.path.join('d', 'b', 'c'), 'x').close()
+        sleep_until_mtime_change()
+        with open(os.path.join('d', 'b', 'c'), 'w') as f:
+            f.write('1')
+
+        self.assertIsNone(dlb.fs.Path('d/').propagate_mtime(name_filter='x', recurse_name_filter=''))
+        self.assertIsNotNone(dlb.fs.Path('d/').propagate_mtime(name_filter='c', recurse_name_filter=''))
+
+        sleep_until_mtime_change()
+        open(os.path.join('d', 'b', 'd'), 'x').close()
+
+        self.assertIsNone(dlb.fs.Path('d/').propagate_mtime(name_filter='x', recurse_name_filter=''))
+        self.assertIsNotNone(dlb.fs.Path('d/').propagate_mtime(name_filter='b', recurse_name_filter=''))
+
+    def test_fails_for_nondirectory(self):
+        open('f', 'xb').close()
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('f').propagate_mtime()
+        self.assertEqual("cannot list non-directory path: 'f'", str(cm.exception))
+
+    def test_fails_for_nonexistent(self):
+        with self.assertRaises(FileNotFoundError) as cm:
+            dlb.fs.Path('d/').propagate_mtime()
+
+    def test_does_not_change_atime(self):
+        os.mkdir('d')
+        open(os.path.join('d', 'a'), 'x').close()
+        sr0 = os.lstat('d')
+
+        sleep_until_mtime_change()
+        with open(os.path.join('d', 'a'), 'w') as f:
+            f.write('1')
+
+        mtime_ns = dlb.fs.Path('d/').propagate_mtime()
+        self.assertGreater(mtime_ns, sr0.st_mtime_ns)
+        sr = os.lstat('d')
+        self.assertEqual(sr.st_mtime_ns, mtime_ns)
+        self.assertEqual(sr.st_atime_ns, sr0.st_atime_ns)
+
+
+class FindLatestMtimeTest(testenv.TemporaryDirectoryTestCase):
+
+    def test_scenario1(self):
+        os.mkdir('d')
+        sleep_until_mtime_change()
+        open(os.path.join('d', 'x'), 'x').close()
+        sleep_until_mtime_change()
+        os.mkdir(os.path.join('d', 'a'))
+        sleep_until_mtime_change()
+        open(os.path.join('d', 'a', 'y'), 'x').close()
+        sleep_until_mtime_change()
+        os.mkdir(os.path.join('d', 'a', 'b'))
+        sleep_until_mtime_change()
+        open(os.path.join('d', 'a', 'b', 'z'), 'x').close()
+        sleep_until_mtime_change()
+        with open(os.path.join('d', 'a', 'b', 'z'), 'w') as f:
+            f.write('1')
+
+        self.assertEqual(dlb.fs.Path('d/a/'), dlb.fs.Path('d/').find_latest_mtime())
+        self.assertEqual(dlb.fs.Path('d/a/'), dlb.fs.Path('d/').find_latest_mtime(is_dir=True))
+        self.assertEqual(dlb.fs.Path('d/x'), dlb.fs.Path('d/').find_latest_mtime(is_dir=False))
+
+        self.assertEqual(dlb.fs.Path('d/a/b/z'), dlb.fs.Path('d/').find_latest_mtime(recurse_name_filter=''))
+        self.assertEqual(dlb.fs.Path('d/a/b/'),
+                         dlb.fs.Path('d/').find_latest_mtime(is_dir=True, recurse_name_filter=''))
+        self.assertEqual(dlb.fs.Path('d/a/b/z'),
+                         dlb.fs.Path('d/').find_latest_mtime(is_dir=False, recurse_name_filter=''))
+
+    def test_empty_returns_none_if_empty(self):
+        os.mkdir('d')
+        self.assertIsNone(dlb.fs.Path('d/').find_latest_mtime())
+        self.assertIsNone(dlb.fs.Path('d/').find_latest_mtime(is_dir=False))
+        self.assertIsNone(dlb.fs.Path('d/').find_latest_mtime(is_dir=True))
+
+    def test_returns_smaller_for_same_mtime(self):
+        open('a', 'x').close()
+        open('b', 'x').close()
+        os.utime('a', ns=(123, 456))
+        os.utime('b', ns=(123, 456))
+        self.assertEqual(dlb.fs.Path('a'), dlb.fs.Path('.').find_latest_mtime())
+
+    def test_fails_for_nondirectory(self):
+        open('f', 'xb').close()
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('f').find_latest_mtime()
+        self.assertEqual("cannot list non-directory path: 'f'", str(cm.exception))
+
+    def test_fails_for_nonexistent(self):
+        with self.assertRaises(FileNotFoundError) as cm:
+            dlb.fs.Path('d/').find_latest_mtime()

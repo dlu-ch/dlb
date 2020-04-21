@@ -14,6 +14,7 @@ __all__ = [
 
 import re
 import os
+import stat
 import collections.abc
 import functools
 import pathlib  # since Python 3.4
@@ -123,6 +124,35 @@ def _make_name_filter(f):
         else:
             return lambda s: True
     raise TypeError(f'invalid name filter: {f!r}')
+
+
+def _propagate_mtime_native(path: str, name_filter, is_dir, recurse_name_filter) -> Tuple[int, bool]:
+    sr_dir = os.lstat(path)
+
+    did_update = False
+
+    latest_content_mtime = sr_dir.st_mtime_ns
+    with os.scandir(path) as it:  # since Python 3.6
+        for de in it:
+            mt = latest_content_mtime
+
+            sr = de.stat(follow_symlinks=False)
+            does_match = name_filter(de.name) and (is_dir is None or stat.S_ISDIR(sr.st_mode) == is_dir)
+
+            if stat.S_ISDIR(sr.st_mode) and not stat.S_ISLNK(sr.st_mode) and recurse_name_filter(de.name):
+                mts, u = _propagate_mtime_native(de.path, name_filter, is_dir, recurse_name_filter)
+                did_update = did_update or u
+                if u or does_match:
+                    mt = mts
+            elif name_filter(de.name):
+                mt = sr.st_mtime_ns
+            latest_content_mtime = max(latest_content_mtime, mt)
+
+    if latest_content_mtime > sr_dir.st_mtime_ns:
+        os.utime(path, ns=(sr_dir.st_atime_ns, latest_content_mtime))
+        did_update = True
+
+    return latest_content_mtime, did_update
 
 
 # cannot derive easily from pathlib.Path without defining non-API members
@@ -442,6 +472,59 @@ class Path(metaclass=_PathMeta):
                follow_symlinks: bool = True, cls=None) -> List['Path']:
         return sorted(self.iterdir_r(name_filter=name_filter, is_dir=is_dir, recurse_name_filter=recurse_name_filter,
                                      follow_symlinks=follow_symlinks, cls=cls))
+
+    def find_latest_mtime(self, *, name_filter='', recurse_name_filter=None,
+                          is_dir: Optional[bool] = None, follow_symlinks: bool = True, cls=None) -> Optional['Path']:
+        # must be fast for large number of objects per directory
+
+        name_filter, is_dir, recurse_name_filter, cls = \
+            self._check_dir_list_args(name_filter, is_dir, recurse_name_filter, cls)
+        follow_symlinks = bool(follow_symlinks)
+
+        latest_mtime = None
+        path_with_latest_mtime = None
+        path_with_latest_mtime_is_dir = False
+
+        dir_paths_to_recurse = [str(self.native)]
+        while dir_paths_to_recurse:
+            dir_path = dir_paths_to_recurse.pop(0)
+            with os.scandir(dir_path) as it:  # since Python 3.6
+                for de in it:
+                    n = de.name
+                    sr = de.stat(follow_symlinks=follow_symlinks)
+                    d = stat.S_ISDIR(sr.st_mode)
+
+                    if name_filter(n) and (is_dir is None or d == is_dir):
+                        mt = sr.st_mtime_ns
+                        if latest_mtime is None or mt > latest_mtime:
+                            latest_mtime = mt
+                            path_with_latest_mtime = de.path
+                            path_with_latest_mtime_is_dir = d
+                        elif mt == latest_mtime and de.path < path_with_latest_mtime:
+                            path_with_latest_mtime = de.path
+                            path_with_latest_mtime_is_dir = d
+
+                    if d and not (stat.S_ISLNK(sr.st_mode) and not follow_symlinks) and recurse_name_filter(n):
+                        dir_paths_to_recurse.append(de.path)
+
+        if not path_with_latest_mtime:
+            return
+
+        return cls(_Native(path_with_latest_mtime), is_dir=path_with_latest_mtime_is_dir)
+
+    def propagate_mtime(self, *, name_filter='', is_dir: Optional[bool] = None,
+                        recurse_name_filter='') -> Optional[int]:
+        # must be fast
+
+        name_filter, is_dir, recurse_name_filter, cls = \
+            self._check_dir_list_args(name_filter, is_dir, recurse_name_filter, None)
+
+        abs_path = str(self.native)
+        if not self.is_absolute():
+            abs_path = os.path.join(os.getcwd(), abs_path)
+
+        mtime_ns, did_update = _propagate_mtime_native(abs_path, name_filter, is_dir, recurse_name_filter)
+        return mtime_ns if did_update else None
 
     @property
     def components(self) -> Tuple[str, ...]:
