@@ -93,7 +93,6 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 
 .. _Make: https://en.wikipedia.org/wiki/Make_%28software%29
