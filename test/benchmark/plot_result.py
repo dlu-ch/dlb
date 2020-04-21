@@ -51,22 +51,24 @@ with open(result_file_path, 'r') as result_file:
         tool_name, number_of_libraries, number_of_classes_per_library = fields[:3]
         configuration = tool_name, int(number_of_libraries), int(number_of_classes_per_library)
         if len(fields) > 3:
-            t0, t1, t2, tpartial = [float(f) for f in fields[3:]]
-            durations_by_configuration[configuration] = t0, t1, t2, tpartial
+            t0, t1, t2, tpartial0, tpartial1 = [float(f) for f in fields[3:]]
+            durations_by_configuration[configuration] = t0, t1, t2, tpartial0, tpartial1
         else:
             durations_by_configuration[configuration] = None  # failed
 
 description_by_tool['make2'] = '{}\n(complete)'.format(description_by_tool['make'])
 description_by_tool['make'] = '{}\n+ makedepend (simplistic)'.format(description_by_tool['make'])
-description_by_tool['dlb2'] = '{}\n(5 source files\nper tool instance)'.format(description_by_tool['dlb'])
+description_by_tool['dlb2'] = '{}\n(grouped)'.format(description_by_tool['dlb'])
+description_by_tool['dlb3'] = '{}\n(hierarchical)'.format(description_by_tool['dlb'])
 
-tools = ['make', 'make2', 'dlb2', 'dlb', 'scons']  # as used in file *result_file_path*
+tools = ['make', 'make2', 'dlb', 'dlb2', 'dlb3', 'scons']  # as used in file *result_file_path*
 colormap = plt.get_cmap("tab10")
 style_by_tool = {
     'make': (colormap(2), '-', 'x', 'none'),
     'make2': (colormap(2), '-', 'v', 'full'),
     'dlb': (colormap(0), '-', 'o', 'full'),
     'dlb2': (colormap(0), '-', 'o', 'none'),
+    'dlb3': (colormap(0), '-', 'o', 'left'),
     'scons': (colormap(1), '-', 's', 'full')
 }
 
@@ -100,7 +102,7 @@ for tool in tools:
 
     # partial build, vary number_of_classes_per_library
     x, y = zip(*[
-        (ncls, v[3])
+        (ncls, v[4])
         for (t, nlib, ncls), v in durations_by_configuration.items()
         if v and nlib == 3 and t == tool
     ])
@@ -152,7 +154,7 @@ for tool in style_by_tool:
 
     # partial build, vary number_of_classes_per_library
     x, y = zip(*[
-        (nlib, v[3])
+        (nlib, v[4])
         for (t, nlib, ncls), v in durations_by_configuration.items()
         if v and ncls == number_of_classes_per_library and t == tool
     ])

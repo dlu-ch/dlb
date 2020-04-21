@@ -49,13 +49,16 @@ fi
 # prepare project for Make, SCons and dlb in $build_generated_dir
 function prepare_testdata() {
     "${RM:?}" -rf -- "${build_generated_dir:?}"
-    "${PYTHON2:?}" "${build_dir:?}generate_libs.py" "${build_generated_dir:?}" "$@"
-
     "${MKDIR:?}" -p -- "${build_generated_dir:?}.dlbroot"
+
+    "${PYTHON2:?}" "${build_dir:?}generate_libs.py" "${build_generated_dir:?}" "$@"
 
     for q in "${setup_dir:?}"top/* ; do "${CP:?}" -- "${q}" "${build_generated_dir:?}";  done
     for p in "${build_generated_dir:?}"lib_* ; do
-        for q in "${setup_dir:?}"eachlib/* ; do "${CP:?}" -- "${q}" "${p}";  done
+        for q in "${setup_dir:?}"eachlib/* ; do
+            "${CP:?}" -- "${q}" "${p}"
+            "${CP:?}" --attributes-only --preserve=timestamps -- "${build_generated_dir:?}Makefile" "${p}"
+        done
     done
 }
 
@@ -87,26 +90,30 @@ function run_and_return_avg_duration() {
 
 
 function run_builds_return_avg_durations() {
-    local n="$1"
+    local number_of_runs="$1"
     local file_to_touch="$2"
     shift 2
     local duration
 
     durations=()
 
-    # first (full)
+    echo "-- first (full)" >&2
     run_and_return_avg_duration 1 "$@" || return $?
     durations+=("$duration")
 
-    # second (full or partial, depending on build tool)
+    echo "-- second (full or partial, depending on build tool)" >&2
     run_and_return_avg_duration 1 "$@" || return $?
     durations+=("$duration")
 
-    # empty
+    echo "-- empty" >&2
     run_and_return_avg_duration "${number_of_runs}" "$@" || return $?
     durations+=("$duration")
 
-    # partial
+    echo "-- first partial" >&2
+    run_and_return_avg_duration "${number_of_runs}" run_after_touch "${file_to_touch}" "$@" || return $?
+    durations+=("$duration")
+
+    echo "-- seconds partial" >&2
     run_and_return_avg_duration "${number_of_runs}" run_after_touch "${file_to_touch}" "$@" || return $?
     durations+=("$duration")
 }
@@ -153,6 +160,8 @@ function run_builds_and_append_results_to_result_file() {
 
     # based on example/c-huge:
     run_build_and_append_results_to_result_file "$1" "$2" "$3" "dlb2" "dlb" "build-all2"
+
+    run_build_and_append_results_to_result_file "$1" "$2" "$3" "dlb3" "dlb" "build-all3"
 
     run_build_and_append_results_to_result_file "$1" "$2" "$3" "scons" "scons"
 }
