@@ -12,7 +12,6 @@ __all__ = [
     'PortablePath'
 ]
 
-import sys
 import re
 import os
 import collections.abc

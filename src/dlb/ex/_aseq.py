@@ -7,7 +7,6 @@ This is an implementation detail - do not import it unless you know what you are
 
 __all__ = []
 
-import sys
 import time
 import asyncio
 from typing import Any, Callable, Coroutine, Dict, Hashable, Optional, Set

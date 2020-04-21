@@ -7,7 +7,6 @@ This is an implementation detail - do not import it unless you know what you are
 
 __all__ = ['Tool', 'is_complete']
 
-import sys
 import re
 import os
 import collections
