@@ -7,55 +7,55 @@ Why another build tool?
 A common answer to a common question: Because none of the available tools met the requirements of the author,
 especially for the development of embedded software with cross-compiler toolchains and generated source code.
 
-   +----------------------------------------+---------------+---------------+---------------+
-   | (Desirable) property                   | dlb           | Make          | SCons         |
-   +========================================+===============+===============+===============+
-   | Speed of full build (huge project)     | |avg|         | |plusplus|    | |avg|         |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Speed of partial or "empty" build      | |plus|        | |plusplus|    | |minus|       |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Avoidance of unnecessary execution     | |plusplus|    | |minusminus|  | |plus|        |
-   | of tools                               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Accuracy of automatically detected     | |plusplus|    | |minusminus|  | |plus|        |
-   | input dependencies                     |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Expressiveness of build description    | |plusplus|    | |minusminus|  | |avg|         |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Portability of build description       | |plusplus|    | |minusminus|  | |avg|         |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Modularity                             | |plusplus|    | |minusminus|  | |minus|       |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Robustness to system time jumps        | |plus|        | |minusminus|  | |plusplus|    |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Robustness to changes during build     | |plusplus|    | |minusminus|  | |plusplus|    |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Simplicity of separation between input | |plusplus|    | |minusminus|  | |plus|        |
-   | and output directories                 |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Reproducibility of builds              | |plusplus|    | |minusminus|  | |minusminus|  |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Fine-grained control                   | |plusplus|    | |minusminus|  | |minusminus|  |
-   | of parallel execution                  |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Abstraction of tools                   | |plusplus|    | |minusminus|  | |minus|       |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Self-containedness                     | |plusplus|    | |minusminus|  | |plusplus|    |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Possibility to step through build      | |plus|        | |minusminus|  | |minus|       |
-   | with debugger                          |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Safe use of paths containing "special" | |plusplus|    | |minusminus|  | |minus|       |
-   | characters (``' '``,  ``'$'``,         |               |               |               |
-   | ``'\\'``, ...)                         |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Ability to deal with circular          | |plusplus|    | |minusminus|  | |minusminus|  |
-   | dependencies                           |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+
-   | Fundamental objects                    | contexts,     | strings       | environments, |
-   |                                        | tools, paths  |               | strings,      |
-   |                                        |               |               | string lists  |
-   +----------------------------------------+---------------+---------------+---------------+
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | (Desirable) property                   | dlb           | Make          | SCons         | Ninja         |
+   +========================================+===============+===============+===============+===============+
+   | Speed of full build (huge project)     | |avg|         | |plusplus|    | |avg|         | |plusplus|    |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Speed of partial or "empty" build      | |plus|        | |plusplus|    | |minus|       | |plusplus|    |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Avoidance of unnecessary execution     | |plusplus|    | |minusminus|  | |plus|        | |plus|        |
+   | of tools                               |               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Accuracy of automatically detected     | |plusplus|    | |none|        | |plus|        | |none|        |
+   | input dependencies                     |               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Expressiveness of build description    | |plusplus|    | |minusminus|  | |avg|         | |avg|         |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Portability of build description       | |plusplus|    | |minusminus|  | |avg|         | |minus|       |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Modularity                             | |plusplus|    | |minusminus|  | |minus|       | |avg|         |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Robustness to system time jumps        | |plus|        | |minusminus|  | |plusplus|    | |minusminus|  |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Robustness to changes during build     | |plusplus|    | |minusminus|  | |plusplus|    | |minusminus|  |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Simplicity of separation between input | |plusplus|    | |minusminus|  | |plus|        | |avg|         |
+   | and output directories                 |               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Reproducibility of builds              | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Fine-grained control                   | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
+   | of parallel execution                  |               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Abstraction of tools                   | |plusplus|    | |minusminus|  | |minus|       | |avg|         |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Self-containedness                     | |plusplus|    | |minusminus|  | |plusplus|    | |minusminus|  |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Possibility to step through build      | |plus|        | |minusminus|  | |minus|       | |minusminus|  |
+   | with debugger                          |               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Safe use of paths containing "special" | |plusplus|    | |minusminus|  | |minus|       | |minus|       |
+   | characters (``' '``,  ``'$'``,         |               |               |               |               |
+   | ``'\\'``, ...)                         |               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Ability to deal with circular          | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
+   | dependencies                           |               |               |               |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
+   | Fundamental objects                    | contexts,     | strings       | environments, | strings,      |
+   |                                        | tools, paths  |               | strings,      | string lists  |
+   |                                        |               |               | string lists  |               |
+   +----------------------------------------+---------------+---------------+---------------+---------------+
 
 .. |plus| replace:: ⊕
 
@@ -67,10 +67,16 @@ especially for the development of embedded software with cross-compiler toolchai
 
 .. |avg| replace:: ⊙
 
+.. |none| replace:: `-`
 
-See the following questions for a comparison to Make and SCons.
+dlb has the unique ability to *enforce* requirements instead of just *assuming* them.
+This makes dlb not only a build tool but also a tool for quality control.
+For example: You can check the design decision that library A in your project must not depend on library B
+every time library A is built and use this guarantee (not just assumption!) to reduce the build time.
 
-There is also plethora of other build tools besides Make and SCons:
+See the following questions for a comparison to Make, Ninja and SCons.
+
+There is plethora of other build tools:
 
 - https://en.wikipedia.org/wiki/List_of_build_automation_software
 - https://pypi.org/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Build+Tools
@@ -84,11 +90,12 @@ Tools based on declared dependency rules
 Most of them implement the functionality of Make in a more readable descriptive language
 and improve the modularity and the ability to split large projects into smaller ones.
 
-See :ref:`here <manual-explicit-is-better-than-implicit>` why a descriptive language is not the best approach to describe a
-build process.
+See :ref:`here <manual-explicit-is-better-than-implicit>` why a descriptive language is not the best approach to
+describe a build process.
 
 Examples are:
 
+- Rōnin_ (Python, Ninja file generator) + Ninja_ (clean and fast backend for a high-level build system)
 - `Apache Ant <https://ant.apache.org/>`_ (XML, Java-centric)
 - https://pypi.org/project/doit/ (Python)
 - https://mesonbuild.com/ (Python)
@@ -181,7 +188,8 @@ Having said that, here are the results of a simple benchmark used both
 Notes:
 
 - Each source file defines one C++ class and includes 15 files from its own library as well as 5 files from
-  other libraries.
+  other libraries. Each library depends on every other library (in other words: the benchmark scenario represents are
+  very poorly designed project).
 - The generated simplistic GNU Makefiles contain static lists of files while SCons and dlb find the files at run-time
   and miss a lot of dependencies (labeled ``simplistic`` in the plots).
 - A build with GNU Makefiles based on `example/c-minimal-gnumake/`_ that describes the dependencies completely was added
@@ -214,10 +222,18 @@ dlb does not guess or assume, but requires the explicit statement of information
 that concisely describe their requisites and assumptions.
 
 Make is significantly faster than dlb when only a small fraction of the output dependencies has to be generated
-(Make: only a few sourcea are newer than their targets).
+(Make: only a few sources are newer than their targets).
 The available Make implementations have been carefully optimized for speed over the years.
 dlb is executed by an instance of a Python interpreter; starting a Python interpreter and importing some modules
 typically takes approximately 70 ms.
+
+Make executes a rule's command if one of the rule's source has a later :term:`mtime` than any of the the rule's
+targets (or if one of the output dependencies does not exist).
+A Make build can therefore silently miss the update of a rule's target, if one of the following (implicit) requirements
+is violated:
+
+1. The :term:`mtime` of each involved filesystem object never decreases.
+2. The :term:`mtime` of each involved filesystem object is in the past when the build starts.
 
 Make *requires* that each output dependency (target) changes when one of its input dependencies (sources) has changed.
 Fixing a typo in a comment of a :file:`.c` file necessarily leads to compilation, linking and all dependent
@@ -227,6 +243,40 @@ you won't so easily find yourself in the position with dlb where you have to rem
 from scratch.
 
 Compare `example/c-minimal/`_ and `example/c-minimal-gnumake/`_.
+
+
+How does dlb compare to Ninja?
+------------------------------
+
+Ninja_'s mission statement reads:
+
+  Ninja is a small build system with a focus on speed.
+  It differs from other build systems in two major respects: it is designed to have its input files generated by
+  a higher-level build system, and it is designed to run builds as fast as possible.
+
+This is a clever choice. Ninja files have a elegant and well-defined syntax.
+This means: Wherever Make is suitable Ninja is better.
+
+Despite its claim, Ninja has hardcoded support for compiler interfaces specific to GCC, Clang and MSVC as well as
+a file-based mechanism for dependency detection at build time.
+
+Like Make, Ninja executes a rule's command if one of the input dependencies have a later :term:`mtime` `than any of the
+output dependencies <https://github.com/ninja-build/ninja/blob/v1.10.0/src/build.cc#L507>`_ (or if one of the output
+dependencies does not exist). It therefore shares the risks of Make related to system time changes and file changes
+during a build.
+
+Ninja (similar to dlb) detects outputs `unchanged by a rule's command
+<https://github.com/ninja-build/ninja/blob/v1.10.0/src/build.cc#L979>`_.
+
+As stated above, Ninja is meant to work as part of a higher-level build system that automatically generates Ninja files.
+[#ninjafilegenerators1]_
+Rōnin_ is such a higher-level build system. It has a structure similar to dlb and can therefore be part of a
+:term:`dlb script <script>`.
+However, Rōnin shares the typical :ref:`limitations <manual-explicit-is-better-than-implicit>` of declarative build
+descriptions; it performs a lot of "magic" (with undocumented assumptions) and cannot be extended beyond the hardcoded
+(and limited) extension interfaces.
+
+You can use dlb to generate Ninja files.
 
 
 How does dlb compare to SCons?
@@ -327,6 +377,8 @@ Feel free to contribute.
 
 
 .. _Click: https://click.palletsprojects.com/
+.. _Rōnin: https://github.com/tliron/ronin/
+.. _Ninja: https://ninja-build.org/
 .. _LGPLv3: https://www.gnu.org/licenses/lgpl-3.0.en.html
 .. _GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html
 .. _`example/c-minimal/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal
@@ -346,6 +398,9 @@ Feel free to contribute.
 
    Make implementations like GNU Make allow additional characters and limited quoting, but treat paths
    differently on different platforms.
+
+.. [#ninjafilegenerators1]
+   https://github.com/ninja-build/ninja/wiki/List-of-generators-producing-ninja-build-files
 
 .. [#distributeinorganization1]
    Propagating dlb to several developers in the same organization by the means of a source code repository
