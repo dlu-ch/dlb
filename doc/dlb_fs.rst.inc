@@ -148,7 +148,7 @@ Path objects
       :raises ValueError: if this is a non-directory path
       :raises ValueError: if *other* is not a prefix of this
 
-   .. method:: iterdir(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: iterdir(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Yields all path objects of the directory contents denoted by this path and matched by the
       name filters.
@@ -190,11 +190,11 @@ Path objects
       :raises TypeError: if *name_filter* or *recurse_name_filter* are not both name filters
       :raises ValueError: if this is a non-directory path
 
-   .. method:: iterdir_r(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: iterdir_r(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Like :meth:`iterdir`, but all returns paths are relative to this path.
 
-   .. method:: list(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: list(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Returns all paths yielded by :meth:`iterdir` as a sorted list.
 
@@ -203,7 +203,7 @@ Path objects
           >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
           [NoSpacePath('src/Clock.cpp'), NoSpacePath('src/main.cpp')]
 
-   .. method:: list_r(name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: list_r(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Returns all paths yielded by :meth:`iterdir_r` as a sorted list.
 
