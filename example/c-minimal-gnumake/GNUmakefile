@@ -13,6 +13,7 @@ SHELL=/bin/sh
 GCC=gcc
 FIND=find
 MKDIR=mkdir
+CP=cp
 MV=mv
 RM=rm
 
@@ -38,7 +39,9 @@ build/out/application: $(object_files) $(MAKEFILE_LIST) build/out/source_files.m
 	unset -v DEPENDENCIES_OUTPUT SUNPRO_DEPENDENCIES SOURCE_DATE_EPOCH
 	$(MKDIR) -p -- $(@D)
 	$(RM) -f -- $@
+	echo > $@.ts
 	$(GCC) -o $@.t $(object_files)
+	$(CP) --attributes-only --preserve=timestamps -- $@.ts $@.t
 	$(MV) -- $@.t $@
 
 # static pattern rules are GNU Make specific
@@ -49,7 +52,10 @@ $(object_files): build/out/src/%.c.o: src/%.c $(MAKEFILE_LIST)
 	unset -v DEPENDENCIES_OUTPUT SUNPRO_DEPENDENCIES SOURCE_DATE_EPOCH
 	$(MKDIR) -p -- $(@D)
 	$(RM) -f -- $@
-	$(GCC) -x c -std=c99 -MMD -MT $@ -MF $@.d.t -o $@.t -c $<	
+	echo > $@.ts
+	$(GCC) -x c -std=c99 -MMD -MT $@ -MF $@.d.t -o $@.t -c $<
+	$(CP) --attributes-only --preserve=timestamps -- $@.ts $@.d.t
+	$(CP) --attributes-only --preserve=timestamps -- $@.ts $@.t
 	$(MV) -- $@.d.t $@.d
 	$(MV) -- $@.t $@
 
