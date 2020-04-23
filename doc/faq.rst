@@ -57,18 +57,6 @@ especially for the development of embedded software with cross-compiler toolchai
    |                                        |               |               | string lists  |               |
    +----------------------------------------+---------------+---------------+---------------+---------------+
 
-.. |plus| replace:: ⊕
-
-.. |plusplus| replace:: ⊕⊕
-
-.. |minus| replace:: ⊖
-
-.. |minusminus| replace:: ⊖⊖
-
-.. |avg| replace:: ⊙
-
-.. |none| replace:: `-`
-
 dlb has the unique ability to *enforce* requirements instead of just *assuming* them.
 This makes dlb not only a build tool but also a tool for quality control.
 For example: You can check the design decision that library A in your project must not depend on library B
@@ -185,19 +173,42 @@ Having said that, here are the results of a simple benchmark used both
 
 .. image:: grph/benchmark-1.svg
 
-Notes:
+Remarks:
 
 - Each source file defines one C++ class and includes 15 files from its own library as well as 5 files from
-  other libraries. Each library depends on every other library (in other words: the benchmark scenario represents are
+  other libraries. Each library depends on every other library (in other words: the benchmark scenario represents a
   very poorly designed project).
 - The generated simplistic GNU Makefiles contain static lists of files while SCons and dlb find the files at run-time
-  and miss a lot of dependencies (labeled ``simplistic`` in the plots).
-- A build with GNU Makefiles based on `example/c-minimal-gnumake/`_ that describes the dependencies completely was added
-  for comparison (labeled ``complete`` in the plots).
+  and miss a lot of dependencies (labeled ``simplistic``).
 - :command:`makedepend` (used in a rule of the simplistic GNU Makefiles) crashes for very large numbers of classes.
-- One of builds with dlb is based on `example/c-minimal/`_  while one is based on `example/c-huge/`_
-  (labeled ``5 source files per tool instance`` in the plots). Both describe the dependencies completely.
-- The code of the benchmark is here: `test/benchmark/`_.
+- A build with GNU Makefiles that describes the dependencies completely was added for comparison.
+- The dlb performance is given for three styles of the dlb script (all describe the dependencies completely):
+
+  - ``dlb``: straight-forward
+  - ``dlb (grouped)``: 5 source files per tool instance
+  - ``dlb (hierarchical)``: assume a monotonic system time as Make does
+
+- The complete code of the benchmark is here: `test/benchmark/`_.
+
+Properties of tested builds (*n*: number of libraries, *m*: number of source files per library):
+
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
+   |                                   | GNU Make +              | GNU Make                      | dlb                   | dlb                | dlb            | SCons             |
+   |                                   | makedepend (simplistic) |                               |                       | (grouped)          | (hierarchical) |                   |
+   +===================================+=========================+===============================+=======================+====================+================+===================+
+   | Describes dependencies completely | |none|                  | |check|                       | |check|               | |check|            | |check|        | |check|           |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
+   | Can be aborted without corruption | |none|                  | |check|                       | |check|               | |check|            | |check|        | |none|            |
+   | of output                         |                         |                               |                       |                    |                |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
+   | Does not depend on monotonic      | |none|                  | |none|                        | |check|               | |check|            | |none|         | |check|           |
+   | system time                       |                         |                               |                       |                    |                |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
+   | Size of build description         | 7 + *n* (*m* + 20)      | 188 + *n*                     | 25                    | 37                 | 51             | 1 + *n* (*m* + 4) |
+   | (number of non-trivial lines)     |                         |                               |                       |                    |                |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
+   | Based on                          |                         | `example/c-minimal-gnumake/`_ | `example/c-minimal/`_ | `example/c-huge/`_ |                |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
 
 
 .. _manual-make-comparison:
@@ -422,3 +433,18 @@ Feel free to contribute.
    - "If your new kernel does really weird things after a routine kernel upgrade, chances are you forgot to make clean
      before compiling the new kernel. Symptoms can be anything from your system outright crashing, strange I/O problems,
      to crummy performance. Make sure you do a make dep, too."
+
+
+.. |plus| replace:: ⊕
+
+.. |plusplus| replace:: ⊕⊕
+
+.. |minus| replace:: ⊖
+
+.. |minusminus| replace:: ⊖⊖
+
+.. |avg| replace:: ⊙
+
+.. |none| replace:: `-`
+
+.. |check| replace:: ☒
