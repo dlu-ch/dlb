@@ -26,7 +26,7 @@ linker from the GNU Binutils)."""
 #                 object_files=[output_path / p.with_appended_suffix('.o')],
 #                 include_search_directories=[source_path]
 #             ).run()
-#             for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
+#             for p in source_path.iterdir(name_filter=r'.+\.c', is_dir=False)
 #         ]
 #
 #         dlb_contrib.gcc.CLinkerGcc(

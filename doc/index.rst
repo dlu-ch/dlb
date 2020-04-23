@@ -46,7 +46,7 @@ Example::
               source_files=[p],
               object_files=[output_path / p.with_appended_suffix('.o')]
           ).run().object_files[0]
-          for p in Path('src/X/').list(name_filter=r'.+\.cpp') if not p.is_dir()
+          for p in Path('src/X/').iterdir(name_filter=r'.+\.cpp', is_dir=False)
        ]
 
        application_file = Linker(

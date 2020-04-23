@@ -492,6 +492,43 @@ class DirectoryListingTest(unittest.TestCase):
         self.assertEqual(rel_paths, expected_rel_paths)
         self.assertEqual([p.relative_to(self.tmp_dir) for p in paths], expected_rel_paths)
 
+    def test_listed_nondirectory_paths_are_complete_and_ordered(self):
+
+        expected_rel_paths = [dlb.fs.Path(s) for s in [
+            'a1',
+            'b1',
+            'b3',
+            'b4',
+            'b2/c3/d1',
+            'b2/c3/d2'
+        ]]
+        expected_rel_paths.sort()
+
+        paths = self.tmp_dir.list(recurse_name_filter='', is_dir=False)
+        rel_paths = self.tmp_dir.list_r(recurse_name_filter='', is_dir=False)
+        self.assertEqual(set(rel_paths), set(expected_rel_paths))
+        self.assertEqual({p.relative_to(self.tmp_dir) for p in paths}, set(expected_rel_paths))
+
+        self.assertEqual(rel_paths, expected_rel_paths)
+        self.assertEqual([p.relative_to(self.tmp_dir) for p in paths], expected_rel_paths)
+
+    def test_listed_directory_paths_are_complete_and_ordered(self):
+
+        expected_rel_paths = [dlb.fs.Path(s) for s in [
+            'a2/',
+            'b2/',
+            'b2/c3/'
+        ]]
+        expected_rel_paths.sort()
+
+        paths = self.tmp_dir.list(recurse_name_filter='', is_dir=True)
+        rel_paths = self.tmp_dir.list_r(recurse_name_filter='', is_dir=True)
+        self.assertEqual(set(rel_paths), set(expected_rel_paths))
+        self.assertEqual({p.relative_to(self.tmp_dir) for p in paths}, set(expected_rel_paths))
+
+        self.assertEqual(rel_paths, expected_rel_paths)
+        self.assertEqual([p.relative_to(self.tmp_dir) for p in paths], expected_rel_paths)
+
     def test_namefilter_can_be_none(self):
         rel_paths = self.tmp_dir.list_r(name_filter=None)
         self.assertEqual(rel_paths, [])

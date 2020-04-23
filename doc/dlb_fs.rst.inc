@@ -148,16 +148,18 @@ Path objects
       :raises ValueError: if this is a non-directory path
       :raises ValueError: if *other* is not a prefix of this
 
-   .. method:: iterdir(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: iterdir(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Yields all path objects of the directory contents denoted by this path and matched by the
       name filters.
       The paths are duplicate-free and in a defined and repeatable order, but not necessarily sorted.
       Their class is the class of this object if *cls* is ``None`` and *cls* otherwise.
 
-      The path of an existing filesystem object is eventually yielded if and only if
+      The path *p* of an existing filesystem object is eventually yielded if and only if
 
       - its name matches the name filter *name_filter* and
+      - *is_dir* is None or *is_dir* is ``False`` and *p* is a non-directory
+        or *is_dir* is ``True`` and *p* is a directory
       - it is contained in a matched directory.
 
       A directory is a matched directory if and only if it is the directory *d* denoted by this path or a direct
@@ -190,11 +192,11 @@ Path objects
       :raises TypeError: if *name_filter* or *recurse_name_filter* are not both name filters
       :raises ValueError: if this is a non-directory path
 
-   .. method:: iterdir_r(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: iterdir_r(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Like :meth:`iterdir`, but all returns paths are relative to this path.
 
-   .. method:: list(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: list(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Returns all paths yielded by :meth:`iterdir` as a sorted list.
 
@@ -203,7 +205,7 @@ Path objects
           >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
           [NoSpacePath('src/Clock.cpp'), NoSpacePath('src/main.cpp')]
 
-   .. method:: list_r(*, name_filter='', recurse_name_filter=None, follow_symlinks=True, cls=None)
+   .. method:: list_r(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
       Returns all paths yielded by :meth:`iterdir_r` as a sorted list.
 

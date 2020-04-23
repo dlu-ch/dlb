@@ -109,6 +109,22 @@ def _parts_from_components(components: Tuple[str, ...]) -> Tuple[str, ...]:
     return components  # absolute path
 
 
+def _make_name_filter(f):
+    if f is None:
+        return lambda s: False
+    if callable(f):
+        return f
+    if isinstance(f, Pattern):
+        return lambda s: f.fullmatch(s)  # since Python 3.4
+    if isinstance(f, str):
+        if f:
+            r = re.compile(f)
+            return lambda s: r.fullmatch(s)  # since Python 3.4
+        else:
+            return lambda s: True
+    raise TypeError(f'invalid name filter: {f!r}')
+
+
 # cannot derive easily from pathlib.Path without defining non-API members
 class _Native:
 
@@ -330,6 +346,22 @@ class Path(metaclass=_PathMeta):
         p._check_constrains(components_checked)
         return p
 
+    def _check_dir_list_args(self, name_filter, is_dir, recurse_name_filter, cls):
+        if not self._is_dir:
+            raise ValueError(f'cannot list non-directory path: {self.as_string()!r}')
+
+        is_dir = None if is_dir is None else bool(is_dir)
+
+        name_filter = _make_name_filter(name_filter)
+        recurse_name_filter = _make_name_filter(recurse_name_filter)
+
+        if cls is None:
+            cls = self.__class__
+        if not (isinstance(cls, type) and issubclass(cls, Path)):
+            raise TypeError("'cls' must be None or a subclass of 'dlb.fs.Path'")
+
+        return name_filter, is_dir, recurse_name_filter, cls
+
     def is_dir(self) -> bool:
         return self._is_dir
 
@@ -362,33 +394,11 @@ class Path(metaclass=_PathMeta):
         components = ('',) + ('..',) * (n - common_prefix_length) + self._components[common_prefix_length:]
         return self._with_components(components, components_checked=True)
 
-    def iterdir(self, *, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None)\
-            -> Iterator['Path']:
-        if not self._is_dir:
-            raise ValueError(f'cannot list non-directory path: {self.as_string()!r}')
+    def iterdir(self, *, name_filter='', is_dir: Optional[bool] = None, recurse_name_filter=None,
+                follow_symlinks: bool = True, cls=None) -> Iterator['Path']:
 
-        def make_name_filter(f):
-            if f is None:
-                return lambda s: False
-            if callable(f):
-                return f
-            if isinstance(f, Pattern):
-                return lambda s: f.fullmatch(s)  # since Python 3.4
-            if isinstance(f, str):
-                if f:
-                    r = re.compile(f)
-                    return lambda s: r.fullmatch(s)  # since Python 3.4
-                else:
-                    return lambda s: True
-            raise TypeError(f'invalid name filter: {f!r}')
-
-        name_filter = make_name_filter(name_filter)
-        recurse_name_filter = make_name_filter(recurse_name_filter)
-
-        if cls is None:
-            cls = self.__class__
-        if not (isinstance(cls, type) and issubclass(cls, Path)):
-            raise TypeError("'cls' must be None or a subclass of 'dlb.fs.Path'")
+        name_filter, is_dir, recurse_name_filter, cls = \
+            self._check_dir_list_args(name_filter, is_dir, recurse_name_filter, cls)
 
         dir_paths_to_recurse = [Path(self)]
         while dir_paths_to_recurse:
@@ -400,14 +410,12 @@ class Path(metaclass=_PathMeta):
                 for de in it:
                     n = de.name
                     d = de.is_dir(follow_symlinks=follow_symlinks)
-                    does_name_match = name_filter(n)
+                    does_match = name_filter(n) and (is_dir is None or d == is_dir)
                     do_recurse = d and recurse_name_filter(n)
 
-                    p = None
-                    if does_name_match or do_recurse:
-                        p = dir_path / Path(n, is_dir=d)
+                    p = dir_path / Path(n, is_dir=d) if does_match or do_recurse else None
 
-                    if does_name_match:
+                    if does_match:
                         paths.append(p)
                     if do_recurse:
                         dir_paths_to_recurse.append(p)
@@ -418,19 +426,21 @@ class Path(metaclass=_PathMeta):
 
             dir_paths_to_recurse.sort()
 
-    def iterdir_r(self, *, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None) \
+    def iterdir_r(self, *, name_filter='', is_dir: Optional[bool] = None, recurse_name_filter=None,
+                  follow_symlinks: bool = True, cls=None) \
             -> Iterator['Path']:
-        for p in self.iterdir(name_filter=name_filter, recurse_name_filter=recurse_name_filter,
+        for p in self.iterdir(name_filter=name_filter, is_dir=is_dir, recurse_name_filter=recurse_name_filter,
                               follow_symlinks=follow_symlinks, cls=cls):
             yield p.relative_to(self)
 
-    def list(self, *, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None) -> List['Path']:
-        return sorted(self.iterdir(name_filter=name_filter, recurse_name_filter=recurse_name_filter,
+    def list(self, *, name_filter='', is_dir: Optional[bool] = None, recurse_name_filter=None,
+             follow_symlinks: bool = True, cls=None) -> List['Path']:
+        return sorted(self.iterdir(name_filter=name_filter, is_dir=is_dir, recurse_name_filter=recurse_name_filter,
                                    follow_symlinks=follow_symlinks, cls=cls))
 
-    def list_r(self, *, name_filter='', recurse_name_filter=None, follow_symlinks: bool = True, cls=None) \
-            -> List['Path']:
-        return sorted(self.iterdir_r(name_filter=name_filter, recurse_name_filter=recurse_name_filter,
+    def list_r(self, *, name_filter='', is_dir: Optional[bool] = None, recurse_name_filter=None,
+               follow_symlinks: bool = True, cls=None) -> List['Path']:
+        return sorted(self.iterdir_r(name_filter=name_filter, is_dir=is_dir, recurse_name_filter=recurse_name_filter,
                                      follow_symlinks=follow_symlinks, cls=cls))
 
     @property

@@ -61,7 +61,7 @@ def build_application(*, version_result, source_path: Path, output_path: Path, a
                 include_search_directories=(source_path, generated_source_path) +
                                            pkgconfig_result.include_search_directories
             ).run()
-            for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()
+            for p in source_path.iterdir(name_filter=r'.+\.c', is_dir=False)
         ]
 
     object_files = [r.object_files[0] for r in compile_results]

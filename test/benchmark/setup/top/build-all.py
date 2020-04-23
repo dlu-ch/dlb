@@ -24,7 +24,7 @@ with dlb.ex.Context():
                     CplusplusCompiler(source_files=[source_file],
                                       object_files=[output_path / source_file[1:].with_appended_suffix('.o')],
                                       include_search_directories=[source_path]).run()
-                    for source_file in library_path.list(name_filter=r'.+\.cpp') if not source_file.is_dir()
+                    for source_file in library_path.iterdir(name_filter=r'.+\.cpp', is_dir=False)
                 ]
             with dlb.di.Cluster(f'link'):
                 archive_file = output_path / (library_path.components[-1] + '.a')

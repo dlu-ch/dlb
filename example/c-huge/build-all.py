@@ -21,7 +21,7 @@ with dlb.ex.Context():
     output_path = dlb.fs.Path('build/out/')
 
     # group multiple source files for the same compiler tool instance the reduce time and space for dependency checking
-    source_files = [p for p in source_path.list(name_filter=r'.+\.c') if not p.is_dir()]
+    source_files = [p for p in source_path.iterdir(name_filter=r'.+\.c', is_dir=False)]
     source_file_groups = dlb_contrib.partition.by_working_tree_path(source_files,
                                                                     number_of_groups=len(source_files) // 10)
     del source_files
