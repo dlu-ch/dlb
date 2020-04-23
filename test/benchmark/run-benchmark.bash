@@ -53,12 +53,10 @@ function prepare_testdata() {
 
     "${PYTHON2:?}" "${build_dir:?}generate_libs.py" "${build_generated_dir:?}" "$@"
 
-    for q in "${setup_dir:?}"top/* ; do "${CP:?}" -- "${q}" "${build_generated_dir:?}";  done
+    for q in "${setup_dir:?}"top/* ; do "${CP:?}" -- "${q}" "${build_generated_dir:?}"; done
     for p in "${build_generated_dir:?}"lib_* ; do
-        for q in "${setup_dir:?}"eachlib/* ; do
-            "${CP:?}" -- "${q}" "${p}"
-            "${CP:?}" --attributes-only --preserve=timestamps -- "${build_generated_dir:?}Makefile" "${p}"
-        done
+        for q in "${setup_dir:?}"eachlib/* ; do "${CP:?}" -- "${q}" "${p}"; done
+        "${TOUCH:?}" -- "${p}/api_version.h"
     done
 }
 
@@ -101,7 +99,7 @@ function run_builds_return_avg_durations() {
     run_and_return_avg_duration 1 "$@" || return $?
     durations+=("$duration")
 
-    echo "-- second (full or partial, depending on build tool)" >&2
+    echo "-- second (full or empty, depending on build tool)" >&2
     run_and_return_avg_duration 1 "$@" || return $?
     durations+=("$duration")
 

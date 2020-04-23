@@ -56,6 +56,7 @@ with open(result_file_path, 'r') as result_file:
         else:
             durations_by_configuration[configuration] = None  # failed
 
+description_by_tool['make2'] = description_by_tool['make']
 description_by_tool['make'] = '{}\n+ makedepend (simplistic)'.format(description_by_tool['make'])
 description_by_tool['dlb2'] = '{}\n(grouped)'.format(description_by_tool['dlb'])
 description_by_tool['dlb3'] = '{}\n(hierarchical)'.format(description_by_tool['dlb'])
