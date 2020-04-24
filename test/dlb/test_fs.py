@@ -4,6 +4,7 @@
 
 import testenv  # also sets up module search paths
 import dlb.fs
+import sys
 import os.path
 import pathlib
 import copy
@@ -1046,6 +1047,8 @@ class PropagateMtimeTest(testenv.TemporaryDirectoryTestCase):
         self.assertIsNone(dlb.fs.Path('d/').propagate_mtime(recurse_name_filter='b.*'))
 
         os.mkdir(os.path.join('d', 'a', 'e'))  # updates directory itself
+        os.lstat(os.path.join('d', 'a'))  # necessary on MS Windows, for whatever reason, to update mtime
+
         self.assertIsNotNone(dlb.fs.Path('d/').propagate_mtime(recurse_name_filter='b.*'))
 
         sleep_until_mtime_change()
@@ -1082,6 +1085,7 @@ class PropagateMtimeTest(testenv.TemporaryDirectoryTestCase):
         with self.assertRaises(FileNotFoundError) as cm:
             dlb.fs.Path('d/').propagate_mtime()
 
+    @unittest.skipIf(sys.platform == 'win32', 'POSIX filesystem only')
     def test_does_not_change_atime(self):
         os.mkdir('d')
         open(os.path.join('d', 'a'), 'x').close()
