@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Builds packages in dist/.
+#
+# Install the created Wheel archive with
+#
+#     pip3 install dist/dlb-*.whl
+
 set -e
 
 RM=rm

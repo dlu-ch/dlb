@@ -83,7 +83,6 @@ describe a build process.
 
 Examples are:
 
-- Rōnin_ (Python, Ninja file generator) + Ninja_ (clean and fast backend for a high-level build system)
 - `Apache Ant <https://ant.apache.org/>`_ (XML, Java-centric)
 - https://pypi.org/project/doit/ (Python)
 - https://mesonbuild.com/ (Python)
