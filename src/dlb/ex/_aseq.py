@@ -166,10 +166,10 @@ class _ResultProxy:
         raise AttributeError
 
     def __getattr__(self, item):
-        return getattr(self._get_or_wair_for_result(), item)
+        return getattr(self._get_or_wait_for_result(), item)
 
     def __enter__(self):
-        return self._get_or_wair_for_result()
+        return self._get_or_wait_for_result()
 
     def __exit__(self, exc_type, exc_value, traceback):
         pass
@@ -186,7 +186,7 @@ class _ResultProxy:
     def _is_complete(self):
         return self._result is not None or self._exception is not None
 
-    def _get_or_wair_for_result(self):
+    def _get_or_wait_for_result(self):
         if self._result is None:
             if self._exception is not None:
                 raise self._exception
