@@ -722,12 +722,20 @@ class CleanupTest(testenv.TemporaryDirectoryTestCase):
             self.assertEqual(3 - 1, rundb.get_tool_instance_dbid_count())
 
 
+def wait_for_time_change():
+    t0 = datetime.datetime.utcnow()
+    while datetime.datetime.utcnow() == t0:
+        time.sleep(15e-3)
+
+
 class ForgetRunsBeforeTest(testenv.TemporaryDirectoryTestCase):
 
     def test_forgets_run_and_dependencies(self):
-        t0 = datetime.datetime.utcnow()
-
+        t0a = datetime.datetime.utcnow()
         with contextlib.closing(dlb.ex._rundb.Database('runs.sqlite')) as rundb:
+            wait_for_time_change()
+            t0b = datetime.datetime.utcnow()
+
             rundb.get_and_register_tool_instance_dbid(b't', b'i0')
 
             tool_dbid1 = rundb.get_and_register_tool_instance_dbid(b't', b'i1')
@@ -742,14 +750,15 @@ class ForgetRunsBeforeTest(testenv.TemporaryDirectoryTestCase):
             self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
             self.assertEqual(1, len(rundb.get_redo_state(tool_dbid2)))
 
+        wait_for_time_change()
         t1 = datetime.datetime.utcnow()
 
-        max_age = t1 - t0 + datetime.timedelta(seconds=1)
+        max_age = t1 - t0a + datetime.timedelta(seconds=1)
         with contextlib.closing(dlb.ex._rundb.Database('runs.sqlite', max_dependency_age=max_age)) as rundb:
             self.assertEqual(1, len(rundb.get_fsobject_inputs(tool_dbid1)))
             self.assertEqual(1, len(rundb.get_redo_state(tool_dbid2)))
 
-        with contextlib.closing(dlb.ex._rundb.Database('runs.sqlite', max_dependency_age=t1 - t0)) as rundb:
+        with contextlib.closing(dlb.ex._rundb.Database('runs.sqlite', max_dependency_age=t1 - t0b)) as rundb:
             self.assertEqual(0, len(rundb.get_fsobject_inputs(tool_dbid1)))
             self.assertEqual(0, len(rundb.get_redo_state(tool_dbid2)))
 
