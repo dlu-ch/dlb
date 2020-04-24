@@ -144,7 +144,7 @@ def _propagate_mtime_native(path: str, name_filter, is_dir, recurse_name_filter)
                 did_update = did_update or u
                 if u or does_match:
                     mt = mts
-            elif name_filter(de.name):
+            elif does_match:
                 mt = sr.st_mtime_ns
             latest_content_mtime = max(latest_content_mtime, mt)
 
