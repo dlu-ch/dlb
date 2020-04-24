@@ -3,6 +3,11 @@
 set -e
 
 SPHINXBUILD=sphinx-build
+READLINK=readlink
+
+script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="${script_dir%/*}"
+cd -- "${script_dir}"
 
 doc_dir=doc
 doc_to_root=..

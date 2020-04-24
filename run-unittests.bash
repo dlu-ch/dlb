@@ -5,6 +5,11 @@ set -e
 PYTHON3=python3
 COVERAGE3=coverage3  # pip3
 PYTHON3COVERAGE=python3-coverage  # Debian
+READLINK=readlink
+
+script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="${script_dir%/*}"
+cd -- "${script_dir}"
 
 test_dir=test/
 packages_under_test=("$@")

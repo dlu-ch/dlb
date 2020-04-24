@@ -29,15 +29,16 @@ READLINK=readlink
 CURL=curl
 PYTHON2=python2
 PYTHON3=python3
+READLINK=readlink
+
+script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="${script_dir%/*}"
+cd -- "${script_dir}"
 
 build_dir="../../build/out/benchmark/"
 build_generated_dir="${build_dir:?}generated/"
 result_file="${build_dir:?}result.txt"
 setup_dir="setup/"
-
-script_dir="$("${READLINK:?}" -e -- "$0")"
-script_dir="${script_dir%/*}"
-cd -- "${script_dir}"
 
 "${MKDIR:?}" -p -- "${build_dir:?}"
 if ! [ -f  "${build_dir:?}/generate_libs.py" ]; then

@@ -4,6 +4,12 @@ set -e
 
 RM=rm
 PYTHON=python3
+READLINK=readlink
+
+script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="${script_dir%/*}"
+cd -- "${script_dir}"
+
 out_dir=build/out
 setup_build_dir="${out_dir}/setupbuild"
 
