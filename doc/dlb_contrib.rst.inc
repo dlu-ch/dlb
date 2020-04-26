@@ -38,6 +38,7 @@ Please see there for details.
 .. dlbcontrib:module:: exportenv
 .. dlbcontrib:module:: generic
 .. dlbcontrib:module:: zip
+.. dlbcontrib:module:: versioned_interface
 .. dlbcontrib:module:: git
 .. dlbcontrib:module:: gnumake
 .. dlbcontrib:module:: gnubinutils
