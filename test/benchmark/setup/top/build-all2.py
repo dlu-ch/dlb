@@ -24,7 +24,7 @@ with dlb.ex.Context():
             # group multiple source files for the same compiler tool instance the reduce time
             # and space for dependency checking
 
-            source_files = [p for p in library_path.iterdir(name_filter=r'.+\.cpp', is_dir=False)]
+            source_files = library_path.list(name_filter=r'.+\.cpp', is_dir=False)
             source_file_groups = \
                 dlb_contrib.partition.by_working_tree_path(source_files, number_of_groups=len(source_files) // 5)
             del source_files
