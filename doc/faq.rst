@@ -49,7 +49,7 @@ especially for the development of embedded software with cross-compiler toolchai
    | characters (``' '``,  ``'$'``,         |               |               |               |               |
    | ``'\\'``, ...)                         |               |               |               |               |
    +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Ability to deal with circular          | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
+   | Ability to deal with circular          | |plusplus|    | |none|        | |none|        | |none|        |
    | dependencies                           |               |               |               |               |
    +----------------------------------------+---------------+---------------+---------------+---------------+
    | Fundamental objects                    | contexts,     | strings       | environments, | strings,      |
@@ -58,18 +58,20 @@ especially for the development of embedded software with cross-compiler toolchai
    +----------------------------------------+---------------+---------------+---------------+---------------+
 
 dlb has the unique ability to *enforce* requirements instead of just *assuming* them.
-This makes dlb not only a build tool but also a tool for quality control.
+This makes dlb not only a build tool but also a tool for quality assurance.
 For example: You can check the design decision that library A in your project must not depend on library B
-every time library A is built and use this guarantee (not just assumption!) to reduce the build time.
-
-See the following questions for a comparison to Make, Ninja and SCons.
+every time library A is built and use this guarantee (not just assumption!) to reduce the build time
+(see `example/c-huge-libraries/`_).
 
 There is plethora of other build tools:
 
 - https://en.wikipedia.org/wiki/List_of_build_automation_software
 - https://pypi.org/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Build+Tools
 
-They fall into two large categories which both have major shortcomings in the view of the author.
+Of these, SCons and doit are closest to the goals of dlb.
+See the following questions for a comparison to Make, Ninja and SCons.
+
+The other tools fall into two large categories which both have major shortcomings in the view of the author.
 
 
 Tools based on declared dependency rules
@@ -94,8 +96,6 @@ Examples are:
 - https://pypi.org/project/bold/ (Python, C-centric)
 - https://pypi.org/project/buildit/ (Python, .ini-file syntax to describe rules)
 - `Bruce Eckel's builder.py <https://www.artima.com/weblogs/viewpost.jsp?thread=241209>`_ (Python)
-
-Of these, SCons and doit are closest to the goals of this project.
 
 
 Tools based on directory structure
@@ -177,10 +177,11 @@ Remarks:
 - Each source file defines one C++ class and includes 15 files from its own library as well as 5 files from
   other libraries. Each library depends on every other library (in other words: the benchmark scenario represents a
   very poorly designed project).
-- The generated simplistic GNU Makefiles contain static lists of files while SCons and dlb find the files at run-time
-  and miss a lot of dependencies (labeled ``simplistic``).
+- The generated simplistic GNU Makefiles contain static lists of files while and miss a lot of dependencies.
+  dlb finds the files at run-time.
 - :command:`makedepend` (used in a rule of the simplistic GNU Makefiles) crashes for very large numbers of classes.
-- A build with GNU Makefiles that describes the dependencies completely was added for comparison.
+- In addition to the original simplistic GNU Makefiles, labeled ``GNU Make + makedepend (simplistic)``, a build with
+  GNU Makefiles that describes the dependencies completely was added for comparison and labeled ``GNU Make``.
 - The dlb performance is given for three styles of the dlb script (all describe the dependencies completely):
 
   - ``dlb``: straight-forward
@@ -191,23 +192,23 @@ Remarks:
 
 Properties of tested builds (*n*: number of libraries, *m*: number of source files per library):
 
-   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
-   |                                   | GNU Make +              | GNU Make                      | dlb                   | dlb                | dlb            | SCons             |
-   |                                   | makedepend (simplistic) |                               |                       | (grouped)          | (hierarchical) |                   |
-   +===================================+=========================+===============================+=======================+====================+================+===================+
-   | Describes dependencies completely | |none|                  | |check|                       | |check|               | |check|            | |check|        | |check|           |
-   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
-   | Can be aborted without corruption | |none|                  | |check|                       | |check|               | |check|            | |check|        | |none|            |
-   | of output                         |                         |                               |                       |                    |                |                   |
-   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
-   | Does not depend on monotonic      | |none|                  | |none|                        | |check|               | |check|            | |none|         | |check|           |
-   | system time                       |                         |                               |                       |                    |                |                   |
-   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
-   | Size of build description         | 7 + *n* (*m* + 20)      | 188 + *n*                     | 25                    | 37                 | 51             | 1 + *n* (*m* + 4) |
-   | (number of non-trivial lines)     |                         |                               |                       |                    |                |                   |
-   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
-   | Based on                          |                         | `example/c-minimal-gnumake/`_ | `example/c-minimal/`_ | `example/c-huge/`_ |                |                   |
-   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+----------------+-------------------+
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+-------------------------------+-------------------+
+   |                                   | GNU Make +              | GNU Make                      | dlb                   | dlb                | dlb                           | SCons             |
+   |                                   | makedepend (simplistic) |                               |                       | (grouped)          | (hierarchical)                |                   |
+   +===================================+=========================+===============================+=======================+====================+===============================+===================+
+   | Describes dependencies completely | |none|                  | |check|                       | |check|               | |check|            | |check|                       | |check|           |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+-------------------------------+-------------------+
+   | Can be aborted without corruption | |none|                  | |check|                       | |check|               | |check|            | |check|                       | |none|            |
+   | of output                         |                         |                               |                       |                    |                               |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+-------------------------------+-------------------+
+   | Does not depend on monotonic      | |none|                  | |none|                        | |check|               | |check|            | |none|                        | |check|           |
+   | system time                       |                         |                               |                       |                    |                               |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+-------------------------------+-------------------+
+   | Size of build description         | 7 + *n* (*m* + 20)      | 188 + *n*                     | 25                    | 37                 | 56                            | 1 + *n* (*m* + 4) |
+   | (number of non-trivial lines)     |                         |                               |                       |                    |                               |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+-------------------------------+-------------------+
+   | Based on                          |                         | `example/c-minimal-gnumake/`_ | `example/c-minimal/`_ | `example/c-huge/`_ | `example/c-huge-libraries/`_  |                   |
+   +-----------------------------------+-------------------------+-------------------------------+-----------------------+--------------------+-------------------------------+-------------------+
 
 
 .. _manual-make-comparison:
@@ -229,7 +230,7 @@ There is a reason why there are so many flavours of Make and so many utilities t
 In contrast, it is very easy to write fast, complete, reproducible and portable :term:`dlb scripts <script>`.
 dlb does not guess or assume, but requires the explicit statement of information to be used by external tools
 (the expected content of environment variables, for example). This results in readable and self-documenting dlb scripts
-that concisely describe their requisites and assumptions.
+that concisely describe their prerequisites.
 
 Make is significantly faster than dlb when only a small fraction of the output dependencies has to be generated
 (Make: only a few sources are newer than their targets).
@@ -284,7 +285,7 @@ Rōnin_ is such a higher-level build system. It has a structure similar to dlb a
 :term:`dlb script <script>`.
 However, Rōnin shares the typical :ref:`limitations <manual-explicit-is-better-than-implicit>` of declarative build
 descriptions; it performs a lot of "magic" (with undocumented assumptions) and cannot be extended beyond the hardcoded
-(and limited) extension interfaces.
+and limited extension interfaces.
 
 You can use dlb to generate Ninja files.
 
@@ -391,9 +392,10 @@ Feel free to contribute.
 .. _Ninja: https://ninja-build.org/
 .. _LGPLv3: https://www.gnu.org/licenses/lgpl-3.0.en.html
 .. _GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html
-.. _`example/c-minimal/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal
-.. _`example/c-minimal-gnumake/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal-gnumake
-.. _`example/c-huge/`: https://github.com/dlu-ch/dlb/tree/master/example/c-huge
+.. _`example/c-minimal/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal/
+.. _`example/c-minimal-gnumake/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal-gnumake/
+.. _`example/c-huge/`: https://github.com/dlu-ch/dlb/tree/master/example/c-huge/
+.. _`example/c-huge-libraries/`: https://github.com/dlu-ch/dlb/tree/master/example/c-huge-libraries/
 .. _`test/benchmark/`: https://github.com/dlu-ch/dlb/tree/master/test/benchmark/
 
 .. rubric:: Footnotes
