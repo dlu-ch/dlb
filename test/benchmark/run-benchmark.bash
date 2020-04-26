@@ -57,7 +57,6 @@ function prepare_testdata() {
     for q in "${setup_dir:?}"top/* ; do "${CP:?}" -- "${q}" "${build_generated_dir:?}"; done
     for p in "${build_generated_dir:?}"lib_* ; do
         for q in "${setup_dir:?}"eachlib/* ; do "${CP:?}" -- "${q}" "${p}"; done
-        "${TOUCH:?}" -- "${p}/api_version.h"
     done
 }
 

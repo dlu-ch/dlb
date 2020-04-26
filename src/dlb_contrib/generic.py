@@ -14,26 +14,39 @@
 #
 #   with dlb.ex.Context():
 #       check = dlb_contrib.generic.Check(input_files=['logo.png'])
-#       ATool(...).run(force_redo=check.run())  # performs a redo of ATool(...) when 'logo.png' has changed
+#       ATool(...).run(force_redo=check.run())
+#       # performs a redo of ATool(...) if 'logo.png' has changed
+#
+#   ...
 #
 #   with dlb.ex.Context():
-#       library_path = dlb.fs.Path('src/libx/')  # contains all sources for a huge library
-#       archive_file = dlb.fs.Path(...)
+#       # contains all source files of a huge library:
+#       library_source_directory = dlb.fs.Path('src/libx/')
+#       archive_file = dlb.fs.Path(...)  # compiled from *library_source_directory*
 #
-#       # 1. check if update of library can be avoided - fast but coarse check
+#       # 1. check if update of *archive_file* may be necessary - fast but coarse
+#       with dlb.ex.Context:
+#           # update mtime of directory if content has later mtime
+#           # (requires monotonic system time to detect all mtime changes)
+#           mtime = dlb.fs.propagate_mtime(library_source_directory)
+#           assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
 #
-#       # update mtime of directory if content has later mtime
-#       # (requires monotonic system time to detect all mtime changes)
-#       mtime = dlb.fs.propagate_mtime(library_path)
-#       assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
-#       coarse_check = dlb_contrib.generic.Check(input_directories=[library_path], output_files=[archive_file])
-#       fine_check_completion = \
-#           dlb_contrib.generic.ResultRemover(result_file=archive_file.with_appended_suffix('.uptodate'))
+#           needs_update = dlb_contrib.generic.ResultRemover(
+#               result_file=archive_file.with_appended_suffix('.uptodate')
+#           ).run(
+#               force_redo=dlb_contrib.generic.Check(
+#                   input_directories=[library_source_directory],
+#                   output_files=[archive_file]
+#               ).run()
+#           )
+#           # after normal exit from this context, needs_update.result_file does not exist
+#           # if bool(needs_update) is True
 #
-#       if fine_check_completion.run(force_redo=coarse_check.run()).run()):
-#           # 2. compile library to *archive_file* - slow but fine check
+#       if needs_update:
+#           # 2. compile library to *archive_file* - slow but fine
+#           # (*needs_update* will be True next time if this fails)
 #           ...
-#           fine_check_completion.result_file.native.raw.touch()  # mark successfull completion of update
+#           needs_update.result_file.native.raw.touch()  # mark successfull completion
 
 __all__ = ['Check', 'ResultRemover']
 
