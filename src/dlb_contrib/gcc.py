@@ -17,21 +17,21 @@ linker from the GNU Binutils)."""
 #     import dlb_contrib.gcc
 #
 #     with dlb.ex.Context():
-#         source_path = dlb.fs.Path('src/')
-#         output_path = dlb.fs.Path('build/out/')
+#         source_directory = dlb.fs.Path('src/')
+#         output_directory = dlb.fs.Path('build/out/')
 #
 #         compile_results = [
 #             dlb_contrib.gcc.CCompilerGcc(
 #                 source_files=[p],
-#                 object_files=[output_path / p.with_appended_suffix('.o')],
-#                 include_search_directories=[source_path]
+#                 object_files=[output_directory / p.with_appended_suffix('.o')],
+#                 include_search_directories=[source_directory]
 #             ).run()
-#             for p in source_path.iterdir(name_filter=r'.+\.c', is_dir=False)
+#             for p in source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
 #         ]
 #
 #         dlb_contrib.gcc.CLinkerGcc(
 #             object_and_archive_files=[r.object_files[0] for r in compile_results],
-#             linked_file=output_path / 'application').run()
+#             linked_file=output_directory / 'application').run()
 
 __all__ = [
     'Path', 'ObjectOrArchivePath',

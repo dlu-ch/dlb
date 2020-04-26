@@ -7,8 +7,8 @@ import dlb_contrib.gnubinutils
 from typing import Iterable, Union
 
 
-source_path = dlb.fs.Path('.')
-output_path = dlb.fs.Path('out/')
+source_directory = dlb.fs.Path('.')
+output_directory = dlb.fs.Path('out/')
 
 
 class CplusplusCompiler(dlb_contrib.gcc.CplusplusCompilerGcc):
@@ -18,13 +18,13 @@ class CplusplusCompiler(dlb_contrib.gcc.CplusplusCompilerGcc):
 
 with dlb.ex.Context():
 
-    for library_path in source_path.list(name_filter=r'lib_.*'):
+    for library_source_directory in source_directory.list(name_filter=r'lib_.*'):
 
-        with dlb.di.Cluster(f'library in {library_path.as_string()!r}'):
+        with dlb.di.Cluster(f'library in {library_source_directory.as_string()!r}'):
             # group multiple source files for the same compiler tool instance the reduce time
             # and space for dependency checking
 
-            source_files = library_path.list(name_filter=r'.+\.cpp', is_dir=False)
+            source_files = library_source_directory.list(name_filter=r'.+\.cpp', is_dir=False)
             source_file_groups = \
                 dlb_contrib.partition.by_working_tree_path(source_files, number_of_groups=len(source_files) // 5)
             del source_files
@@ -35,8 +35,8 @@ with dlb.ex.Context():
                 compile_results = [
                     CplusplusCompiler(
                         source_files=g,
-                        object_files=[output_path / p.with_appended_suffix('.o') for p in g],
-                        include_search_directories=[source_path]
+                        object_files=[output_directory / p.with_appended_suffix('.o') for p in g],
+                        include_search_directories=[source_directory]
                     ).run()
                     for g in source_file_groups
                 ]
@@ -45,5 +45,5 @@ with dlb.ex.Context():
             object_files = [o for g in object_file_groups for o in g]
 
             with dlb.di.Cluster(f'link'):
-                archive_file = output_path / (library_path.components[-1] + '.a')
+                archive_file = output_directory / (library_source_directory.components[-1] + '.a')
                 dlb_contrib.gnubinutils.Archive(object_files=object_files, archive_file=archive_file).run()

@@ -179,6 +179,8 @@ def identifier_like_from_string(text: str, sep: str = '_') -> str:
 
 
 def identifier_from_path(path: dlb.fs.PathLike, *, to_upper_case: bool = True) -> str:
+    # TODO add example
+
     path = dlb.fs.Path(path)
     if path.is_absolute():
         raise ValueError("'path' must be relative")

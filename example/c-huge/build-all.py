@@ -17,11 +17,11 @@ import dlb_contrib.gcc
 
 # compile and link application written in C
 with dlb.ex.Context():
-    source_path = dlb.fs.Path('src/')
-    output_path = dlb.fs.Path('build/out/')
+    source_directory = dlb.fs.Path('src/')
+    output_directory = dlb.fs.Path('build/out/')
 
     # group multiple source files for the same compiler tool instance the reduce time and space for dependency checking
-    source_files = source_path.list(name_filter=r'.+\.c', is_dir=False)
+    source_files = source_directory.list(name_filter=r'.+\.c', is_dir=False)
     source_file_groups = dlb_contrib.partition.by_working_tree_path(source_files,
                                                                     number_of_groups=len(source_files) // 10)
     del source_files
@@ -36,8 +36,8 @@ with dlb.ex.Context():
         compile_results = [
             dlb_contrib.gcc.CCompilerGcc(
                 source_files=g,
-                object_files=[output_path / p.with_appended_suffix('.o') for p in g],
-                include_search_directories=[source_path]
+                object_files=[output_directory / p.with_appended_suffix('.o') for p in g],
+                include_search_directories=[source_directory]
             ).run()
             for g in source_file_groups
         ]
@@ -45,4 +45,4 @@ with dlb.ex.Context():
     object_file_groups = [r.object_files for r in compile_results]
     dlb_contrib.gcc.CLinkerGcc(
         object_and_archive_files=[o for g in object_file_groups for o in g],
-        linked_file=output_path / 'application').run()
+        linked_file=output_directory / 'application').run()

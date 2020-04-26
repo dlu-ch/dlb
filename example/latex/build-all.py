@@ -19,14 +19,14 @@ class PdfLatex(dlb_contrib.tex.Latex):
 
 
 with dlb.ex.Context():
-    source_path = dlb.fs.Path('src/')
-    output_path = dlb.fs.Path('build/out/')
+    source_directory = dlb.fs.Path('src/')
+    output_directory = dlb.fs.Path('build/out/')
 
     # repeat redo until all state files exist and their content remains unchanged, but at most 10 times
     for i in range(10):
         r = PdfLatex(toplevel_file='src/report.tex',
-                     output_file=output_path / 'report.pdf',
-                     input_search_paths=['src/'],
-                     state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
+                     output_file=output_directory / 'report.pdf',
+                     input_search_directories=['src/'],
+                     state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).run()
         if not r:
             break

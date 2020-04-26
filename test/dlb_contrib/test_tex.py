@@ -190,7 +190,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             r = dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-                input_search_paths=['src/'],
+                input_search_directories=['src/'],
                 state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
         self.assertTrue(r)
         self.assertEqual((dlb.fs.Path('src/loc ation.tex'),), r.included_files)
@@ -200,14 +200,14 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             r = dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-                input_search_paths=['src/'],
+                input_search_directories=['src/'],
                 state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
         self.assertTrue(r)
 
         with dlb.ex.Context():
             r = dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-                input_search_paths=['src/'],
+                input_search_directories=['src/'],
                 state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
         self.assertFalse(r)
 

@@ -18,12 +18,12 @@
 #     import dlb_contrib.tex
 #
 #     with dlb.ex.Context():
-#         output_path = dlb.fs.Path('build/out/')
+#         output_directory = dlb.fs.Path('build/out/')
 #
 #         dlb_contrib.tex.Latex(
-#             toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-#             input_search_paths=['src/'],
-#             state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
+#             toplevel_file='src/report.tex', output_file=output_directory / 'report.dvi',
+#             input_search_directories=['src/'],
+#             state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).run()
 
 __all__ = ['KpathseaPath', 'TexPath', 'accessed_files_from_recorded', 'Tex', 'Latex']
 
@@ -153,7 +153,7 @@ class Tex(dlb.ex.Tool):
     state_files = dlb.ex.output.RegularFile[:](replace_by_same_content=False)
 
     included_files = dlb.ex.input.RegularFile[:](explicit=False)
-    input_search_paths = dlb.ex.input.Directory[:](required=False, cls=KpathseaPath)
+    input_search_directories = dlb.ex.input.Directory[:](required=False, cls=KpathseaPath)
 
     # Directory of .aux, .log etc. and working directory for *EXECUTABLE*.
     # If not set, a temporary directory is used.
@@ -188,11 +188,11 @@ class Tex(dlb.ex.Tool):
             # compile TEXINPUTS
             path_separator = os.pathsep
             texinputs = []
-            if self.input_search_paths:
+            if self.input_search_directories:
                 texinputs = [
                     str(context.working_tree_path_of(p, existing=True, allow_temporary=True).relative_to(
                         intermediary_directory, collapsable=True).native)
-                    for p in self.input_search_paths
+                    for p in self.input_search_directories
                 ]
             texinputs += [result.global_input_search_paths.raw] if result.global_input_search_paths else ['']
             env = {'TEXINPUTS': path_separator.join(texinputs)}

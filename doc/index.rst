@@ -39,19 +39,19 @@ Example::
    class Linker(CplusplusLinkerGcc): pass
 
    with dlb.ex.Context():                                                        # (c)
-       output_path = Path('build/out/')
+       output_directory = Path('build/out/')
 
        object_files = [                                                          # (d)
           Compiler(
               source_files=[p],
-              object_files=[output_path / p.with_appended_suffix('.o')]
+              object_files=[output_directory / p.with_appended_suffix('.o')]
           ).run().object_files[0]
           for p in Path('src/X/').iterdir(name_filter=r'.+\.cpp', is_dir=False)
        ]
 
        application_file = Linker(
            object_and_archive_files=object_files,
-           linked_file=output_path / 'example'                                   # (e)
+           linked_file=output_directory / 'example'                              # (e)
        ).run().linked_file
 
        dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')    # (f)

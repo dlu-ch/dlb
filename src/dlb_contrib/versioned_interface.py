@@ -19,13 +19,13 @@ define the interface."""
 #     #     ...
 #
 #     with dlb.ex.Context():
-#         source_path = dlb.fs.Path('src/')
+#         source_directory = dlb.fs.Path('src/')
 #
 #         # compare hash of header files with hash in 'api-version.h'
 #         dlb_contrib.versioned_interface.check_hash(
 #             # everything that does not end in '.c':
-#             files_to_hash=source_path.iterdir(name_filter=r'(?!.+\.c$).+', recurse_name_filter=''),
-#             hash_line_file=source_path / 'api-version.h',
+#             files_to_hash=source_directory.iterdir(name_filter=r'(?!.+\.c$).+', recurse_name_filter=''),
+#             hash_line_file=source_directory / 'api-version.h',
 #             hash_line_regex=rb'^// last checked for header file hash ([0-9a-f]+|<none>)$',
 #             warnonly_hash=b'<none>'
 #         )
@@ -67,7 +67,7 @@ def check_hash(*, files_to_hash: Iterator[dlb.fs.PathLike], hash_line_file: dlb.
 
     hash_line_regex = re.compile(hash_line_regex)
 
-    # calculate SHA1 hash over content of all non-.c file in *source_path* other than *hash_line_file* ...
+    # calculate SHA1 hash over content of all non-.c file in *files_to_hash* other than *hash_line_file* ...
     content_hash = hashlib.sha1()
     for p in files_to_hash:
         p = dlb.fs.Path(p)
