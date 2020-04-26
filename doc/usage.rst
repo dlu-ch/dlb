@@ -197,7 +197,7 @@ previous ones.
 Real stuff
 ^^^^^^^^^^
 
-There are more meaningful tasks than replacing text in text file.
+There are more meaningful tasks than replacing text in a text file.
 
 For example, building a C program with GCC looks like
 `this <https://github.com/dlu-ch/dlb/blob/master/example/c-minimal/build-all.py>`_.
@@ -328,7 +328,7 @@ Write scripts and tools
 - Do not use (explicit) multithreading. Use :py:mod:`asyncio` instead.
 
 - Do not use multiple hierarchical :term:`scripts <script>` (where one calls another).
-  This would be error-prone an inefficient.
+  This would be error-prone and inefficient.
   Use scripts only on the top-level.
 
 - Split large :term:`scripts<script>` into small modules that are imported by the script.

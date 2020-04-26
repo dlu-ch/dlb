@@ -64,7 +64,7 @@ def by_working_tree_path(paths: Sequence[dlb.fs.PathLike], *, number_of_groups: 
     groups = [[] for _ in range(number_of_groups)]
     for i in range(len(paths)):
         b = working_tree_paths[i].as_string().encode()
-        h = zlib.crc32(b, zlib.crc32(b))  # concatenation makes reduces runs for short *b* in small *number_of_groups*
+        h = zlib.crc32(b, zlib.crc32(b))  # concatenation reduces runs for short *b* in small *number_of_groups*
         groups[h % number_of_groups].append(paths[i])
 
     return [g for g in groups if g]

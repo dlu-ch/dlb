@@ -604,7 +604,7 @@ Tools are customized by inheritance and defining class attributes.
 
       The *permanent local tool instance fingerprint* of this instance.
 
-      This is a :class:`python:bytes` object of fixed size, calculated from all its concrete  dependencies *d* with
+      This is a :class:`python:bytes` object of fixed size, calculated from all its concrete dependencies *d* with
       ``d.explicit`` = ``True``.
 
       If two instances of the same subclass of :class:`Tool` have "similar" explicit dependencies, their
@@ -840,7 +840,7 @@ following abstract classes:
    A :class:`Dependency` that describes an input dependency of a tool.
 
    The :term:`tool instance` must be :term:`redone <redo>` if it (e.g. the :term:`mtime` of a file) has changed compared
-   to the state before the last successful redo of the :term:`tool instance`.
+   to the state before the last known successful redo of the :term:`tool instance`.
 
    An redo *must not* modify it, successful or not (the same object can be an output dependency of the same tool
    instance though which *can* be modified).

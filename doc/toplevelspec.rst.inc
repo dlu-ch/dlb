@@ -344,7 +344,7 @@ Dependencies
    the "modification intervals are relatively long" for every filesystem object that is a :term:`true input dependency`
    of a :term:`tool instance`.
 
-   Here, a modification interval of a filesystem object *p* is considered to be relatively long if
+   Here a modification interval of a filesystem object *p* is considered to be relatively long if
    it is unlikely that the :term:`working tree time` at the :term:`ideal time` *t* is the same as at *t* + *T*,
    where *T* is the :term:`ideal time` between two consecutive :term:`mtime updates <mtime update>` of *p*.
 

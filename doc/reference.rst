@@ -42,7 +42,7 @@ Reference
    Linux currently (2020) `uses <https://elixir.bootlin.com/linux/v5.5/source/fs/inode.c#L2220>`_
    `ktime_get_coarse_real_ts64() <https://www.kernel.org/doc/html/latest/core-api/timekeeping.html>`_ as time source
    for its (optional) :term:`mtime` updates, which
-   `which returns the system-wide realtime clock at the last tick <https://lwn.net/Articles/347811/>`_.
+   `returns the system-wide realtime clock at the last tick <https://lwn.net/Articles/347811/>`_.
 
 .. [#lazytime1]
    Some filesystems support mount options to sacrifice this guaranteed for performance.

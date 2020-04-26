@@ -27,8 +27,7 @@ Terms
       #. if redo necessary:
 
          #. redo: generate all output dependencies.
-         #. dependency finalization: update registered dependencies and their state ("memo") in the
-            :term:`run-database`.
+         #. dependency finalization: update registered dependencies and their state in the :term:`run-database`.
 
       #. end of execution:
 

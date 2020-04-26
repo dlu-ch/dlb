@@ -129,7 +129,7 @@ You should *not* use dlb if:
 - You do not have to build your code on several machines (i.e. you work alone).
 - You do not care about portability and quality.
 - Your project is huge, everything depends on everything, and its individual parts cannot be tested in isolation
-  (i.e. it is poorly designed)
+  (i.e. it is poorly designed).
 - Your project is mostly built from scratch and extremely often (like FreeBSD ports or Linux kernels built by users for
   installation). Even a build time increase as low as 5% would --- cumulated --- mean a massive waste of (life) time
   and energy.

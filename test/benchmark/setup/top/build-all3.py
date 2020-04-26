@@ -68,6 +68,6 @@ with dlb.ex.Context():
                     dlb_contrib.gnubinutils.Archive(object_files=[r.object_files[0] for r in compile_results],
                                                     archive_file=archive_file).run()
 
-                needs_update.result_file.native.raw.touch()  # mark successfull completion of update
+                needs_update.result_file.native.raw.touch()  # mark successful completion of update
             else:
                 dlb.di.inform('skip')

@@ -7,7 +7,7 @@
 .. data:: __version__
 
    The version of dlb as a non-empty string.
-   Example: ``'1.2.3``.
+   Example: ``'1.2.3'``.
 
    Conforms to :pep:`396`, :pep:`386` and :pep:`440`.
 

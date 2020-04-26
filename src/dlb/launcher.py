@@ -102,7 +102,7 @@ def get_help():
         appended if it does not end with '.py'. All other parameters are forwarded to
         the dlb script.
     
-        When called without a parameter, the parameters from the last successul call of
+        When called without a parameter, the parameters from the last successful call of
         this script with the same 'os.name' are used.
     
         Each regular file or symbolic link to a regular file in the directory

@@ -40,9 +40,11 @@ Path objects
    - A sequence of two or more consequent ``'/'`` is equivalent to a single ``'/'``, except at the beginning of
      the path.
    - At the beginning of the path:
-       - Three or more consequent ``'/'`` are equivalent to a single ``'/'``
-       - Exactly two consequent ``'/'`` (followed be a character other than ``'/'``) means that the following component
-         is to be interpreted in a implementation-defined manner (e.g. `ISO 1003.1-2008`_ or UNC paths)
+
+     - Three or more consequent ``'/'`` are equivalent to a single ``'/'``
+     - Exactly two consequent ``'/'`` (followed be a character other than ``'/'``) means that the following component
+       is to be interpreted in a implementation-defined manner (e.g. `ISO 1003.1-2008`_ or UNC paths)
+
    - If the platform supports symbolic links, it resolves them as specified in `ISO 1003.1-2008`_
      (which means that ``'..'`` cannot be collapsed without knowing the filesystem's content).
 

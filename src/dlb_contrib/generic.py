@@ -46,7 +46,7 @@
 #           # 2. compile library to *archive_file* - slow but fine
 #           # (*needs_update* will be True next time if this fails)
 #           ...
-#           needs_update.result_file.native.raw.touch()  # mark successfull completion
+#           needs_update.result_file.native.raw.touch()  # mark successful completion
 
 __all__ = ['Check', 'ResultRemover']
 

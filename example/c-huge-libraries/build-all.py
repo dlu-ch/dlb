@@ -101,6 +101,6 @@ with dlb.ex.Context():
                               api_version_file=api_version_file,
                               include_directories=include_directories,
                               output_directory=output_directory)
-                needs_update.result_file.native.raw.touch()  # mark successfull completion of update
+                needs_update.result_file.native.raw.touch()  # mark successful completion of update
             else:
                 dlb.di.inform('skip')
