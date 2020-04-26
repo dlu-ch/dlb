@@ -514,10 +514,11 @@ Tools are customized by inheritance and defining class attributes.
       Run the tool instance in the :term:`active context` and returns a result (proxy) object *result*.
 
       ``bool(result)`` is ``True`` if a :term:`redo` is performed and ``False`` otherwise.
+      A redo is performed if *force_redo* is ``True`` or if it is :term:`necessary <redo necessity>`.
+      "Performing a redo" means scheduling the eventual (asynchronous) execution of :meth:`redo()` of this
+      class.
 
-      A redo is performed if *force_redo* is ``True`` or if it is necessary.
-
-      If a redo is performed, this method returns before the (asynchronous) redo is complete.
+      If a redo is performed, this method returns before the redo is complete.
       After each of the following actions the redo is guaranteed to be complete (either successfully or
       by raising an exception):
 
@@ -537,13 +538,10 @@ Tools are customized by inheritance and defining class attributes.
 
    .. method:: redo(result, context)
 
-      Overwrite this method to implement a new :class:`Tool`.
+      Overwrite this awaitable method to implement a new :class:`Tool` (do not forget ``async``!).
 
       *result* is the result object that will by returned by the calling :meth:`run()`.
       *context* is the redo context as an instance of :class:`RedoContext`.
-
-      Use :meth:`context.execute_helper() <RedoContext.execute_helper()>` and
-      :meth:`context.replace_output() <RedoContext.replace_output()>`.
 
       Assign to attributes of *result* to define a non-explicit concrete dependency for the dependency role with the
       same name.
@@ -553,12 +551,16 @@ Tools are customized by inheritance and defining class attributes.
       - Create all explicit output dependencies
       - Assign values to each required non-explicit dependencies
 
+      Use :meth:`await context.execute_helper() <RedoContext.execute_helper()>` to call executable files.
+
+      Make sure the :term:`mtime` of each filesystem object that is an output dependency of this tool instance is
+      updated when it is (potentially) modified, even if the redo fails.
+
       For a filesystem object whose path *p* is contained in an output dependency, it is recommended to first write
       to a temporary filesystem object *q* and then replace it with ``context.replace_output(p, q)``.
       This guarantees that no incomplete output dependency is left behind (like an only half-written object file)
       when the :term:`redo` is aborted.
-
-      A filesystem object that is an output dependencies is treated as modified be the redo if it is a non-explicit
+      A filesystem object that is an output dependencies is treated as modified by the redo if it is a non-explicit
       dependency or if it is a explicit dependency that was replaced with `context.replace_output()`.
 
       Raises :exc:`python:RuntimeError` on the attempt to enter a new :class:`dlb.ex.Context` as a context manager or
@@ -950,23 +952,23 @@ Each non-abstract dependency role class is derived from :class:`InputDependency`
 Input dependency role classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+-------------------------------------+----------------------------------------------------+
-| Dependency role class               | Keyword arguments of constructor                   |
-|                                     +-----------------------+----------------------------+
-|                                     | Name                  | Default value              |
-+=====================================+=======================+============================+
-| :class:`input.RegularFile`          | *cls*                 | :class:`dlb.fs.Path`       |
-+-------------------------------------+-----------------------+----------------------------+
-| :class:`input.NonRegularFile`       | *cls*                 | :class:`dlb.fs.Path`       |
-+-------------------------------------+-----------------------+----------------------------+
-| :class:`input.Directory`            | *cls*                 | :class:`dlb.fs.Path`       |
-+-------------------------------------+-----------------------+----------------------------+
-| :class:`input.EnvVar`               | *name*                |                            |
-|                                     +-----------------------+----------------------------+
-|                                     | *restriction*         |                            |
-|                                     +-----------------------+----------------------------+
-|                                     | *example*             |                            |
-+-------------------------------------+-----------------------+----------------------------+
++-------------------------------------+-----------------------------------------------+----------------------------+
+| Dependency role class               | Keyword arguments of constructor              | Depended-upon state        |
+|                                     +-----------------------+-----------------------+ for redo necessity         |
+|                                     | Name                  | Default value         |                            |
++=====================================+=======================+=======================+============================+
+| :class:`input.RegularFile`          | *cls*                 | :class:`dlb.fs.Path`  | summary of status of       |
++-------------------------------------+                       |                       | filesystem object          |
+| :class:`input.NonRegularFile`       |                       |                       | with given                 |
++-------------------------------------+                       |                       | :term:`managed tree path`  |
+| :class:`input.Directory`            |                       |                       |                            |
++-------------------------------------+-----------------------+-----------------------+----------------------------+
+| :class:`input.EnvVar`               | *name*                |                       | value of enviroment        |
+|                                     +-----------------------+-----------------------+ variable *name* in         |
+|                                     | *restriction*         |                       | active context             |
+|                                     +-----------------------+-----------------------+                            |
+|                                     | *example*             |                       |                            |
++-------------------------------------+-----------------------+-----------------------+----------------------------+
 
 In addition to the keyword arguments of the specific constructors described here, all constructors also accept the
 keyword arguments of the constructor of :class:`Dependency`.
@@ -974,18 +976,27 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: input.RegularFile(cls=dlb.fs.Path, required=True, explicit=True)
 
-   Constructs a dependency role for a regular files, identified by their paths.
+   Constructs a dependency role for regular files, identified by their paths.
 
    If a path is relative, is it treated as relative to
    :attr:`dlb.ex.Context.root_path`, and it must be :term:`collapsable <collapsable path>` and
    :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
    are met).
 
-   Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
-
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
    of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
    otherwise.
+
+   The depended-upon state for redo necessity is a summary of each file's status which consists in
+
+   - :term:`mtime`
+   - size
+   - UID
+   - GID
+   - access permissions
+
+   For a file outside the :term:`managed tree` the state is always assumed to remain unchanged between
+   :term:`runs of dlb <run of dlb>`.
 
    Example::
 
@@ -1012,11 +1023,22 @@ keyword arguments of the constructor of :class:`Dependency`.
    :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
    are met).
 
-   Files outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
-
-   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
+   The :meth:`validated value <Dependency.validate()>` of a concrete dependency is each file's path as an instance
    of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
    otherwise.
+
+   The depended-upon state for redo necessity is a summary of each file's status which consists in
+
+   - :term:`mtime`
+   - size
+   - type of filesystem object (e.g. symbolic link, block device, ...)
+   - target path if a symbolic link
+   - UID
+   - GID
+   - access permissions
+
+   For a file outside the :term:`managed tree` the state is always assumed to remain unchanged between
+   :term:`runs of dlb <run of dlb>`.
 
    Example::
 
@@ -1042,11 +1064,20 @@ keyword arguments of the constructor of :class:`Dependency`.
    :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
    are met).
 
-   Directories outside the :term:`managed tree` are assumed to remain unchanged between :term:`runs of dlb <run of dlb>`.
-
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the directory's path as an
    instance of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the
    directory's paths otherwise.
+
+   The depended-upon state for redo necessity is a summary of each directory's status which consists in
+
+   - :term:`mtime`
+   - size
+   - UID
+   - GID
+   - access permissions
+
+   For a directory outside the :term:`managed tree` the state is always assumed to remain unchanged between
+   :term:`runs of dlb <run of dlb>`.
 
    Example::
 
@@ -1077,6 +1108,8 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
    with the environment variable's name and value.
+
+   The depended-upon state for redo necessity is the value of environment variable *name* in the :term:`active context`.
 
    Example::
 

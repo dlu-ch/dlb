@@ -104,24 +104,25 @@ Replace the content of :file:`build.py` by this::
        PATTERN = 'xxx'
        REPLACEMENT = 'hello'
 
-       template = dlb.ex.input.RegularFile()
-       output = dlb.ex.output.RegularFile()
+       template_file = dlb.ex.input.RegularFile()
+       output_file = dlb.ex.output.RegularFile()
 
        async def redo(self, result, context):
-           with open(self.template.native, 'r') as i:
+           with open(self.template_file.native, 'r') as i:
                c = i.read()  # read input
            with context.temporary() as t:
                with open(t.native, 'w') as o:
                    o.write(c.replace(self.PATTERN, self.REPLACEMENT))  # write transformed 'c' to temporary
-               context.replace_output(result.output, t)  # atomically replace output by temporary
+               context.replace_output(result.output_file, t)  # atomically replace output_file by temporary
 
+   t = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c')  # create a tool instance
    with dlb.ex.Context():  # an execution context
-       Replacer(template='src/main.c.tmpl', output='build/out/main.c').run()  # create a tool instance and run it
+       t.run()  # run the tool instance in the active execution context
 
 
-This defines a :term:`tool` called ``Replacer`` with an *input dependency role* ``template`` and an *output
-dependency role* ``output``. The class attributes ``PATTERN`` and ``REPLACEMENT`` are *execution parameters* of the
-tool. The method ``redo()`` is called by ``Replacer(...).run()`` if a :term:`redo` is necessary.
+This defines a :term:`tool` called ``Replacer`` with an *input dependency role* ``template_file`` and an *output
+dependency role* ``output_file``. The class attributes ``PATTERN`` and ``REPLACEMENT`` are *execution parameters* of the
+tool. The method ``redo()`` is called by ``t.run()`` if a :term:`redo` is necessary.
 
 Create a file :file:`src/main.c.tmpl` with this content::
 
@@ -173,6 +174,57 @@ did not change. After a modification of the input dependency, dlb again causes a
        D done. [+0.000375s]
      D done. [+0.000385s]
    I start redo for tool instance 1 [+0.014572s]
+
+
+Understand redo necessity
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Everything related to dependency checking and :term:`redos <redo>` is centered around
+:term:`tool instances <tool instance>`; only tool instances can have dependencies.
+
+This line creates a tool instance *t* that assigns the concrete input dependency ``dlb.fs.Path('src/main.c.tmpl')`` to
+the input dependency role ``template_file`` and the concrete output dependency ``dlb.fs.Path('build/out/main.c')`` to
+the output dependency role ``output_file``::
+
+   t = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c')
+
+``t.run()`` performs a redo when
+
+a. one it explicitly requested by ``t.run(force_redo=True)`` or
+b. a redo is considered necessary (see :term:`here <redo necessity>` for general conditions and the documentation of
+   the dependency classes for the specific ones).
+
+After the successful completion of a redo of a tool instance *t* the :term:`run-database` contains the depended-upon
+state of its (explicit and non-explicit) input dependencies before the start of the redo and its non-explicit
+input dependencies.
+
+A redo of *t* from above is considered necessary if at least one of the following conditions is true:
+
+- A redo was never performed successfully before for *t* (same class and fingerprint) according to the
+  :term:`run-database`.
+- :file:`build/out/main.c` does not exist as a regular file.
+- The :term:`mtime`, size, UID, GID, or set of access permissions of :file:`src/main.c.tmpl` has changed since the
+  start of the last known successful redo for *t* (because it is an output dependency of *t*)
+- The value of ``PATTERN`` or ``REPLACEMENT`` has changed since the the last known successful redo for *t*.
+- The :term:`mtime`, size, UID, GID, or set of access permissions of :file:`build.py` has changed since the last known
+  successful redo of *t* (because :file:`build.py` is a definition file for *t* in the :term:`managed tree`).
+
+Tool instances are identified by their class (file path and line number of definition) and their fingerprint.
+The fingerprint includes the concrete dependencies of the tool instance which are defined by arguments of the
+constructor matching class attributes.
+Consider the following tool instances::
+
+    t2 = Replacer(template_file=dlb.fs.Path('src/main.c.tmpl'), output_file='build/out/main.c')
+    t3 = Replacer(template_file='src/MAIN.C.TMPL', output_file='build/out/main.c')
+
+*t2* and *t* have the same same class and fingerprint and are therefore indistinguishable with respect to dependencies;
+the statements ``t.run()`` and ``t2.run()`` have the same effect under all circumstances.
+*t3* on the other hand has a different fingerprint; ``t3.run()`` does not affect the last known successful redo for *t*.
+
+.. note::
+   dlb never stores the state of filesystem objects outside the :term:`working tree` in its :term:`run-database`.
+   The modification of such a filesystem object does *not* lead to a redo.
+   [#dependenciesoutsideworkingtree1]_
 
 
 Control the output verbosity
@@ -437,3 +489,9 @@ Write scripts and tools
 .. [#touch1] |assumption-a3|
 
 .. [#mmap1] |assumption-f3|
+
+.. [#dependenciesoutsideworkingtree1]
+   This is a deliberate design decision.
+   It avoids complicated assumptions related to the :term:`mtimes <mtime>` of different filesystems,
+   helps to promote a clean structure of project files and makes it possible to move an entire
+   :term:`working tree` without changing the meaning of the :term:`run-database` in an unpredictable manner.

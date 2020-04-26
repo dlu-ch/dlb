@@ -48,14 +48,25 @@ Terms
    redo
       The phase of the execution of a :term:`tool instance` *t* that generates all its output dependencies.
 
-      A redo is considered necessary if at least one of the following statements is true:
+   redo necessity
+      A :term:`redo` of a :term:`tool instance` *t* is considered necessary if at least one of the following
+      statements is true:
 
-      a) Any of the output dependencies of *t* does not exist in the expected form.
-      b) Any of the input dependencies of *t* has changed its existence in the expected form since the start of
-         the last known successful execution of *t*.
-      c) Any of the input dependencies of *t* has changed a depended-upon property (e.g. filesystem attribute, value of
-         environment variable) since the start of the last known successful execution of *t*.
-      d) Any of the execution parameters *t* has changed since the start of the last known successful execution of *t*.
+      - There is no last known successful redo of *t* (see below).
+      - Any of the output dependencies of *t* does not exist in the expected form.
+      - Any of the non-explicit input dependencies set by the the last known successful redo of *t* does not exist
+        in the expected form.
+      - Any of the input dependencies of *t* has changed a depended-upon state (e.g. a filesystem attribute or
+        a value of environment variable) since the start of the last known successful redo of *t*.
+      - Any of the execution parameters *t* has changed since the start of the last known successful redo of *t*.
+      - The last known successful redo of *t* requested a redo for the next run.
+      - The :term:`mtime`, size, UID, GID, or set of access permissions of any of the definition files for *t* in
+        the :term:`managed tree` has changed since the last known successful redo of *t*; a definition file for *t* is
+        a regular file that contains the class definition of the class of *t* or one of its
+        (direct or indirect) subclasses.
+
+      The last known successful redo of *t* is the last redo that was completed (without throwing an exception)
+      for a tool instance of the same class and the same fingerprint as *t* according to the :term:`run-database`.
 
    redo miss
       A redo miss of a :term:`tool instance` is an undesirable situation that occurs when the :term:`redo` check
