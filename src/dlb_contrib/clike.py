@@ -179,7 +179,16 @@ def identifier_like_from_string(text: str, sep: str = '_') -> str:
 
 
 def identifier_from_path(path: dlb.fs.PathLike, *, to_upper_case: bool = True) -> str:
-    # TODO add example
+    # Examples:
+    #
+    #    >>> identifier_from_path('hello')
+    #    'HELLO'
+    #
+    #    >>> identifier_from_path('string.h')
+    #    'STRING_H_06D'
+    #
+    #    >>> identifier_from_path('core/api-version.h')
+    #    'CORE_API_VERSION_H_15D06D'
 
     path = dlb.fs.Path(path)
     if path.is_absolute():
