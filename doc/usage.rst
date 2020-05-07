@@ -176,6 +176,36 @@ did not change. After a modification of the input dependency, dlb again causes a
    I start redo for tool instance 1 [+0.014572s]
 
 
+Control the output verbosity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+dlb is configured by *configuration parameters* in :mod:`dlb.cf`.
+
+You want to know how exactly dlb calls the external tools and like some output after *each* run?
+Add the following lines to :file:`build.py` (before the line ``with dlb.ex.Context():``)::
+
+  import dlb.di
+  import dlb.cf
+
+  dlb.cf.level.helper_execution = dlb.di.INFO
+  dlb.cf.latest_run_summary_max_count = 5
+
+This instructs dlb to use the log level :data:`dlb.di.INFO` for all future diagnostic messages of the category
+:data:`dlb.cf.level.helper_execution` and to output a summary after each run that compares the run with the
+previous ones.
+
+
+Commit the changes
+^^^^^^^^^^^^^^^^^^
+
+Git does not track empty directories. If we want Git to create :file:`.dlbroot` as part of the repository, a file
+must be added. We can use the file :file:`.dlbroot/o` created by the :term:`root context` of a previous
+:term:`run of dlb` to that end::
+
+   $ git add .dlbroot/o
+   $ git commit
+
+
 Understand redo necessity
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -276,25 +306,6 @@ to split the build into sequential phases like this::
 This mechanism is used in `example/c-gtk/`_.
 
 
-Control the output verbosity
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-dlb is configured by *configuration parameters* in :mod:`dlb.cf`.
-
-You want to know how exactly dlb calls the external tools and like some output after *each* run?
-Add the following lines to :file:`build.py` (before the line ``with dlb.ex.Context():``)::
-
-  import dlb.di
-  import dlb.cf
-
-  dlb.cf.level.helper_execution = dlb.di.INFO
-  dlb.cf.latest_run_summary_max_count = 5
-
-This instructs dlb to use the log level :data:`dlb.di.INFO` for all future diagnostic messages of the category
-:data:`dlb.cf.level.helper_execution` and to output a summary after each run that compares the run with the
-previous ones.
-
-
 Real stuff
 ^^^^^^^^^^
 
@@ -304,17 +315,6 @@ For example, building a C program with GCC looks like
 `this <https://github.com/dlu-ch/dlb/blob/master/example/c-minimal/build-all.py>`_.
 
 The package :mod:`dlb_contrib` provides tools and utilities to build upon.
-
-
-Commit the changes
-^^^^^^^^^^^^^^^^^^
-
-Git does not track empty directories. If we want Git to create :file:`.dlbroot` as part of the repository, a file
-must be added. We can use the file :file:`.dlbroot/o` created by the :term:`root context` of a previous
-:term:`run of dlb` to that end::
-
-   $ git add .dlbroot/o
-   $ git commit
 
 
 .. _manual-self-contained-project:
