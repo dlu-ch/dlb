@@ -13,11 +13,12 @@ with the execution environment outside the :term:`working tree` and with each ot
 E.g:
 
 - number of asynchronously running :term:`tool instances <tool instance>`
+- synchronization of :term:`redos <redo>`
 - search paths for :term:`dynamic helper` files
 - environment variables to be imported from :data:`python:os.environ` for use in :term:`tool instances <tool instance>`
 
-It also controls how diagnostic messages of :term:`tool instances <tool instance>` are handled and helps with filesystem
-abstraction (e.g. :term:`working tree time`, case sensitivity of names in the :term:`working tree`).
+It also helps with filesystem abstraction (e.g. :term:`working tree time` or
+:term:`working tree paths <working tree path>`).
 
 A context is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
 The context is entered with the call of :meth:`__enter__` and exited with the return of :meth:`__exit__`.
@@ -518,9 +519,9 @@ Tools are customized by inheritance and defining class attributes.
       "Performing a redo" means scheduling the eventual (asynchronous) execution of :meth:`redo()` of this
       class.
 
-      If a redo is performed, this method returns before the redo is complete.
-      After each of the following actions the redo is guaranteed to be complete (either successfully or
-      by raising an exception):
+      If a redo is performed, this method returns while the redo is pending (not complete).
+      After each of the following actions the redo is guaranteed to be complete, either successfully or
+      by raising an exception:
 
       - read of a "public" attribute of the result proxy object
       - exit of the context :meth:`run()` was called in

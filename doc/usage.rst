@@ -227,6 +227,55 @@ the statements ``t.run()`` and ``t2.run()`` have the same effect under all circu
    [#dependenciesoutsideworkingtree1]_
 
 
+Understand redo concurrency
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When ``t.run()`` "performs a redo" it schedules the eventual (asynchronous) execution of
+:meth:`redo() <dlb.ex.Tool.redo>` and then returns immediately. The completion of the pending redo is left to
+:mod:`asyncio`.
+
+So, redos are parallel by default. The maximum number of pending redos at a time is given by
+:attr:`max_parallel_redo_count <dlb.ex.Context.max_parallel_redo_count>` of the :term:`active context`.
+
+In contrast to GNU Make or Ninja, for example, filesystem paths used in multiple tool instances do *not* form an
+implicit mutual exclusion mechanism. Synchronization and ordering of events is explicit in dlb.
+Redos can be synchronized
+
+a) globally for all pending redos by the means of :term:`(execution) contexts <context>` or
+b) selectively for a specific redo by accessing the result (proxy) object return by :meth:`dlb.ex.Tool.run()`.
+
+See :meth:`dlb.ex.Tool.run()` for details.
+
+As a rule, paths `should not be repeated <https://en.wikipedia.org/wiki/Don%27t_repeat_yourself>`_ like
+:file:`build/out/main.c` in this snippet (which may execute the redos of ``Replacer(...)`` and ``CCompiler(...)``
+in parallel)::
+
+  Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').run()
+  CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).run()
+
+Better use a variable whose name expresses the meaning of the filesystem object or cascade tool instances with their
+result objects. Write this, for example, if you want to express that one tool instance depends on the result of
+another one::
+
+  r = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').run()
+  CCompiler(source_files=[r.output_file], object_files=['build/out/main.c.o']).run()
+  # waits for pending redo with result r to complete before CCompiler(...).run()
+
+This mechanism is used in `example/c-minimal/`_.
+
+Alternatively, you could wait for *all* pending redos to complete before ``Compiler(...).run()`` if you prefer
+to split the build into sequential phases like this::
+
+  # code generation phase
+  Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').run()
+
+  # compilation phase
+  with dlb.ex.Context():  # waits for all pending redos to complete
+      CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).run()
+
+This mechanism is used in `example/c-gtk/`_.
+
+
 Control the output verbosity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -449,6 +498,10 @@ Write scripts and tools
 .. |guarantee-d1| replace:: :ref:`G-D1 <guarantee-d1>`
 .. |guarantee-d2| replace:: :ref:`G-D2 <guarantee-d2>`
 .. |guarantee-d3| replace:: :ref:`G-D3 <guarantee-d3>`
+
+
+.. _`example/c-minimal/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal/
+.. _`example/c-gtk/`: https://github.com/dlu-ch/dlb/tree/master/example/c-gtk/
 
 
 .. rubric:: Footnotes
