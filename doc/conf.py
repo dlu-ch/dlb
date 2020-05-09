@@ -28,9 +28,17 @@ release, version_info, commit_hash = version_from_repo.get_version()
 # The short X.Y version.
 version = '.'.join(str(c) for c in version_info)
 
-github_base_url = 'https://github.com/dlu-ch/dlb/'
 read_the_doc_base_url = 'https://dlb.readthedocs.io/en/'
+github_base_url = 'https://github.com/dlu-ch/dlb/'
 
+github_tree_url = f'{github_base_url}tree/' + (f'v{version}/' if release == version else f'{commit_hash}/')
+# GitHub URLs and redirection:
+#  - https://github.com/dlu-ch/dlb/blob/<branch-or-tag>/... is redirected to
+#    https://github.com/dlu-ch/dlb/tree/<branch-or-tag>/... for directory
+#  - https://github.com/dlu-ch/dlb/tree/<branch-or-tag>/... is redirected to
+#    https://github.com/dlu-ch/dlb/blob/<branch-or-tag>/... for regular file
+#  - https://github.com/dlu-ch/dlb/tree/<branch-or-tag>/ does exist
+#  - https://github.com/dlu-ch/dlb/blob/<branch-or-tag>/ does *not* exist
 
 # -- General configuration ------------------------------------------------
 
@@ -42,6 +50,7 @@ read_the_doc_base_url = 'https://dlb.readthedocs.io/en/'
 # ones.
 extensions = [
     'sphinx.ext.intersphinx',  # link to Python 3 documentation
+    'sphinx.ext.extlinks',
     'sphinx.ext.mathjax',
     'sphinx.ext.graphviz',
     'sphinx.ext.inheritance_diagram',
@@ -98,8 +107,6 @@ pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
-
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -210,6 +217,16 @@ man_pages = [
 # If true, show URL addresses after external links.
 #man_show_urls = False
 
+# -- Options for sphinx.ext.intersphinx -----------------------------------
+
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+
+# -- Options for sphinx.ext.extlinks --------------------------------------
+
+extlinks = {
+    'dlbrepo': (github_tree_url.replace('%', '%%') + '%s', '')  # usage: :dlbrepo:`example/`
+}
+
 # -- Options for sphinx.ext.graphviz --------------------------------------
 
 # https://www.sphinx-doc.org/en/master/usage/extensions/graphviz.html
@@ -230,12 +247,7 @@ graphviz_dot_args = [
 def dlbcontrib_resolve(fq_module, lineno=None):
     filename = fq_module.replace('.', '/')
 
-    if release == version:
-        tree_url = f'{github_base_url}blob/v{version}/'
-    else:
-        tree_url = f'{github_base_url}tree/{commit_hash}/'
-
-    file_url = f'{tree_url}src/{filename}.py'
+    file_url = f'{github_tree_url}src/{filename}.py'
 
     if lineno is None:
         url = file_url

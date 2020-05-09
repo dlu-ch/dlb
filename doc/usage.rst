@@ -291,7 +291,7 @@ another one::
   CCompiler(source_files=[r.output_file], object_files=['build/out/main.c.o']).run()
   # waits for pending redo with result r to complete before CCompiler(...).run()
 
-This mechanism is used in `example/c-minimal/`_.
+This mechanism is used in :dlbrepo:`example/c-minimal/`.
 
 Alternatively, you could wait for *all* pending redos to complete before ``Compiler(...).run()`` if you prefer
 to split the build into sequential phases like this::
@@ -303,7 +303,7 @@ to split the build into sequential phases like this::
   with dlb.ex.Context():  # waits for all pending redos to complete
       CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).run()
 
-This mechanism is used in `example/c-gtk/`_.
+This mechanism is used in :dlbrepo:`example/c-gtk/`.
 
 
 Real stuff
@@ -312,7 +312,7 @@ Real stuff
 There are more meaningful tasks than replacing text in a text file.
 
 For example, building a C program with GCC looks like
-`this <https://github.com/dlu-ch/dlb/blob/master/example/c-minimal/build-all.py>`_.
+this: :dlbrepo:`example/c-minimal/build-all.py`.
 
 The package :mod:`dlb_contrib` provides tools and utilities to build upon.
 
@@ -498,10 +498,6 @@ Write scripts and tools
 .. |guarantee-d1| replace:: :ref:`G-D1 <guarantee-d1>`
 .. |guarantee-d2| replace:: :ref:`G-D2 <guarantee-d2>`
 .. |guarantee-d3| replace:: :ref:`G-D3 <guarantee-d3>`
-
-
-.. _`example/c-minimal/`: https://github.com/dlu-ch/dlb/tree/master/example/c-minimal/
-.. _`example/c-gtk/`: https://github.com/dlu-ch/dlb/tree/master/example/c-gtk/
 
 
 .. rubric:: Footnotes
