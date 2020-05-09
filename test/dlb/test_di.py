@@ -423,7 +423,7 @@ class UsageExampleTest(unittest.TestCase):
         rom_max = 128
         logfile = dlb.fs.Path('out/linker.log')
 
-        with dlb.di.Cluster(f"analyze memory usage\n    note: see {logfile.as_string()!r} for details",
+        with dlb.di.Cluster(f"analyze memory usage\n    see {logfile.as_string()!r} for details",
                             is_progress=True):
             ram, rom, emmc = (12, 108, 512)
 
@@ -440,7 +440,7 @@ class UsageExampleTest(unittest.TestCase):
 
         o = (
             "I analyze memory usage... \n"
-            "  | note: see 'out/linker.log' for details\n"
+            "  | see 'out/linker.log' for details\n"
             "  I in use: \n"
             "    | RAM:              12 kB \n"
             "    | ROM (NOR flash): 108 kB \n"

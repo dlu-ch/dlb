@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Partition a set of files in the managed tree."""
+"""Partition filesystem objects in the managed tree."""
 
 # Usage example:
 #

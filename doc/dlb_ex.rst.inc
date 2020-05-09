@@ -648,6 +648,9 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       subprocess. Note: On Windows, in order to run a side-by-side assembly the specified *env* must include a valid
       :envvar:`SYSTEMROOT`.
 
+      The file descriptors 1 (stdout) and 2 (stderr) are open in the subprocess. Their meaning is specified by
+      *stdout_output* and *stderr_output*. No other file descriptor from the Python process is open in the subprocess.
+
       :param helper_file: :term:`dynamic helper` to be executed as a relative path
       :param arguments: command-line arguments
       :type arguments: iterable of objects that can be converted to str
@@ -708,6 +711,10 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
            _, output = await context.execute_helper_with_output(..., chunk_processor=Processor())
            # output is a list of 'bytes' objects starting with b'hello'
+
+      The file descriptors 1 (stdout) and 2 (stderr) are open in the subprocess. Their meaning is specified by
+      *output_to_process* and *other_output*. No other file descriptor from the Python process is open in the
+      subprocess.
 
       See :meth:`execute_helper()` for a description of *cwd*, *arguments*, *expected_returncodes*, and *forced_env*.
 
@@ -995,7 +1002,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    - size
    - UID
    - GID
-   - access permissions
+   - filesystem permissions
 
    For a file outside the :term:`managed tree` the state is always assumed to remain unchanged between
    :term:`runs of dlb <run of dlb>`.
@@ -1037,7 +1044,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    - target path if a symbolic link
    - UID
    - GID
-   - access permissions
+   - filesystem permissions
 
    For a file outside the :term:`managed tree` the state is always assumed to remain unchanged between
    :term:`runs of dlb <run of dlb>`.
@@ -1076,7 +1083,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    - size
    - UID
    - GID
-   - access permissions
+   - filesystem permissions
 
    For a directory outside the :term:`managed tree` the state is always assumed to remain unchanged between
    :term:`runs of dlb <run of dlb>`.

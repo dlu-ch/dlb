@@ -178,23 +178,37 @@ did not change. After a modification of the input dependency, dlb again causes a
    I replaced regular file with different one: 'build/out/main.c'
 
 
-Control the output verbosity
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Control the diagnostic output
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 dlb is configured by *configuration parameters* in :mod:`dlb.cf`.
 
 You want to know how exactly dlb calls the external tools and like some output after *each* run?
 Add the following lines to :file:`build.py` (before the line ``with dlb.ex.Context():``)::
 
-  import dlb.di
-  import dlb.cf
+   import dlb.di
+   import dlb.cf
 
-  dlb.cf.level.helper_execution = dlb.di.INFO
-  dlb.cf.latest_run_summary_max_count = 5
+   dlb.cf.level.helper_execution = dlb.di.INFO
+   dlb.cf.latest_run_summary_max_count = 5
 
 This instructs dlb to use the log level :data:`dlb.di.INFO` for all future diagnostic messages of the category
 :data:`dlb.cf.level.helper_execution` and to output a summary after each run that compares the run with the
 previous ones.
+
+To clearly separate the output of tools (like compiler warnings) from dlb's diagnostic messages add this (near the
+beginning of the dlb script)::
+
+   import dlb.di
+
+   try:
+       dlb.di.set_output_file(open(3, 'w'))
+   except OSError:
+       pass
+
+It allows you to redirect diagnostic messages to a specific pseudo terminal (on a typical GNU/Linux system)::
+
+   $ dlb 3>/dev/pts/0
 
 
 Commit the changes
@@ -222,9 +236,13 @@ the output dependency role ``output_file``::
 
 ``t.run()`` performs a redo when
 
-a. one it explicitly requested by ``t.run(force_redo=True)`` or
+a. one is explicitly requested by ``t.run(force_redo=True)`` or
 b. a redo is considered necessary (see :term:`here <redo necessity>` for general conditions and the documentation of
    the dependency classes for the specific ones).
+
+.. note::
+   In contrast to what someone used to the appearance of SCons scripts might expect, the constructor of a tool instance
+   does not run it. Make sure you call ``run()`` on a tool instance when you want it to perform its actual task.
 
 After the successful completion of a redo of a tool instance *t* the :term:`run-database` contains the depended-upon
 state of its (explicit and non-explicit) input dependencies before the start of the redo and its non-explicit
@@ -235,11 +253,11 @@ A redo of *t* from above is considered necessary if at least one of the followin
 - A redo was never performed successfully before for *t* (same class and fingerprint) according to the
   :term:`run-database`.
 - :file:`build/out/main.c` does not exist as a regular file.
-- The :term:`mtime`, size, UID, GID, or set of access permissions of :file:`src/main.c.tmpl` has changed since the
+- The :term:`mtime`, size, UID, GID, or set of filesystem permissions of :file:`src/main.c.tmpl` has changed since the
   start of the last known successful redo for *t* (because it is an output dependency of *t*)
 - The value of ``PATTERN`` or ``REPLACEMENT`` has changed since the the last known successful redo for *t*.
-- The :term:`mtime`, size, UID, GID, or set of access permissions of :file:`build.py` has changed since the last known
-  successful redo of *t* (because :file:`build.py` is a definition file for *t* in the :term:`managed tree`).
+- The :term:`mtime`, size, UID, GID, or set of filesystem permissions of :file:`build.py` has changed since the
+  last known successful redo of *t* (because :file:`build.py` is a definition file for *t* in the :term:`managed tree`).
 
 Tool instances are identified by their class (file path and line number of definition) and their fingerprint.
 The fingerprint includes the concrete dependencies of the tool instance which are defined by arguments of the
@@ -270,7 +288,7 @@ So, redos are parallel by default. The maximum number of pending redos at a time
 :attr:`max_parallel_redo_count <dlb.ex.Context.max_parallel_redo_count>` of the :term:`active context`.
 
 In contrast to GNU Make or Ninja, for example, filesystem paths used in multiple tool instances do *not* form an
-implicit mutual exclusion mechanism. Synchronization and ordering of events is explicit in dlb.
+implicit mutual exclusion mechanism. Synchronization and ordering of events are explicit in dlb.
 Redos can be synchronized
 
 a) globally for all pending redos by the means of :term:`(execution) contexts <context>` or
@@ -420,13 +438,8 @@ Run dlb
 Write scripts and tools
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-- Do not modify the :term:`managed tree` in a :term:`script` inside a :term:`root context`, e.g. by calling
-  :func:`shutil.rmtree()` directly. [#managedtree1]_
-
-  Use :term:`tool instances <tool instance>` instead.
-
 - It is safe to modify the :term:`managed tree` immediately after a :term:`run of dlb` is completed (e.g. in the same
-  :term:`script`, without risking a :term:`redo miss` [#make2]_
+  :term:`script`) without risking a :term:`redo miss` [#make2]_
 
 - Do not use (explicit) multithreading. Use :py:mod:`asyncio` instead.
 
@@ -465,15 +478,8 @@ Write scripts and tools
          ...  # context manager exit is artificially delayed as necessary according to the
               # filesystem's effective mtime resolution (again)
 
-- Use context to serialize groups of running tool instances, even when running in parallel [#serialize1]_::
-
-      with dlb.ex.Context(max_parallel_redo_count=4):
-          ...
-
-      ...  #  all running tool instances are completed here
-
-      with dlb.ex.Context():
-          ...
+- Do not modify the :term:`managed tree` in a :term:`script` -- e.g. by calling :func:`shutil.rmtree()` directly --
+  unless you are sure no redo is pending that accesses the affected filesystem objects. [#managedtree1]_
 
 
 .. _POSIX:

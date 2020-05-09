@@ -60,7 +60,7 @@ Terms
         a value of environment variable) since the start of the last known successful redo of *t*.
       - Any of the execution parameters *t* has changed since the start of the last known successful redo of *t*.
       - The last known successful redo of *t* requested a redo for the next run.
-      - The :term:`mtime`, size, UID, GID, or set of access permissions of any of the definition files for *t* in
+      - The :term:`mtime`, size, UID, GID, or set of filesystem permissions of any of the definition files for *t* in
         the :term:`managed tree` has changed since the last known successful redo of *t*; a definition file for *t* is
         a regular file that contains the class definition of the class of *t* or one of its
         (direct or indirect) subclasses.

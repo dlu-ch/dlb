@@ -29,14 +29,15 @@ by subclassing.
 
 Example::
 
+   import dlb.di
    import dlb.fs
    import dlb.ex
-   ...
+   import dlb_contrib.gcc
 
    class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
 
-   class Compiler(CplusplusCompilerGcc): DIALECT = 'c++14'                       # (b)
-   class Linker(CplusplusLinkerGcc): pass
+   class Compiler(dlb_contrib.gcc.CplusplusCompilerGcc): DIALECT = 'c++14'       # (b)
+   class Linker(dlb_contrib.gcc.CplusplusLinkerGcc): pass
 
    with dlb.ex.Context():                                                        # (c)
        output_directory = Path('build/out/')
@@ -64,8 +65,7 @@ a. *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
 
 #. *Configure* some tools of the toolchain by subclassing and redefining attributes.
 
-#. Create a *context*. A context describes how subprocesses (e.g. of the compiler) are executed and how
-   diagnostic messages are handled.
+#. Create a *context*. A context determines how subprocesses (e.g. of the compiler) are executed.
 
 #. *Compile* all :file:`.cpp` files in directory :file:`src/X/` and its subdirectories into object files.
 

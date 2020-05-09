@@ -15,6 +15,12 @@ import dlb.ex
 import dlb_contrib.doxygen
 import build.version_from_repo
 
+# usage example: dlb 3>/dev/pts/<n>
+try:
+    dlb.di.set_output_file(open(3, 'w'))
+except OSError:
+    pass
+
 
 class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath):
     pass

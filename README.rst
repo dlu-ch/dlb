@@ -16,6 +16,13 @@ Who should use dlb?
 - Short answer: you.
 - Long answer: `here <https://dlb.readthedocs.io/en/latest/faq.html#who-should-use-dlb>`_.
 
+dlb itself is completely tool-agnostic (it does not contain a single line of code specific to a tool or
+programming language).
+
+It comes with a separate Python package ``dlb_contrib`` that contains abstractions and examples for a wide range of
+common tools like GCC, MSVC, GNU Binutils, Git, Doxygen, LaTeX, as well as utilities for code generation,
+API versioning etc.
+
 See here for more: https://dlb.readthedocs.io/.
 
 .. |logo| image:: ./doc/logo.png

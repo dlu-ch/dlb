@@ -40,6 +40,10 @@ messages as long as the syntax is not violated.
 
 To output a message, call :func:`dlb.di.inform()` or enter a context manager instance of :class:`dlb.di.Cluster()`.
 
+All messages are output to the *output file* assigned at the time the output occurs. When first imported,
+:mod:`dlb.di` assigns the standard error :data:`sys.stderr`. It can be changed by calling
+:func:`dlb.di.set_output_file()` at any time.
+
 .. _dlb-di-message-example:
 
 Example
@@ -50,7 +54,7 @@ Example
    import dlb.di
    ...
 
-   with dlb.di.Cluster(f"analyze memory usage\n    note: see {logfile.as_string()!r} for details", is_progress=True):
+   with dlb.di.Cluster(f"analyze memory usage\n    see {logfile.as_string()!r} for details", is_progress=True):
       ram, rom, emmc = ...
 
       dlb.di.inform(
@@ -69,7 +73,7 @@ This will generate the following output:
 .. code-block:: text
 
    I analyze memory usage...
-     | note: see 'out/linker.log' for details
+     | see 'out/linker.log' for details
      I in use:
        | RAM:              12 kB
        | ROM (NOR flash): 108 kB
@@ -155,6 +159,10 @@ Module content
 .. function:: set_output_file(file)
 
    Set the output file for all future outputs of this module to *file* and return the old output file.
+
+   *file* is used by :mod:`dlb.di` exclusively like this: ``file.write(message)``. *message* is a (non-empty) string
+   that can be produced by the production rule :token:`message`. Its first character is meant to represent the first
+   character of a line.
 
    :param file: new output file
    :type file: an object with a ``write(string)`` method
