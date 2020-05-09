@@ -15,10 +15,10 @@ out_dir=build/out
 sphinx_out_dir="${out_dir:?}/sphinx"
 
 # list of builders: https://www.sphinx-doc.org/en/master/usage/builders/index.html
-# most important: html, linkcheck
+# most important: html, linkcheck, man
 builders=("$@")
 if [ "${#builders[@]}" -eq 0 ]; then
-    builders=(html)
+    builders=(html linkcheck)
 fi
 
 (
