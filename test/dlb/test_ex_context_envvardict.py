@@ -109,7 +109,10 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
 
                     with self.assertRaises(ValueError) as cm:
                         dlb.ex.Context.active.env['A_B_C'] = 'xYz'
-                    msg = "'value' invalid with respect to active or an outer context: 'xYz'"
+                    msg = (
+                        "'value' invalid with respect to active or an outer context: 'xYz'\n"
+                        "  | not matched by regular expression 'X.*Z'"
+                    )
                     self.assertEqual(str(cm.exception), msg)
 
     def test_imported_can_be_assigned_and_deleted(self):

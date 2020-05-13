@@ -242,16 +242,6 @@ class Tex(dlb.ex.Tool):
             if self.state_files:
                 read_files = [p for p in read_files if p not in restored_state_files]
 
-            read_and_written_files = sorted(set(read_files) & set(written_files))
-            if read_and_written_files:
-                msg = (
-                    f"{len(read_and_written_files)} file(s) were read and written "
-                    f"(consider adding them to 'state_files'):"
-                )
-                for p in read_and_written_files:
-                    msg += f'\n    {p.as_string()!r}'
-                dlb.di.inform(msg, level=dlb.di.WARNING)
-
             read_files_in_managed_tree = []
             for p in read_files:
                 try:
@@ -262,6 +252,16 @@ class Tex(dlb.ex.Tool):
             result.included_files = sorted(read_files_in_managed_tree)
             output_file = intermediary_directory / f'{base_filename}.{self.OUTPUT_EXTENSION}'
             context.replace_output(result.output_file, context.root_path / output_file)
+
+            read_and_written_files = sorted(set(read_files) & set(written_files))
+            if read_and_written_files:
+                msg = (
+                    f"{len(read_and_written_files)} file(s) were read and written "
+                    f"(consider adding them to 'state_files'):"
+                )
+                for p in read_and_written_files:
+                    msg += f'\n    {p.as_string()!r}'
+                dlb.di.inform(msg, level=dlb.di.WARNING)
 
         return needs_redo
 

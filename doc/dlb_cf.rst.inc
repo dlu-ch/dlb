@@ -31,6 +31,7 @@ To change the behaviour of dlb, change the values of the following variables.
 .. data:: redo_start
 .. data:: redo_aftermath
 .. data:: helper_execution
+.. data:: output_filesystem_object_replacement
 .. data:: run_summary
 
    Assign a message level (a positive integer like :data:`dlb.di.INFO`) to be used for all message of a given

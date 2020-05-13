@@ -13,6 +13,8 @@ from typing import Hashable, Optional, Sequence, Set, Type
 
 from .. import ut
 from .. import fs
+from .. import di
+from .. import cf
 from . import _rundb
 from . import _worktree
 from . import _depend
@@ -78,9 +80,9 @@ class Action:
 
     # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
-        # *source* and *destination* are different managed tree paths with same *is_dir()*
+        # *source* and *destination* (relative path) are different managed tree paths with same *is_dir()*
         # remove *source* if successful
-        # return bool is *destination* is possibly changed
+        # return bool if *destination* is possibly changed
         raise ValueError("is not a filesystem object that is an output dependency")
 
 
@@ -168,6 +170,8 @@ class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action)
 
         if not do_replace:
             os.remove(src)
+            di.inform(f'kept regular file because replacement has same content: {destination.as_string()!r}',
+                      level=cf.level.output_filesystem_object_replacement)
             return False
 
         try_again = False
@@ -178,6 +182,9 @@ class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action)
         if try_again:
             os.makedirs((context.root_path / destination[:-1]).native, exist_ok=True)
             os.replace(src=src, dst=dst)
+
+        di.inform(f'replaced regular file with different one: {destination.as_string()!r}',
+                  level=cf.level.output_filesystem_object_replacement)
 
         return True
 
@@ -198,6 +205,9 @@ class NonRegularFileOutputAction(_NonRegularFileMixin, _FilesystemObjectMixin, A
             os.makedirs((r / destination[:-1]).native, exist_ok=True)
             os.replace(src=src, dst=dst)
 
+        di.inform(f'replaced non-regular file: {destination.as_string()!r}',
+                  level=cf.level.output_filesystem_object_replacement)
+
         return True
 
 
@@ -212,6 +222,9 @@ class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
             os.makedirs((r / destination[:-1]).native, exist_ok=True)
             _worktree.remove_filesystem_object(dst, abs_empty_dir_path=tmp_dir, ignore_non_existent=True)
             os.replace(src=src, dst=dst)
+
+        di.inform(f'replaced directory: {destination.as_string()!r}',
+                  level=cf.level.output_filesystem_object_replacement)
 
         return True
 

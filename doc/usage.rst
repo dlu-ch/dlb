@@ -134,16 +134,17 @@ Create a file :file:`src/main.c.tmpl` with this content::
        return 0;
    }
 
-When you run ``dlb`` now, you get something like::
+When you run ``dlb`` now, you get something like this::
 
    $ dlb build
    D check redo necessity for tool instance 1... [+0.000000s]
      D explicit output dependencies... [+0.000161s]
-       I redo necessary because of filesystem object that is an output dependency: 'build/out/main.c'
+       I redo necessary because of filesystem object: 'build/out/main.c'
          | reason: [Errno 2] No such file or directory: '/.../hello/build/out/main.c'
        D done. [+0.000264s]
      D done. [+0.000331s]
    I start redo for tool instance 1 [+0.014796s]
+   I replaced regular file with different one: 'build/out/main.c'
 
 It informs you that a :term:`redo` was necessary for the :term:`tool instance` because the output dependency
 :file:`build/out/main.c` did not exist.
@@ -165,7 +166,7 @@ Now run dlb again::
 Nothing happens because the output existed and the input (including the tool definition in :file:`build.py`)
 did not change. After a modification of the input dependency, dlb again causes a redo::
 
-   $ touch src/src/main.c.tmpl
+   $ touch src/main.c.tmpl
    $ dlb build
    D check redo necessity for tool instance 1... [+0.000000s]
      D compare input dependencies with state before last successful redo... [+0.000287s]
@@ -174,6 +175,7 @@ did not change. After a modification of the input dependency, dlb again causes a
        D done. [+0.000375s]
      D done. [+0.000385s]
    I start redo for tool instance 1 [+0.014572s]
+   I replaced regular file with different one: 'build/out/main.c'
 
 
 Control the output verbosity

@@ -18,6 +18,7 @@ redo_start: int = di.INFO
 redo_aftermath: int = di.DEBUG + 5
 
 helper_execution: int = di.DEBUG + 7
+output_filesystem_object_replacement: int = di.INFO
 
 run_summary: int = di.INFO
 

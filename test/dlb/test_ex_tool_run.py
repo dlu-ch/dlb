@@ -469,7 +469,11 @@ class RedoIfOutputNotAsExpected(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.di.set_output_file(output)
             self.assertTrue(t.run())
 
-        regex = r"\b()redo necessary because of filesystem object that is an output dependency: 'a\.o'"
+        regex = (
+            r"(?m)\n"
+            r"( *)D explicit output dependencies\.\.\. \[[+.0-9]+s\]\n" 
+            r"\1  I redo necessary because of filesystem object: 'a\.o'"
+        )
         self.assertRegex(output.getvalue(), regex)
 
     def test_redo_if_not_output_is_directory(self):
@@ -487,9 +491,10 @@ class RedoIfOutputNotAsExpected(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.di.set_output_file(output)
             self.assertTrue(t.run())
             regex = (
-                r"(?m)\b"
-                r"redo necessary because of filesystem object that is an output dependency: 'a\.o' \n"
-                r".*  \| reason: filesystem object exists, but is not a regular file\n"
+                r"(?m)\n"
+                r"( *)D explicit output dependencies\.\.\. \[[+.0-9]+s\]\n"
+                r"\1  I redo necessary because of filesystem object: 'a\.o' \n"
+                r"\1    \| reason: filesystem object exists, but is not a regular file\n"
             )
             self.assertRegex(output.getvalue(), regex)
 

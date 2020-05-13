@@ -550,8 +550,7 @@ def check_explicit_fs_output_dependencies(tool, dependency_actions: Tuple[_depen
                         obstructive_paths.add(p)
                     if not needs_redo:
                         msg = (
-                            f"redo necessary because of filesystem object that "
-                            f"is an output dependency: {p.as_string()!r}\n"
+                            f"redo necessary because of filesystem object: {p.as_string()!r}\n"
                             f"    reason: {ut.exception_to_line(e)}"
                         )
                         di.inform(msg, level=cf.level.redo_reason)

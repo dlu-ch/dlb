@@ -536,24 +536,6 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
 class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
-    def test_replaces(self):
-        with dlb.ex.Context() as c:
-            action = dlb.ex._dependaction.RegularFileOutputAction(dlb.ex.output.RegularFile(), 'test_file')
-            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
-
-            with open('a', 'wb') as f:
-                f.write(b'A')
-            with open('b', 'wb') as f:
-                f.write(b'B')
-
-            rd.replace_output('a', 'b')
-
-            self.assertFalse(os.path.exists('b'))
-            with open('a', 'rb') as f:
-                self.assertEqual(b'B', f.read())
-
-            self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
-
     def test_replaces_if_different_size(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(
@@ -566,6 +548,8 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             with open('b', 'wb') as f:
                 f.write(b'BB')
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('a', 'b')
 
             self.assertFalse(os.path.exists('b'))
@@ -573,6 +557,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertEqual(b'BB', f.read())
 
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
+            self.assertEqual("I replaced regular file with different one: 'a'\n", output.getvalue())
 
     def test_replaces_if_different_content_of_same_size(self):
         with dlb.ex.Context() as c:
@@ -586,6 +571,8 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             with open('b', 'wb') as f:
                 f.write(b'BB')
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('a', 'b')
 
             self.assertFalse(os.path.exists('b'))
@@ -593,6 +580,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertEqual(b'BB', f.read())
 
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
+            self.assertEqual("I replaced regular file with different one: 'a'\n", output.getvalue())
 
     def test_replaces_if_nonexistent(self):
         with dlb.ex.Context() as c:
@@ -604,6 +592,8 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             with open('b', 'wb') as f:
                 f.write(b'BB')
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('a', 'b')
 
             self.assertFalse(os.path.exists('b'))
@@ -611,6 +601,7 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertEqual(b'BB', f.read())
 
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
+            self.assertEqual("I replaced regular file with different one: 'a'\n", output.getvalue())
 
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
@@ -622,12 +613,14 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             with open('b', 'wb') as f:
                 f.write(b'BB')
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('x/y/a', 'b')
 
             with open('x/y/a', 'rb') as f:
                 self.assertEqual(b'BB', f.read())
 
-    def test_does_not_replace__if_same_content(self):
+    def test_does_not_replace_if_same_content(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.RegularFile(replace_by_same_content=False),
@@ -639,10 +632,13 @@ class ReplaceRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             with open('b', 'wb') as f:
                 f.write(b'AA')
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('a', 'b')
 
             self.assertFalse(os.path.exists('b'))
             self.assertNotIn(dlb.fs.Path('a'), rd.modified_outputs)
+            self.assertEqual("I kept regular file because replacement has same content: 'a'\n", output.getvalue())
 
 
 class ReplaceDirectoryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -655,18 +651,23 @@ class ReplaceDirectoryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             os.makedirs('a/b/c')
             os.makedirs('u/v')
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('a/', 'u/')
 
             self.assertFalse(os.path.exists('b'))
             self.assertTrue(os.path.exists(os.path.join('a', 'v')))
 
             self.assertIn(dlb.fs.Path('a/'), rd.modified_outputs)
+            self.assertEqual("I replaced directory: 'a/'\n", output.getvalue())
 
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.DirectoryOutputAction(dlb.ex.output.Directory(), 'test_directory')
             rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('x/y/a/'): action})
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             os.makedirs('u/v')
 
             rd.replace_output('x/y/a/', 'u/')
@@ -687,12 +688,15 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
                 self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
                 raise unittest.SkipTest from None
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('a', 'b')
 
             self.assertFalse(os.path.exists('b'))
             self.assertEqual('/u/v', os.readlink('a'))
 
             self.assertIn(dlb.fs.Path('a'), rd.modified_outputs)
+            self.assertEqual("I replaced non-regular file: 'a'\n", output.getvalue())
 
     def test_creates_nonexistent_destination_directory(self):
         with dlb.ex.Context() as c:
@@ -705,5 +709,8 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
                 self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
                 raise unittest.SkipTest from None
 
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             rd.replace_output('x/y/a', 'b')
+
             self.assertEqual('/u/v', os.readlink(os.path.join('x', 'y', 'a')))

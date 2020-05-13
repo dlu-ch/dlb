@@ -67,12 +67,13 @@ class _BaseEnvVarDict:
             return True
         return self._context.parent is not None and self._context.parent.env.is_imported(name)
 
-    def _is_valid(self, name, value):
-        self._check_non_empty_str(name=name)
+    def _find_violated_restriction(self, name, value) -> re.Pattern:
         restriction = self._restriction_by_name.get(name)
         if restriction is not None and not restriction.fullmatch(value):
-            return False
-        return self._context.parent is None or self._context.parent.env._is_valid(name, value)
+            return restriction
+        if self._context.parent is None:
+            return
+        return self._context.parent.env._find_violated_restriction(name, value)
 
     @staticmethod
     def _check_non_empty_str(**kwargs):
@@ -174,8 +175,13 @@ class _EnvVarDict(_BaseEnvVarDict):
 
         self._prepare_for_modification()
 
-        if not self._is_valid(name, value):
-            raise ValueError(f"'value' invalid with respect to active or an outer context: {value!r}")
+        regex = self._find_violated_restriction(name, value)
+        if regex is not None:
+            msg = (
+                f"'value' invalid with respect to active or an outer context: {value!r}\n"
+                f"  | not matched by regular expression {regex.pattern!r}"
+            )
+            raise ValueError(msg)
 
         self._value_by_name[name] = value
 
