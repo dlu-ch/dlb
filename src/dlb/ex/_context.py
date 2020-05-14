@@ -462,7 +462,7 @@ class _RootSpecifics:
             wt = self.working_tree_time_ns
             if wt != wt0:  # guarantee G-T2
                 break
-            if (time.monotonic_ns() - t0) / 1e9 > 10.0:  # at most 10 for s
+            if (time.monotonic_ns() - t0) / 1e9 > 10.0:  # at most 10 s
                 msg = (
                     'working tree time did not change for at least 10 s of system time\n'
                     '  | was the system time adjusted in this moment?'
