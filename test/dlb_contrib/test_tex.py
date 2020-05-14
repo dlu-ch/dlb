@@ -227,7 +227,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         output_path = dlb.fs.Path('build/out/')
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('TEXINPUTS', restriction=r'.*', example='.:~/tex//:')
+            dlb.ex.Context.active.env.import_from_outer('TEXINPUTS', pattern=r'.*', example='.:~/tex//:')
             dlb.ex.Context.active.env['TEXINPUTS'] = '../../../src/:'
             dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',

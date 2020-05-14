@@ -156,7 +156,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertIsNotNone(ra)
             self.assertFalse(dlb.ex.is_complete(ra))
 
-            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
 
             self.assertTrue(dlb.ex.is_complete(ra))
             rb = ATool(source_file='b.cpp', object_file='b.o').run()
@@ -243,7 +243,7 @@ class ContextInRedoTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_env_modification_in_redo(self):
         class CTool(dlb.ex.Tool):
             async def redo(self, result, context):
-                dlb.ex.Context.active.env.import_from_outer('a', restriction=r'.*', example='')
+                dlb.ex.Context.active.env.import_from_outer('a', pattern=r'.*', example='')
 
         with self.assertRaises(RuntimeError):
             with dlb.ex.Context():
@@ -408,9 +408,9 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         class CTool(dlb.ex.Tool):
             object_file = dlb.ex.output.RegularFile()
             language = dlb.ex.input.EnvVar(name='LANG',
-                                           restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                           pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
                                            example='sv_SE')
-            cflags = dlb.ex.input.EnvVar(name='CFLAGS', restriction='.+', example='-O2', required=False)
+            cflags = dlb.ex.input.EnvVar(name='CFLAGS', pattern='.+', example='-O2', required=False)
 
             async def redo(self, result, context):
                 pass
@@ -436,10 +436,10 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         class CTool(dlb.ex.Tool):
             object_file = dlb.ex.output.RegularFile()
             language = dlb.ex.input.EnvVar(name='LANG',
-                                           restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                           pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
                                            example='sv_SE',
                                            explicit=False)
-            cflags = dlb.ex.input.EnvVar(name='CFLAGS', restriction='.+', example='-O2',
+            cflags = dlb.ex.input.EnvVar(name='CFLAGS', pattern='.+', example='-O2',
                                          required=False, explicit=False)
 
             # noinspection PyShadowingNames
@@ -451,7 +451,7 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertIs(NotImplemented, t.cflags)
 
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('LANG', restriction='[a-z]{2}_[A-Z]{2}', example='sv_SE')
+            c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             c.env['LANG'] = 'de_CH'
             result = t.run()
 
@@ -459,7 +459,7 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertIsNone(result.cflags)
 
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('LANG', restriction='[a-z]{2}_[A-Z]{2}', example='sv_SE')
+            c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             with self.assertRaises(dlb.ex.RedoError) as cm:
                 t.run()
         msg = (

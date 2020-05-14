@@ -160,8 +160,8 @@ class Tex(dlb.ex.Tool):
     intermediary_directory = dlb.ex.output.Directory(required=False)
 
     # must not contain unexpanded variables (because these are not imported)
-    global_input_search_paths = dlb.ex.input.EnvVar(name='TEXINPUTS', restriction=r'[^$]*', example='.:~/tex//:',
-                                                         required=False, explicit=False)
+    global_input_search_paths = dlb.ex.input.EnvVar(name='TEXINPUTS', pattern=r'[^$]*', example='.:~/tex//:',
+                                                    required=False, explicit=False)
     # environment variables:
     # https://www.tug.org/texinfohtml/kpathsea.html
     # https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/texmf.in?view=markup

@@ -17,7 +17,7 @@ import dlb_contrib.msbatch
 def setup_paths_for_msvc(context):
     # VCINSTALLDIR must be defined, the other environment variables are set by build/setup.bat with the help of
     # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
-    context.env.import_from_outer('VCINSTALLDIR', restriction=r'.+\\',
+    context.env.import_from_outer('VCINSTALLDIR', pattern=r'.+\\',
                                   example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\')
     assert context.env['VCINSTALLDIR']
     environment = dlb_contrib.msbatch.RunEnvBatch(batch_file='build/setup.bat').run().environment
@@ -27,9 +27,9 @@ def setup_paths_for_msvc(context):
     context.helper['cl.exe'] = binary_directory / 'cl.exe'
     context.helper['link.exe'] = binary_directory / 'link.exe'
 
-    context.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
-    context.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
-    context.env.import_from_outer('LIB', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+    context.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
+    context.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+    context.env.import_from_outer('LIB', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
     context.env['INCLUDE'] = environment['INCLUDE']
     context.env['LIB'] = environment['LIB']
 

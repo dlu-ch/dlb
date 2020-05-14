@@ -210,11 +210,11 @@ class SingleInputValidationTest(unittest.TestCase):
         self.assertEqual(v, dlb.fs.NoSpacePath('a/b/'))
 
     def test_envvar_returns_str_or_dict(self):
-        d = dlb.ex.input.EnvVar(name='number', restriction=r'[0-9]+[a-z]+', example='42s')
+        d = dlb.ex.input.EnvVar(name='number', pattern=r'[0-9]+[a-z]+', example='42s')
         # noinspection PyCallByClass
         self.assertEqual(dlb.ex.input.EnvVar.Value(name='number', raw='123mm', groups={}), d.validate('123mm'))
 
-        d = dlb.ex.input.EnvVar(name='number', restriction=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s')
+        d = dlb.ex.input.EnvVar(name='number', pattern=r'(?P<num>[0-9]+)(?P<unit>[a-z]+)', example='42s')
 
         # noinspection PyCallByClass
         self.assertEqual(dlb.ex.input.EnvVar.Value(name='number', raw='123mm', groups={'num': '123', 'unit': 'mm'}),
@@ -254,10 +254,10 @@ class PropertyTest(unittest.TestCase):
         d = dlb.ex.output.RegularFile(replace_by_same_content=False)
         self.assertFalse(d.replace_by_same_content)
 
-    def test_envvar_intput_dependency_has_name_restriction_and_example(self):
-        d = dlb.ex.input.EnvVar(name='n', restriction=r'.', example='!')
+    def test_envvar_intput_dependency_has_name_pattern_and_example(self):
+        d = dlb.ex.input.EnvVar(name='n', pattern=r'.', example='!')
         self.assertEqual('n', d.name)
-        self.assertEqual(re.compile(r'.'), d.restriction)
+        self.assertEqual(re.compile(r'.'), d.pattern)
         self.assertEqual('!', d.example)
 
 
@@ -287,40 +287,40 @@ class EnvVarInputValidationTest(unittest.TestCase):
     def test_fails_if_name_not_str(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex.input.EnvVar(name=1, restriction=r'[0-9]+', example='42')
+            dlb.ex.input.EnvVar(name=1, pattern=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "'name' must be a str")
 
     def test_fails_if_name_empty(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.input.EnvVar(name='', restriction=r'[0-9]+', example='42')
+            dlb.ex.input.EnvVar(name='', pattern=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "'name' must not be empty")
 
-    def test_fails_if_restriction_is_bytes(self):
+    def test_fails_if_pattern_is_bytes(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex.input.EnvVar(name='number', restriction=b'42', example='42')
-        self.assertEqual(str(cm.exception), "'restriction' must be regular expression (compiled or str)")
+            dlb.ex.input.EnvVar(name='number', pattern=b'42', example='42')
+        self.assertEqual(str(cm.exception), "'pattern' must be regular expression (compiled or str)")
 
     def test_fails_if_example_is_none(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
-            dlb.ex.input.EnvVar(name='number', restriction='42', example=None)
+            dlb.ex.input.EnvVar(name='number', pattern='42', example=None)
         self.assertEqual(str(cm.exception), "'example' must be a str")
 
     def test_fails_with_nonmatching_example(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.input.EnvVar(name='number', restriction=r'[0-9]+', example='42s')
-        self.assertEqual(str(cm.exception), "'example' is invalid with respect to 'restriction': '42s'")
+            dlb.ex.input.EnvVar(name='number', pattern=r'[0-9]+', example='42s')
+        self.assertEqual(str(cm.exception), "'example' is not matched by 'pattern': '42s'")
 
     def test_invalid_if_value_does_not_match_all_the_value(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.input.EnvVar(name='number', restriction=r'[0-9]+[a-z]+', example='42s').validate('123mm2')
-        msg = "value is invalid with respect to restriction: '123mm2'"
+            dlb.ex.input.EnvVar(name='number', pattern=r'[0-9]+[a-z]+', example='42s').validate('123mm2')
+        msg = "value '123mm2' is not matched by validation pattern '[0-9]+[a-z]+'"
         self.assertEqual(str(cm.exception), msg)
 
     def test_fails_with_multiplicity(self):
         with self.assertRaises(ValueError) as cm:
-            dlb.ex.input.EnvVar[1](name='number', restriction=r'[0-9]+', example='42')
+            dlb.ex.input.EnvVar[1](name='number', pattern=r'[0-9]+', example='42')
         self.assertEqual(str(cm.exception), "must not have a multiplicity")
 
 
@@ -404,8 +404,8 @@ class CompatibilityTest(unittest.TestCase):
         for D in filesystem_dependency_classes:
             self.assertTrue(D().compatible_and_no_less_restrictive(D()))
 
-        d1 = dlb.ex.input.EnvVar(name='n', restriction=r'.*', example='')
-        d2 = dlb.ex.input.EnvVar(name='n', restriction=r'.*', example='')
+        d1 = dlb.ex.input.EnvVar(name='n', pattern=r'.*', example='')
+        d2 = dlb.ex.input.EnvVar(name='n', pattern=r'.*', example='')
         self.assertTrue(d1.compatible_and_no_less_restrictive(d2))
 
         d1 = dlb.ex.output.Object(explicit=False)
@@ -458,19 +458,19 @@ class CompatibilityTest(unittest.TestCase):
 
     def test_envvar_and_file_are_not_compatible(self):
         d1 = dlb.ex.input.RegularFile()
-        d2 = dlb.ex.input.EnvVar(name='n1', restriction=r'.*', example='')
+        d2 = dlb.ex.input.EnvVar(name='n1', pattern=r'.*', example='')
         self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
         self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 
     def test_envvar_with_different_names_are_not_compatible(self):
-        d1 = dlb.ex.input.EnvVar(name='n1', restriction=r'.*', example='')
-        d2 = dlb.ex.input.EnvVar(name='n2', restriction=r'.*', example='')
+        d1 = dlb.ex.input.EnvVar(name='n1', pattern=r'.*', example='')
+        d2 = dlb.ex.input.EnvVar(name='n2', pattern=r'.*', example='')
         self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
         self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 
-    def test_envvar_with_different_restrictions_are_not_compatible(self):
-        d1 = dlb.ex.input.EnvVar(name='n', restriction=r'', example='')
-        d2 = dlb.ex.input.EnvVar(name='n', restriction=r'.*', example='')
+    def test_envvar_with_different_validation_patterns_are_not_compatible(self):
+        d1 = dlb.ex.input.EnvVar(name='n', pattern=r'', example='')
+        d2 = dlb.ex.input.EnvVar(name='n', pattern=r'.*', example='')
         self.assertFalse(d1.compatible_and_no_less_restrictive(d2))
         self.assertFalse(d2.compatible_and_no_less_restrictive(d1))
 

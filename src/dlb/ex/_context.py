@@ -59,21 +59,21 @@ class _BaseEnvVarDict:
         self._context = context
         self._top_value_by_name = {str(k): str(v) for k, v, in top_value_by_name.items()}
         self._value_by_name = {} if context.parent is None else dict(context.parent.env._value_by_name)
-        self._restriction_by_name: Dict[str, Pattern] = {}
+        self._pattern_by_name: Dict[str, Pattern] = {}
 
     def is_imported(self, name):
         self._check_non_empty_str(name=name)
-        if name in self._restriction_by_name:
+        if name in self._pattern_by_name:
             return True
         return self._context.parent is not None and self._context.parent.env.is_imported(name)
 
-    def _find_violated_restriction(self, name, value) -> re.Pattern:
-        restriction = self._restriction_by_name.get(name)
-        if restriction is not None and not restriction.fullmatch(value):
-            return restriction
+    def _find_violated_validation_pattern(self, name, value) -> Pattern:
+        pattern = self._pattern_by_name.get(name)
+        if pattern is not None and not pattern.fullmatch(value):
+            return pattern
         if self._context.parent is None:
             return
-        return self._context.parent.env._find_violated_restriction(name, value)
+        return self._context.parent.env._find_violated_validation_pattern(name, value)
 
     @staticmethod
     def _check_non_empty_str(**kwargs):
@@ -119,18 +119,18 @@ class _BaseEnvVarDict:
 
 class _EnvVarDict(_BaseEnvVarDict):
 
-    def import_from_outer(self, name: str, *, restriction: Union[str, Pattern], example: str):
+    def import_from_outer(self, name: str, *, pattern: Union[str, Pattern], example: str):
         self._check_non_empty_str(name=name)
 
-        if isinstance(restriction, str):
-            restriction = re.compile(restriction)
-        if not isinstance(restriction, Pattern):
-            raise TypeError("'restriction' must be regular expression (compiled or str)")
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+        if not isinstance(pattern, Pattern):
+            raise TypeError("'pattern' must be regular expression (compiled or str)")
         if not isinstance(example, str):
             raise TypeError("'example' must be a str")
 
-        if not restriction.fullmatch(example):
-            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
+        if not pattern.fullmatch(example):
+            raise ValueError(f"'example' is not matched by 'pattern': {example!r}")
 
         self._prepare_for_modification()
 
@@ -143,10 +143,10 @@ class _EnvVarDict(_BaseEnvVarDict):
         else:
             value_name = 'current'
 
-        if value is not None and not restriction.fullmatch(value):
-            raise ValueError(f"{value_name} value invalid with respect to 'restriction': {value!r}")
+        if value is not None and not pattern.fullmatch(value):
+            raise ValueError(f"{value_name} value is not matched by 'pattern': {value!r}")
 
-        self._restriction_by_name[name] = restriction  # cannot be removed, once defined!
+        self._pattern_by_name[name] = pattern  # cannot be removed, once defined!
         if value is not None:
             self._value_by_name[name] = value
 
@@ -175,11 +175,11 @@ class _EnvVarDict(_BaseEnvVarDict):
 
         self._prepare_for_modification()
 
-        regex = self._find_violated_restriction(name, value)
+        regex = self._find_violated_validation_pattern(name, value)
         if regex is not None:
             msg = (
-                f"'value' invalid with respect to active or an outer context: {value!r}\n"
-                f"  | not matched by regular expression {regex.pattern!r}"
+                f"'value' is not matched by associated validation pattern: {value!r}\n"
+                f"  | validation pattern in question is {regex.pattern!r}"
             )
             raise ValueError(msg)
 
@@ -206,7 +206,7 @@ class _ReadOnlyEnvVarDictView(_BaseEnvVarDict):
         self._context = env_var_dict._context
         self._top_value_by_name = env_var_dict._top_value_by_name
         self._value_by_name = env_var_dict._value_by_name
-        self._restriction_by_name = env_var_dict._restriction_by_name
+        self._pattern_by_name = env_var_dict._pattern_by_name
 
 
 _ReadOnlyEnvVarDictView.__name__ = 'ReadOnlyEnvVarDictView'

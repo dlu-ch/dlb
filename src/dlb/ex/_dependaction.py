@@ -135,7 +135,7 @@ class DirectoryInputAction(_DirectoryMixin, Action):
 class EnvVarInputAction(Action):
 
     def get_permanent_local_instance_id(self) -> bytes:
-        # does _not_ depend on 'restriction'
+        # does _not_ depend on 'pattern'
         d = self.dependency
         return super().get_permanent_local_instance_id() + ut.to_permanent_local_bytes((d.name,))
 

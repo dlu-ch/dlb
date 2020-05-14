@@ -323,7 +323,7 @@ is a dictionary-like object of all environment variables defined in this *c*.
 *c* is called the associated :term:`context` of *env*.
 
 In addition, the environment variable dictionary object manages the import of environment variables from
-environment variables of the outer :term:`context` and restriction of imported or assigned values in the
+environment variables of the outer :term:`context` and validation of imported or assigned values in the
 form of regular expressions.
 
 The environment variables of the outer :term:`context` of the :term:`root context` is defined
@@ -337,21 +337,20 @@ Example::
 
         # import the environment variable 'LANG' into the context
         dlb.ex.Context.active.env.import_from_outer(
-            'LANG', restriction=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
+            'LANG', pattern=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
 
         # now the environment variable is either undefined or matches the regular expression given
         # (in this context and all future inner contexts)
 
         ... = dlb.ex.Context.active.env['LANG']
-            # value in snapshot of os.environ complying to the restriction or KeyError
+            # value in snapshot of os.environ complying to the validation pattern(s) or KeyError
 
         dlb.ex.Context.active.env['LANG'] = 'de_AT'
 
         with dlb.ex.Context():
 
-            # further restrict the value and make sure it is defined
-            dlb.ex.Context.active.env.import_from_outer(
-                'LANG', restriction='(?P<language>de).*', example='de_CH')
+            # further restrict accepted values
+            dlb.ex.Context.active.env.import_from_outer('LANG', pattern='(?P<language>de).*', example='de_CH')
 
             ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
             del dlb.ex.Context.active.env['LANG']
@@ -366,29 +365,30 @@ Example::
 
 Environment variable dictionary object support the following methods and attributes:
 
-.. method:: EnvVarDict.import_from_outer(name, *, restriction, value_if_undefined=None, example=None)
+.. method:: EnvVarDict.import_from_outer(name, *, pattern, value_if_undefined=None, example=None)
 
-   Sets the value of the environment variable named *name* from the innermost outer :term:`context` that
+   Set the value of the environment variable named *name* from the innermost outer :term:`context` that
    defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
 
-   Also sets the importing restriction for the value of the environment variable; when it is or later becomes
-   defined, it regular expression *restriction* must match its value.
+   Also associate a validation pattern for the value with the environment variable; when it is or later becomes
+   defined, the regular expression *validation* must match its value.
+   Use ``r'.*'`` if any value of the environment variable is valid.
 
-   The possible imported value and the importing restriction apply to the context and all its future inner contexts.
+   The possible imported value and the validation pattern apply to the context and all its future inner contexts.
 
    When called for a root contest, the environment variables are imported from :data:`python:os.environ` at the time
    is was entered.
 
    :param name: (non-empty) name of the environment variable
    :type name: str
-   :param restriction: regular expression
-   :type restriction: str | :class:`python:typing.Pattern`
-   :param example: typical value of a environment variable, *restriction* must match this
+   :param pattern: validation pattern for value as a regular expression
+   :type pattern: str | :class:`python:typing.Pattern`
+   :param example: typical value of an environment variable, *pattern* must match this
    :type example: str
 
    :raises ValueError:
       if an environment variable named *name* is defined in the associated or an outer :term:`context`
-      and *restriction* does not match its value
+      and *pattern* does not match its value
    :raises NonActiveContextAccessError: if the associated context is not an :term:`active context`
 
 .. method:: EnvVarDict.is_imported(name)
@@ -433,7 +433,8 @@ Environment variable dictionary object support the following methods and attribu
    Raises :exc:`KeyError`, if *name* was not imported in the associated  :term:`context` or one of its outer contexts.
 
    Raises :exc:`ValueError`, if *name* was imported in the associated :term:`context` or one of its outer contexts,
-   but is invalid with respect to the restriction an importing context (can be this context and any outer context).
+   but the associated validation pattern in the associated context or in one of its any outer contexts does not
+   match *value*.
 
    Raises :exc:`NonActiveContextAccessError`, if the associated context is not an :term:`active context`.
 
@@ -966,7 +967,7 @@ Input dependency role classes
 +-------------------------------------+-----------------------+-----------------------+----------------------------+
 | :class:`input.EnvVar`               | *name*                |                       | value of enviroment        |
 |                                     +-----------------------+-----------------------+ variable *name* in         |
-|                                     | *restriction*         |                       | active context             |
+|                                     | *pattern*             |                       | active context             |
 |                                     +-----------------------+-----------------------+                            |
 |                                     | *example*             |                       |                            |
 +-------------------------------------+-----------------------+-----------------------+----------------------------+
@@ -1095,7 +1096,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
       Is :class:`dlb.fs.Path`.
 
-.. class:: input.EnvVar(name, restriction, example, required=True, explicit=True)
+.. class:: input.EnvVar(name, pattern, example, required=True, explicit=True)
 
    Constructs a dependency role for a environment variable named *name*.
    It must not have a multiplicity (other than ``None``).
@@ -1104,7 +1105,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    future runs of the tool instance.
    Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.run()` is called.
 
-   The value of the environment variable is valid if it is a string that matches the regular expression *restriction*,
+   The value of the environment variable is valid if it is a string that the regular expression *pattern* matches,
    or if it is ``None`` and *required* is ``False``.
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
@@ -1117,9 +1118,9 @@ keyword arguments of the constructor of :class:`Dependency`.
       >>> class Tool(dlb.ex.Tool):
       >>>    language = dlb.ex.input.EnvVar(
       >>>                   name='LANG',
-      >>>                   restriction=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+      >>>                   pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
       >>>                   example='sv_SE')
-      >>>     flags = dlb.ex.input.EnvVar(name='CFLAGS', restriction=r'.+', example='-Wall')
+      >>>     flags = dlb.ex.input.EnvVar(name='CFLAGS', pattern=r'.+', example='-Wall')
       >>> tool = Tool(language='de_CH')  # use 'de_CH' as value of the environment variable for all
       >>> tool.language.groups['territory']
       'CH'
@@ -1128,9 +1129,9 @@ keyword arguments of the constructor of :class:`Dependency`.
       >>> tool.run().flags.raw  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
       '-O2'
 
-   :param restriction: regular expression
-   :type restriction: str | :class:`python:typing.Pattern`
-   :param example: typical value of a environment variable, *restriction* must match this
+   :param pattern: validation pattern for value as a regular expression
+   :type pattern: str | :class:`python:typing.Pattern`
+   :param example: typical value of a environment variable, *pattern* must match this
    :type example: str
 
    .. class:: Value
@@ -1147,7 +1148,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
       .. attribute:: groups
 
-         The named groups of *restriction* of the corresponding concrete dependency when matched against *raw*.
+         The named groups of *pattern* of the corresponding concrete dependency when matched against *raw*.
 
 
 Output dependency role classes

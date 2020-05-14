@@ -563,7 +563,7 @@ class ToolInstanceConstructionTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     class CTool(dlb.ex.Tool):
-        envvar = dlb.ex.input.EnvVar(name='n', restriction='.*', example='', required=False)
+        envvar = dlb.ex.input.EnvVar(name='n', pattern='.*', example='', required=False)
 
     # noinspection PyAbstractClass
     class DTool(BTool):

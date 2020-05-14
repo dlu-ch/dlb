@@ -21,7 +21,7 @@
 #     def setup_paths_for_msvc(context):
 #         # VCINSTALLDIR must be defined, the other environment variables are set by build/setup.bat with the help of
 #         # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
-#         context.env.import_from_outer('VCINSTALLDIR', restriction=r'.+\\',
+#         context.env.import_from_outer('VCINSTALLDIR', pattern=r'.+\\',
 #                                       example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\')
 #         environment = dlb_contrib.msbatch.RunEnvBatch(batch_file='build/setup.bat').run().environment
 #
@@ -30,9 +30,9 @@
 #         context.helper['cl.exe'] = binary_directory / 'cl.exe'
 #         context.helper['link.exe'] = binary_directory / 'link.exe'
 #
-#         context.env.import_from_outer('SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS')
-#         context.env.import_from_outer('INCLUDE', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
-#         context.env.import_from_outer('LIB', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+#         context.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
+#         context.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+#         context.env.import_from_outer('LIB', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
 #         context.env['INCLUDE'] = environment['INCLUDE']
 #         context.env['LIB'] = environment['LIB']
 #
@@ -168,10 +168,10 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
     EXECUTABLE = 'cl.exe'
 
     system_root_directory_path = dlb.ex.input.EnvVar(
-        name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
+        name='SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS',
         required=True, explicit=False)
     system_include_search_directories = dlb.ex.input.EnvVar(
-        name='INCLUDE', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
+        name='INCLUDE', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
         required=True, explicit=False)
 
     async def redo(self, result, context):
@@ -265,10 +265,10 @@ class LinkerMsvc(dlb.ex.Tool):
     EXECUTABLE = 'link.exe'
 
     system_root_directory_path = dlb.ex.input.EnvVar(
-        name='SYSTEMROOT', restriction=r'.+', example='C:\\WINDOWS',
+        name='SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS',
         required=True, explicit=False)
     system_library_search_directories = dlb.ex.input.EnvVar(
-        name='LIB', restriction=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
+        name='LIB', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
         required=True, explicit=False)
 
     # Object files and static libraries to link.

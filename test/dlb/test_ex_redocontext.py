@@ -254,8 +254,8 @@ class ExecuteHelperEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_can_override_envvar(self):
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('X', restriction='.*', example='')
-            c.env.import_from_outer('Y', restriction='.*', example='')
+            c.env.import_from_outer('X', pattern='.*', example='')
+            c.env.import_from_outer('Y', pattern='.*', example='')
             c.env['X'] = 'x'
             c.env['Y'] = 'z'
             rd = dlb.ex._toolrun.RedoContext(c, dict())

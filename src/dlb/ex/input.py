@@ -29,7 +29,7 @@ class EnvVar(_depend.InputDependency):
         raw: str
         groups: Dict[str, str]
 
-    def __init__(self, *, name: str, restriction: Union[str, Pattern], example: str, **kwargs):
+    def __init__(self, *, name: str, pattern: Union[str, Pattern], example: str, **kwargs):
         super().__init__(**kwargs)
 
         if not isinstance(name, str):
@@ -37,21 +37,21 @@ class EnvVar(_depend.InputDependency):
         if not name:
             raise ValueError("'name' must not be empty")
 
-        if isinstance(restriction, str):
-            restriction = re.compile(restriction)
-        if not isinstance(restriction, Pattern):
-            raise TypeError("'restriction' must be regular expression (compiled or str)")
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+        if not isinstance(pattern, Pattern):
+            raise TypeError("'pattern' must be regular expression (compiled or str)")
         if not isinstance(example, str):
             raise TypeError("'example' must be a str")
 
-        if not restriction.fullmatch(example):
-            raise ValueError(f"'example' is invalid with respect to 'restriction': {example!r}")
+        if not pattern.fullmatch(example):
+            raise ValueError(f"'example' is not matched by 'pattern': {example!r}")
 
         if self.multiplicity is not None:
             raise ValueError("must not have a multiplicity")
 
         self._name = name
-        self._restriction: Pattern = restriction
+        self._pattern: Pattern = pattern
         self._example = example
 
     @property
@@ -59,8 +59,8 @@ class EnvVar(_depend.InputDependency):
         return self._name
 
     @property
-    def restriction(self) -> Pattern:
-        return self._restriction
+    def pattern(self) -> Pattern:
+        return self._pattern
 
     @property
     def example(self) -> str:
@@ -70,7 +70,7 @@ class EnvVar(_depend.InputDependency):
         if not super().compatible_and_no_less_restrictive(other):
             return False
 
-        return self.name == other.name and self.restriction == other.restriction  # ignore example
+        return self.name == other.name and self.pattern == other.pattern  # ignore example
 
     def validate_single(self, value) -> 'EnvVar.Value':
         # value is used to defined the content of a (future) environment variable
@@ -79,9 +79,9 @@ class EnvVar(_depend.InputDependency):
         if not isinstance(value, str):
             raise TypeError("'value' must be a str")
 
-        m = self._restriction.fullmatch(value)
+        m = self._pattern.fullmatch(value)
         if not m:
-            raise ValueError(f"value is invalid with respect to restriction: {value!r}")
+            raise ValueError(f"value {value!r} is not matched by validation pattern {self._pattern.pattern!r}")
 
         # noinspection PyCallByClass
         return EnvVar.Value(name=self.name, raw=value, groups=m.groupdict())

@@ -175,8 +175,8 @@ class FailsWithDifferentInputDependenciesForSameEnvVarTest(testenv.TemporaryWork
     def test_fails(self):
         # noinspection PyAbstractClass
         class BTool(dlb.ex.Tool):
-            a = dlb.ex.input.EnvVar(name='XY', restriction='.*', example='')
-            b = dlb.ex.input.EnvVar(name='XY', restriction='.*', example='', explicit=False)
+            a = dlb.ex.input.EnvVar(name='XY', pattern='.*', example='')
+            b = dlb.ex.input.EnvVar(name='XY', pattern='.*', example='', explicit=False)
 
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
@@ -624,7 +624,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
     def test_redo_for_explicit(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.input.EnvVar(name='LANG', restriction=r'.+', example='de_CH')
+            language = dlb.ex.input.EnvVar(name='LANG', pattern=r'.+', example='de_CH')
 
             async def redo(self, result, context):
                 pass
@@ -645,14 +645,14 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
     def test_redo_for_nonexplicit(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.input.EnvVar(name='LANG', restriction=r'.+', example='de_CH', explicit=False)
+            language = dlb.ex.input.EnvVar(name='LANG', pattern=r'.+', example='de_CH', explicit=False)
 
             async def redo(self, result, context):
                 pass
 
         t = BTool()
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
             dlb.ex.Context.active.env['LANG'] = 'fr_FR'
             r = t.run()
             self.assertIsNotNone(r)
@@ -661,13 +661,13 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
         t = BTool()
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
             dlb.ex.Context.active.env['LANG'] = 'fr_FR'
             self.assertFalse(t.run())
 
         t = BTool()
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
             dlb.ex.Context.active.env['LANG'] = 'it_IT'
             r = t.run()
             self.assertIsNotNone(r)
@@ -676,20 +676,20 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
     def test_fails_for_nonexplicit_with_invalid_envvar_value(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.input.EnvVar(name='LANG', restriction=r'[a-z]+_[A-Z]+', example='de_CH', explicit=False)
+            language = dlb.ex.input.EnvVar(name='LANG', pattern=r'[a-z]+_[A-Z]+', example='de_CH', explicit=False)
 
             async def redo(self, result, context):
                 pass
 
         t = BTool()
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', restriction=r'.*', example='')
+            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
             dlb.ex.Context.active.env['LANG'] = '_'
             with self.assertRaises(dlb.ex.RedoError) as cm:
                 t.run()
             msg = (
                 "input dependency 'language' cannot use environment variable 'LANG'\n"
-                "  | reason: value is invalid with respect to restriction: '_'"
+                "  | reason: value '_' is not matched by validation pattern '[a-z]+_[A-Z]+'"
             )
             self.assertEqual(msg, str(cm.exception))
 
