@@ -367,7 +367,7 @@ def _show_summary(summaries: List[Tuple[datetime.datetime, int, int, int]]):
     if mean_duration_ns > 0:
         msg = (
             f'duration compared to mean duration of previous {len(summaries) - 1} successful runs: '
-            f'{100 * duration_ns / mean_duration_ns:.1f}% of {di.format_time_ns(mean_duration_ns)} s\n'
+            f'{100 * duration_ns / mean_duration_ns:.1f}% of {di.format_time_ns(mean_duration_ns)} seconds\n'
         )
     else:
         msg = f'duration: {di.format_time_ns(duration_ns)} s\n'

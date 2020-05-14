@@ -436,7 +436,7 @@ class UsageExampleTest(unittest.TestCase):
                 """)
 
             if rom > 0.8 * rom_max:
-                dlb.di.inform("more than 80 % of ROM used", level=dlb.di.WARNING)
+                dlb.di.inform("more than 80% of ROM used", level=dlb.di.WARNING)
 
         o = (
             "I analyze memory usage... \n"
@@ -445,7 +445,7 @@ class UsageExampleTest(unittest.TestCase):
             "    | RAM:              12 kB \n"
             "    | ROM (NOR flash): 108 kB \n"
             "    | eMMC:            512 kB\n"
-            "  W more than 80 % of ROM used\n"
+            "  W more than 80% of ROM used\n"
             "  I done.\n"
         )
         self.assertEqual(o, output.getvalue())

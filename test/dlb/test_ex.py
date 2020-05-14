@@ -141,7 +141,7 @@ class RunSummaryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
             regex = (
                 r"(?m)\A"
-                f"I duration compared to mean duration of previous 1 successful runs: [0-9.]+% of [0-9.]+ s \n"
+                f"I duration compared to mean duration of previous 1 successful runs: [0-9.]+% of [0-9.]+ seconds \n"
                 r"  \| start +seconds +runs +redos \n"
                 r"  \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z +[0-9.]+ +3 +2 +\(66\.7%\) \n"
                 r"  \| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z\* +[0-9.]+ +2 +1 +\(50\.0%\)\n\Z"

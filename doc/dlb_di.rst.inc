@@ -62,7 +62,7 @@ Example
           """)
 
       if rom > 0.8 * rom_max:
-          dlb.di.inform("more than 80 % of ROM used", dlb.di.WARNING)
+          dlb.di.inform("more than 80% of ROM used", dlb.di.WARNING)
 
 This will generate the following output:
 
@@ -74,7 +74,7 @@ This will generate the following output:
        | RAM:              12 kB
        | ROM (NOR flash): 108 kB
        | eMMC:            512 kB
-     W more than 80 % of ROM used
+     W more than 80% of ROM used
      I done.
 
 
