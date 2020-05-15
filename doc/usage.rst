@@ -178,8 +178,8 @@ did not change. After a modification of the input dependency, dlb again causes a
    I replaced regular file with different one: 'build/out/main.c'
 
 
-Control the diagnostic output
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Control the diagnostic message verbosity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 dlb is configured by *configuration parameters* in :mod:`dlb.cf`.
 
@@ -195,20 +195,6 @@ Add the following lines to :file:`build.py` (before the line ``with dlb.ex.Conte
 This instructs dlb to use the log level :data:`dlb.di.INFO` for all future diagnostic messages of the category
 :data:`dlb.cf.level.helper_execution` and to output a summary after each run that compares the run with the
 previous ones.
-
-To clearly separate the output of tools (like compiler warnings) from dlb's diagnostic messages add this (near the
-beginning of the dlb script)::
-
-   import dlb.di
-
-   try:
-       dlb.di.set_output_file(open(3, 'w'))
-   except OSError:
-       pass
-
-It allows you to redirect diagnostic messages to a specific pseudo terminal (on a typical GNU/Linux system)::
-
-   $ dlb 3>/dev/pts/0
 
 
 Commit the changes
@@ -339,8 +325,8 @@ The package :mod:`dlb_contrib` provides tools and utilities to build upon.
 
 .. _manual-self-contained-project:
 
-Self-contained project: add dlb to the repository
--------------------------------------------------
+Self-contained projects: dlb as part of the repository
+------------------------------------------------------
 
 ZIP archives in :file:`.dlbroot/u/` are automatically added to the module search path of the Python interpreter
 by :ref:`dlb <dlbexe>`. Placing the :mod:`dlb` package as a version controlled ZIP archive there
@@ -349,6 +335,35 @@ independent of a system-wide installed version.
 
 If you do not need the command-line utility :ref:`dlb <dlbexe>`, dlb does not even have to be installed (globally)
 to build your project.
+
+
+Redirection of diagnostic messages
+----------------------------------
+
+Diagnostic messages are output to :data:`sys.stderr` by default.
+To unambiguously separate them from output of executed tools (e.g. compiler warnings) you can always set a destination
+with :func:`dlb.di.set_output_file()`::
+
+   import dlb.di
+   dlb.di.set_output_file(open('run.log', 'w'))
+   # any object with a file-like write() method can be used as output file
+
+The following snippet "exposes" the destination of diagnostic messages to the parent process and therefore allows
+for its manipulation by shell redirection::
+
+   try:
+       dlb.di.set_output_file(open(3, 'w', buffering=1))
+   except OSError:  # e.g. because file descriptor 3 not opened by parent process
+       pass
+
+Possible applications (on a typical GNU/Linux system)::
+
+   $ dlb 3>run.log             # write to file
+   $ dlb 3>/dev/pts/0          # show in specific pseudo terminal
+   $ dlb 3>&1 1>&2 | gedit -   # (incrementally) show in GEdit window
+
+   $ mkfifo dlb.fifo
+   $ tilix -e cat dlb.fifo && dlb 3>dlb.fifo  # show in new terminal emulator window
 
 
 PyCharm integration

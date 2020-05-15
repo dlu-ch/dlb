@@ -17,8 +17,8 @@ import build.version_from_repo
 
 # usage example: dlb 3>/dev/pts/<n>
 try:
-    dlb.di.set_output_file(open(3, 'w'))
-except OSError:
+    dlb.di.set_output_file(open(3, 'w', buffering=1))
+except OSError:  # e.g. because file descriptor 3 not opened by parent process
     pass
 
 
