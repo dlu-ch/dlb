@@ -110,8 +110,8 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
         compile_arguments += ['-Werror=' + _check_warning_name(n) for n in self.FATAL_WARNINGS]
 
         for macro, replacement in self.DEFINITIONS.items():
-            if not dlb_contrib.clike.SIMPLE_IDENTIFIER.match(macro) and \
-                    not dlb_contrib.clike.FUNCTIONLIKE_MACRO.match(macro):
+            if not dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match(macro) and \
+                    not dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match(macro):
                 raise ValueError(f"not a macro: {macro!r}")
             # *macro* is a string that does not start with '-' and does not contain '='
             if replacement is None:

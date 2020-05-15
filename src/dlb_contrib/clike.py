@@ -13,7 +13,7 @@
 #     import dlb_contrib.clike
 #
 #     name = ...
-#     assert dlb_contrib.clike.SIMPLE_IDENTIFIER.match(name)
+#     assert dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match(name)
 #
 #     ... = dlb_contrib.clike.string_literal_from_bytes('Tête-à-tête'.encode())
 #     # '"T\\xC3\\xAAte-\\xC3\\xA0-t\\xC3\\xAAte"'
@@ -42,7 +42,7 @@
 #         CCompiler(source_files=['main.c'], object_files=['main.c.o']).run()
 
 __all__ = [
-    'SIMPLE_IDENTIFIER', 'IDENTIFIER', 'PORTABLE_C_IDENTIFIER', 'FUNCTIONLIKE_MACRO',
+    'SIMPLE_IDENTIFIER_REGEX', 'IDENTIFIER_REGEX', 'PORTABLE_C_IDENTIFIER_REGEX', 'FUNCTIONLIKE_MACRO_REGEX',
     'string_literal_from_bytes', 'identifier_like_from_string', 'identifier_from_path',
     'ClikeCompiler', 'GenerateHeaderFile'
 ]
@@ -68,19 +68,19 @@ assert sys.version_info >= (3, 7)
 # All characters are significant.
 #
 # Note: not each string matching this regular expression is a valid identifier (could by keyword).
-SIMPLE_IDENTIFIER = re.compile(r'^[_A-Za-z][_A-Za-z0-9]*$')
+SIMPLE_IDENTIFIER_REGEX = re.compile(r'^[_A-Za-z][_A-Za-z0-9]*$')
 
 # Identifier of unrestricted length without universal characters.
 # Note: not each string matching this regular expression is a valid identifier (could by keyword or invalid
 # universal characters),
-IDENTIFIER = re.compile(r'^[_A-Za-z]([_A-Za-z0-9]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8})*$')
+IDENTIFIER_REGEX = re.compile(r'^[_A-Za-z]([_A-Za-z0-9]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8})*$')
 
 # Simple internal or external identifier with only significant characters for a compliant C compiler
-PORTABLE_C_IDENTIFIER = re.compile(r'^[_A-Za-z][_A-Za-z0-9]{0,30}$')
+PORTABLE_C_IDENTIFIER_REGEX = re.compile(r'^[_A-Za-z][_A-Za-z0-9]{0,30}$')
 
-# Indentifier part of function-like macro (for object-like macro: use IDENTIFIER).
+# Indentifier part of function-like macro (for object-like macro: use IDENTIFIER_REGEX).
 # Example: 'V(a, ...)'
-FUNCTIONLIKE_MACRO = re.compile((
+FUNCTIONLIKE_MACRO_REGEX = re.compile((
     r'^(?P<name>{identifier})'  # without universal characters
     r'\((?P<arguments>(( *{identifier} *,)* *({identifier}|\.\.\.))? *)\)$'
 ).format(identifier='[_A-Za-z][_A-Za-z0-9]*'))
@@ -246,7 +246,7 @@ class GenerateHeaderFile(dlb.ex.Tool):
         pass
 
     async def redo(self, result, context):
-        if not SIMPLE_IDENTIFIER.match(self.INCLUDE_GUARD_PREFIX + self.INCLUDE_GUARD_SUFFIX):
+        if not SIMPLE_IDENTIFIER_REGEX.match(self.INCLUDE_GUARD_PREFIX + self.INCLUDE_GUARD_SUFFIX):
             raise ValueError("'INCLUDE_GUARD_PREFIX' and 'INCLUDE_GUARD_SUFFIX' do not form a valid identifier")
         if self.PATH_COMPONENTS_TO_STRIP >= len(result.file.parts):
             raise ValueError("nothing left to strip after 'PATH_COMPONENTS_TO_STRIP'")

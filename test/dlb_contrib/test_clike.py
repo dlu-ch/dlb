@@ -13,36 +13,36 @@ import unittest
 class RegexTest(unittest.TestCase):
 
     def test_simple_identifier(self):
-        self.assertTrue(dlb_contrib.clike.SIMPLE_IDENTIFIER.match('_a1Z'))
-        self.assertFalse(dlb_contrib.clike.SIMPLE_IDENTIFIER.match(''))
-        self.assertFalse(dlb_contrib.clike.SIMPLE_IDENTIFIER.match('1a'))
-        self.assertFalse(dlb_contrib.clike.SIMPLE_IDENTIFIER.match('a::b'))
-        self.assertTrue(dlb_contrib.clike.SIMPLE_IDENTIFIER.match('a' * 100))
+        self.assertTrue(dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match('_a1Z'))
+        self.assertFalse(dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match(''))
+        self.assertFalse(dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match('1a'))
+        self.assertFalse(dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match('a::b'))
+        self.assertTrue(dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match('a' * 100))
 
     def test_identifier(self):
-        self.assertTrue(dlb_contrib.clike.IDENTIFIER.match('_a1Z\\u1a3F\\UA234567f'))
-        self.assertFalse(dlb_contrib.clike.IDENTIFIER.match('\\u1a3'))
-        self.assertFalse(dlb_contrib.clike.IDENTIFIER.match('\\UA234567'))
+        self.assertTrue(dlb_contrib.clike.IDENTIFIER_REGEX.match('_a1Z\\u1a3F\\UA234567f'))
+        self.assertFalse(dlb_contrib.clike.IDENTIFIER_REGEX.match('\\u1a3'))
+        self.assertFalse(dlb_contrib.clike.IDENTIFIER_REGEX.match('\\UA234567'))
 
     def test_portable_c_identifier(self):
-        self.assertTrue(dlb_contrib.clike.PORTABLE_C_IDENTIFIER.match('a' * 31))
-        self.assertFalse(dlb_contrib.clike.PORTABLE_C_IDENTIFIER.match('a' * 32))
+        self.assertTrue(dlb_contrib.clike.PORTABLE_C_IDENTIFIER_REGEX.match('a' * 31))
+        self.assertFalse(dlb_contrib.clike.PORTABLE_C_IDENTIFIER_REGEX.match('a' * 32))
 
     def test_macro(self):
-        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z()'))
-        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z(x)'))
-        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z(...)'))
-        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z(x, y, ...)'))
-        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z(  x  , y  , ...  )'))
+        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z()'))
+        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x)'))
+        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(...)'))
+        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)'))
+        self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(  x  , y  , ...  )'))
 
-        self.assertEqual('_a1Z', dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z(x, y, ...)').group('name'))
-        self.assertEqual('x, y, ...', dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z(x, y, ...)').group('arguments'))
+        self.assertEqual('_a1Z', dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)').group('name'))
+        self.assertEqual('x, y, ...', dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)').group('arguments'))
 
-        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z'))
-        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z ()'))
-        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z('))
-        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z( ..., x )'))
-        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO.match('_a1Z( x, ..., y )'))
+        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z'))
+        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z ()'))
+        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z('))
+        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z( ..., x )'))
+        self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z( x, ..., y )'))
 
 
 class StringLiteralFromBytesTest(unittest.TestCase):

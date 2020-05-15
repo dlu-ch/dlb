@@ -194,7 +194,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         # https://docs.microsoft.com/en-us/cpp/build/reference/d-preprocessor-definitions?view=vs-2019:
         # The /D option doesn't support function-like macro definitions.
         for macro, replacement in self.DEFINITIONS.items():
-            if not dlb_contrib.clike.SIMPLE_IDENTIFIER.match(macro):
+            if not dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match(macro):
                 raise ValueError(f"not an object-like macro: {macro!r}")
             # *macro* is a string that does not start with '/' and does not contain '=' or '#'
             if replacement is None:

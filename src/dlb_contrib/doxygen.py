@@ -19,7 +19,7 @@
 #             source_directories=['src/'],  # replaces '${{source_directories}}' in Doxyfile
 #             output_directory='build/out/').run()
 
-__all__ = ['PLACEHOLDER_NAME', 'Template', 'Path', 'Doxygen']
+__all__ = ['PLACEHOLDER_NAME_REGEX', 'Template', 'Path', 'Doxygen']
 
 import sys
 import re
@@ -32,7 +32,7 @@ import dlb.ex
 
 assert sys.version_info >= (3, 7)
 
-PLACEHOLDER_NAME = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*$')
+PLACEHOLDER_NAME_REGEX = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*$')
 
 
 class Path(dlb.fs.PosixPath):
@@ -96,7 +96,7 @@ def _transform_replacement(replacements: Dict[str, Any]):
     for name, value in replacements.items():
         if not isinstance(name, str):
             raise TypeError('placeholder name must be str')
-        if not PLACEHOLDER_NAME.match(name):
+        if not PLACEHOLDER_NAME_REGEX.match(name):
             raise ValueError(f'invalid placeholder name: {name!r}')
         d[name] = _stringify_value(value)
     return d
