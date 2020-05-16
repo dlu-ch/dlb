@@ -31,3 +31,5 @@ with dlb.ex.Context():
     dlb_contrib.gcc.CLinkerGcc(
         object_and_archive_files=object_files,
         linked_file=output_directory / 'application').run()
+
+dlb.di.inform('finished successfully')

@@ -119,6 +119,7 @@ Replace the content of :file:`build.py` by this::
    with dlb.ex.Context():  # an execution context
        t.run()  # run the tool instance in the active execution context
 
+   dlb.di.inform('finished successfully')
 
 This defines a :term:`tool` called ``Replacer`` with an *input dependency role* ``template_file`` and an *output
 dependency role* ``output_file``. The class attributes ``PATTERN`` and ``REPLACEMENT`` are *execution parameters* of the
@@ -145,6 +146,7 @@ When you run ``dlb`` now, you get something like this::
      D done. [+0.000331s]
    I start redo for tool instance 1 [+0.014796s]
    I replaced regular file with different one: 'build/out/main.c'
+   I finished successfully
 
 It informs you that a :term:`redo` was necessary for the :term:`tool instance` because the output dependency
 :file:`build/out/main.c` did not exist.
@@ -162,6 +164,7 @@ It was created by the redo and now contains::
 Now run dlb again::
 
    $ dlb build
+   I finished successfully
 
 Nothing happens because the output existed and the input (including the tool definition in :file:`build.py`)
 did not change. After a modification of the input dependency, dlb again causes a redo::
@@ -176,6 +179,7 @@ did not change. After a modification of the input dependency, dlb again causes a
      D done. [+0.000385s]
    I start redo for tool instance 1 [+0.014572s]
    I replaced regular file with different one: 'build/out/main.c'
+   I finished successfully
 
 
 Control the diagnostic message verbosity
@@ -195,6 +199,10 @@ Add the following lines to :file:`build.py` (before the line ``with dlb.ex.Conte
 This instructs dlb to use the log level :data:`dlb.di.INFO` for all future diagnostic messages of the category
 :data:`dlb.cf.level.helper_execution` and to output a summary after each run that compares the run with the
 previous ones.
+
+It is good practice to output some summary of a successful build even if no redo was necessary.
+This can be a relevant information on the most important build product (e.g. code size of an application)
+or just the line ``dlb.di.inform('finished successfully')`` at the end of the dlb script.
 
 
 Commit the changes

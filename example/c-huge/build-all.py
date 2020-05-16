@@ -46,3 +46,5 @@ with dlb.ex.Context():
     dlb_contrib.gcc.CLinkerGcc(
         object_and_archive_files=[o for g in object_file_groups for o in g],
         linked_file=output_directory / 'application').run()
+
+dlb.di.inform('finished successfully')

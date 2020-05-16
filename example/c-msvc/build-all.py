@@ -54,3 +54,5 @@ with dlb.ex.Context():
     dlb_contrib.msvc.LinkerMsvc(
          linkable_files=object_files,
          linked_file=output_directory / 'application.exe').run()
+
+dlb.di.inform('finished successfully')

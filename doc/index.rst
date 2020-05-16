@@ -55,7 +55,7 @@ Example::
            linked_file=output_directory / 'example'                              # (e)
        ).run().linked_file
 
-       dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')    # (f)
+   dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')        # (f)
 
 Explanation:
 

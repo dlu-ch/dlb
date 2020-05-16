@@ -39,3 +39,5 @@ with dlb.ex.Context():
                      state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).run()
         if not r:
             break
+
+dlb.di.inform('finished successfully')

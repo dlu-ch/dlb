@@ -104,3 +104,5 @@ with dlb.ex.Context():
                 needs_update.result_file.native.raw.touch()  # mark successful completion of update
             else:
                 dlb.di.inform('skip')
+
+dlb.di.inform('finished successfully')
