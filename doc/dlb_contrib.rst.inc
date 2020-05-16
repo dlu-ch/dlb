@@ -34,6 +34,7 @@ Please see there for details.
    - simple modules before complicated modules
 
 .. dlbcontrib:module:: backslashescape
+.. dlbcontrib:module:: iso6429
 .. dlbcontrib:module:: partition
 .. dlbcontrib:module:: exportenv
 .. dlbcontrib:module:: generic

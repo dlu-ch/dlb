@@ -8,9 +8,18 @@
 #    python3 -m build-all           # in the directory of this file
 #    python3 "$PWD"/build-all.py'   # in the directory of this file
 
+import sys
+
+import dlb.di
 import dlb.fs
 import dlb.ex
 import dlb_contrib.tex
+import dlb_contrib.iso6429
+
+
+if sys.stderr.isatty():
+    # assume ISO/IEC 6429 conformant terminal ("VT-100 compatible")
+    dlb.di.set_output_file(dlb_contrib.iso6429.MessageColorator(sys.stderr))
 
 
 class PdfLatex(dlb_contrib.tex.Latex):

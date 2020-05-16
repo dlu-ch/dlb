@@ -365,6 +365,10 @@ Possible applications (on a typical GNU/Linux system)::
    $ mkfifo dlb.fifo
    $ tilix -e cat dlb.fifo && dlb 3>dlb.fifo  # show in new terminal emulator window
 
+If you mostly work with a terminal emulator that is (at least partially) compliant to ISO/IEC 6429, colored output
+might be useful which can easily be achieved with :class:`MessageColorator <dlb_contrib.iso6429.MessageColorator>`
+from :mod:`dlb_contrib.iso6429`.
+
 
 PyCharm integration
 -------------------
