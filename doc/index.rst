@@ -34,7 +34,7 @@ Example::
    import dlb.ex
    import dlb_contrib.gcc
 
-   class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NonSpacePath): pass   # (a)
+   class Path(dlb.fs.PosixPath, dlb.fs.WindowsPath, dlb.fs.NoSpacePath): pass    # (a)
 
    class Compiler(dlb_contrib.gcc.CplusplusCompilerGcc): DIALECT = 'c++14'       # (b)
    class Linker(dlb_contrib.gcc.CplusplusLinkerGcc): pass

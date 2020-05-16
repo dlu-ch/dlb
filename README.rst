@@ -16,6 +16,8 @@ Who should use dlb?
 - Short answer: you.
 - Long answer: `here <https://dlb.readthedocs.io/en/latest/faq.html#who-should-use-dlb>`_.
 
+|demo-c|
+
 dlb itself is completely tool-agnostic (it does not contain a single line of code specific to a tool or
 programming language).
 
@@ -26,6 +28,10 @@ API versioning etc.
 See here for more: https://dlb.readthedocs.io/.
 
 .. |logo| image:: ./doc/grph/logo.png
+
+.. |demo-c| image:: ./doc/grph/demo-c.gif
+   :alt: Build of C11 application
+   :target: example/c-typical/build-all.py
 
 .. |batch-unittest| image:: https://travis-ci.org/dlu-ch/dlb.svg?branch=master
    :alt: Build status (unittests)
