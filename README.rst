@@ -25,7 +25,7 @@ API versioning etc.
 
 See here for more: https://dlb.readthedocs.io/.
 
-.. |logo| image:: ./doc/logo.png
+.. |logo| image:: ./doc/grph/logo.png
 
 .. |batch-unittest| image:: https://travis-ci.org/dlu-ch/dlb.svg?branch=master
    :alt: Build status (unittests)
