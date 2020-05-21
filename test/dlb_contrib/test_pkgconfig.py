@@ -6,6 +6,7 @@ import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.pkgconfig
 import os.path
 import unittest
@@ -119,3 +120,21 @@ class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertIn('libgdk-3.so', result.library_filenames)
         self.assertIn(dlb.fs.Path('/usr/include/gtk-3.0/'), result.include_search_directories)
         self.assertEqual(('-pthread',), result.options)
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/pkg-config'), 'requires pkg-config')
+class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_version_is_string_with_dot(self):
+        Tool = dlb_contrib.pkgconfig.PkgConfig
+
+        class QueryVersion(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
+
+        with dlb.ex.Context():
+            version_by_path = QueryVersion().run().version_by_path
+            path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
+            self.assertEqual(1, len(version_by_path))
+            version = version_by_path[path]
+            self.assertIsInstance(version, str)
+            self.assertGreaterEqual(version.count('.'), 1)

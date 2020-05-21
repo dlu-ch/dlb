@@ -59,6 +59,9 @@ class PkgConfig(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'pkg-config'
 
+    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    VERSION_PARAMETERS = ('--version',)
+
     LIBRARY_NAMES = ()  # e.g. ('orte')
 
     LIBRARY_FILENAME_PATTERN = 'lib{}.so'

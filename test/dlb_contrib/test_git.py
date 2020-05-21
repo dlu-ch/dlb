@@ -6,6 +6,7 @@ import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.git
 import dlb_contrib.sh
 import os.path
@@ -220,3 +221,21 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         self.assertIsNone(result.branch_refname)
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/git'), 'requires Git')
+class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_version_is_string_with_dot(self):
+        Tool = dlb_contrib.git.GitDescribeWorkingDirectory
+
+        class QueryVersion(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
+
+        with dlb.ex.Context():
+            version_by_path = QueryVersion().run().version_by_path
+            path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
+            self.assertEqual(1, len(version_by_path))
+            version = version_by_path[path]
+            self.assertIsInstance(version, str)
+            self.assertGreaterEqual(version.count('.'), 2)

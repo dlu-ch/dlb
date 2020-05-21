@@ -40,14 +40,29 @@
 #           # (*needs_update* will be True next time if this fails)
 #           ...
 #           needs_update.result_file.native.raw.touch()  # mark successful completion
+#
+#   ...
+#
+#   with dlb.ex.Context():
+#       class VersionQuery(dlb_contrib.generic.VersionQuery):
+#           VERSION_PARAMETERS_BY_EXECUTABLE = {
+#               tool.EXECUTABLE: tool.VERSION_PARAMETERS
+#               for tool in [dlb_contrib.gcc.CCompilerGcc, dlb_contrib.doxygen.Doxygen, ...]
+#           }
+#       version_by_path = VersionQuery().run().version_by_path
 
-__all__ = ['Check', 'ResultRemover']
+__all__ = ['Check', 'ResultRemover', 'VersionQuery', 'VERSION_WORD_REGEX']
 
 import sys
+import re
+from typing import Dict, Optional, Tuple
+
 import dlb.ex
 
 assert sys.version_info >= (3, 7)
 
+# e.g. 'v1.2.3-alpha4'
+VERSION_WORD_REGEX = re.compile(b'(^|\s)(?P<version>[0-9a-zA-Z._@+-]*[0-9]\.[0-9][0-9a-zA-Z._@+-]*)($|\s)')
 
 # TODO replace (prone to redo miss when dlb aborted between Check(...).run() and use of result
 class Check(dlb.ex.Tool):
@@ -92,3 +107,43 @@ class ResultRemover(dlb.ex.Tool):
             p.native.raw.unlink()
         except FileNotFoundError:
             pass
+
+
+class VersionQuery(dlb.ex.Tool):
+    # Execute dynamic helpers to query their version.
+    # Overwrite *VERSION_PARAMETERS_BY_EXECUTABLE* in a subclass *C* and then use 'C().run().version_by_path'.
+
+    # Dictionary of commandline parameters by executable.
+    # Example: {dlb_contrib.tex.Latex.EXECUTABLE: dlb_contrib.tex.Latex.VERSION_PARAMETERS}.
+    VERSION_PARAMETERS_BY_EXECUTABLE: Dict[str, Tuple[str]] = {}
+
+    # Dictionary of versions of all executables in *VERSION_PARAMETERS_BY_EXECUTABLE*.
+    #
+    # The key is the absolute path of the executable *e* where *e* is a key of *VERSION_PARAMETERS_BY_EXECUTABLE*.
+    # The value is the first version word in the first non-empty line (after removing white space) in *e*'s
+    # output to standard output when called with command line parameters VERSION_PARAMETERS_BY_EXECUTABLE[e].
+    #
+    # A version word is a word (delimited by whitespace or beginning/end of line) that contains two decimal digits
+    # separated by '.' and consists only of ASCII letters, decimal digits, '_', '.', '+', '-', '@'.
+    # Example: 'v1.2.3-alpha4'.
+    version_by_path = dlb.ex.output.Object(explicit=False)
+
+    async def redo(self, result: 'dlb.ex.RunResult', context: 'dlb.ex.RedoContext') -> Optional[bool]:
+        version_by_path = {}
+
+        for executable, version_parameters in sorted(self.VERSION_PARAMETERS_BY_EXECUTABLE.items()):
+            first_line = None
+            version = None
+            _, output = await context.execute_helper_with_output(executable, [p for p in version_parameters])
+            for li in output.splitlines():
+                li = li.strip()
+                if li:
+                    first_line = li
+                    break
+            m = VERSION_WORD_REGEX.search(first_line)
+            if m:
+                version = m.group('version').decode()
+            version_by_path[context.helper[executable]] = version
+
+        result.version_by_path = version_by_path
+        return True

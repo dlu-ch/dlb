@@ -6,6 +6,7 @@ import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.tex
 import sys
 import os.path
@@ -261,3 +262,29 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertRegex(output.getvalue(), regex)
         finally:
             dlb.di.set_output_file(sys.stderr)
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/tex'), 'requires tex')
+@unittest.skipIf(not os.path.isfile('/usr/bin/latex'), 'requires latex')
+class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_version_is_string_with_dot(self):
+        Tools = [
+            dlb_contrib.tex.Tex,
+            dlb_contrib.tex.Latex,
+        ]
+
+        class QueryVersion(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {
+                Tool.EXECUTABLE: Tool.VERSION_PARAMETERS
+                for Tool in Tools
+            }
+
+        with dlb.ex.Context():
+            version_by_path = QueryVersion().run().version_by_path
+            self.assertEqual(len(QueryVersion.VERSION_PARAMETERS_BY_EXECUTABLE), len(version_by_path))
+            for Tool in Tools:
+                path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
+                version = version_by_path[path]
+                self.assertIsInstance(version, str)
+                self.assertGreaterEqual(version.count('.'), 1)

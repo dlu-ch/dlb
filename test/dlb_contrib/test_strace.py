@@ -6,6 +6,7 @@ import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.strace
 import os.path
 import unittest
@@ -167,3 +168,21 @@ class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
             r = ShowContent(source_file='x', target_file='y').run()
         self.assertEqual((dlb.fs.Path('x'),), r.read_files)
         self.assertEqual((dlb.fs.Path('y'),), r.written_files)
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/strace'), 'requires strace')
+class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_version_is_string_with_dot(self):
+        Tool = dlb_contrib.strace.RunStraced
+
+        class QueryVersion(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.TRACING_EXECUTABLE: Tool.VERSION_PARAMETERS}
+
+        with dlb.ex.Context():
+            version_by_path = QueryVersion().run().version_by_path
+            path = dlb.ex.Context.active.helper[Tool.TRACING_EXECUTABLE]
+            self.assertEqual(1, len(version_by_path))
+            version = version_by_path[path]
+            self.assertIsInstance(version, str)
+            self.assertGreaterEqual(version.count('.'), 1)

@@ -5,6 +5,7 @@
 import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.doxygen
 import os.path
 import unittest
@@ -130,3 +131,21 @@ class Doxygen2Test(testenv.TemporaryWorkingDirectoryTestCase):
                 configuration_template_file='Doxyfile',
                 source_directories=['.'],
                 output_directory='d/').run()
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/doxygen'), 'requires doxygen')
+class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_version_is_string_with_dot(self):
+        Tool = dlb_contrib.doxygen.Doxygen
+
+        class QueryVersion(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
+
+        with dlb.ex.Context():
+            version_by_path = QueryVersion().run().version_by_path
+            path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
+            self.assertEqual(1, len(version_by_path))
+            version = version_by_path[path]
+            self.assertIsInstance(version, str)
+            self.assertGreaterEqual(version.count('.'), 2)

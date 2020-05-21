@@ -12,6 +12,7 @@ import dlb.fs
 import dlb.di
 import dlb.cf
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.doxygen
 import build.version_from_repo
 
@@ -106,6 +107,29 @@ def build_documentation(*, version_result, source_directory: Path, output_direct
         dlb_contrib.zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run()
 
 
+# list used executables with version
+def summarize():
+    class VersionQuery(dlb_contrib.generic.VersionQuery):
+        VERSION_PARAMETERS_BY_EXECUTABLE = {
+            tool.EXECUTABLE: tool.VERSION_PARAMETERS
+            for tool in [
+                build.version_from_repo.VersionQuery,
+                dlb_contrib.pkgconfig.PkgConfig,
+                dlb_contrib.gcc.CCompilerGcc,
+                dlb_contrib.gcc.CLinkerGcc,
+                dlb_contrib.doxygen.Doxygen
+            ]
+            if dlb.fs.Path(tool.EXECUTABLE) in dlb.ex.Context.active.helper
+        }
+
+    version_by_path = VersionQuery().run().version_by_path
+    executable_lines = [
+        f'    {k.as_string()!r}: \t{v.as_string()!r} \t{version_by_path[v] if v in version_by_path else "?"}'
+        for k, v in sorted(dlb.ex.Context.active.helper.items()) if not k.is_dir()
+    ]
+    dlb.di.inform('\n'.join(['used executables:'] + executable_lines))
+
+
 dlb.cf.latest_run_summary_max_count = 5
 
 with dlb.ex.Context():
@@ -129,3 +153,5 @@ with dlb.ex.Context():
             output_directory=output_directory,
             application_name=application_name,
             sources_changed=sources_changed)
+
+    summarize()

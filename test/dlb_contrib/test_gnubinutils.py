@@ -4,6 +4,7 @@
 
 import testenv  # also sets up module search paths
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.gcc
 import dlb_contrib.gnubinutils
 import os.path
@@ -35,3 +36,21 @@ class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
             ]
             dlb_contrib.gnubinutils.Archive(object_files=[o for g in object_file_groups for o in g],
                                             archive_file='libexample.a').run()
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/ar'), 'requires ar')
+class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_version_is_string_with_dot(self):
+        Tool = dlb_contrib.gnubinutils.Archive
+
+        class QueryVersion(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
+
+        with dlb.ex.Context():
+            version_by_path = QueryVersion().run().version_by_path
+            path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
+            self.assertEqual(1, len(version_by_path))
+            version = version_by_path[path]
+            self.assertIsInstance(version, str)
+            self.assertGreaterEqual(version.count('.'), 2)

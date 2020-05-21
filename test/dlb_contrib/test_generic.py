@@ -3,6 +3,7 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 import testenv  # also sets up module search paths
+import dlb.fs
 import dlb.ex
 import dlb_contrib.generic
 import os.path
@@ -65,3 +66,25 @@ class ResultRemoverTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertTrue(r.result_file[:-1].native.raw.is_dir())
                 self.assertFalse(r.result_file.native.raw.exists())
                 r.result_file.native.raw.touch()  # mark as completed
+
+
+class EmptyVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
+    def test_is_empty(self):
+        with dlb.ex.Context():
+            version_by_path = dlb_contrib.generic.VersionQuery().run().version_by_path
+        self.assertEqual({}, version_by_path)
+
+
+@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+class LsVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
+    def test_ls(self):
+        class VersionQuery(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {
+                'ls': ('--version',)
+            }
+
+        with dlb.ex.Context():
+            version_by_path = VersionQuery().run().version_by_path
+
+        self.assertEqual([dlb.fs.Path('/bin/ls')], sorted(version_by_path.keys()))
+        self.assertRegex(version_by_path[dlb.fs.Path('/bin/ls')], '[0-9]+(\.[0-9]+)+')

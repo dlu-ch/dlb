@@ -143,6 +143,9 @@ class RunStraced(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     TRACING_EXECUTABLE = 'strace'
 
+    # Command line parameters for *TRACING_EXECUTABLE* to output version information of standard output
+    VERSION_PARAMETERS = ('-V',)
+
     # Dynamic helper of executable to  be traced by *TRACING_EXECUTABLE*, looked-up in the context.
     EXECUTABLE = ''  # define in subclass
 

@@ -6,6 +6,7 @@ import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.di
 import dlb.ex
+import dlb_contrib.generic
 import dlb_contrib.sh
 import dlb_contrib.gcc
 import sys
@@ -291,3 +292,30 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             CLinkerGcc(object_and_archive_files=['a.o'], library_search_directories=['lib/'],
                        linked_file='e').run()
+
+
+@unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
+class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_version_is_string_with_dot(self):
+        Tools = [
+            dlb_contrib.gcc.CCompilerGcc,
+            dlb_contrib.gcc.CplusplusCompilerGcc,
+            dlb_contrib.gcc.CLinkerGcc,
+            dlb_contrib.gcc.CplusplusLinkerGcc
+        ]
+
+        class QueryVersion(dlb_contrib.generic.VersionQuery):
+            VERSION_PARAMETERS_BY_EXECUTABLE = {
+                Tool.EXECUTABLE: Tool.VERSION_PARAMETERS
+                for Tool in Tools
+            }
+
+        with dlb.ex.Context():
+            version_by_path = QueryVersion().run().version_by_path
+            self.assertEqual(len(QueryVersion.VERSION_PARAMETERS_BY_EXECUTABLE), len(version_by_path))
+            for Tool in Tools:
+                path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
+                version = version_by_path[path]
+                self.assertIsInstance(version, str)
+                self.assertGreaterEqual(version.count('.'), 2)

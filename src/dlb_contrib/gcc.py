@@ -82,6 +82,9 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'gcc'
 
+    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    VERSION_PARAMETERS = ('--version',)
+
     # Names of warnings to be suppressed (e.g. 'unused-value').
     SUPPRESSED_WARNINGS = ()
 
@@ -165,6 +168,9 @@ class _LinkerGcc(dlb.ex.Tool):
 
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = ''  # define in subclass
+
+    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    VERSION_PARAMETERS = ('--version',)
 
     # Tuple of library name to be searched in the library search directories and linked against.
     # Order matters; if library *b* depends on *a*, *b* should precede *a* in the sequence

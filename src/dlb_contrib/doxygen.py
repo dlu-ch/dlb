@@ -116,6 +116,9 @@ class Doxygen(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'doxygen'
 
+    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    VERSION_PARAMETERS = ('--version',)
+
     # Placeholders in Doxygen configuration file template.
     # The dictionary key are placeholder names and the value their replacement value.
     #

@@ -152,6 +152,9 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'git'
 
+    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    VERSION_PARAMETERS = ('--version',)
+
     # Consider only annotated tags with a name that matches this glob(7) pattern.
     TAG_PATTERN = 'v[0-9]*'
 
