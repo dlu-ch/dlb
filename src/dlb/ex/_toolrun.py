@@ -328,11 +328,14 @@ class RunResult:
     #
     # To be used by run() and redo().
 
-    # Do *not* construct RedoContext objects manually!
+    # Do *not* construct RunResult objects manually!
     # dlb.ex.Tool.run() will construct one and pass it as *result* to dlb.ex.Tool.redo(..., result, ...).
     def __init__(self, tool, redo: bool):
         super().__setattr__('_tool', tool)
         super().__setattr__('_redo', bool(redo))
+
+    def complete(self):  # does not conflict with name of attribute of tool class (because single word)
+        return self
 
     def __setattr__(self, key, value):
         if not self._redo:

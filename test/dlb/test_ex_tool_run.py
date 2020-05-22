@@ -839,8 +839,7 @@ class RedoIfExplicitInputDependencyChangedTest(testenv.TemporaryWorkingDirectory
             dlb.di.set_output_file(output)
             r = t.run()
             self.assertTrue(r)
-            with r:
-                pass
+            r.complete()
 
             regex = r"\b()redo necessary because of invalid encoded path: 'a/\.\./'\n"
             self.assertRegex(output.getvalue(), regex)

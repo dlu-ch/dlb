@@ -161,8 +161,7 @@ class _ToolBase:
             if result_proxy_of_last_run is not None:
                 with di.Cluster('wait for last redo to complete', level=cf.level.run_serialization,
                                 with_time=True, is_progress=True):
-                    with result_proxy_of_last_run:
-                        pass
+                    result_proxy_of_last_run.complete()
 
         with di.Cluster(f'check redo necessity for tool instance {tool_instance_dbid!r}',
                         level=cf.level.redo_necessity_check, with_time=True, is_progress=True):
@@ -638,7 +637,7 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
     return info
 
 
-def is_complete(result):
+def is_complete(result):  # TODO necessary?
     if isinstance(result, _toolrun.RunResult) and not result:
         return True
     from . import _aseq

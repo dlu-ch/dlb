@@ -190,7 +190,9 @@ class LimitingResultSequencerTest(unittest.TestCase):
             sequencer.create_result_proxy(tid2, uid=1)
         self.assertEqual("id(uid) is not unique", str(cm.exception))
 
-        with proxy:
+        try:
+            proxy.nonexistent_attribute
+        except AttributeError:
             pass
 
         with self.assertRaises(dlb.ex._aseq.IdError) as cm:
@@ -218,21 +220,6 @@ class LimitingResultSequencerTest(unittest.TestCase):
         self.assertTrue(dlb.ex._aseq.is_complete(proxy))
 
         self.assertIsNone(sequencer.get_result_proxy(uid))
-
-    def test_context_manager_completes(self):
-
-        sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
-        tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
-
-        uid = 1
-        proxy = sequencer.create_result_proxy(tid, uid)
-        self.assertFalse(dlb.ex._aseq.is_complete(proxy))
-
-        with proxy:
-            pass
-
-        self.assertTrue(dlb.ex._aseq.is_complete(proxy))
-        self.assertEqual(0.5, proxy.value)
 
     def test_consume_all_completes(self):
 
@@ -297,7 +284,9 @@ class ResultProxyReprTest(unittest.TestCase):
         s = repr(proxy)
         self.assertEqual('<proxy object for future result>', s)
 
-        with proxy:
+        try:
+            proxy.nonexistent_attribute
+        except AttributeError:
             pass
 
         s = repr(proxy)
@@ -315,7 +304,9 @@ class ResultProxyReprTest(unittest.TestCase):
         s = repr(proxy)
         self.assertEqual("<proxy object for future <class 'int'> result>", s)
 
-        with proxy:
+        try:
+            proxy.nonexistent_attribute
+        except AttributeError:
             pass
 
         s = repr(proxy)

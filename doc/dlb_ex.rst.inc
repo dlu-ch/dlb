@@ -526,19 +526,22 @@ Tools are customized by inheritance and defining class attributes.
       After each of the following actions the redo is guaranteed to be complete, either successfully or
       by raising an exception:
 
-      - read of a "public" attribute of the result proxy object
+      - read of a "public" attribute (or method) of the result (proxy) object
       - exit of the context :meth:`run()` was called in
       - enter of an inner context of the context :meth:`run()` was called in
       - modification of :attr:`env <dlb.ex.Context.env>` or :attr:`helper <dlb.ex.Context.helper>` of
         the context :meth:`run()` was called in
       - call of :meth:`run()` of the same tool instance
 
-      The result object contains an attribute for every dependency role of the tool which contains the concrete
+      The result (proxy) object contains an attribute for every dependency role of the tool which contains the concrete
       dependencies.
 
       If ``bool(result)`` is ``True``, all attributes for dependencies have an assigned value.
       If ``bool(result)`` is ``False``, only the attributes for explicit dependencies have an assigned value;
       the value of all attributes for non-explicit dependencies is ``NotImplemented``.
+
+      *result* has a method ``complete()`` which only returns *result*.
+      Use ``t.run(...).complete()`` for a tool instance *t* to block until the possible redo is complete.
 
    .. method:: redo(result, context)
 

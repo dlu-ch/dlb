@@ -168,12 +168,6 @@ class _ResultProxy:
     def __getattr__(self, item):
         return getattr(self._get_or_wait_for_result(), item)
 
-    def __enter__(self):
-        return self._get_or_wait_for_result()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
     def __repr__(self):
         if self._is_complete:
             return f"<proxy object for {self._result!r} result>"

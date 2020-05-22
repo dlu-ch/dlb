@@ -74,6 +74,15 @@ class WithRedoBeforeRedoTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
 
+class AttributeNameTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_does_not_clash_with_dependency_roles(self):
+        for name in dir(dlb.ex._toolrun.RunResult):
+            if not name.startswith('_'):
+                self.assertFalse(dlb.ex._tool.UPPERCASE_NAME_REGEX.match(name))
+                self.assertFalse(dlb.ex._tool.LOWERCASE_MULTIWORD_NAME_REGEX.match(name))
+
+
 class AssignmentTest(unittest.TestCase):
 
     def test_assignment_validates(self):
