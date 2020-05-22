@@ -16,7 +16,7 @@
 #         SCRIPTLET = "echo echoed: " + dlb_contrib.sh.quote('a $ is a $')
 #
 #     with dlb.ex.Context():
-#         ... = PrintString().run().processed_output.decode()  # 'echoed: a $ is a $\n'
+#         ... = PrintString().start().processed_output.decode()  # 'echoed: a $ is a $\n'
 
 __all__ = ['quote', 'ShScriptlet']
 

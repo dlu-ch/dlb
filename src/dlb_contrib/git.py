@@ -15,7 +15,7 @@
 #     import dlb_contrib.git
 #
 #     with dlb.ex.Context():
-#         result = dlb_contrib.git.GitDescribeWorkingDirectory().run()
+#         result = dlb_contrib.git.GitDescribeWorkingDirectory().start()
 #
 #         ... = result.tag_name  # e.g. 'v1.2.3'
 #         ... = result.branch_refname  # 'refs/heads/master'

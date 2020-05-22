@@ -58,14 +58,14 @@ class RunBenchmark(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.di.set_threshold_level(dlb.di.WARNING)
 
             t = ATool(source_file='a.cpp', object_file='a.o')
-            assert t.run()
-            assert t.run()
+            assert t.start()
+            assert t.start()
 
             profile.enable()
 
             for i in range(1000):
                 t = ATool(source_file='a.cpp', object_file='a.o')
-                assert not t.run()
+                assert not t.start()
 
             profile.disable()
 

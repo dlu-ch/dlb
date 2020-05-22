@@ -128,14 +128,14 @@ class RunSummaryOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             open('a.cpp', 'xb').close()
 
             with dlb.ex.Context():
-                self.assertTrue(t.run())
-                self.assertTrue(t.run())
-                self.assertFalse(t.run())
+                self.assertTrue(t.start())
+                self.assertTrue(t.start())
+                self.assertFalse(t.start())
 
             with dlb.ex.Context():
                 with dlb.ex.Context():
-                    self.assertFalse(t.run())
-                    self.assertTrue(t.run(force_redo=True))
+                    self.assertFalse(t.start())
+                    self.assertTrue(t.start(force_redo=True))
                 dlb.di.set_threshold_level(dlb.di.INFO)
 
             regex = (

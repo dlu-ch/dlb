@@ -14,10 +14,10 @@ Terms
    tool instance
       A (concrete) instance of an (abstract) :term:`tool` with concrete dependencies.
 
-      Can be run in an active context with ``r = t.run()`` (once or multiple times), which happens sequentially in the
+      Can be run in an active context with ``r = t.start()`` (once or multiple times), which happens sequentially in the
       following stages:
 
-      #. start of execution: call of :meth:`t.run() <dlb.ex.Tool.run()>`.
+      #. start of execution: call of :meth:`t.start() <dlb.ex.Tool.start()>`.
       #. dynamic helper resolution:
          if this is the first instance of the tool being run in the :term:`active context`:
          find the absolute path of every :term:`dynamic helper` (e.g. executable) that might be needed during a
@@ -29,12 +29,13 @@ Terms
          #. redo: generate all output dependencies.
          #. dependency finalization: update registered dependencies and their state in the :term:`run-database`.
 
-      #. end of execution:
+      #. completion of execution:
 
-         a) successful after awaiting on *r* has been completed or
-         b) unsuccessful after exception has been risen.
+         a) successful when no redo was necessary or
+         b) successful after awaiting on *r* has been completed the redo or
+         c) unsuccessful after exception has been risen.
 
-      Between start and end of execution the tool instance is said to be *running*.
+      Between start and completion of execution the tool instance is said to be *running*.
 
    dynamic helper
       An external filesystem object in the :term:`managed tree` or outside the :term:`working tree` with a path

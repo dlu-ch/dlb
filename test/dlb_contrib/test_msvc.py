@@ -59,7 +59,7 @@ class NonWindowsTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.ex.Context.active.env['SYSTEMROOT'] = 'a'
             dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
             dlb.ex.Context.active.env['INCLUDE'] = 'a'
-            CCompiler(source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/']).run()
+            CCompiler(source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/']).start()
 
 
 @unittest.skipIf(not os.path.isdir(vctools_install_dir), 'requires msvc')
@@ -115,22 +115,22 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
 
             with dlb.ex.Context():
-                result = t.run()
+                result = t.start()
 
             self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
             self.assertTrue(os.path.isfile(result.object_files[0].native))
             self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
             with dlb.ex.Context():
-                t.run()
-                self.assertFalse(t.run())
+                t.start()
+                self.assertFalse(t.start())
 
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
             dlb.ex.Context.active.env.import_from_outer('LIB', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
             dlb.ex.Context.active.env['LIB'] = os.getcwd()
             dlb.ex.Context.active.helper['link.exe'] = binary_path / 'link.exe'
-            DllLinker(linkable_files=['a.o'], linked_file='a').run()
+            DllLinker(linkable_files=['a.o'], linked_file='a').start()
 
     def test_detects_included_files_with_unrepresentable_character_in_abspath(self):
         strange_dir_name = '统一码'  # not in cp437 or cp850
@@ -155,7 +155,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                                                             example='C:\\X;D:\\Y')
                 dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
                 dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
-                result = t.run()
+                result = t.start()
                 self.assertEqual((dlb.fs.Path('a.h'),), result.included_files)
 
     def test_fails_for_included_files_with_unrepresentable_character_in_workingtreepath(self):
@@ -180,7 +180,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                                                             example='C:\\X;D:\\Y')
                 dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
                 dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
-                t.run()
+                t.start()
         regex = (
             r"(?m)\A"
             r"reportedly included file not found: '\?\?\?/a\.h'\n"
@@ -199,7 +199,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
                                                             example='C:\\X;D:\\Y')
                 dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
-                t.run()
+                t.start()
         msg = "'object_files' must be of same length as 'source_files'"
         self.assertEqual(msg, str(cm.exception))
 
@@ -216,7 +216,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
                                                             example='C:\\X;D:\\Y')
                 dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
-                t.run()
+                t.start()
         self.assertEqual("not an object-like macro: 'min(a, b)'", str(cm.exception))
 
     def test_fails_for_argument_with_at(self):
@@ -230,5 +230,5 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
                 dlb.ex.Context.active.env.import_from_outer('LIB', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
                 dlb.ex.Context.active.env['LIB'] = os.getcwd()
-                Linker(linkable_files=['a.o'], linked_file='a').run()
+                Linker(linkable_files=['a.o'], linked_file='a').start()
         self.assertEqual("argument must not start with '@': '@x'", str(cm.exception))

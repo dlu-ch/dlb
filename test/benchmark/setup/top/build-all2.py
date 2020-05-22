@@ -37,7 +37,7 @@ with dlb.ex.Context():
                         source_files=g,
                         object_files=[output_directory / p.with_appended_suffix('.o') for p in g],
                         include_search_directories=[source_directory]
-                    ).run()
+                    ).start()
                     for g in source_file_groups
                 ]
 
@@ -46,4 +46,4 @@ with dlb.ex.Context():
 
             with dlb.di.Cluster(f'link'):
                 archive_file = output_directory / (library_source_directory.components[-1] + '.a')
-                dlb_contrib.gnubinutils.Archive(object_files=object_files, archive_file=archive_file).run()
+                dlb_contrib.gnubinutils.Archive(object_files=object_files, archive_file=archive_file).start()

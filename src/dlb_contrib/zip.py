@@ -13,7 +13,7 @@
 #
 #     with dlb.ex.Context():
 #         dlb_contrib.zip.ZipDirectory(content_directory='build/out/html/',
-#                                      archive_file='build/out/application.html.zip').run()
+#                                      archive_file='build/out/application.html.zip').start()
 
 __all__ = ['ZipDirectory']
 

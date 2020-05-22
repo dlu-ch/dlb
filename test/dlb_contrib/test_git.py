@@ -173,8 +173,8 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
         with dlb.ex.Context():
-            PrepareGitRepo().run()
-            result = DescribeWorkingDirectory().run()
+            PrepareGitRepo().start()
+            result = DescribeWorkingDirectory().start()
 
         dlb.di.inform(f"version: {result.version_components!r}, wd version: {result.wd_version!r}")
         dlb.di.inform(f"changed: {result.modification_by_file.keys()!r}")
@@ -194,8 +194,8 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
             class CommitGitRepo(dlb_contrib.sh.ShScriptlet):
                 SCRIPTLET = 'git commit -a -m 0'
 
-            CommitGitRepo().run()
-            result = DescribeWorkingDirectory().run()
+            CommitGitRepo().start()
+            result = DescribeWorkingDirectory().start()
 
         self.assertEqual({}, result.modification_by_file)
         self.assertEqual({dlb.fs.Path('e/u')}, result.untracked_files)
@@ -206,8 +206,8 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
             class CheckoutBranch(dlb_contrib.sh.ShScriptlet):
                 SCRIPTLET = 'git checkout -f -b "(detached)"'
 
-            CheckoutBranch().run()
-            result = DescribeWorkingDirectory().run()
+            CheckoutBranch().start()
+            result = DescribeWorkingDirectory().start()
 
         self.assertEqual('refs/heads/(detached)', result.branch_refname)
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
@@ -216,8 +216,8 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
             class CheckoutDetached(dlb_contrib.sh.ShScriptlet):
                 SCRIPTLET = 'git checkout --detach'
 
-            CheckoutDetached().run()
-            result = DescribeWorkingDirectory().run()
+            CheckoutDetached().start()
+            result = DescribeWorkingDirectory().start()
 
         self.assertIsNone(result.branch_refname)
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
@@ -233,7 +233,7 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
             VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
 
         with dlb.ex.Context():
-            version_by_path = QueryVersion().run().version_by_path
+            version_by_path = QueryVersion().start().version_by_path
             path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
             self.assertEqual(1, len(version_by_path))
             version = version_by_path[path]

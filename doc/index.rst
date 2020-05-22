@@ -46,14 +46,14 @@ Example::
           Compiler(
               source_files=[p],
               object_files=[output_directory / p.with_appended_suffix('.o')]
-          ).run().object_files[0]
+          ).start().object_files[0]
           for p in Path('src/X/').iterdir(name_filter=r'.+\.cpp', is_dir=False)
        ]
 
        application_file = Linker(
            object_and_archive_files=object_files,
            linked_file=output_directory / 'example'                              # (e)
-       ).run().linked_file
+       ).start().linked_file
 
    dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')        # (f)
 
@@ -71,7 +71,7 @@ a. *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
 
    Compiling also means: automatically find all included files and remember them as input dependencies for future
    runs of dlb.
-   ``run()`` executes the compiler only when a :term:`redo` is necessary (e.g. because one of its include files
+   ``start()`` executes the compiler only when a :term:`redo` is necessary (e.g. because one of its include files
    has changed). Otherwise is does almost nothing.
 
 #. *Link* these object files into an executable file.

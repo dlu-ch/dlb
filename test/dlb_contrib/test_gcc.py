@@ -90,18 +90,18 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = CCompiler(source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/'])
         with dlb.ex.Context():
-            result = t.run()
+            result = t.start()
 
         self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
         self.assertTrue(os.path.isfile(result.object_files[0].native))
         self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
         with dlb.ex.Context():
-            t.run()
-            self.assertFalse(t.run())
+            t.start()
+            self.assertFalse(t.start())
 
         with dlb.ex.Context():
-            dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').run()
+            dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').start()
 
     def test_fails_for_colon_in_name(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -118,7 +118,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CCompiler(source_files=['a.c'], object_files=['a.o', 'b.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         msg = "'object_files' must be of same length as 'source_files'"
         self.assertEqual(msg, str(cm.exception))
 
@@ -132,7 +132,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = C(source_files=['a.c'], object_files=['a.o'])
         with self.assertRaises(dlb.ex.HelperExecutionError):
             with dlb.ex.Context():
-                t.run()
+                t.start()
 
     def test_fails_for_invalid_warning(self):
         open('a.c', 'w').close()
@@ -143,7 +143,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = C(source_files=['a.c'], object_files=['a.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         self.assertEqual("not a warning name: 'no-all'", str(cm.exception))
 
     def test_fails_for_invalid_macro(self):
@@ -155,7 +155,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = C(source_files=['a.c'], object_files=['a.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         self.assertEqual("not a macro: 'a('", str(cm.exception))
 
 
@@ -198,18 +198,18 @@ class CplusplusTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = dlb_contrib.gcc.CplusplusCompilerGcc(
             source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/'])
         with dlb.ex.Context():
-            result = t.run()
+            result = t.start()
 
         self.assertEqual((dlb.fs.Path('a.h'), dlb.fs.Path('i/a greeting.inc')), result.included_files)
         self.assertTrue(os.path.isfile(result.object_files[0].native))
         self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
         with dlb.ex.Context():
-            t.run()
-            self.assertFalse(t.run())
+            t.start()
+            self.assertFalse(t.start())
 
         with dlb.ex.Context():
-            dlb_contrib.gcc.CplusplusLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').run()
+            dlb_contrib.gcc.CplusplusLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').start()
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
@@ -250,8 +250,8 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
             ))
 
         with dlb.ex.Context():
-            dlb_contrib.gcc.CplusplusCompilerGcc(source_files=['a.c', 'b.c'], object_files=['a.o', 'b.o']).run()
-            dlb_contrib.gcc.CplusplusCompilerGcc(source_files=['c.c'], object_files=['c.o']).run()
+            dlb_contrib.gcc.CplusplusCompilerGcc(source_files=['a.c', 'b.c'], object_files=['a.o', 'b.o']).start()
+            dlb_contrib.gcc.CplusplusCompilerGcc(source_files=['c.c'], object_files=['c.o']).start()
 
     def test_fails_without_proper_suffix(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -265,7 +265,7 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_succeeds_for_absolute_subprogram_directory(self):
         with dlb.ex.Context():
             dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
-                                       subprogram_directory='/usr/bin/').run()
+                                       subprogram_directory='/usr/bin/').start()
 
     def test_succeeds_for_relative_subprogram_directory(self):
         try:
@@ -276,7 +276,7 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
-                                       subprogram_directory='u/bin/').run()
+                                       subprogram_directory='u/bin/').start()
 
     def test_finds_shared_library(self):
         class CSharedLibraryLinkerGcc(dlb_contrib.gcc.CLinkerGcc):
@@ -287,11 +287,11 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
             LIBRARY_FILENAMES = ('libbc.so',)
 
         with dlb.ex.Context():
-            CSharedLibraryLinkerGcc(object_and_archive_files=['b.o', 'c.o'], linked_file='lib/libbc.so').run()
+            CSharedLibraryLinkerGcc(object_and_archive_files=['b.o', 'c.o'], linked_file='lib/libbc.so').start()
 
         with dlb.ex.Context():
             CLinkerGcc(object_and_archive_files=['a.o'], library_search_directories=['lib/'],
-                       linked_file='e').run()
+                       linked_file='e').start()
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
@@ -312,7 +312,7 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
             }
 
         with dlb.ex.Context():
-            version_by_path = QueryVersion().run().version_by_path
+            version_by_path = QueryVersion().start().version_by_path
             self.assertEqual(len(QueryVersion.VERSION_PARAMETERS_BY_EXECUTABLE), len(version_by_path))
             for Tool in Tools:
                 path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]

@@ -25,13 +25,13 @@ linker from the GNU Binutils)."""
 #                 source_files=[p],
 #                 object_files=[output_directory / p.with_appended_suffix('.o')],
 #                 include_search_directories=[source_directory]
-#             ).run()
+#             ).start()
 #             for p in source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
 #         ]
 #
 #         dlb_contrib.gcc.CLinkerGcc(
 #             object_and_archive_files=[r.object_files[0] for r in compile_results],
-#             linked_file=output_directory / 'application').run()
+#             linked_file=output_directory / 'application').start()
 
 __all__ = [
     'Path', 'ObjectOrArchivePath',

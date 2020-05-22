@@ -38,13 +38,13 @@ with dlb.ex.Context():
                 source_files=g,
                 object_files=[output_directory / p.with_appended_suffix('.o') for p in g],
                 include_search_directories=[source_directory]
-            ).run()
+            ).start()
             for g in source_file_groups
         ]
 
     object_file_groups = [r.object_files for r in compile_results]
     dlb_contrib.gcc.CLinkerGcc(
         object_and_archive_files=[o for g in object_file_groups for o in g],
-        linked_file=output_directory / 'application').run()
+        linked_file=output_directory / 'application').start()
 
 dlb.di.inform('finished successfully')

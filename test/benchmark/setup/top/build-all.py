@@ -23,10 +23,10 @@ with dlb.ex.Context():
                 compile_results = [
                     CplusplusCompiler(source_files=[source_file],
                                       object_files=[output_directory / source_file.with_appended_suffix('.o')],
-                                      include_search_directories=[source_directory]).run()
+                                      include_search_directories=[source_directory]).start()
                     for source_file in library_source_directory.iterdir(name_filter=r'.+\.cpp', is_dir=False)
                 ]
             with dlb.di.Cluster(f'link'):
                 archive_file = output_directory / (library_source_directory.components[-1] + '.a')
                 dlb_contrib.gnubinutils.Archive(object_files=[r.object_files[0] for r in compile_results],
-                                                archive_file=archive_file).run()
+                                                archive_file=archive_file).start()

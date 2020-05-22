@@ -16,7 +16,7 @@
 #         ...  # create 'a.o', 'b.o'
 #         dlb_contrib.gnubinutils.Archive(
 #               object_files=['a.o', 'b.o'],
-#               archive_file='libexample.a').run()
+#               archive_file='libexample.a').start()
 
 __all__ = ['Archive']
 

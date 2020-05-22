@@ -124,7 +124,7 @@ class _ToolBase:
         object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
 
     # final
-    def run(self, *, force_redo: bool = False):
+    def start(self, *, force_redo: bool = False):
         with di.Cluster('prepare tool instance', level=cf.level.run_preparation, with_time=True, is_progress=True):
             # noinspection PyTypeChecker
             context: _context.Context = _context.Context.active
@@ -192,7 +192,7 @@ class _ToolBase:
                           level=cf.level.redo_necessity_check)
 
             # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
-            # is an explicit input dependency of this call of 'run()' or an non-explicit input dependency of the
+            # is an explicit input dependency of this call of 'start()' or an non-explicit input dependency of the
             # last successful redo of the same tool instance according to the run-database
 
             with di.Cluster('explicit output dependencies', level=cf.level.redo_necessity_check,
@@ -213,7 +213,7 @@ class _ToolBase:
                         memo_by_encoded_path[encoded_path] = memo  # memo.state may be None
 
             # 'memo_by_encoded_path' contains a current memo for every filesystem object in the managed tree that
-            # is an explicit or non-explicit input dependency of this call of 'run()' or an non-explicit input
+            # is an explicit or non-explicit input dependency of this call of 'start()' or an non-explicit input
             # dependency of the last successful redo of the same tool instance according to the run-database
 
             with di.Cluster('environment variables', level=cf.level.redo_necessity_check,
@@ -222,7 +222,7 @@ class _ToolBase:
                     _toolrun.check_envvar_dependencies(self, dependency_actions, context)
 
             if not needs_redo and force_redo:
-                di.inform("redo requested by run()", level=cf.level.redo_reason)
+                di.inform("redo requested by start()", level=cf.level.redo_reason)
                 needs_redo = True
 
             if not needs_redo:

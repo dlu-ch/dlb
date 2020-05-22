@@ -21,7 +21,7 @@ class PkgConfigWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
 
     def test_empty_without_library_names(self):
         with dlb.ex.Context():
-            r = dlb_contrib.pkgconfig.PkgConfig().run()
+            r = dlb_contrib.pkgconfig.PkgConfig().start()
         self.assertEqual((), r.library_search_directories)
         self.assertEqual((), r.include_search_directories)
 
@@ -31,35 +31,35 @@ class PkgConfigWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
 
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('-a',)
 
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('>a',)
 
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('<a',)
 
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('a b',)
 
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
     def test_fails_for_invalid_version_constraint(self):
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
@@ -67,28 +67,28 @@ class PkgConfigWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
             VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'a': ''}
         with self.assertRaises(TypeError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('a',)
             VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'a': '= 1.2.3'}
         with self.assertRaises(TypeError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('a',)
             VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'a': ('>',)}
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('a',)
             VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'a': ('=1.2.3',)}
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
-                PkgConfig().run()
+                PkgConfig().start()
 
     def test_parse(self):
         r = dlb_contrib.pkgconfig.parse_from_output('')
@@ -115,7 +115,7 @@ class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             dlb.di.set_threshold_level(dlb.di.DEBUG)
-            result = PkgConfig().run()
+            result = PkgConfig().start()
 
         self.assertIn('libgdk-3.so', result.library_filenames)
         self.assertIn(dlb.fs.Path('/usr/include/gtk-3.0/'), result.include_search_directories)
@@ -132,7 +132,7 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
             VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
 
         with dlb.ex.Context():
-            version_by_path = QueryVersion().run().version_by_path
+            version_by_path = QueryVersion().start().version_by_path
             path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
             self.assertEqual(1, len(version_by_path))
             version = version_by_path[path]

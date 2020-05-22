@@ -47,12 +47,12 @@ def build_application(*, version_result, source_directory: Path, output_director
                 file.write(f'#define APPLICATION_VERSION_MICRO {version_result.version_components[2]}\n')
 
         generated_source_directory = output_directory / 'gsrc/'
-        GenerateVersionFile(output_file=generated_source_directory / 'Generated/Version.h').run()
+        GenerateVersionFile(output_file=generated_source_directory / 'Generated/Version.h').start()
 
     with dlb.di.Cluster('find libraries'), dlb.ex.Context():
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('gtk+-3.0',)
-        pkgconfig_result = PkgConfig().run()
+        pkgconfig_result = PkgConfig().start()
 
     class CCompiler(dlb_contrib.gcc.CCompilerGcc):
         DIALECT = 'c11'
@@ -67,7 +67,7 @@ def build_application(*, version_result, source_directory: Path, output_director
                 object_files=[output_directory / p.with_appended_suffix('.o')],
                 include_search_directories=(source_directory, generated_source_directory) +
                                            pkgconfig_result.include_search_directories
-            ).run()
+            ).start()
             for p in source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
         ]
 
@@ -75,7 +75,7 @@ def build_application(*, version_result, source_directory: Path, output_director
     with dlb.di.Cluster('link'), dlb.ex.Context():
         application_file = CLinker(
             object_and_archive_files=object_files,
-            linked_file=output_directory / application_name).run().linked_file
+            linked_file=output_directory / application_name).start().linked_file
         dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')
 
     return any(compile_results)  # True if any source was compiled (redo)
@@ -99,12 +99,12 @@ def build_documentation(*, version_result, source_directory: Path, output_direct
             configuration_template_file='doc/doxygen/Doxyfile.tmpl',
             source_directories=[source_directory, output_directory / 'gsrc/', 'doc/doxygen/'],
             output_directory=output_directory / 'doxygen/',
-            source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=update).output_directory
+            source_files_to_watch=Path('doc/doxygen/').list()).start(force_redo=update).output_directory
         # TODO rebuild if dlb was aborted after last build_application() == True
 
         doc_archive_file = \
             output_directory / '{}_{}.html.bzip'.format(application_name, version_result.wd_version)
-        dlb_contrib.zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).run()
+        dlb_contrib.zip.ZipDirectory(content_directory=output_directory / 'html/', archive_file=doc_archive_file).start()
 
 
 # list used executables with version
@@ -122,7 +122,7 @@ def summarize():
             if dlb.fs.Path(tool.EXECUTABLE) in dlb.ex.Context.active.helper
         }
 
-    version_by_path = VersionQuery().run().version_by_path
+    version_by_path = VersionQuery().start().version_by_path
     executable_lines = [
         f'    {k.as_string()!r}: \t{v.as_string()!r} \t{version_by_path[v] if v in version_by_path else "?"}'
         for k, v in sorted(dlb.ex.Context.active.helper.items()) if not k.is_dir()
@@ -137,9 +137,9 @@ with dlb.ex.Context():
     source_directory = Path('src/')
     output_directory = Path('build/out/')
 
-    version_result = build.version_from_repo.VersionQuery().run()
+    version_result = build.version_from_repo.VersionQuery().start()
 
-    source_related_check = dlb_contrib.generic.Check(result_file=output_directory / 'result/source_related').run()
+    source_related_check = dlb_contrib.generic.Check(result_file=output_directory / 'result/source_related').start()
 
     with dlb.ex.Context():
 

@@ -44,15 +44,15 @@ class IsCompleteTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_true_if_no_redo(self):
 
         with dlb.ex.Context():
-            BTool().run()
-            r = BTool().run()
+            BTool().start()
+            r = BTool().start()
             self.assertFalse(r)
             self.assertTrue(r.iscomplete)
 
     def test_false_if_incomplete_redo(self):
 
         with dlb.ex.Context():
-            r = BTool().run()
+            r = BTool().start()
             self.assertTrue(r)
             self.assertFalse(r.iscomplete)
             self.assertFalse(r.iscomplete)  # access did not force completion
@@ -72,8 +72,8 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             self.assertEqual(1, dlb.ex.Context.max_parallel_redo_count)
-            ra = ATool(source_file='a.cpp', object_file='a.o').run()
-            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            ra = ATool(source_file='a.cpp', object_file='a.o').start()
+            rb = ATool(source_file='b.cpp', object_file='b.o').start()
             self.assertIsNotNone(ra)
             self.assertIsNotNone(rb)
             self.assertFalse(ra.iscomplete)  # but not yet consumed
@@ -93,8 +93,8 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context(max_parallel_redo_count=2):
             self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
-            ra = ATool(source_file='a.cpp', object_file='a.o').run()
-            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            ra = ATool(source_file='a.cpp', object_file='a.o').start()
+            rb = ATool(source_file='b.cpp', object_file='b.o').start()
             self.assertIsNotNone(ra)
             self.assertIsNotNone(rb)
             self.assertFalse(ra.iscomplete)
@@ -116,7 +116,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context(max_parallel_redo_count=2):
             self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
-            ra = ATool(source_file='a.cpp', object_file='a.o').run()
+            ra = ATool(source_file='a.cpp', object_file='a.o').start()
             self.assertIsNotNone(ra)
             self.assertFalse(ra.iscomplete)
 
@@ -124,7 +124,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
                 pass
 
             self.assertTrue(ra.iscomplete)
-            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            rb = ATool(source_file='b.cpp', object_file='b.o').start()
             self.assertIsNotNone(rb)
             self.assertFalse(rb.iscomplete)
 
@@ -142,14 +142,14 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context(max_parallel_redo_count=2):
             self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
-            ra = ATool(source_file='a.cpp', object_file='a.o').run()
+            ra = ATool(source_file='a.cpp', object_file='a.o').start()
             self.assertIsNotNone(ra)
             self.assertFalse(ra.iscomplete)
 
             dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
 
             self.assertTrue(ra.iscomplete)
-            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            rb = ATool(source_file='b.cpp', object_file='b.o').start()
             self.assertIsNotNone(rb)
             self.assertFalse(rb.iscomplete)
 
@@ -167,14 +167,14 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context(max_parallel_redo_count=2):
             self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
-            ra = ATool(source_file='a.cpp', object_file='a.o').run()
+            ra = ATool(source_file='a.cpp', object_file='a.o').start()
             self.assertIsNotNone(ra)
             self.assertFalse(ra.iscomplete)
 
             dlb.ex.Context.active.helper['a'] = '/a'
 
             self.assertTrue(ra.iscomplete)
-            rb = ATool(source_file='b.cpp', object_file='b.o').run()
+            rb = ATool(source_file='b.cpp', object_file='b.o').start()
             self.assertIsNotNone(rb)
             self.assertFalse(rb.iscomplete)
 
@@ -197,7 +197,7 @@ class KeyboardInterruptTest(testenv.TemporaryWorkingDirectoryTestCase):
         try:
             with dlb.ex.Context():
                 with dlb.ex.Context():
-                    KeyboardInterruptTest.CTool().run()
+                    KeyboardInterruptTest.CTool().start()
         except KeyboardInterrupt:
             pass
 
@@ -208,8 +208,8 @@ class KeyboardInterruptTest(testenv.TemporaryWorkingDirectoryTestCase):
         try:
             with dlb.ex.Context():
                 with dlb.ex.Context(max_parallel_redo_count=2):
-                    KeyboardInterruptTest.CTool().run()
-                    KeyboardInterruptTest.CTool().run()
+                    KeyboardInterruptTest.CTool().start()
+                    KeyboardInterruptTest.CTool().start()
         except KeyboardInterrupt:
             pass
 
@@ -228,7 +228,7 @@ class ContextInRedoTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with self.assertRaises(RuntimeError):
             with dlb.ex.Context():
-                CTool().run()
+                CTool().start()
 
     def test_fails_for_env_modification_in_redo(self):
         class CTool(dlb.ex.Tool):
@@ -237,7 +237,7 @@ class ContextInRedoTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with self.assertRaises(RuntimeError):
             with dlb.ex.Context():
-                CTool().run()
+                CTool().start()
 
     def test_fails_for_helper_modification_in_redo(self):
         class CTool(dlb.ex.Tool):
@@ -246,7 +246,7 @@ class ContextInRedoTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with self.assertRaises(RuntimeError):
             with dlb.ex.Context():
-                CTool().run()
+                CTool().start()
 
 
 class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -262,7 +262,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CTool(object_file='a.o')
         with self.assertRaises(dlb.ex.RedoError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         msg = (
             "non-explicit dependency not assigned during redo: 'included_files'\n"
             "  | use 'result.included_files = ...' in body of redo(self, result, context)"
@@ -280,7 +280,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CTool(object_file='a.o')
         with self.assertRaises(dlb.ex.RedoError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         msg = (
             "non-explicit dependency not assigned during redo: 'log_file'\n"
             "  | use 'result.log_file = ...' in body of redo(self, result, context)"
@@ -298,7 +298,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CTool(object_file='a.o')
         with self.assertRaises(dlb.ex.RedoError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         msg = (
             "non-explicit input dependency 'included_files' contains a relative path "
             "that is not a managed tree path: 'a/../b'"
@@ -315,7 +315,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CTool()
         with self.assertRaises(dlb.ex.RedoError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         msg = (
             "non-explicit output dependency 'log_file' contains a path "
             "that is not a managed tree path: '/tmp/x'"
@@ -333,7 +333,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CTool(object_file='a.o')
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
-                t.run()
+                t.start()
         msg = "value for required dependency must not be None"
         self.assertEqual(msg, str(cm.exception))
 
@@ -349,7 +349,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = CTool(object_file='a.o')
         with dlb.ex.Context():
-            result = t.run()
+            result = t.start()
         self.assertIsNone(result.included_files)
         self.assertIsNone(result.log_file)
 
@@ -363,7 +363,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = CTool(object_file='a.o')
         with dlb.ex.Context():
-            t.run()
+            t.start()
 
     def test_can_assign_output_dependency_in_managed_tree(self):
         class CTool(dlb.ex.Tool):
@@ -374,7 +374,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = CTool()
         with dlb.ex.Context():
-            r = t.run()
+            r = t.start()
         self.assertEqual(dlb.fs.Path('x'), r.log_file)
 
     def test_redo_can_assigns_none_to_nonrequired(self):
@@ -388,7 +388,7 @@ class ResultAssignmentTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = CTool(object_file='a.o')
         with dlb.ex.Context():
-            result = t.run()
+            result = t.start()
         self.assertIsNone(result.included_files)
 
 
@@ -443,7 +443,7 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             c.env['LANG'] = 'de_CH'
-            result = t.run()
+            result = t.start()
 
         self.assertEqual({'language': 'de', 'territory': 'CH'}, result.language_code.groups)
         self.assertIsNone(result.cflags_string)
@@ -451,7 +451,7 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             with self.assertRaises(dlb.ex.RedoError) as cm:
-                t.run()
+                t.start()
         msg = (
             "not a defined environment variable in the context: 'LANG'\n"
             "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
@@ -466,7 +466,7 @@ class RedoResultExplicitInputDependencyTest(testenv.TemporaryWorkingDirectoryTes
 
         with dlb.ex.Context() as c:
             t = ATool(source_file=c.root_path / 'a.cpp', object_file='a.o')
-            r = t.run()
+            r = t.start()
             self.assertEqual(c.root_path / 'a.cpp', r.source_file)
 
     def test_absolute_can_be_outside_managed_tree(self):
@@ -479,7 +479,7 @@ class RedoResultExplicitInputDependencyTest(testenv.TemporaryWorkingDirectoryTes
 
             with dlb.ex.Context() as c:
                 t = ATool(source_file=c.root_path / '../x.cpp', object_file='a.o')
-                t.run()
+                t.start()
 
 
 class RedoResultObjectTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -493,7 +493,7 @@ class RedoResultObjectTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = CTool()
         with dlb.ex.Context():
-            r = t.run()
+            r = t.start()
             self.assertTrue(r)
             self.assertEqual(42, r.calculated_value)
 
@@ -506,7 +506,7 @@ class RedoResultRepr(testenv.TemporaryWorkingDirectoryTestCase):
         open('a.cpp', 'xb').close()
 
         with dlb.ex.Context():
-            r = t.run()
+            r = t.start()
             self.assertTrue(r)
             self.assertFalse(r.iscomplete)
             imcomplete_repr = repr(r)

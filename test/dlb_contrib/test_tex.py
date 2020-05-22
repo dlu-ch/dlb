@@ -151,7 +151,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
         open('report.tex', 'xb').close()
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
-                Latex(toplevel_file='report.tex', output_file='report.dvi', state_files=[]).run()
+                Latex(toplevel_file='report.tex', output_file='report.dvi', state_files=[]).start()
         self.assertEqual("not an option: 'ahoi'", str(cm.exception))
 
     def test_fails_for_nonunique_statefile_suffix(self):
@@ -159,7 +159,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
                 dlb_contrib.tex.Tex(toplevel_file='report.tex', output_file='report.dvi',
-                                    state_files=['x.aux', 'y.aux']).run()
+                                    state_files=['x.aux', 'y.aux']).start()
         msg = "'state_file' contains more than one path with suffix '.aux': 'x.aux', 'y.aux'"
         self.assertEqual(msg, str(cm.exception))
 
@@ -170,7 +170,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             open('report.tex', 'xb').close()
             with self.assertRaises(Exception) as cm:
                 with dlb.ex.Context():
-                    dlb_contrib.tex.Tex(toplevel_file='report.tex', output_file='report.dvi', state_files=[]).run()
+                    dlb_contrib.tex.Tex(toplevel_file='report.tex', output_file='report.dvi', state_files=[]).start()
             self.assertEqual("current working directory must not contain '\\n'", str(cm.exception))
 
     def test_scenario1(self):
@@ -192,7 +192,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             r = dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
                 input_search_directories=['src/'],
-                state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
+                state_files=[output_path / 'report.aux', output_path / 'report.toc']).start()
         self.assertTrue(r)
         self.assertEqual((dlb.fs.Path('src/loc ation.tex'),), r.included_files)
         self.assertTrue((output_path / 'report.aux').native.raw.is_file())
@@ -202,14 +202,14 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             r = dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
                 input_search_directories=['src/'],
-                state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
+                state_files=[output_path / 'report.aux', output_path / 'report.toc']).start()
         self.assertTrue(r)
 
         with dlb.ex.Context():
             r = dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
                 input_search_directories=['src/'],
-                state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
+                state_files=[output_path / 'report.aux', output_path / 'report.toc']).start()
         self.assertFalse(r)
 
     def test_finds_file_in_texinputs(self):
@@ -233,7 +233,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.tex.Latex(
                 toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
                 intermediary_directory=output_path / 'latex/',
-                state_files=[output_path / 'report.aux', output_path / 'report.toc']).run()
+                state_files=[output_path / 'report.aux', output_path / 'report.toc']).start()
 
     def test_warns_for_missing_state_file(self):
         os.mkdir('src')
@@ -253,7 +253,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
                 output = io.StringIO()
                 dlb.di.set_output_file(output)
                 dlb_contrib.tex.Latex(toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-                                      state_files=[]).run()
+                                      state_files=[]).start()
             regex = (
                 r"(?m).*\n"
                 r"W 1 file\(s\) were read and written \(consider adding them to 'state_files'\): \n"
@@ -281,7 +281,7 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
             }
 
         with dlb.ex.Context():
-            version_by_path = QueryVersion().run().version_by_path
+            version_by_path = QueryVersion().start().version_by_path
             self.assertEqual(len(QueryVersion.VERSION_PARAMETERS_BY_EXECUTABLE), len(version_by_path))
             for Tool in Tools:
                 path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]

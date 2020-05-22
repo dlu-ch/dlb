@@ -44,13 +44,13 @@ with dlb.ex.Context():
                 source_files=[p],
                 object_files=[output_directory / p.with_appended_suffix('.o')],
                 include_search_directories=[source_directory]
-            ).run()
+            ).start()
             for p in source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
         ]
 
     with dlb.di.Cluster('link'), dlb.ex.Context():        
         application_file = CLinker(
             object_and_archive_files=[r.object_files[0] for r in compile_results],
-            linked_file=output_directory / 'application').run().linked_file
+            linked_file=output_directory / 'application').start().linked_file
 
 dlb.di.inform(f'application size: {application_file.native.raw.stat().st_size} B')

@@ -117,13 +117,13 @@ Replace the content of :file:`build.py` by this::
 
    t = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c')  # create a tool instance
    with dlb.ex.Context():  # an execution context
-       t.run()  # run the tool instance in the active execution context
+       t.start()  # start running the tool instance in the active execution context
 
    dlb.di.inform('finished successfully')
 
 This defines a :term:`tool` called ``Replacer`` with an *input dependency role* ``template_file`` and an *output
 dependency role* ``output_file``. The class attributes ``PATTERN`` and ``REPLACEMENT`` are *execution parameters* of the
-tool. The method ``redo()`` is called by ``t.run()`` if a :term:`redo` is necessary.
+tool. The method ``redo()`` is called by ``t.start()`` eventually if a :term:`redo` is necessary.
 
 Create a file :file:`src/main.c.tmpl` with this content::
 
@@ -228,15 +228,15 @@ the output dependency role ``output_file``::
 
    t = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c')
 
-``t.run()`` performs a redo when
+``t.start()`` performs a redo when
 
-a. one is explicitly requested by ``t.run(force_redo=True)`` or
+a. one is explicitly requested by ``t.start(force_redo=True)`` or
 b. a redo is considered necessary (see :term:`here <redo necessity>` for general conditions and the documentation of
    the dependency classes for the specific ones).
 
 .. note::
    In contrast to what someone used to the appearance of SCons scripts might expect, the constructor of a tool instance
-   does not run it. Make sure you call ``run()`` on a tool instance when you want it to perform its actual task.
+   does not run it. Make sure you call ``start()`` on a tool instance when you want it to perform its actual task.
 
 After the successful completion of a redo of a tool instance *t* the :term:`run-database` contains the depended-upon
 state of its (explicit and non-explicit) input dependencies before the start of the redo and its non-explicit
@@ -258,12 +258,13 @@ The fingerprint includes the concrete dependencies of the tool instance which ar
 constructor matching class attributes.
 Consider the following tool instances::
 
-    t2 = Replacer(template_file=dlb.fs.Path('src/main.c.tmpl'), output_file='build/out/main.c')
-    t3 = Replacer(template_file='src/MAIN.C.TMPL', output_file='build/out/main.c')
+   t2 = Replacer(template_file=dlb.fs.Path('src/main.c.tmpl'), output_file='build/out/main.c')
+   t3 = Replacer(template_file='src/MAIN.C.TMPL', output_file='build/out/main.c')
 
 *t2* and *t* have the same same class and fingerprint and are therefore indistinguishable with respect to dependencies;
-the statements ``t.run()`` and ``t2.run()`` have the same effect under all circumstances.
-*t3* on the other hand has a different fingerprint; ``t3.run()`` does not affect the last known successful redo for *t*.
+the statements ``t.start()`` and ``t2.start()`` have the same effect under all circumstances.
+*t3* on the other hand has a different fingerprint; ``t3.start()`` does not affect the last known successful redo
+for *t*.
 
 .. note::
    dlb never stores the state of filesystem objects outside the :term:`working tree` in its :term:`run-database`.
@@ -274,7 +275,7 @@ the statements ``t.run()`` and ``t2.run()`` have the same effect under all circu
 Understand redo concurrency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When ``t.run()`` "performs a redo" it schedules the eventual (asynchronous) execution of
+When ``t.start()`` "performs a redo" it schedules the eventual (asynchronous) execution of
 :meth:`redo() <dlb.ex.Tool.redo>` and then returns immediately. The completion of the pending redo is left to
 :mod:`asyncio`.
 
@@ -286,36 +287,44 @@ implicit mutual exclusion mechanism. Synchronization and ordering of events are 
 Redos can be synchronized
 
 a) globally for all pending redos by the means of :term:`(execution) contexts <context>` or
-b) selectively for a specific redo by accessing the result (proxy) object return by :meth:`dlb.ex.Tool.run()`.
+b) selectively for a specific redo by accessing the result (proxy) object return by :meth:`dlb.ex.Tool.start()`.
 
-See :meth:`dlb.ex.Tool.run()` for details.
+See :meth:`dlb.ex.Tool.start()` for details.
 
 As a rule, paths `should not be repeated <https://en.wikipedia.org/wiki/Don%27t_repeat_yourself>`_ like
 :file:`build/out/main.c` in this snippet (which may execute the redos of ``Replacer(...)`` and ``CCompiler(...)``
 in parallel)::
 
-  Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').run()
-  CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).run()
+   Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').start()
+   CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).start()
 
 Better use a variable whose name expresses the meaning of the filesystem object or cascade tool instances with their
 result objects. Write this, for example, if you want to express that one tool instance depends on the result of
 another one::
 
-  r = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').run()
-  CCompiler(source_files=[r.output_file], object_files=['build/out/main.c.o']).run()
-  # waits for pending redo with result r to complete before CCompiler(...).run()
+   r = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').start()
+   CCompiler(source_files=[r.output_file], object_files=['build/out/main.c.o']).start()
+   # waits for pending redo with result r to complete before CCompiler(...).start()
 
 This mechanism is used in :dlbrepo:`example/c-minimal/`.
 
-Alternatively, you could wait for *all* pending redos to complete before ``Compiler(...).run()`` if you prefer
+To wait for the completion of a specific redo without referring to specific dependencies you can use
+``complete()`` instead::
+
+   r = Replacer(...).start().complete()
+   assert r.iscomplete
+   # note: the missing '_' makes clear that 'complete' and 'iscomplete'
+   # are not names of dependencies
+
+Alternatively, you could wait for *all* pending redos to complete before ``Compiler(...).start()`` if you prefer
 to split the build into sequential phases like this::
 
-  # code generation phase
-  Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').run()
+   # code generation phase
+   Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c').start()
 
-  # compilation phase
-  with dlb.ex.Context():  # waits for all pending redos to complete
-      CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).run()
+   # compilation phase
+   with dlb.ex.Context():  # waits for all pending redos to complete
+       CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).start()
 
 This mechanism is used in :dlbrepo:`example/c-gtk/`.
 

@@ -34,7 +34,7 @@ class ChunkProcessor:
 class RedoContext(_context.ReadOnlyContext):
 
     # Do *not* construct RedoContext objects manually!
-    # dlb.ex.Tool.run() will construct one and pass it as *context* to dlb.ex.Tool.redo(..., context).
+    # dlb.ex.Tool.start() will construct one and pass it as *context* to dlb.ex.Tool.redo(..., context).
     def __init__(self, context: _context.Context, dependency_action_by_path: Dict[fs.Path, _dependaction.Action]):
         if not isinstance(dependency_action_by_path, dict):
             raise TypeError
@@ -326,10 +326,10 @@ class RunResult:
     # Explicit dependencies are referred to the tool instance.
     # Non-explicit dependencies can be set exactly once, if *redo* is True.
     #
-    # To be used by run() and redo().
+    # To be used by start() and redo().
 
     # Do *not* construct RunResult objects manually!
-    # dlb.ex.Tool.run() will construct one and pass it as *result* to dlb.ex.Tool.redo(..., result, ...).
+    # dlb.ex.Tool.start() will construct one and pass it as *result* to dlb.ex.Tool.redo(..., result, ...).
     def __init__(self, tool, redo: bool):
         super().__setattr__('_tool', tool)
         super().__setattr__('_redo', bool(redo))

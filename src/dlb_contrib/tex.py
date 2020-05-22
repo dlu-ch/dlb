@@ -23,7 +23,7 @@
 #         dlb_contrib.tex.Latex(
 #             toplevel_file='src/report.tex', output_file=output_directory / 'report.dvi',
 #             input_search_directories=['src/'],
-#             state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).run()
+#             state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).start()
 
 __all__ = ['KpathseaPath', 'TexPath', 'accessed_files_from_recorded', 'Tex', 'Latex']
 

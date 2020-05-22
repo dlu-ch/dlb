@@ -18,7 +18,7 @@
 #         VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'gtk+-3.0': ['> 3.0.1', '< 4.0']}
 #
 #     with dlb.ex.Context():
-#         result = PkgConfig().run()
+#         result = PkgConfig().start()
 #         ... = result.library_filenames
 
 __all__ = ['LIBRARY_NAME_REGEX', 'VERSION_CONSTRAINT_REGEX', 'parse_from_output', 'PkgConfig']

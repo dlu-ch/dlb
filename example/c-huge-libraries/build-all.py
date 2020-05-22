@@ -39,7 +39,7 @@ def build_library(*, library_source_directory, archive_file, api_version_file, i
                 source_files=[source_file],
                 object_files=[output_directory / source_file.with_appended_suffix('.o')],
                 include_search_directories=[source_directory]
-            ).run()
+            ).start()
             for source_file in library_source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
         ]
 
@@ -55,7 +55,7 @@ def build_library(*, library_source_directory, archive_file, api_version_file, i
 
     with dlb.di.Cluster(f'link'):
         dlb_contrib.gnubinutils.Archive(object_files=[r.object_files[0] for r in compile_results],
-                                        archive_file=archive_file).run()
+                                        archive_file=archive_file).start()
 
 
 # build huge C libraries (to many source files to check every time) when file in their source directory has changes
@@ -86,7 +86,7 @@ with dlb.ex.Context():
                 input_files=api_version_files[:-1],
                 output_files=[archive_file],
                 result_file=output_directory / f'check/{library_source_directory.components[-1]}.complete'
-            ).run()
+            ).start()
 
             with dlb.ex.Context():  # waits for previous redos to complete
                 if needs_update:  # need to take a closer look?

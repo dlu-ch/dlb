@@ -27,18 +27,18 @@ class CheckTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             check = dlb_contrib.generic.Check(input_files=['a.txt'], input_directories=['b/'])
-            self.assertTrue(ATool().run(force_redo=check.run()))
-            self.assertFalse(ATool().run(force_redo=check.run()))
+            self.assertTrue(ATool().start(force_redo=check.start()))
+            self.assertFalse(ATool().start(force_redo=check.start()))
 
             with open('a.txt', 'wb') as f:
                 f.write(b'0')
 
-            self.assertTrue(ATool().run(force_redo=check.run()))
-            self.assertFalse(ATool().run(force_redo=check.run()))
+            self.assertTrue(ATool().start(force_redo=check.start()))
+            self.assertFalse(ATool().start(force_redo=check.start()))
 
             os.mkdir(os.path.join('b', 'c'))
-            self.assertTrue(ATool().run(force_redo=check.run()))
-            self.assertFalse(ATool().run(force_redo=check.run()))
+            self.assertTrue(ATool().start(force_redo=check.start()))
+            self.assertFalse(ATool().start(force_redo=check.start()))
 
 
 class CheckResultTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -47,7 +47,7 @@ class CheckResultTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = dlb_contrib.generic.Check(result_file='build/out/r')
 
         with dlb.ex.Context():
-            r = t.run()  # usually with force_redo=...
+            r = t.start()  # usually with force_redo=...
             self.assertTrue(r)
             if r:
                 self.assertFalse(r.result_file.native.raw.exists())
@@ -56,11 +56,11 @@ class CheckResultTest(testenv.TemporaryWorkingDirectoryTestCase):
                 r.result_file.native.raw.touch()  # mark as completed
 
         with dlb.ex.Context():
-            r = t.run()
+            r = t.start()
             self.assertFalse(r)
 
         with dlb.ex.Context():
-            r = t.run(force_redo=True)
+            r = t.start(force_redo=True)
             self.assertTrue(r)
             if r:
                 self.assertTrue(r.result_file[:-1].native.raw.is_dir())
@@ -71,7 +71,7 @@ class CheckResultTest(testenv.TemporaryWorkingDirectoryTestCase):
 class EmptyVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_is_empty(self):
         with dlb.ex.Context():
-            version_by_path = dlb_contrib.generic.VersionQuery().run().version_by_path
+            version_by_path = dlb_contrib.generic.VersionQuery().start().version_by_path
         self.assertEqual({}, version_by_path)
 
 
@@ -84,7 +84,7 @@ class LsVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
             }
 
         with dlb.ex.Context():
-            version_by_path = VersionQuery().run().version_by_path
+            version_by_path = VersionQuery().start().version_by_path
 
         self.assertEqual([dlb.fs.Path('/bin/ls')], sorted(version_by_path.keys()))
         self.assertRegex(version_by_path[dlb.fs.Path('/bin/ls')], '[0-9]+(\.[0-9]+)+')

@@ -17,7 +17,7 @@
 #         dlb_contrib.doxygen.Doxygen(
 #             configuration_template_file='Doxyfile',  # contains '${{source_directories}}', '${{output_directory}}'
 #             source_directories=['src/'],  # replaces '${{source_directories}}' in Doxyfile
-#             output_directory='build/out/').run()
+#             output_directory='build/out/').start()
 
 __all__ = ['PLACEHOLDER_NAME_REGEX', 'Template', 'Path', 'Doxygen']
 

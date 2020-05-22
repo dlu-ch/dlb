@@ -146,7 +146,7 @@ class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
                 return ['-c', '-', 'cat  -- *', 's']
 
         with dlb.ex.Context():
-            r = ShowContent().run()
+            r = ShowContent().start()
         self.assertEqual((dlb.fs.Path('x'), dlb.fs.Path('y')), r.read_files)
 
     def test_discovers_written_files(self):
@@ -165,7 +165,7 @@ class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
                 return [self.source_file, self.target_file]
 
         with dlb.ex.Context():
-            r = ShowContent(source_file='x', target_file='y').run()
+            r = ShowContent(source_file='x', target_file='y').start()
         self.assertEqual((dlb.fs.Path('x'),), r.read_files)
         self.assertEqual((dlb.fs.Path('y'),), r.written_files)
 
@@ -180,7 +180,7 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
             VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.TRACING_EXECUTABLE: Tool.VERSION_PARAMETERS}
 
         with dlb.ex.Context():
-            version_by_path = QueryVersion().run().version_by_path
+            version_by_path = QueryVersion().start().version_by_path
             path = dlb.ex.Context.active.helper[Tool.TRACING_EXECUTABLE]
             self.assertEqual(1, len(version_by_path))
             version = version_by_path[path]

@@ -27,7 +27,7 @@
 #           input_directories=[library_source_directory],
 #           output_files=[archive_file]
 #           result_file=archive_file.with_appended_suffix('.uptodate')  # redo if this does not exist
-#       ).run()  # redo removes *result_file*
+#       ).start()  # redo removes *result_file*
 #
 #       with dlb.ex.Context:  # waits for previous redos to complete
 #           if needs_update:  # need to take a closer look?
@@ -44,7 +44,7 @@
 #               tool.EXECUTABLE: tool.VERSION_PARAMETERS
 #               for tool in [dlb_contrib.gcc.CCompilerGcc, dlb_contrib.doxygen.Doxygen, ...]
 #           }
-#       version_by_path = VersionQuery().run().version_by_path
+#       version_by_path = VersionQuery().start().version_by_path
 
 __all__ = ['Check', 'VersionQuery', 'VERSION_WORD_REGEX']
 
@@ -89,7 +89,7 @@ class Check(dlb.ex.Tool):
 
 class VersionQuery(dlb.ex.Tool):
     # Execute dynamic helpers to query their version.
-    # Overwrite *VERSION_PARAMETERS_BY_EXECUTABLE* in a subclass *C* and then use 'C().run().version_by_path'.
+    # Overwrite *VERSION_PARAMETERS_BY_EXECUTABLE* in a subclass *C* and then use 'C().start().version_by_path'.
 
     # Dictionary of commandline parameters by executable.
     # Example: {dlb_contrib.tex.Latex.EXECUTABLE: dlb_contrib.tex.Latex.VERSION_PARAMETERS}.

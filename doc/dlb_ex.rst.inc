@@ -513,9 +513,9 @@ Tools are customized by inheritance and defining class attributes.
       >>> compiler.object_file  # dependency
       Path('main.cpp.o')
 
-   .. method:: run(force_redo=False)
+   .. method:: start(force_redo=False)
 
-      Run the tool instance in the :term:`active context` and returns a result (proxy) object *result*.
+      Start running the tool instance in the :term:`active context` and return a result (proxy) object *result*.
 
       ``bool(result)`` is ``True`` if a :term:`redo` is performed and ``False`` otherwise.
       A redo is performed if *force_redo* is ``True`` or if it is :term:`necessary <redo necessity>`.
@@ -527,11 +527,11 @@ Tools are customized by inheritance and defining class attributes.
       by raising an exception:
 
       - read of a "public" attribute (or method) of the result (proxy) object
-      - exit of the context :meth:`run()` was called in
-      - enter of an inner context of the context :meth:`run()` was called in
+      - exit of the context :meth:`start()` was called in
+      - enter of an inner context of the context :meth:`start()` was called in
       - modification of :attr:`env <dlb.ex.Context.env>` or :attr:`helper <dlb.ex.Context.helper>` of
-        the context :meth:`run()` was called in
-      - call of :meth:`run()` of the same tool instance
+        the context :meth:`start()` was called in
+      - call of :meth:`start()` of the same tool instance
 
       The result (proxy) object contains an attribute for every dependency role of the tool which contains the concrete
       dependencies.
@@ -541,13 +541,13 @@ Tools are customized by inheritance and defining class attributes.
       the value of all attributes for non-explicit dependencies is ``NotImplemented``.
 
       *result* has a method ``complete()`` which only returns *result*.
-      Use ``t.run(...).complete()`` for a tool instance *t* to block until the possible redo is complete.
+      Use ``t.start(...).complete()`` for a tool instance *t* to block until the possible redo is complete.
 
    .. method:: redo(result, context)
 
       Overwrite this awaitable method to implement a new :class:`Tool` (do not forget ``async``!).
 
-      *result* is the result object that will by returned by the calling :meth:`run()`.
+      *result* is the result object that will by returned by the calling :meth:`start()`.
       *context* is the redo context as an instance of :class:`RedoContext`.
 
       Assign to attributes of *result* to define a non-explicit concrete dependency for the dependency role with the
@@ -633,7 +633,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
 .. class:: RedoContext
 
-   A redo context is constructed automatically by :meth:`Tool.run()`. Redo contexts should not be constructed manually.
+   A redo context is constructed automatically by :meth:`Tool.start()`. Redo contexts should not be constructed manually.
 
    .. method:: execute_helper(helper_file, arguments=(), *, cwd=None, expected_returncodes=frozenset([0]), \
                forced_env={}, stdout_output=None, stderr_output=None)
@@ -875,7 +875,7 @@ Dependency role classes support the following methods and attributes:
    If *required* is ``True``, a concrete dependency of this dependency role will never be ``None``.
 
    If *explicit* is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
-   is created. Otherwise, it cannot and must not be but is automatically assigned by :meth:`Tool.run()`.
+   is created. Otherwise, it cannot and must not be but is automatically assigned by :meth:`Tool.start()`.
 
    .. param required: is a value other than ``None`` required?
    .. type required: bool
@@ -1112,7 +1112,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    If *explicit* is ``True``, the value assigned in the constructor of the :term:`tool instance` is used for all
    future runs of the tool instance.
-   Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.run()` is called.
+   Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.start()` is called.
 
    The value of the environment variable is valid if it is a string that the regular expression *pattern* matches
    or if it is ``None`` and *required* is ``False``.
@@ -1135,7 +1135,7 @@ keyword arguments of the constructor of :class:`Dependency`.
       'CH'
       >>> tool.cflags_string
       NotImplemented
-      >>> tool.run().cflags_string.raw  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
+      >>> tool.start().cflags_string.raw  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
       '-O2'
 
    :param pattern: validation pattern for value as a regular expression

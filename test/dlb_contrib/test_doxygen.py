@@ -83,7 +83,7 @@ class DoxygenWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestCas
                 Doxygen(
                     configuration_template_file='Doxyfile',
                     source_directories=['.'],
-                    output_directory='d/').run()
+                    output_directory='d/').start()
         self.assertEqual("placeholder name must be str", str(cm.exception))
 
     def test_fails_for_invalid_placeholder_name(self):
@@ -97,7 +97,7 @@ class DoxygenWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestCas
                 Doxygen(
                     configuration_template_file='Doxyfile',
                     source_directories=['.'],
-                    output_directory='d/').run()
+                    output_directory='d/').start()
         self.assertEqual("invalid placeholder name: '1'", str(cm.exception))
 
     def test_fails_for_unexpanded_placeholder(self):
@@ -112,7 +112,7 @@ class DoxygenWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestCas
                 Doxygen(
                     configuration_template_file='Doxyfile',
                     source_directories=['.'],
-                    output_directory='d/').run()
+                    output_directory='d/').start()
         msg = (
             "unexpanded placeholder in configuration file template 'Doxyfile'\n"
             "  | file contains '${{xyz}}' but 'TEXTUAL_REPLACEMENTS' does not define a replacement"
@@ -130,7 +130,7 @@ class Doxygen2Test(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.doxygen.Doxygen(
                 configuration_template_file='Doxyfile',
                 source_directories=['.'],
-                output_directory='d/').run()
+                output_directory='d/').start()
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/doxygen'), 'requires doxygen')
@@ -143,7 +143,7 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
             VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
 
         with dlb.ex.Context():
-            version_by_path = QueryVersion().run().version_by_path
+            version_by_path = QueryVersion().start().version_by_path
             path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
             self.assertEqual(1, len(version_by_path))
             version = version_by_path[path]

@@ -69,8 +69,8 @@ class WithRedoBeforeRedoTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
-            result.run()
-        msg = "'run' is not a dependency"
+            result.start()
+        msg = "'start' is not a dependency"
         self.assertEqual(msg, str(cm.exception))
 
 

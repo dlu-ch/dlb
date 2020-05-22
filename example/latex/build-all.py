@@ -36,7 +36,7 @@ with dlb.ex.Context():
         r = PdfLatex(toplevel_file='src/report.tex',
                      output_file=output_directory / 'report.pdf',
                      input_search_directories=['src/'],
-                     state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).run()
+                     state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).start()
         if not r:
             break
 

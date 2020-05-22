@@ -21,7 +21,7 @@
 #             return ['-c', '-', 'cat  -- *', 's']
 #
 #     with dlb.ex.Context():
-#         ... = ShowContent().run().read_files
+#         ... = ShowContent().start().read_files
 
 __all__ = ['SYSCALL_NAME_REGEX', 'syscall_from_line', 'RunStraced']
 

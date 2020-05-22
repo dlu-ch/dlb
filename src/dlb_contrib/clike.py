@@ -38,8 +38,8 @@
 #             result.included_files = sorted(included_files)
 #
 #     with dlb.ex.Context():
-#         GenerateVersionFile(file='Version.h').run()
-#         CCompiler(source_files=['main.c'], object_files=['main.c.o']).run()
+#         GenerateVersionFile(file='Version.h').start()
+#         CCompiler(source_files=['main.c'], object_files=['main.c.o']).start()
 
 __all__ = [
     'SIMPLE_IDENTIFIER_REGEX', 'IDENTIFIER_REGEX', 'PORTABLE_C_IDENTIFIER_REGEX', 'FUNCTIONLIKE_MACRO_REGEX',

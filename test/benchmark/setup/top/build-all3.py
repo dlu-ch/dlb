@@ -36,7 +36,7 @@ with dlb.ex.Context():
                 input_files=api_version_files,
                 output_files=[archive_file],
                 result_file=archive_file.with_appended_suffix('.uptodate')
-            ).run()
+            ).start()
 
             with dlb.ex.Context():  # waits for previous redos to complete
 
@@ -55,13 +55,13 @@ with dlb.ex.Context():
                                 source_files=[source_file],
                                 object_files=[output_directory / source_file.with_appended_suffix('.o')],
                                 include_search_directories=[source_directory]
-                            ).run()
+                            ).start()
                             for source_file in library_source_path.iterdir(name_filter=r'.+\.cpp', is_dir=False)
                         ]
 
                     with dlb.di.Cluster(f'link'):
                         dlb_contrib.gnubinutils.Archive(object_files=[r.object_files[0] for r in compile_results],
-                                                        archive_file=archive_file).run()
+                                                        archive_file=archive_file).start()
                 else:
                     dlb.di.inform('skip')
 

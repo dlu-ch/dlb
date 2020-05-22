@@ -32,14 +32,14 @@ class BatchFileTest(testenv.TemporaryWorkingDirectoryTestCase):
                 f.write('cd %1\n\r')
                 f.write('echo {"a": "b"} > env.json\n\r')
             with dlb.ex.Context():
-                env = dlb_contrib.msbatch.RunEnvBatch(batch_file='a.bat').run().exported_environment
+                env = dlb_contrib.msbatch.RunEnvBatch(batch_file='a.bat').start().exported_environment
             self.assertEqual({'a': 'b'}, env)
 
     def test_fails_without_envvar_file(self):
         open('a.bat', 'x').close()
         with self.assertRaises(Exception) as cm:
             with dlb.ex.Context():
-                dlb_contrib.msbatch.RunEnvBatch(batch_file='a.bat').run()
+                dlb_contrib.msbatch.RunEnvBatch(batch_file='a.bat').start()
         msg = (
             "exported environment file not found: 'env.json'\n"
             "  | create it in the batch file with 'python3 -m dlb_contrib.exportenv'"

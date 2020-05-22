@@ -23,7 +23,7 @@
 #         # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
 #         context.env.import_from_outer('VCINSTALLDIR', pattern=r'.+\\',
 #                                       example='C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\')
-#         environment = dlb_contrib.msbatch.RunEnvBatch(batch_file='build/setup.bat').run().environment
+#         environment = dlb_contrib.msbatch.RunEnvBatch(batch_file='build/setup.bat').start().environment
 #
 #         install_directory = dlb.fs.Path(dlb.fs.Path.Native(environment['VCTOOLSINSTALLDIR']), is_dir=True)
 #         binary_directory = install_directory / 'bin/Hostx64/x64/'
@@ -47,14 +47,14 @@
 #                 source_files=[p],
 #                 object_files=[output_directory / p.with_appended_suffix('.o')],
 #                 include_search_directories=[source_directory]
-#             ).run()
+#             ).start()
 #             for p in source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
 #         ]
 #
 #         object_files = [r.object_files[0] for r in compile_results]
 #         dlb_contrib.msvc.LinkerMsvc(
 #              linkable_files=object_files,
-#              linked_file=output_directory / 'application.exe').run()
+#              linked_file=output_directory / 'application.exe').start()
 
 __all__ = ['CCompilerMsvc', 'CplusplusCompilerMsvc', 'LinkerMsvc']
 
