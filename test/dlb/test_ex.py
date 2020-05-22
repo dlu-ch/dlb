@@ -40,7 +40,6 @@ class ImportTest(unittest.TestCase):
             'RedoContext',
             'RunResult',
             'Tool',
-            'is_complete',
 
             'input',
             'output'

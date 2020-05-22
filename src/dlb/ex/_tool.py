@@ -5,7 +5,7 @@
 """Dependency-aware tool execution.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = ['Tool', 'is_complete']
+__all__ = ['Tool']
 
 import re
 import os
@@ -635,16 +635,6 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
     _registered_info_by_tool[tool] = info
 
     return info
-
-
-def is_complete(result):  # TODO necessary?
-    if isinstance(result, _toolrun.RunResult) and not result:
-        return True
-    from . import _aseq
-    try:
-        return _aseq.is_complete(result)
-    except TypeError:
-        raise TypeError("'result' is not a result of dlb.ex.Tool.run()") from None
 
 
 # noinspection PyCallByClass

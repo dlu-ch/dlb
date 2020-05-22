@@ -41,32 +41,22 @@ class ThisIsAUnitTest(unittest.TestCase):
 
 class IsCompleteTest(testenv.TemporaryWorkingDirectoryTestCase):
 
-    def test_fails_for_non_result(self):
-        msg = "'result' is not a result of dlb.ex.Tool.run()"
-
-        with self.assertRaises(TypeError) as cm:
-            dlb.ex.is_complete(None)
-        self.assertEqual(msg, str(cm.exception))
-
-        with self.assertRaises(TypeError) as cm:
-            dlb.ex.is_complete(27)
-        self.assertEqual(msg, str(cm.exception))
-
     def test_true_if_no_redo(self):
 
         with dlb.ex.Context():
             BTool().run()
             r = BTool().run()
             self.assertFalse(r)
-            self.assertTrue(dlb.ex.is_complete(r))
+            self.assertTrue(r.iscomplete)
 
     def test_false_if_incomplete_redo(self):
 
         with dlb.ex.Context():
             r = BTool().run()
             self.assertTrue(r)
-            self.assertFalse(dlb.ex.is_complete(r))
-        self.assertTrue(dlb.ex.is_complete(r))
+            self.assertFalse(r.iscomplete)
+            self.assertFalse(r.iscomplete)  # access did not force completion
+        self.assertTrue(r.iscomplete)
 
 
 class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -86,8 +76,8 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             rb = ATool(source_file='b.cpp', object_file='b.o').run()
             self.assertIsNotNone(ra)
             self.assertIsNotNone(rb)
-            self.assertFalse(dlb.ex.is_complete(ra))  # but not yet consumed
-            self.assertFalse(dlb.ex.is_complete(rb))
+            self.assertFalse(ra.iscomplete)  # but not yet consumed
+            self.assertFalse(rb.iscomplete)
 
         regex = (
             r"(?m)"
@@ -107,8 +97,8 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             rb = ATool(source_file='b.cpp', object_file='b.o').run()
             self.assertIsNotNone(ra)
             self.assertIsNotNone(rb)
-            self.assertFalse(dlb.ex.is_complete(ra))
-            self.assertFalse(dlb.ex.is_complete(rb))
+            self.assertFalse(ra.iscomplete)
+            self.assertFalse(rb.iscomplete)
 
             with dlb.ex.Context():
                 self.assertEqual(1, dlb.ex.Context.max_parallel_redo_count)
@@ -128,15 +118,15 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').run()
             self.assertIsNotNone(ra)
-            self.assertFalse(dlb.ex.is_complete(ra))
+            self.assertFalse(ra.iscomplete)
 
             with dlb.ex.Context(max_parallel_redo_count=200):
                 pass
 
-            self.assertTrue(dlb.ex.is_complete(ra))
+            self.assertTrue(ra.iscomplete)
             rb = ATool(source_file='b.cpp', object_file='b.o').run()
             self.assertIsNotNone(rb)
-            self.assertFalse(dlb.ex.is_complete(rb))
+            self.assertFalse(rb.iscomplete)
 
         regex = (
             r"(?m)"
@@ -154,14 +144,14 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').run()
             self.assertIsNotNone(ra)
-            self.assertFalse(dlb.ex.is_complete(ra))
+            self.assertFalse(ra.iscomplete)
 
             dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
 
-            self.assertTrue(dlb.ex.is_complete(ra))
+            self.assertTrue(ra.iscomplete)
             rb = ATool(source_file='b.cpp', object_file='b.o').run()
             self.assertIsNotNone(rb)
-            self.assertFalse(dlb.ex.is_complete(rb))
+            self.assertFalse(rb.iscomplete)
 
         regex = (
             r"(?m)"
@@ -179,14 +169,14 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').run()
             self.assertIsNotNone(ra)
-            self.assertFalse(dlb.ex.is_complete(ra))
+            self.assertFalse(ra.iscomplete)
 
             dlb.ex.Context.active.helper['a'] = '/a'
 
-            self.assertTrue(dlb.ex.is_complete(ra))
+            self.assertTrue(ra.iscomplete)
             rb = ATool(source_file='b.cpp', object_file='b.o').run()
             self.assertIsNotNone(rb)
-            self.assertFalse(dlb.ex.is_complete(rb))
+            self.assertFalse(rb.iscomplete)
 
         regex = (
             r"(?m)"
@@ -518,7 +508,7 @@ class RedoResultRepr(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             r = t.run()
             self.assertTrue(r)
-            self.assertFalse(dlb.ex._aseq.is_complete(r))
+            self.assertFalse(r.iscomplete)
             imcomplete_repr = repr(r)
         complete_repr = repr(r)
 

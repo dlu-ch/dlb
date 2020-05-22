@@ -168,8 +168,8 @@ class _ResultProxy:
     def __getattr__(self, item):
         return getattr(self._get_or_wait_for_result(), item)
 
-    def __repr__(self):
-        if self._is_complete:
+    def __repr__(self) -> str:
+        if self.iscomplete:
             return f"<proxy object for {self._result!r} result>"
         cls = self._expected_class
         if cls is None:
@@ -177,7 +177,7 @@ class _ResultProxy:
         return f"<proxy object for future {cls!r} result>"
 
     @property
-    def _is_complete(self):
+    def iscomplete(self) -> bool:
         return self._result is not None or self._exception is not None
 
     def _get_or_wait_for_result(self):
@@ -257,10 +257,3 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
         self._proxy_uid_by_tid[tid] = uid
 
         return proxy
-
-
-def is_complete(proxy):
-    if not isinstance(proxy, _ResultProxy):
-        raise TypeError
-    # noinspection PyProtectedMember
-    return proxy._is_complete

@@ -337,6 +337,10 @@ class RunResult:
     def complete(self):  # does not conflict with name of attribute of tool class (because single word)
         return self
 
+    @property
+    def iscomplete(self) -> bool:
+        return True
+
     def __setattr__(self, key, value):
         if not self._redo:
             raise AttributeError
