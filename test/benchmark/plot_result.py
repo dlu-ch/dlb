@@ -51,7 +51,7 @@ with open(result_file_path, 'r') as result_file:
         tool_name, number_of_libraries, number_of_classes_per_library = fields[:3]
         configuration = tool_name, int(number_of_libraries), int(number_of_classes_per_library)
         if len(fields) > 3:
-            t0, t1, t2, tpartial0, tpartial1 = [float(f) for f in fields[3:]]
+            t0, t1, t2, tpartial0, tpartial1 = [float(f) for f in fields[3:][:5]]
             durations_by_configuration[configuration] = t0, t1, t2, tpartial0, tpartial1
         else:
             durations_by_configuration[configuration] = None  # failed
