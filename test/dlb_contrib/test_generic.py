@@ -41,10 +41,10 @@ class CheckTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertFalse(ATool().run(force_redo=check.run()))
 
 
-class ResultRemoverTest(testenv.TemporaryWorkingDirectoryTestCase):
+class CheckResultTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_scenario1(self):
-        t = dlb_contrib.generic.ResultRemover(result_file='build/out/r')
+        t = dlb_contrib.generic.Check(result_file='build/out/r')
 
         with dlb.ex.Context():
             r = t.run()  # usually with force_redo=...

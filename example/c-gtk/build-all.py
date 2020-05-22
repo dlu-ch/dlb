@@ -83,7 +83,7 @@ def build_application(*, version_result, source_directory: Path, output_director
 
 # generate zipped HTML documentation from markup in source code comments and from "free" pages
 def build_documentation(*, version_result, source_directory: Path, output_directory: Path, application_name: str,
-                        sources_changed: bool):
+                        update: bool):
     import dlb_contrib.zip
 
     with dlb.di.Cluster('compile documentation'):
@@ -99,7 +99,7 @@ def build_documentation(*, version_result, source_directory: Path, output_direct
             configuration_template_file='doc/doxygen/Doxyfile.tmpl',
             source_directories=[source_directory, output_directory / 'gsrc/', 'doc/doxygen/'],
             output_directory=output_directory / 'doxygen/',
-            source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=sources_changed).output_directory
+            source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=update).output_directory
         # TODO rebuild if dlb was aborted after last build_application() == True
 
         doc_archive_file = \
@@ -139,19 +139,25 @@ with dlb.ex.Context():
 
     version_result = build.version_from_repo.VersionQuery().run()
 
-    sources_changed = build_application(
-        version_result=version_result,
-        source_directory=source_directory,
-        output_directory=output_directory,
-        application_name=application_name)
+    source_related_check = dlb_contrib.generic.Check(result_file=output_directory / 'result/source_related').run()
 
-    # build documentaton if Doxygen is installed
-    if dlb.ex.Context.helper.get(dlb_contrib.doxygen.Doxygen.EXECUTABLE):
-        build_documentation(
+    with dlb.ex.Context():
+
+        sources_changed = build_application(
             version_result=version_result,
             source_directory=source_directory,
             output_directory=output_directory,
-            application_name=application_name,
-            sources_changed=sources_changed)
+            application_name=application_name)
+
+        # build documentaton if Doxygen is installed
+        if dlb.ex.Context.helper.get(dlb_contrib.doxygen.Doxygen.EXECUTABLE):
+            build_documentation(
+                version_result=version_result,
+                source_directory=source_directory,
+                output_directory=output_directory,
+                application_name=application_name,
+                update=sources_changed or source_related_check)
+
+    source_related_check.result_file.native.raw.touch()
 
     summarize()

@@ -75,34 +75,29 @@ with dlb.ex.Context():
             include_directories = frozenset(library_source_directories[:i + 1])
             archive_file = output_directory / (library_source_directory.components[-1] + '.a')
 
-            with dlb.ex.Context():
-                # update mtime of directory if content has later mtime
-                # (requires monotonic system time to detect all mtime changes)
-                mtime = library_source_directory.propagate_mtime()
-                assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
+            # update mtime of directory if content has later mtime
+            # (requires monotonic system time to detect all mtime changes)
+            mtime = library_source_directory.propagate_mtime()
+            assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
 
-                needs_update = dlb_contrib.generic.ResultRemover(
-                    result_file=output_directory / f'check/{library_source_directory.components[-1]}.complete'
-                ).run(
-                    force_redo=dlb_contrib.generic.Check(
-                        # with potentially changed mtime due to propagate_mtime():
-                        input_directories=[library_source_directory],
-                        input_files=api_version_files[:-1],
-                        output_files=[archive_file]
-                    ).run()
-                )
-                # after normal exit from this context, needs_update.result_file does not exist
-                # if bool(needs_update) is True
+            needs_update = dlb_contrib.generic.Check(
+                # with potentially changed mtime due to propagate_mtime():
+                input_directories=[library_source_directory],
+                input_files=api_version_files[:-1],
+                output_files=[archive_file],
+                result_file=output_directory / f'check/{library_source_directory.components[-1]}.complete'
+            ).run()
 
-            if needs_update:
-                # take a closer look
-                build_library(library_source_directory=library_source_directory,
-                              archive_file=archive_file,
-                              api_version_file=api_version_file,
-                              include_directories=include_directories,
-                              output_directory=output_directory)
-                needs_update.result_file.native.raw.touch()  # mark successful completion of update
-            else:
-                dlb.di.inform('skip')
+            with dlb.ex.Context():  # waits for previous redos to complete
+                if needs_update:  # need to take a closer look?
+                    build_library(library_source_directory=library_source_directory,
+                                  archive_file=archive_file,
+                                  api_version_file=api_version_file,
+                                  include_directories=include_directories,
+                                  output_directory=output_directory)
+                else:
+                    dlb.di.inform('skip')
+
+            needs_update.result_file.native.raw.touch()
 
 dlb.di.inform('finished successfully')

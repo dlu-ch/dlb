@@ -18,28 +18,23 @@
 #       archive_file = dlb.fs.Path(...)  # compiled from *library_source_directory*
 #
 #       # 1. check if update of *archive_file* may be necessary - fast but coarse
-#       with dlb.ex.Context:
-#           # update mtime of directory if content has later mtime
-#           # (requires monotonic system time to detect all mtime changes)
-#           mtime = dlb.fs.propagate_mtime(library_source_directory)
-#           assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
+#       # update mtime of directory if content has later mtime
+#       # (requires monotonic system time to detect all mtime changes)
+#       mtime = dlb.fs.propagate_mtime(library_source_directory)
+#       assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
 #
-#           needs_update = dlb_contrib.generic.ResultRemover(
-#               result_file=archive_file.with_appended_suffix('.uptodate')
-#           ).run(
-#               force_redo=dlb_contrib.generic.Check(
-#                   input_directories=[library_source_directory],
-#                   output_files=[archive_file]
-#               ).run()
-#           )
-#           # after normal exit from this context, needs_update.result_file does not exist
-#           # if bool(needs_update) is True
+#       needs_update = dlb_contrib.generic.Check(
+#           input_directories=[library_source_directory],
+#           output_files=[archive_file]
+#           result_file=archive_file.with_appended_suffix('.uptodate')  # redo if this does not exist
+#       ).run()  # redo removes *result_file*
 #
-#       if needs_update:
-#           # 2. compile library to *archive_file* - slow but fine
-#           # (*needs_update* will be True next time if this fails)
-#           ...
-#           needs_update.result_file.native.raw.touch()  # mark successful completion
+#       with dlb.ex.Context:  # waits for previous redos to complete
+#           if needs_update:  # need to take a closer look?
+#               # 2. compile library to *archive_file* - slow but fine
+#               ...   # *needs_update* will be True next time if this fails with an exception
+#
+#       needs_update.result_file.native.raw.touch()  # mark successful completion
 #
 #   ...
 #
@@ -51,7 +46,7 @@
 #           }
 #       version_by_path = VersionQuery().run().version_by_path
 
-__all__ = ['Check', 'ResultRemover', 'VersionQuery', 'VERSION_WORD_REGEX']
+__all__ = ['Check', 'VersionQuery', 'VERSION_WORD_REGEX']
 
 import sys
 import re
@@ -64,23 +59,14 @@ assert sys.version_info >= (3, 7)
 # e.g. 'v1.2.3-alpha4'
 VERSION_WORD_REGEX = re.compile(b'(^|\s)(?P<version>[0-9a-zA-Z._@+-]*[0-9]\.[0-9][0-9a-zA-Z._@+-]*)($|\s)')
 
-# TODO replace (prone to redo miss when dlb aborted between Check(...).run() and use of result
+
 class Check(dlb.ex.Tool):
     # Perform a redo (which does nothing) when one of the given regular files or directories has changed
     # or one of the given output files does not exist.
     #
-    # The result 'Check(...).run()' can be used like this to a add an input dependency on a group of other
-    # input dependencies:
+    # Remove *result_file* (but make sure its directory exists) at every redo if given.
     #
-    #    ATool().run(force_redo=Check(...).run())
-    #
-    # Notes:
-    #
-    #   - It is more efficient to use the same Check() tool instance for multiple other tool instances
-    #     than adding its input dependencies to all of them.
-    #   - Should only be used in conjunction with ResultRemover to avoid redo misses;
-    #     a redo miss can occur when dlb is aborted between 'Check(...).run()' and the use of its result like
-    #     'ATool().run(force_redo=...)'
+    # See above for an example.
     #
     # For GNU Make lovers: This is the equivalent to using a .PHONY target as a source.
 
@@ -89,24 +75,16 @@ class Check(dlb.ex.Tool):
     output_files = dlb.ex.output.RegularFile[:](required=False)
     output_directories = dlb.ex.output.Directory[:](required=False)
 
-    async def redo(self, result, context):
-        pass
-
-
-# TODO remove
-class ResultRemover(dlb.ex.Tool):
-    # Remove *result_file* (but make sure its directory exists) at every redo.
-    # See above for a usage example.
-
-    result_file = dlb.ex.output.RegularFile()
+    result_file = dlb.ex.output.RegularFile(required=False)
 
     async def redo(self, result, context):
-        p = context.root_path / result.result_file
-        p[:-1].native.raw.mkdir(parents=True, exist_ok=True)
-        try:
-            p.native.raw.unlink()
-        except FileNotFoundError:
-            pass
+        if result.result_file is not None:
+            p = context.root_path / result.result_file
+            p[:-1].native.raw.mkdir(parents=True, exist_ok=True)
+            try:
+                p.native.raw.unlink()
+            except FileNotFoundError:
+                pass
 
 
 class VersionQuery(dlb.ex.Tool):
