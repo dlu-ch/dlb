@@ -38,6 +38,8 @@ def quote(text: str) -> str:
 class ShScriptlet(dlb.ex.Tool):
     # Run a small sh script, wait for its completion and return its output to stdout as a string.
     # Do not use this for "big" scripts with a lot of output.
+    #
+    # Overwrite *SCRIPTLET* in subclass.
 
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'sh'

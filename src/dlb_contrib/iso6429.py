@@ -3,7 +3,7 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 """Output text to a terminal or terminal emulator that supports a Select Graphic Rendition Control Sequence (SGR)
-compliant to ISO/IEC 6429 (ECMA-48, ANSI X3.64).
+compliant with ISO/IEC 6429 (ECMA-48, ANSI X3.64).
 Of such terminals the DEC VT-100 (although monochrome) is best known."""
 
 # ISO/IEC 6429: <https://www.iso.org/standard/12782.html>
@@ -15,7 +15,7 @@ Of such terminals the DEC VT-100 (although monochrome) is best known."""
 # Tested with: Terminal of PyCharm 2020.1.1 (Community Edition)
 #
 # Examples of terminals and terminal emulators with a Select Graphic Rendition Control Sequence (SGR)
-# compliant to ISO/IEC 6429:
+# compliant with ISO/IEC 6429:
 #
 #  - DEC VT-100
 #  - Linux console <http://man7.org/linux/man-pages/man4/console_codes.4.html>

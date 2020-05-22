@@ -30,7 +30,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from .. import ut
 
 
-# these correspond to logging.*, but are fixed (see https://docs.python.org/3/library/logging.html#logging-levels)
+# these correspond to logging.* but are fixed (see https://docs.python.org/3/library/logging.html#logging-levels)
 # not importing 'logging' reduced import time for this module
 DEBUG = 10
 INFO = 20

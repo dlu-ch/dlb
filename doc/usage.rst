@@ -10,7 +10,7 @@ The canonical way to install dlb is from the Python Package Index (`PyPI`_)::
 
    $ python3 -m pip install dlb
 
-If you prefer not to install to the Python system location, or do not have privileges to do so, you can add a flag to
+If you prefer not to install to the Python system location or do not have privileges to do so, you can add a flag to
 install to a location specific to your own account::
 
    $ python3 -m pip install --user dlb
@@ -373,7 +373,7 @@ Possible applications (on a typical GNU/Linux system)::
    $ mkfifo dlb.fifo
    $ tilix -e cat dlb.fifo && dlb 3>dlb.fifo  # show in new terminal emulator window
 
-If you mostly work with a terminal emulator that is (at least partially) compliant to ISO/IEC 6429, colored output
+If you mostly work with a terminal emulator that is (at least partially) compliant with ISO/IEC 6429, colored output
 might be useful which can easily be achieved with :class:`MessageColorator <dlb_contrib.iso6429.MessageColorator>`
 from :mod:`dlb_contrib.iso6429`.
 

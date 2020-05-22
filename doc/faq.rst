@@ -63,7 +63,7 @@ For example: You can check the design decision that library A in your project mu
 every time library A is built and use this guarantee (not just assumption!) to reduce the build time
 (see :dlbrepo:`example/c-huge-libraries/`).
 
-There is plethora of other build tools:
+There is a plethora of other build tools:
 
 - https://en.wikipedia.org/wiki/List_of_build_automation_software
 - https://pypi.org/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Build+Tools
@@ -228,7 +228,7 @@ It is possible but time-consuming to write Makefiles that clearly describe and c
 There is a reason why there are so many flavours of Make and so many utilities that generate Makefiles.
 
 In contrast, it is very easy to write fast, complete, reproducible and portable :term:`dlb scripts <script>`.
-dlb does not guess or assume, but requires the explicit statement of information to be used by external tools
+dlb does not guess or assume but requires the explicit statement of information to be used by external tools
 (the expected content of environment variables, for example). This results in readable and self-documenting dlb scripts
 that concisely describe their prerequisites.
 
@@ -403,7 +403,7 @@ Feel free to contribute.
       Implementations may allow other characters in target names as extensions.
       The interpretation of targets containing the characters '%' and '"' is implementation-defined.
 
-   Make implementations like GNU Make allow additional characters and limited quoting, but treat paths
+   Make implementations like GNU Make allow additional characters and limited quoting but treat paths
    differently on different platforms.
 
 .. [#ninjafilegenerators1]

@@ -102,11 +102,21 @@ def _transform_replacement(replacements: Dict[str, Any]):
     return d
 
 
+# TODO improve name (express purpuse of execution)
 class Doxygen(dlb.ex.Tool):
+    # Generate documentation from source files with Doxygen, using a configuration file generated from a
+    # configuration template file *configuration_template_file* by replacing (unescaped) placeholders according to
+    # *TEXTUAL_REPLACEMENTS*.
+    #
+    # The *configuration_template_file* should a least contain the following lines:
+    #
+    #     INPUT = ${{source_directories}}
+    #     OUTPUT_DIRECTORY = ${{output_directory}}
+
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'doxygen'
 
-    # Placeholders in doxygen configuration file template.
+    # Placeholders in Doxygen configuration file template.
     # The dictionary key are placeholder names and the value their replacement value.
     #
     # The name of a placeholder must be a non-empty string from ASCII letters, decimal digits and '_' that does not
@@ -127,7 +137,7 @@ class Doxygen(dlb.ex.Tool):
 
     # Template for Doxygen configuration file, UTF-8 encoded (must contain 'DOXYFILE_ENCODING = UTF-8')
     # Escape $ by $$.
-    # All unescaped  occurences of ${{name}} are replaced by the content of TEXTUAL_REPLACEMENTS[name].
+    # All unescaped occurences of ${{name}} are replaced by the content of TEXTUAL_REPLACEMENTS[name].
     configuration_template_file = dlb.ex.input.RegularFile()
 
     output_directory = dlb.ex.output.Directory(cls=Path)

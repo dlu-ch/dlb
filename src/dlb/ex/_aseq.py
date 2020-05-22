@@ -244,8 +244,8 @@ class LimitingResultSequencer(LimitingCoroutineSequencer):
     def create_result_proxy(self, tid: int, uid: Hashable, expected_class: Optional[type] = None) -> _ResultProxy:
         # Create a result proxy for the result of a task of this sequencer with task ID *tid* and assigned it
         # a unique *uid*.
-        # Raises IdError if *tid* is not the task ID of a pending task are a task with unconsumed result, or it there
-        # already is a result proxy with the same *tid* or 'id(uid)'.
+        # Raises IdError if *tid* is not the task ID of a pending task with unconsumed result or if there already is
+        # a result proxy with the same *tid* or 'id(uid)'.
 
         if not (tid in self._pending_task_by_tid or tid in self._result_by_tid or
                 tid in self._exception_by_tid):

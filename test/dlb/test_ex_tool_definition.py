@@ -614,7 +614,7 @@ class ToolInstanceConstructionTest(unittest.TestCase):
             ToolInstanceConstructionTest.DTool(include_directories=['i/', 'i/'])
         msg = (
             "keyword argument for dependency role 'include_directories' is invalid: ['i/', 'i/']\n"
-            "  | reason: iterable must be duplicate-free, but contains Path('i/') more than once"
+            "  | reason: iterable must be duplicate-free but contains Path('i/') more than once"
         )
         self.assertEqual(msg, str(cm.exception))
 

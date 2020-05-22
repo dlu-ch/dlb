@@ -258,7 +258,7 @@ class RedoContext(_context.ReadOnlyContext):
 
         return returncode, output
 
-    # This a part of the (stable) public interface of dlb.ex.RedoContext, but undocumented on purpose.
+    # This is part of the (stable) public interface of dlb.ex.RedoContext but is undocumented on purpose.
     async def execute_helper_raw(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
                                  cwd: Optional[fs.PathLike] = None, forced_env: Optional[Dict[str, str]] = None,
                                  stdin=None, stdout=None, stderr=None, limit: int = 2**16) \

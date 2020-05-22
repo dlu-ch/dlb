@@ -48,8 +48,13 @@ def parse_from_output(line, options=''):  # parse an output line of pkg-config
     return arguments_by_option, tuple(others)
 
 
+# TODO improve name (express purpuse of execution)
 class PkgConfig(dlb.ex.Tool):
-    # https://www.freedesktop.org/wiki/Software/pkg-config/
+    # Query paths as well as compile and link options for libraries *VERSION_CONSTRAINTS_BY_LIBRARY_NAME*
+    # with pkg-config.
+    #
+    # Fails if a requested library is not available (according to the installed metadata files) or does not fulfil
+    # all version constraints in *VERSION_CONSTRAINTS_BY_LIBRARY_NAME*.
 
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'pkg-config'

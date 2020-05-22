@@ -92,7 +92,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
    +------------------------------+-----------------------------------------------------------------------------+-------------------------------+
 
    .. note::
-      Most attributes and methods are available "on the class" as well as "on the instance", and refer to the
+      Most attributes and methods are available "on the class" as well as "on the instance" and refer to the
       corresponding attribute of the :term:`active context`::
 
        with dlb.ex.Context:
@@ -432,7 +432,7 @@ Environment variable dictionary object support the following methods and attribu
 
    Raises :exc:`KeyError`, if *name* was not imported in the associated  :term:`context` or one of its outer contexts.
 
-   Raises :exc:`ValueError`, if *name* was imported in the associated :term:`context` or one of its outer contexts,
+   Raises :exc:`ValueError`, if *name* was imported in the associated :term:`context` or one of its outer contexts
    but the associated validation pattern in the associated context or in one of its any outer contexts does not
    match *value*.
 
@@ -595,7 +595,7 @@ Tools are customized by inheritance and defining class attributes.
       It is a tuple of the form ``(file_path, in_archive_path, lineno)`` and uniquely identifies the tool
       among all subclasses of :class:`Tool`.
 
-      *in_archive_path* is ``None``, if the class was defined in an existing Python source file, and *file_path* is
+      *in_archive_path* is ``None`` if the class was defined in an existing Python source file and *file_path* is
       the :func:`python:os.path.realpath()` of this file.
 
       *in_archive_path* is the path relative of the source file in the zip archive, if the class was defined in an
@@ -779,7 +779,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       If the parent directory of *path* does not exist, it is created (with all its parent directories).
 
       The actual operation depends on the corresponding dependency role.
-      If is it a :class:`dlb.ex.output.RegularFile` with
+      If it is a :class:`dlb.ex.output.RegularFile` with
       :attr:`replace_by_same_content <dlb.ex.output.RegularFile.replace_by_same_content>` = ``False`` and *path*
       and *source* both exist with the same content, *path* is no replaced and treated as unchanged.
 
@@ -870,7 +870,7 @@ Dependency role classes support the following methods and attributes:
    If *required* is ``True``, a concrete dependency of this dependency role will never be ``None``.
 
    If *explicit* is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
-   is created. Otherwise, it cannot and must not be, but automatically assigned by :meth:`Tool.run()`.
+   is created. Otherwise, it cannot and must not be but is automatically assigned by :meth:`Tool.run()`.
 
    .. param required: is a value other than ``None`` required?
    .. type required: bool
@@ -987,10 +987,9 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    Constructs a dependency role for regular files, identified by their paths.
 
-   If a path is relative, is it treated as relative to
-   :attr:`dlb.ex.Context.root_path`, and it must be :term:`collapsable <collapsable path>` and
-   :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
-   are met).
+   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
+   :file:`..` components, these requirements are met).
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
    of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
@@ -1027,10 +1026,9 @@ keyword arguments of the constructor of :class:`Dependency`.
    Constructs a dependency role for filesystem objects that are neither directories nor regular files,
    identified by their paths.
 
-   If a path is relative, is it treated as relative to
-   :attr:`dlb.ex.Context.root_path`, and it must be :term:`collapsable <collapsable path>` and
-   :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
-   are met).
+   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
+   :file:`..` components, these requirements are met).
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is each file's path as an instance
    of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
@@ -1068,10 +1066,9 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    Constructs a dependency role for directories, identified by their paths.
 
-   If a path is relative, is it treated as relative to
-   :attr:`dlb.ex.Context.root_path`, and it must be :term:`collapsable <collapsable path>` and
-   :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
-   are met).
+   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
+   :file:`..` components, these requirements are met).
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the directory's path as an
    instance of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the
@@ -1112,7 +1109,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    future runs of the tool instance.
    Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.run()` is called.
 
-   The value of the environment variable is valid if it is a string that the regular expression *pattern* matches,
+   The value of the environment variable is valid if it is a string that the regular expression *pattern* matches
    or if it is ``None`` and *required* is ``False``.
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
@@ -1185,10 +1182,9 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    Constructs a dependency role for regular files in the :term:`managed tree`, identified by their paths.
 
-   If a path is relative, is it treated as relative to
-   :attr:`dlb.ex.Context.root_path`, and it must be :term:`collapsable <collapsable path>` and
-   :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
-   are met).
+   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
+   :file:`..` components, these requirements are met).
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
    of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
@@ -1218,10 +1214,9 @@ keyword arguments of the constructor of :class:`Dependency`.
    Constructs a dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor
    regular files, identified by their paths.
 
-   If a path is relative, is it treated as relative to
-   :attr:`dlb.ex.Context.root_path`, and it must be :term:`collapsable <collapsable path>` and
-   :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
-   are met).
+   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
+   :file:`..` components, these requirements are met).
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the file's path as an instance
    of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the file's paths
@@ -1246,10 +1241,9 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    Constructs a dependency role for directories in the :term:`managed tree`, identified by their paths.
 
-   If a path is relative, is it treated as relative to
-   :attr:`dlb.ex.Context.root_path`, and it must be :term:`collapsable <collapsable path>` and
-   :term:`non-upwards <non-upwards path>` (if the path does not contain :file:`..` components, these requirements
-   are met).
+   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
+   :file:`..` components, these requirements are met).
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is the directory's path as an
    instance of *cls* if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and a tuple of the

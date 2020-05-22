@@ -489,7 +489,7 @@ class Database:
         # *tool_instance_dbid* must be the value returned by call of :meth:`get_and_register_tool_instance_dbid()` since
         # not before the last :meth:`cleanup()` (if any).
         #
-        # Starts a new transaction when no transaction is active, but does not commit.
+        # Starts a new transaction when no transaction is active but does not commit.
         # In case of an exception, the information on dependencies in the run-database remains unchanged;
         # if a transaction was active, it is rolled back.
 

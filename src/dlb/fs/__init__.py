@@ -554,7 +554,7 @@ class Path(metaclass=_PathMeta):
         # construction from one string is much faster than several components (its also safer)
         p = pathlib.PureWindowsPath(str(_native_components_for_windows(self.components)))
         if p.is_reserved():
-            # not actually reserved for directory path, but information whether directory is lost after conversion
+            # not actually reserved for directory path but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
         return p
 
@@ -720,7 +720,7 @@ class WindowsPath(Path):
         if not parts[0]:
             parts = parts[1:]
         if parts and parts[-1].upper() in self.RESERVED_AS_LAST_COMPONENT:
-            # not actually reserved for directory path, but information whether directory is lost after conversion
+            # not actually reserved for directory path but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
 
         if not components_checked:

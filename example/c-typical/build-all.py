@@ -17,7 +17,7 @@ import dlb_contrib.gcc
 import dlb_contrib.iso6429
 
 if sys.stderr.isatty():
-    # assume ISO/IEC 6429 conformant terminal ("VT-100 compatible")
+    # assume terminal compliant with ISO/IEC 6429 ("VT-100 compatible")
     dlb.di.set_output_file(dlb_contrib.iso6429.MessageColorator(sys.stderr))
 
 

@@ -13,13 +13,6 @@
 #       ...
 #
 #   with dlb.ex.Context():
-#       check = dlb_contrib.generic.Check(input_files=['logo.png'])
-#       ATool(...).run(force_redo=check.run())
-#       # performs a redo of ATool(...) if 'logo.png' has changed
-#
-#   ...
-#
-#   with dlb.ex.Context():
 #       # contains all source files of a huge library:
 #       library_source_directory = dlb.fs.Path('src/libx/')
 #       archive_file = dlb.fs.Path(...)  # compiled from *library_source_directory*
@@ -56,16 +49,23 @@ import dlb.ex
 assert sys.version_info >= (3, 7)
 
 
+# TODO replace (prone to redo miss when dlb aborted between Check(...).run() and use of result
 class Check(dlb.ex.Tool):
-    # Make a redo (which does nothing) when one of the given regular files or directories has changed.
+    # Perform a redo (which does nothing) when one of the given regular files or directories has changed
+    # or one of the given output files does not exist.
     #
     # The result 'Check(...).run()' can be used like this to a add an input dependency on a group of other
     # input dependencies:
     #
     #    ATool().run(force_redo=Check(...).run())
     #
-    # Note: It is more efficient to use the same Check() tool instance for multiple other tool instances
-    # than adding its input dependencies to all of them.
+    # Notes:
+    #
+    #   - It is more efficient to use the same Check() tool instance for multiple other tool instances
+    #     than adding its input dependencies to all of them.
+    #   - Should only be used in conjunction with ResultRemover to avoid redo misses;
+    #     a redo miss can occur when dlb is aborted between 'Check(...).run()' and the use of its result like
+    #     'ATool().run(force_redo=...)'
     #
     # For GNU Make lovers: This is the equivalent to using a .PHONY target as a source.
 
@@ -78,6 +78,7 @@ class Check(dlb.ex.Tool):
         pass
 
 
+# TODO remove
 class ResultRemover(dlb.ex.Tool):
     # Remove *result_file* (but make sure its directory exists) at every redo.
     # See above for a usage example.

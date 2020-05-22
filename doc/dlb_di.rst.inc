@@ -154,7 +154,7 @@ Module content
    In contrast to :mod:`logging`, these are *not* meant to be changed by the user.
    Use them to define your own positive integers representing levels like this::
 
-       ... = dlb.di.INFO + 4  # a level more important than INFO, but not yet a WARNING
+       ... = dlb.di.INFO + 4  # a level more important than INFO but not yet a WARNING
 
 .. function:: set_output_file(file)
 
@@ -217,7 +217,7 @@ Module content
 
    *message* can contain fields. A field is declared by appending ``'\t'`` or ``'\b'``.
    A field whose declaration ends with ``'\t'`` is left aligned, one whose declaration ends with ``'\t'`` is right
-   aligned over all lines of the message. In the return value, the ``'\t'`` or ``'\b'`` are not present, but their
+   aligned over all lines of the message. In the return value the ``'\t'`` or ``'\b'`` are not present but their
    "positions" are aligned over all lines of the message.
 
    Examples::

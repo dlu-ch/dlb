@@ -101,23 +101,23 @@ class _RegularFileMixin(_FilesystemObjectMixin):
     def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISREG(memo.stat.mode):
-            raise ValueError("filesystem object exists, but is not a regular file")
+            raise ValueError("filesystem object exists but is not a regular file")
 
 
 class _NonRegularFileMixin(_FilesystemObjectMixin):
     def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if stat.S_ISREG(memo.stat.mode):
-            raise ValueError("filesystem object exists, but is a regular file")
+            raise ValueError("filesystem object exists but is a regular file")
         if stat.S_ISDIR(memo.stat.mode):
-            raise ValueError("filesystem object exists, but is a directory")
+            raise ValueError("filesystem object exists but is a directory")
 
 
 class _DirectoryMixin(_FilesystemObjectMixin):
     def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         super().check_filesystem_object_memo(memo)
         if not stat.S_ISDIR(memo.stat.mode):
-            raise ValueError("filesystem object exists, but is not a directory")
+            raise ValueError("filesystem object exists but is not a directory")
 
 
 class RegularFileInputAction(_RegularFileMixin, Action):

@@ -99,6 +99,7 @@ def build_documentation(*, version_result, source_directory: Path, output_direct
             source_directories=[source_directory, output_directory / 'gsrc/', 'doc/doxygen/'],
             output_directory=output_directory / 'doxygen/',
             source_files_to_watch=Path('doc/doxygen/').list()).run(force_redo=sources_changed).output_directory
+        # TODO rebuild if dlb was aborted after last build_application() == True
 
         doc_archive_file = \
             output_directory / '{}_{}.html.bzip'.format(application_name, version_result.wd_version)

@@ -50,7 +50,7 @@ class KpathseaPath(dlb.fs.RelativePath):
     # - ENV_SEP cannot be escaped in TEXINPUTS; ENV_SEP can be one of the following: ' ', ',', ';', ':'.
     # - '$', ',', '{', '}' cannot be escaped in TEXINPUTS
     # - path must not start with '!!'
-    # - '\n', '\r' in TEXINPUTS, but not in the tools that use it
+    # - '\n', '\r' in TEXINPUTS but not in the tools that use it
     # - #if defined(WIN32): '\\' is replaced by '/'
     # see https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/path-elt.c?view=markup#l63
 
@@ -135,6 +135,7 @@ def accessed_files_from_recorded(recorder_output_file: dlb.fs.Path, context) \
     return read_files, written_files
 
 
+# TODO improve name (express purpuse of execution)
 class Tex(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'tex'

@@ -18,7 +18,7 @@ import dlb_contrib.iso6429
 
 
 if sys.stderr.isatty():
-    # assume ISO/IEC 6429 conformant terminal ("VT-100 compatible")
+    # assume terminal compliant with ISO/IEC 6429 ("VT-100 compatible")
     dlb.di.set_output_file(dlb_contrib.iso6429.MessageColorator(sys.stderr))
 
 
@@ -31,7 +31,7 @@ with dlb.ex.Context():
     source_directory = dlb.fs.Path('src/')
     output_directory = dlb.fs.Path('build/out/')
 
-    # repeat redo until all state files exist and their content remains unchanged, but at most 10 times
+    # repeat redo until all state files exist and their content remains unchanged but at most 10 times
     for i in range(10):
         r = PdfLatex(toplevel_file='src/report.tex',
                      output_file=output_directory / 'report.pdf',

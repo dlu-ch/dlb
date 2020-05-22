@@ -199,7 +199,7 @@ class FailWithInputDependenciesOfWrongType(testenv.TemporaryWorkingDirectoryTest
                 t.run()
         msg = (
             "input dependency 'source_file' contains an invalid path: 'src'\n"
-            "  | reason: filesystem object exists, but is not a regular file"
+            "  | reason: filesystem object exists but is not a regular file"
         )
         self.assertEqual(msg, str(cm.exception))
 
@@ -209,7 +209,7 @@ class FailWithInputDependenciesOfWrongType(testenv.TemporaryWorkingDirectoryTest
                 t.run()
         msg = (
             "input dependency 'include_directories' contains an invalid path: 'src/b/'\n"
-            "  | reason: filesystem object exists, but is not a directory"
+            "  | reason: filesystem object exists but is not a directory"
         )
         self.assertEqual(msg, str(cm.exception))
 
@@ -219,7 +219,7 @@ class FailWithInputDependenciesOfWrongType(testenv.TemporaryWorkingDirectoryTest
                 t.run()
         msg = (
             "input dependency 'dummy_file' contains an invalid path: 'src/a.cpp'\n"  
-            "  | reason: filesystem object exists, but is a regular file"
+            "  | reason: filesystem object exists but is a regular file"
         )
         self.assertEqual(msg, str(cm.exception))
 
@@ -229,7 +229,7 @@ class FailWithInputDependenciesOfWrongType(testenv.TemporaryWorkingDirectoryTest
                 t.run()
         msg = (
             "input dependency 'dummy_file' contains an invalid path: 'src'\n"
-            "  | reason: filesystem object exists, but is a directory"
+            "  | reason: filesystem object exists but is a directory"
         )
         self.assertEqual(msg, str(cm.exception))
 
@@ -243,7 +243,7 @@ class FailWithInputDependenciesOfWrongType(testenv.TemporaryWorkingDirectoryTest
                 t.run()
         msg = (
             "input dependency 'include_directories' contains an invalid path: 'src/a.cpp/'\n"
-            "  | reason: filesystem object exists, but is not a directory"
+            "  | reason: filesystem object exists but is not a directory"
         )
         self.assertEqual(msg, str(cm.exception))
 
@@ -494,7 +494,7 @@ class RedoIfOutputNotAsExpected(testenv.TemporaryWorkingDirectoryTestCase):
                 r"(?m)\n"
                 r"( *)D explicit output dependencies\.\.\. \[[+.0-9]+s\]\n"
                 r"\1  I redo necessary because of filesystem object: 'a\.o' \n"
-                r"\1    \| reason: filesystem object exists, but is not a regular file\n"
+                r"\1    \| reason: filesystem object exists but is not a regular file\n"
             )
             self.assertRegex(output.getvalue(), regex)
 

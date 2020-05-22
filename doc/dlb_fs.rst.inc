@@ -154,7 +154,7 @@ Path objects
 
       Yield all path objects of the directory contents denoted by this path and matched by the
       name filters.
-      The paths are duplicate-free and in a platform-independent and deterministic order, but not necessarily sorted.
+      The paths are duplicate-free and in a platform-independent and deterministic order but not necessarily sorted.
       Their class is the class of this object if *cls* is ``None`` and *cls* otherwise.
 
       The path *p* of an existing filesystem object is eventually yielded if and only if
@@ -335,7 +335,7 @@ Path objects
        >>> str(Path.Native('-rf'))
        './-rf'
 
-   Instances of :class:`dlb.fs.Path.Native` and its subclasses should not be constructed directly, but by accessing
+   Instances of :class:`dlb.fs.Path.Native` and its subclasses should not be constructed directly but by accessing
    :attr:`dlb.fs.Path.native`.
 
    Example (on a Posix system)::

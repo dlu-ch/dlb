@@ -90,7 +90,7 @@ setuptools.setup(
 
     description='A Pythonic build tool',
     long_description=(
-        "dlb is a Pythonic build tool that does not try to mimic Make, but brings the benefits of "
+        "dlb is a Pythonic build tool that does not try to mimic Make but brings the benefits of "
         "object-oriented languages to the build process. It is inspired by djb's redo."
     ),
 

@@ -137,6 +137,8 @@ def syscall_from_line(line: bytes) -> Tuple[str, List[Optional[str]], List[bytes
 class RunStraced(dlb.ex.Tool):
     # Run dynamic helper with strace and return all successfully read files in the managed tree in *read_files*
     # and all successfully written files in the managed tree in *written_files*.
+    #
+    # Overwrite *EXECUTABLE* in subclass.
 
     # Dynamic helper, looked-up in the context.
     TRACING_EXECUTABLE = 'strace'
