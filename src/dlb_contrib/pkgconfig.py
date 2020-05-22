@@ -90,7 +90,7 @@ class PkgConfig(dlb.ex.Tool):
     include_search_directories = dlb.ex.output.Object[:](explicit=False)
 
     # Options returned by pkg-config other than '-I...', '-L...', '-l...'.
-    options = dlb.ex.output.Object[:](explicit=False)
+    other_options = dlb.ex.output.Object[:](explicit=False)
 
     async def redo(self, result, context):
         library_selection_arguments = []
@@ -98,7 +98,7 @@ class PkgConfig(dlb.ex.Tool):
         library_filenames = []
         library_search_directories = []
         include_search_directories = []
-        options = []
+        other_options = []
 
         for lib in self.LIBRARY_NAMES:
             if not LIBRARY_NAME_REGEX.match(lib):
@@ -122,7 +122,7 @@ class PkgConfig(dlb.ex.Tool):
         if library_selection_arguments:
             _, stdout = await context.execute_helper_with_output(
                 self.EXECUTABLE, ['--cflags', '--libs'] + library_selection_arguments)
-            arguments_by_option, options = parse_from_output(stdout.decode().strip(), options='ILl')
+            arguments_by_option, other_options = parse_from_output(stdout.decode().strip(), options='ILl')
 
             for p in arguments_by_option.get('-I', []):
                 p = dlb.fs.Path(dlb.fs.Path.Native(p), is_dir=True)
@@ -142,6 +142,6 @@ class PkgConfig(dlb.ex.Tool):
         result.library_filenames = library_filenames
         result.library_search_directories = library_search_directories
         result.include_search_directories = include_search_directories
-        result.options = options
+        result.other_options = other_options
 
         return True

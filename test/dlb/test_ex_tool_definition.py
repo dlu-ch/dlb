@@ -18,15 +18,16 @@ class RegexTest(unittest.TestCase):
 
     def test_uppercase_word(self):
         import dlb.ex._tool
-        self.assertTrue(dlb.ex._tool.UPPERCASE_WORD_NAME_REGEX.match('A'))
-        self.assertTrue(dlb.ex._tool.UPPERCASE_WORD_NAME_REGEX.match('A2_B'))
-        self.assertFalse(dlb.ex._tool.UPPERCASE_WORD_NAME_REGEX.match('_A'))
+        self.assertTrue(dlb.ex._tool.UPPERCASE_NAME_REGEX.match('A'))
+        self.assertTrue(dlb.ex._tool.UPPERCASE_NAME_REGEX.match('A2_B'))
+        self.assertFalse(dlb.ex._tool.UPPERCASE_NAME_REGEX.match('_A'))
 
     def test_lowercase_word(self):
         import dlb.ex._tool
-        self.assertTrue(dlb.ex._tool.LOWERCASE_WORD_NAME_REGEX.match('object_file'))
-        self.assertFalse(dlb.ex._tool.LOWERCASE_WORD_NAME_REGEX.match('_object_file_'))
-        self.assertFalse(dlb.ex._tool.LOWERCASE_WORD_NAME_REGEX.match('Object_file_'))
+        self.assertTrue(dlb.ex._tool.LOWERCASE_MULTIWORD_NAME_REGEX.match('object_file'))
+        self.assertFalse(dlb.ex._tool.LOWERCASE_MULTIWORD_NAME_REGEX.match('object'))
+        self.assertFalse(dlb.ex._tool.LOWERCASE_MULTIWORD_NAME_REGEX.match('_object_file_'))
+        self.assertFalse(dlb.ex._tool.LOWERCASE_MULTIWORD_NAME_REGEX.match('Object_file_'))
 
 
 class ToolClassAttributeDefineTest(unittest.TestCase):
@@ -57,7 +58,8 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
     def test_cannot_define_other(self):
         tmpl = (
             "invalid class attribute name: {}\n"
-            "  | every class attribute of a 'dlb.ex.Tool' must be named like 'UPPER_CASE_WORD' or 'lower_case_word"
+            "  | every class attribute of a 'dlb.ex.Tool' must be named "
+            "like 'UPPER_CASE' or 'lower_case' (at least two words)"
         )
         with self.assertRaises(AttributeError) as cm:
             class ATool(dlb.ex.Tool):
@@ -118,7 +120,7 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
             async def u_v(self):  # ok, not in a base class
                 return 0
 
-            a = dlb.ex.input.RegularFile()
+            some_thing = dlb.ex.input.RegularFile()
 
         class BTool(ATool):
             def x_y_z(self, s: str) -> int:  # ok, same signature in base class
@@ -154,9 +156,9 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
 
         with self.assertRaises(TypeError) as cm:
             class GTool(ATool):
-                def a(self):
+                def some_thing(self):
                     pass
-        regex = r"\A()the value of 'a' must not be callable since it is not callable in <.*>\Z"
+        regex = r"\A()the value of 'some_thing' must not be callable since it is not callable in <.*>\Z"
         self.assertRegex(str(cm.exception), regex)
 
         with self.assertRaises(TypeError) as cm:
@@ -394,7 +396,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 397  # of this line
+        lineno = 399  # of this line
 
         class A(dlb.ex.Tool):
             pass
@@ -563,7 +565,7 @@ class ToolInstanceConstructionTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     class CTool(dlb.ex.Tool):
-        envvar = dlb.ex.input.EnvVar(name='n', pattern='.*', example='', required=False)
+        env_var = dlb.ex.input.EnvVar(name='n', pattern='.*', example='', required=False)
 
     # noinspection PyAbstractClass
     class DTool(BTool):
@@ -782,8 +784,8 @@ class DependencyActionRegistrationTest(unittest.TestCase):
             pass
 
         class T(dlb.ex.Tool):
-            oho = D()
+            o_ho = D()
 
-        regex = r"keyword names unregistered dependency class <class '.+'>: 'oho'"
+        regex = r"keyword names unregistered dependency class <class '.+'>: 'o_ho'"
         with self.assertRaisesRegex(dlb.ex.DependencyError, regex):
-            T(oho='x')
+            T(o_ho='x')

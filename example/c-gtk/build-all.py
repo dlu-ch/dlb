@@ -47,7 +47,7 @@ def build_application(*, version_result, source_directory: Path, output_director
                 file.write(f'#define APPLICATION_VERSION_MICRO {version_result.version_components[2]}\n')
 
         generated_source_directory = output_directory / 'gsrc/'
-        GenerateVersionFile(file=generated_source_directory / 'Generated/Version.h').run()
+        GenerateVersionFile(output_file=generated_source_directory / 'Generated/Version.h').run()
 
     with dlb.di.Cluster('find libraries'), dlb.ex.Context():
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):

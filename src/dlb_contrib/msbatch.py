@@ -31,7 +31,7 @@
 #     #   @python3 -m dlb_contrib.exportenv
 #
 #     with dlb.ex.Context():
-#         ... = dlb_contrib.msbatch.RunEnvBatch(batch_file='setup.bat').environment['LIB']
+#         ... = dlb_contrib.msbatch.RunEnvBatch(batch_file='setup.bat').exported_environment['LIB']
 
 __all__ = ['RunEnvBatch']
 
@@ -57,7 +57,7 @@ class RunEnvBatch(dlb.ex.Tool):
     EXECUTABLE = 'cmd.exe'
 
     batch_file = dlb.ex.input.RegularFile(cls=BatchFilePath)
-    environment = dlb.ex.output.Object(explicit=False)
+    exported_environment = dlb.ex.output.Object(explicit=False)
 
     async def redo(self, result, context):
         batch_file = result.batch_file
@@ -86,14 +86,14 @@ class RunEnvBatch(dlb.ex.Tool):
 
             envvar_file = tmp_dir / dlb_contrib.exportenv.FILE_NAME
             try:
-                environment = dlb_contrib.exportenv.read_exported(envvar_file.native)
+                exported_environment = dlb_contrib.exportenv.read_exported(envvar_file.native)
             except FileNotFoundError:
                 msg = (
                     f"exported environment file not found: {dlb_contrib.exportenv.FILE_NAME!r}\n"
                     f"  | create it in the batch file with 'python3 -m dlb_contrib.exportenv'"
                 )
                 raise Exception(msg) from None
-            result.environment = environment
+            result.exported_environment = exported_environment
 
         return True
 

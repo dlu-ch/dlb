@@ -63,12 +63,12 @@ class ShTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
         with dlb.ex.Context():
-            output = OutputTwoLines().run().output
+            output = OutputTwoLines().run().processed_output
         self.assertEqual(b'first\nsecond\n', output)
 
     def test_incremental_line_output(self):
         with dlb.ex.Context():
-            output = OutputThreeLinesIncrementally().run().output
+            output = OutputThreeLinesIncrementally().run().processed_output
         self.assertEqual([b'first', b'third'], output)
 
     def test_read_files(self):
@@ -78,6 +78,6 @@ class ShTest(testenv.TemporaryWorkingDirectoryTestCase):
             f.write(b'ooh!')
 
         with dlb.di.Cluster('let sh output all parameters'), dlb.ex.Context():
-            output = ReadFile(source_files=['a', 'o']).run().output
+            output = ReadFile(source_files=['a', 'o']).run().processed_output
             dlb.di.inform(f"scriptlet returned {output!r}")
         self.assertEqual(b"scriptlet\naah... ooh!", output)

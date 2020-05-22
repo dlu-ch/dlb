@@ -175,14 +175,14 @@ class FailsWithDifferentInputDependenciesForSameEnvVarTest(testenv.TemporaryWork
     def test_fails(self):
         # noinspection PyAbstractClass
         class BTool(dlb.ex.Tool):
-            a = dlb.ex.input.EnvVar(name='XY', pattern='.*', example='')
-            b = dlb.ex.input.EnvVar(name='XY', pattern='.*', example='', explicit=False)
+            a_var = dlb.ex.input.EnvVar(name='XY', pattern='.*', example='')
+            b_var = dlb.ex.input.EnvVar(name='XY', pattern='.*', example='', explicit=False)
 
         with self.assertRaises(dlb.ex.DependencyError) as cm:
             with dlb.ex.Context():
-                t = BTool(a='a')
+                t = BTool(a_var='a')
                 t.run()
-        msg = "input dependencies 'b' and 'a' both define the same environment variable: 'XY'"
+        msg = "input dependencies 'b_var' and 'a_var' both define the same environment variable: 'XY'"
         self.assertEqual(msg, str(cm.exception))
 
 
@@ -534,7 +534,7 @@ class RedoIfInputIsRemovedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         class BTool(dlb.ex.Tool):
-            inputs = dlb.ex.output.RegularFile[:]()
+            input_files = dlb.ex.output.RegularFile[:]()
             object_file = dlb.ex.output.RegularFile()
 
             async def redo(self, result, context):
@@ -544,13 +544,13 @@ class RedoIfInputIsRemovedTest(testenv.TemporaryWorkingDirectoryTestCase):
         open('a.c', 'xb').close()
         open('b.c', 'xb').close()
 
-        t = BTool(inputs=['a.c', 'b.c'], object_file='a.o')
+        t = BTool(input_files=['a.c', 'b.c'], object_file='a.o')
         fingerprint = t.fingerprint
         with dlb.ex.Context():
             self.assertTrue(t.run())
             self.assertFalse(t.run())
 
-        t = BTool(inputs=['a.c'], object_file='a.o')
+        t = BTool(input_files=['a.c'], object_file='a.o')
         self.assertNotEqual(fingerprint, t.fingerprint)
         with dlb.ex.Context():
             output = io.StringIO()
@@ -564,7 +564,7 @@ class RedoIfInputOrderIsChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo(self):
         class BTool(dlb.ex.Tool):
-            inputs = dlb.ex.output.RegularFile[:]()
+            input_files = dlb.ex.output.RegularFile[:]()
             object_file = dlb.ex.output.RegularFile()
 
             async def redo(self, result, context):
@@ -574,13 +574,13 @@ class RedoIfInputOrderIsChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
         open('a.c', 'xb').close()
         open('b.c', 'xb').close()
 
-        t = BTool(inputs=['a.c', 'b.c'], object_file='a.o')
+        t = BTool(input_files=['a.c', 'b.c'], object_file='a.o')
         fingerprint = t.fingerprint
         with dlb.ex.Context():
             self.assertTrue(t.run())
             self.assertFalse(t.run())
 
-        t = BTool(inputs=['b.c', 'a.c'], object_file='a.o')
+        t = BTool(input_files=['b.c', 'a.c'], object_file='a.o')
         self.assertNotEqual(fingerprint, t.fingerprint)
         with dlb.ex.Context():
             output = io.StringIO()
@@ -624,28 +624,28 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
     def test_redo_for_explicit(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.input.EnvVar(name='LANG', pattern=r'.+', example='de_CH')
+            language_code = dlb.ex.input.EnvVar(name='LANG', pattern=r'.+', example='de_CH')
 
             async def redo(self, result, context):
                 pass
 
-        t = BTool(language='fr_FR')
+        t = BTool(language_code='fr_FR')
         with dlb.ex.Context():
             self.assertTrue(t.run())
             self.assertFalse(t.run())
 
-        t = BTool(language='fr_FR')
+        t = BTool(language_code='fr_FR')
         with dlb.ex.Context():
             self.assertFalse(t.run())
 
-        t = BTool(language='it_IT')
+        t = BTool(language_code='it_IT')
         with dlb.ex.Context():
             self.assertTrue(t.run())
             self.assertFalse(t.run())
 
     def test_redo_for_nonexplicit(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.input.EnvVar(name='LANG', pattern=r'.+', example='de_CH', explicit=False)
+            language_code = dlb.ex.input.EnvVar(name='LANG', pattern=r'.+', example='de_CH', explicit=False)
 
             async def redo(self, result, context):
                 pass
@@ -656,7 +656,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
             dlb.ex.Context.active.env['LANG'] = 'fr_FR'
             r = t.run()
             self.assertIsNotNone(r)
-            self.assertEqual('fr_FR', r.language.raw)
+            self.assertEqual('fr_FR', r.language_code.raw)
             self.assertFalse(t.run())
 
         t = BTool()
@@ -671,12 +671,12 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
             dlb.ex.Context.active.env['LANG'] = 'it_IT'
             r = t.run()
             self.assertIsNotNone(r)
-            self.assertEqual('it_IT', r.language.raw)
+            self.assertEqual('it_IT', r.language_code.raw)
             self.assertFalse(t.run())
 
     def test_fails_for_nonexplicit_with_invalid_envvar_value(self):
         class BTool(dlb.ex.Tool):
-            language = dlb.ex.input.EnvVar(name='LANG', pattern=r'[a-z]+_[A-Z]+', example='de_CH', explicit=False)
+            language_code = dlb.ex.input.EnvVar(name='LANG', pattern=r'[a-z]+_[A-Z]+', example='de_CH', explicit=False)
 
             async def redo(self, result, context):
                 pass
@@ -688,7 +688,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
             with self.assertRaises(dlb.ex.RedoError) as cm:
                 t.run()
             msg = (
-                "input dependency 'language' cannot use environment variable 'LANG'\n"
+                "input dependency 'language_code' cannot use environment variable 'LANG'\n"
                 "  | reason: value '_' is not matched by validation pattern '[a-z]+_[A-Z]+'"
             )
             self.assertEqual(msg, str(cm.exception))

@@ -151,7 +151,7 @@ class GenerateHeaderFileTest(testenv.TemporaryWorkingDirectoryTestCase):
         os.makedirs(os.path.join('src', 'Generated'))
 
         with dlb.ex.Context():
-            GenerateVersionFile(file='src/Generated/Version.h').run()
+            GenerateVersionFile(output_file='src/Generated/Version.h').run()
 
         with open(os.path.join('src', 'Generated', 'Version.h'), 'r') as f:
             content = f.read()
@@ -173,7 +173,7 @@ class GenerateHeaderFileTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_creates_include_guard(self):
 
         with dlb.ex.Context():
-            dlb_contrib.clike.GenerateHeaderFile(file='Version.h').run()
+            dlb_contrib.clike.GenerateHeaderFile(output_file='Version.h').run()
 
         with open('Version.h', 'r') as f:
             content = f.read()

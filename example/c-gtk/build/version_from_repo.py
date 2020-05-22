@@ -30,10 +30,10 @@ class VersionQuery(dlb_contrib.git.GitDescribeWorkingDirectory):
 
         shortened_commit_hash_length = min(40, max(1, int(self.SHORTENED_COMMIT_HASH_LENGTH)))
 
-        version = result.tag[1:]
+        version = result.tag_name[1:]
         m = VERSION_REGEX.fullmatch(version)
         if not m:
-            raise ValueError(f'annotated tag is not a valid version number: {result.tag!r}')
+            raise ValueError(f'annotated tag is not a valid version number: {result.tag_name!r}')
 
         wd_version = version
         if result.commit_number_from_tag_to_latest_commit:

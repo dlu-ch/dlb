@@ -237,7 +237,7 @@ class GenerateHeaderFile(dlb.ex.Tool):
 
     PATH_COMPONENTS_TO_STRIP = 0  # number of leading path component to strip for include guard
 
-    file = dlb.ex.output.RegularFile(replace_by_same_content=False)
+    output_file = dlb.ex.output.RegularFile(replace_by_same_content=False)
 
     def write_preamble(self, file):
         file.write('// This file was created automatically.\n// Do not modify it manually.\n')
@@ -248,11 +248,11 @@ class GenerateHeaderFile(dlb.ex.Tool):
     async def redo(self, result, context):
         if not SIMPLE_IDENTIFIER_REGEX.match(self.INCLUDE_GUARD_PREFIX + self.INCLUDE_GUARD_SUFFIX):
             raise ValueError("'INCLUDE_GUARD_PREFIX' and 'INCLUDE_GUARD_SUFFIX' do not form a valid identifier")
-        if self.PATH_COMPONENTS_TO_STRIP >= len(result.file.parts):
+        if self.PATH_COMPONENTS_TO_STRIP >= len(result.output_file.parts):
             raise ValueError("nothing left to strip after 'PATH_COMPONENTS_TO_STRIP'")
 
         with context.temporary() as tmp_file:
-            include_guard = identifier_from_path(result.file[self.PATH_COMPONENTS_TO_STRIP:])
+            include_guard = identifier_from_path(result.output_file[self.PATH_COMPONENTS_TO_STRIP:])
             include_guard = self.INCLUDE_GUARD_PREFIX + include_guard + self.INCLUDE_GUARD_SUFFIX
 
             with open(tmp_file.native, 'w', encoding='utf-8') as file:
@@ -260,4 +260,4 @@ class GenerateHeaderFile(dlb.ex.Tool):
                 file.write(f'\n#ifndef {include_guard}\n#define {include_guard}\n')
                 self.write_content(file)
                 file.write(f'\n#endif  // {include_guard}\n')
-            context.replace_output(result.file, tmp_file)
+            context.replace_output(result.output_file, tmp_file)

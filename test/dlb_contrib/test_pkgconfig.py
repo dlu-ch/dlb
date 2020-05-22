@@ -119,7 +119,7 @@ class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         self.assertIn('libgdk-3.so', result.library_filenames)
         self.assertIn(dlb.fs.Path('/usr/include/gtk-3.0/'), result.include_search_directories)
-        self.assertEqual(('-pthread',), result.options)
+        self.assertEqual(('-pthread',), result.other_options)
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/pkg-config'), 'requires pkg-config')

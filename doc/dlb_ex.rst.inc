@@ -466,11 +466,13 @@ Tools are customized by inheritance and defining class attributes.
 
 .. class:: Tool
 
-   A tool declares its *dependency roles* (e.g. ``map_file_dependency``) and *execution parameters*
-   (e.g. ``DO_INCLUDE_DEBUG_INFO``, ``PAPER_FORMAT``) as class attributes.
+   A tool declares its *dependency roles* and *execution parameters* as class attributes.
+   The name of a dependency role must consist of at least two lower-case words separated by ``_`` (e.g. ``map_file``).
+   The name of an execution parameters must consist of lower-case words separated by ``_`` (e.g. ``WARNINGS``,
+   ``VERSION_PARAMETERS``).
 
    Every tool instance assigns *concrete dependencies* for the tool's dependency roles
-   (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file_dependency``),
+   (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file``),
    while the execution parameters are the same of all instances of the some tool.
 
    Dependency roles are instances of subclasses of :class:`Dependency`.
@@ -822,14 +824,14 @@ Example::
 
     class Tool(dlb.ex.Tool):
         # these are dependency roles of the tool 'Tool':
-        include_search_paths = dlb.ex.input.Directory[1:]()  # a sequence of at least one dlb.ex.input.Directory
-        cache_dir_path = dlb.ex.input.Directory()  # a single dlb.ex.input.Directory
+        include_search_directories = dlb.ex.input.Directory[1:]()  # a sequence of at least one dlb.ex.input.Directory
+        cache_directory = dlb.ex.input.Directory()  # a single dlb.ex.input.Directory
 
-    tool = Tool(include_search_paths=['build/out/Generated/', 'src/Implementation/'])
+    tool = Tool(include_search_directories=['build/out/Generated/', 'src/Implementation/'])
 
     # these are concrete dependencies of the tool instance 'tool':
-    tool.include_search_paths  # (Path('build/out/Generated/'), Path('src/Implementation/'))
-    tool.cache_dir_path  # (Path('build/out/Generated/'), Path('src/Implementation/'))
+    tool.include_search_directories  # (Path('build/out/Generated/'), Path('src/Implementation/'))
+    tool.cache_directory  # (Path('build/out/Generated/'), Path('src/Implementation/'))
 
 
 Dependency classes are organized in an a hierarchy according to their meaning to a :term:`tool` by the means of the
@@ -1050,9 +1052,9 @@ keyword arguments of the constructor of :class:`Dependency`.
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    symlinks = dlb.ex.input.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
-      >>> tool = Tool(symlinks=['src/current'])
-      >>> tool.symlinks
+      >>>    symbolic_links = dlb.ex.input.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
+      >>> tool = Tool(symbolic_links=['src/current'])
+      >>> tool.symbolic_links
       (NoSpacePath('src/current'),)
 
    :param cls: class to be used to represent the path
@@ -1120,17 +1122,17 @@ keyword arguments of the constructor of :class:`Dependency`.
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    language = dlb.ex.input.EnvVar(
-      >>>                   name='LANG',
-      >>>                   pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
-      >>>                   example='sv_SE')
-      >>>     flags = dlb.ex.input.EnvVar(name='CFLAGS', pattern=r'.+', example='-Wall')
-      >>> tool = Tool(language='de_CH')  # use 'de_CH' as value of the environment variable for all
-      >>> tool.language.groups['territory']
+      >>>     language_code = dlb.ex.input.EnvVar(
+      >>>                         name='LANG',
+      >>>                         pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+      >>>                         example='sv_SE')
+      >>>     cflags_string = dlb.ex.input.EnvVar(name='CFLAGS', pattern=r'.+', example='-Wall')
+      >>> tool = Tool(language_code='de_CH')  # use 'de_CH' as value of the environment variable for all
+      >>> tool.language_code.groups['territory']
       'CH'
-      >>> tool.flags
+      >>> tool.cflags_string
       NotImplemented
-      >>> tool.run().flags.raw  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
+      >>> tool.run().cflags_string.raw  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
       '-O2'
 
    :param pattern: validation pattern for value as a regular expression
@@ -1225,9 +1227,9 @@ keyword arguments of the constructor of :class:`Dependency`.
    Example::
 
       >>> class Tool(dlb.ex.Tool):
-      >>>    symlinks = dlb.ex.output.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
-      >>> tool = Tool(symlinks=['dist'])
-      >>> tool.symlinks
+      >>>    symbolic_links = dlb.ex.output.NonRegularFile[:](cls=dlb.fs.NoSpacePath)
+      >>> tool = Tool(symbolic_links=['dist'])
+      >>> tool.symbolic_links
       (NoSpacePath('src/current'),)
 
    :param cls: class to be used to represent the path

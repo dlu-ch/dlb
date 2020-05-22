@@ -16,7 +16,7 @@
 #         SCRIPTLET = "echo echoed: " + dlb_contrib.sh.quote('a $ is a $')
 #
 #     with dlb.ex.Context():
-#         ... = PrintString().run().output.decode()  # 'echoed: a $ is a $\n'
+#         ... = PrintString().run().processed_output.decode()  # 'echoed: a $ is a $\n'
 
 __all__ = ['quote', 'ShScriptlet']
 
@@ -47,7 +47,7 @@ class ShScriptlet(dlb.ex.Tool):
     NAME = 'scriptlet'
     SCRIPTLET = ''  # this will be executed by sh - overwrite in subclass
 
-    output = dlb.ex.output.Object(explicit=False)
+    processed_output = dlb.ex.output.Object(explicit=False)
 
     # Overwrite this to chunk processor if you want to process the output incrementally.
     # See dlb.ex.RedoContext.execute_helper_with_output() for details.
@@ -60,7 +60,7 @@ class ShScriptlet(dlb.ex.Tool):
     async def redo(self, result, context):
         script = '\n'.join(textwrap.dedent(self.SCRIPTLET).strip().splitlines())
         processor = self.get_chunk_processor()
-        _, output = await context.execute_helper_with_output(
+        _, processed_output = await context.execute_helper_with_output(
             self.EXECUTABLE, ['-c', '-', script, self.NAME] + [c for c in self.get_scriptlet_arguments()],
             chunk_processor=processor)
-        result.output = output
+        result.processed_output = processed_output

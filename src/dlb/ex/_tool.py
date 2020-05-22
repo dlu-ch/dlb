@@ -27,8 +27,8 @@ from . import input
 from . import _dependaction
 from . import _toolrun
 
-UPPERCASE_WORD_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')
-LOWERCASE_WORD_NAME_REGEX = re.compile('^[a-z][a-z0-9]*(_[a-z][a-z0-9]*)*$')
+UPPERCASE_NAME_REGEX = re.compile('^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$')  # at least one word
+LOWERCASE_MULTIWORD_NAME_REGEX = re.compile('^[a-z][a-z0-9]*(_[a-z][a-z0-9]*)+$')  # at least two words
 
 # key: (source_path, in_archive_path, lineno), value: class with metaclass _ToolMeta
 _tool_class_by_definition_location = {}
@@ -507,7 +507,7 @@ class _ToolMeta(type):
     def check_own_attributes(cls):
         for name, value in cls.__dict__.items():
             defining_base_classes = tuple(c for c in cls.__bases__ if name in c.__dict__)
-            if UPPERCASE_WORD_NAME_REGEX.match(name):
+            if UPPERCASE_NAME_REGEX.match(name):
                 # if overridden: must be instance of type of overridden attribute
                 for base_class in defining_base_classes:
                     base_value = base_class.__dict__[name]
@@ -517,7 +517,7 @@ class _ToolMeta(type):
                             f"which is a {type(base_value)!r}"
                         )
                         raise TypeError(msg)
-            elif LOWERCASE_WORD_NAME_REGEX.match(name):
+            elif LOWERCASE_MULTIWORD_NAME_REGEX.match(name):
                 if callable(value):
                     isasync, sig = inspect.iscoroutinefunction(value), inspect.signature(value)
                     for base_class in defining_base_classes:
@@ -566,18 +566,18 @@ class _ToolMeta(type):
                 msg = (
                     f"invalid class attribute name: {name!r}\n"
                     f"  | every class attribute of a 'dlb.ex.Tool' must be named "
-                    f"like 'UPPER_CASE_WORD' or 'lower_case_word"
+                    f"like 'UPPER_CASE' or 'lower_case' (at least two words)"
                 )
                 raise AttributeError(msg)
 
     def _get_names(cls) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
         names = dir(cls)  # from this class and its base classes
 
-        execution_parameters = [n for n in names if UPPERCASE_WORD_NAME_REGEX.match(n)]
+        execution_parameters = [n for n in names if UPPERCASE_NAME_REGEX.match(n)]
         execution_parameters.sort()
         execution_parameters = tuple(execution_parameters)
 
-        dependencies = [(n, getattr(cls, n)) for n in names if LOWERCASE_WORD_NAME_REGEX.match(n)]
+        dependencies = [(n, getattr(cls, n)) for n in names if LOWERCASE_MULTIWORD_NAME_REGEX.match(n)]
         dependency_infos = [
             (not isinstance(d, _depend.InputDependency), not d.required, n)
             for n, d in dependencies if isinstance(d, _depend.Dependency)

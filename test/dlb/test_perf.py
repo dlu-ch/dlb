@@ -162,8 +162,8 @@ class ImportantImportBenchmark(testenv.TemporaryWorkingDirectoryTestCase):
             PARAMETER = ()
             PARAMETER2 = 123
 
-            input = dlb.ex.input.RegularFile()
-            output = dlb.ex.output.RegularFile()
+            input_file = dlb.ex.input.RegularFile()
+            output_file = dlb.ex.output.RegularFile()
 
             def redo(self, result, context):
                 pass
@@ -173,7 +173,7 @@ class ImportantImportBenchmark(testenv.TemporaryWorkingDirectoryTestCase):
             PARAMETER = (1, 2, 3)
             PARAMETER3 = ''
 
-            output2 = dlb.ex.output.RegularFile()
+            output_file2 = dlb.ex.output.RegularFile()
 
             def redo(self, result, context):
                 pass

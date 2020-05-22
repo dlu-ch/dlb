@@ -17,7 +17,7 @@
 #     with dlb.ex.Context():
 #         result = dlb_contrib.git.GitDescribeWorkingDirectory().run()
 #
-#         ... = result.tag  # e.g. 'v1.2.3'
+#         ... = result.tag_name  # e.g. 'v1.2.3'
 #         ... = result.branch_refname  # 'refs/heads/master'
 #
 #         if result.untracked_files:
@@ -162,12 +162,12 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     MATCHING_TAG_CANDIDATE_COUNT = 10  # https://github.com/git/git/blob/v2.20.1/builtin/describe.c
 
     # Most recent annotated tag reachable from commit *latest_commit_hash* and matching *TAG_PATTERN*.
-    tag = dlb.ex.output.Object(explicit=False)  # e.g. 'v1.2.3'
+    tag_name = dlb.ex.output.Object(explicit=False)  # e.g. 'v1.2.3'
 
     # SHA-1 hash of the latest commit as a hex string of 40 characters ('0' - '9', 'a' - 'f').
     latest_commit_hash = dlb.ex.output.Object(explicit=False)  # e.g. '97db12cb0d88c1c157a371f48cf2e0884bf82ade'
 
-    # Number of commits since the tag denoted by *tag* as a non-negative integer.
+    # Number of commits since the tag denoted by *tag_name* as a non-negative integer.
     commit_number_from_tag_to_latest_commit = dlb.ex.output.Object(explicit=False)
 
     # True if there are files in the Git index with uncommitted changes.
@@ -197,7 +197,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
 
         m = GIT_DESCRIPTION_REGEX.match(stdout.strip().decode())
-        result.tag = m.group('tag')
+        result.tag_name = m.group('tag')
         result.latest_commit_hash = m.group('latest_commit_hash')
         result.commit_number_from_tag_to_latest_commit = int(m.group('commit_number'), 10)
 

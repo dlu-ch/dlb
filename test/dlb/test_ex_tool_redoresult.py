@@ -407,20 +407,20 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_explicit_envvar_are_assigned_on_tool_instance(self):
         class CTool(dlb.ex.Tool):
             object_file = dlb.ex.output.RegularFile()
-            language = dlb.ex.input.EnvVar(name='LANG',
-                                           pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
-                                           example='sv_SE')
-            cflags = dlb.ex.input.EnvVar(name='CFLAGS', pattern='.+', example='-O2', required=False)
+            language_code = dlb.ex.input.EnvVar(name='LANG',
+                                                pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                                example='sv_SE')
+            cflags_string = dlb.ex.input.EnvVar(name='CFLAGS', pattern='.+', example='-O2', required=False)
 
             async def redo(self, result, context):
                 pass
 
-        t = CTool(object_file='a.o', language='de_CH')
-        self.assertEqual({'language': 'de', 'territory': 'CH'}, t.language.groups)
-        self.assertIsNone(t.cflags)
+        t = CTool(object_file='a.o', language_code='de_CH')
+        self.assertEqual({'language': 'de', 'territory': 'CH'}, t.language_code.groups)
+        self.assertIsNone(t.cflags_string)
 
-        t = CTool(object_file='a.o', language='de_CH', cflags='-Wall')
-        self.assertEqual('-Wall', t.cflags.raw)
+        t = CTool(object_file='a.o', language_code='de_CH', cflags_string='-Wall')
+        self.assertEqual('-Wall', t.cflags_string.raw)
 
     def test_nonexplicit_envvar_are_assigned_on_result(self):
         try:
@@ -435,28 +435,28 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         class CTool(dlb.ex.Tool):
             object_file = dlb.ex.output.RegularFile()
-            language = dlb.ex.input.EnvVar(name='LANG',
-                                           pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
-                                           example='sv_SE',
-                                           explicit=False)
-            cflags = dlb.ex.input.EnvVar(name='CFLAGS', pattern='.+', example='-O2',
-                                         required=False, explicit=False)
+            language_code = dlb.ex.input.EnvVar(name='LANG',
+                                                pattern=r'(?P<language>[a-z]{2})_(?P<territory>[A-Z]{2})',
+                                                example='sv_SE',
+                                                explicit=False)
+            cflags_string = dlb.ex.input.EnvVar(name='CFLAGS', pattern='.+', example='-O2',
+                                                required=False, explicit=False)
 
             # noinspection PyShadowingNames
             async def redo(self, result, context):
                 pass
 
         t = CTool(object_file='a.o')
-        self.assertIs(NotImplemented, t.language)
-        self.assertIs(NotImplemented, t.cflags)
+        self.assertIs(NotImplemented, t.language_code)
+        self.assertIs(NotImplemented, t.cflags_string)
 
         with dlb.ex.Context() as c:
             c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             c.env['LANG'] = 'de_CH'
             result = t.run()
 
-        self.assertEqual({'language': 'de', 'territory': 'CH'}, result.language.groups)
-        self.assertIsNone(result.cflags)
+        self.assertEqual({'language': 'de', 'territory': 'CH'}, result.language_code.groups)
+        self.assertIsNone(result.cflags_string)
 
         with dlb.ex.Context() as c:
             c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
@@ -496,16 +496,16 @@ class RedoResultObjectTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_nonexplicit_object_is_assigned_on_result(self):
         class CTool(dlb.ex.Tool):
-            calculated = dlb.ex.output.Object(explicit=False)
+            calculated_value = dlb.ex.output.Object(explicit=False)
 
             async def redo(self, result, context):
-                result.calculated = 42
+                result.calculated_value = 42
 
         t = CTool()
         with dlb.ex.Context():
             r = t.run()
             self.assertTrue(r)
-            self.assertEqual(42, r.calculated)
+            self.assertEqual(42, r.calculated_value)
 
 
 class RedoResultRepr(testenv.TemporaryWorkingDirectoryTestCase):
