@@ -9,9 +9,6 @@
 #   import dlb.ex
 #   import dlb_contrib.generic
 #
-#   class ATool(dlb.ex.Tool):
-#       ...
-#
 #   with dlb.ex.Context():
 #       # contains all source files of a huge library:
 #       library_source_directory = dlb.fs.Path('src/libx/')
@@ -26,13 +23,15 @@
 #       needs_update = dlb_contrib.generic.Check(
 #           input_directories=[library_source_directory],
 #           output_files=[archive_file]
-#           result_file=archive_file.with_appended_suffix('.uptodate')  # redo if this does not exist
+#           result_file=archive_file.with_appended_suffix('.uptodate')
+#               # redo if this does not exist
 #       ).start()  # redo removes *result_file*
 #
 #       with dlb.ex.Context:  # waits for previous redos to complete
 #           if needs_update:  # need to take a closer look?
 #               # 2. compile library to *archive_file* - slow but fine
-#               ...   # *needs_update* will be True next time if this fails with an exception
+#               # *needs_update* will be True next time if this fails with an exception
+#               ...
 #
 #       needs_update.result_file.native.raw.touch()  # mark successful completion
 #

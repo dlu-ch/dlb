@@ -10,17 +10,16 @@
 #
 # Usage example:
 #
-#     import sys
-#     import dlb.fs
-#     import dlb_contrib.gnumake
+#   import sys
+#   import dlb.fs
+#   import dlb_contrib.gnumake
 #
-#     makefile = dlb.fs.Path(...)
+#   makefile = dlb.fs.Path(...)
 #
-#     sources = set()
-#     with open(makefile.native, 'r', encoding=sys.getfilesystemencoding()) as f:
-#         for r in dlb_contrib.gnumake.sources_from_rules(f):
-#             sources |= set(r)
-#
+#   sources = set()
+#   with open(makefile.native, 'r', encoding=sys.getfilesystemencoding()) as f:
+#       for r in dlb_contrib.gnumake.sources_from_rules(f):
+#           sources |= set(r)
 
 __all__ = ['sources_from_rules', 'additional_sources_from_rule']
 

@@ -21,17 +21,18 @@
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.msbatch
+#   import dlb.ex
+#   import dlb_contrib.msbatch
 #
-#     # content of 'setup.bat':
-#     #   @call ...
-#     #   @if %errorlevel% neq 0 exit
-#     #   @cd %1
-#     #   @python3 -m dlb_contrib.exportenv
+#   # content of 'setup.bat':
+#   #   @call ...
+#   #   @if %errorlevel% neq 0 exit
+#   #   @cd %1
+#   #   @python3 -m dlb_contrib.exportenv
 #
-#     with dlb.ex.Context():
-#         ... = dlb_contrib.msbatch.RunEnvBatch(batch_file='setup.bat').exported_environment['LIB']
+#   with dlb.ex.Context():
+#       ... = dlb_contrib.msbatch.RunEnvBatch(batch_file='setup.bat') \
+#                 .exported_environment['LIB']
 
 __all__ = ['RunEnvBatch']
 

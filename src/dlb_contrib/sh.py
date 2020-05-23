@@ -9,14 +9,14 @@
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.sh
+#   import dlb.ex
+#   import dlb_contrib.sh
 #
-#     class PrintString(dlb_contrib.sh.ShScriptlet):
-#         SCRIPTLET = "echo echoed: " + dlb_contrib.sh.quote('a $ is a $')
+#   class PrintString(dlb_contrib.sh.ShScriptlet):
+#       SCRIPTLET = "echo echoed: " + dlb_contrib.sh.quote('a $ is a $')
 #
-#     with dlb.ex.Context():
-#         ... = PrintString().start().processed_output.decode()  # 'echoed: a $ is a $\n'
+#   with dlb.ex.Context():
+#       ... = PrintString().start().processed_output.decode()  # 'echoed: a $ is a $\n'
 
 __all__ = ['quote', 'ShScriptlet']
 

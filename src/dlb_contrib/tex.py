@@ -14,16 +14,18 @@
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.tex
+#   import dlb.ex
+#   import dlb_contrib.tex
 #
-#     with dlb.ex.Context():
-#         output_directory = dlb.fs.Path('build/out/')
+#   with dlb.ex.Context():
+#       output_directory = dlb.fs.Path('build/out/')
 #
-#         dlb_contrib.tex.Latex(
-#             toplevel_file='src/report.tex', output_file=output_directory / 'report.dvi',
-#             input_search_directories=['src/'],
-#             state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).start()
+#       dlb_contrib.tex.Latex(
+#           toplevel_file='src/report.tex', output_file=output_directory / 'report.dvi',
+#           input_search_directories=['src/'],
+#           state_files=[output_directory / 'report.aux',
+#           output_directory / 'report.toc']
+#       ).start()
 
 __all__ = ['KpathseaPath', 'TexPath', 'accessed_files_from_recorded', 'Tex', 'Latex']
 

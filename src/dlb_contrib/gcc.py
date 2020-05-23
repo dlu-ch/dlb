@@ -13,25 +13,26 @@ linker from the GNU Binutils)."""
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.gcc
+#   import dlb.ex
+#   import dlb_contrib.gcc
 #
-#     with dlb.ex.Context():
-#         source_directory = dlb.fs.Path('src/')
-#         output_directory = dlb.fs.Path('build/out/')
+#   with dlb.ex.Context():
+#       source_directory = dlb.fs.Path('src/')
+#       output_directory = dlb.fs.Path('build/out/')
 #
-#         compile_results = [
-#             dlb_contrib.gcc.CCompilerGcc(
-#                 source_files=[p],
-#                 object_files=[output_directory / p.with_appended_suffix('.o')],
-#                 include_search_directories=[source_directory]
-#             ).start()
-#             for p in source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
-#         ]
+#       compile_results = [
+#           dlb_contrib.gcc.CCompilerGcc(
+#               source_files=[p],
+#               object_files=[output_directory / p.with_appended_suffix('.o')],
+#               include_search_directories=[source_directory]
+#           ).start()
+#           for p in source_directory.iterdir(name_filter=r'.+\.c', is_dir=False)
+#       ]
 #
-#         dlb_contrib.gcc.CLinkerGcc(
-#             object_and_archive_files=[r.object_files[0] for r in compile_results],
-#             linked_file=output_directory / 'application').start()
+#       dlb_contrib.gcc.CLinkerGcc(
+#           object_and_archive_files=[r.object_files[0] for r in compile_results],
+#           linked_file=output_directory / 'application'
+#       ).start()
 
 __all__ = [
     'Path', 'ObjectOrArchivePath',

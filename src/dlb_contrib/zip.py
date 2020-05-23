@@ -8,12 +8,14 @@
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.zip
+#   import dlb.ex
+#   import dlb_contrib.zip
 #
-#     with dlb.ex.Context():
-#         dlb_contrib.zip.ZipDirectory(content_directory='build/out/html/',
-#                                      archive_file='build/out/application.html.zip').start()
+#   with dlb.ex.Context():
+#       dlb_contrib.zip.ZipDirectory(
+#           content_directory='build/out/html/',
+#           archive_file='build/out/application.html.zip'
+#       ).start()
 
 __all__ = ['ZipDirectory']
 

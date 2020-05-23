@@ -10,18 +10,18 @@
 #
 # Usage example:
 #
-#     from typing import Iterable, List, Tuple, Union
-#     import dlb.ex
-#     import dlb_contrib.strace
+#   from typing import Iterable, List, Tuple, Union
+#   import dlb.ex
+#   import dlb_contrib.strace
 #
-#     class ShowContent(dlb_contrib.strace.RunStraced):
-#         EXECUTABLE = 'bash'
+#   class ShowContent(dlb_contrib.strace.RunStraced):
+#       EXECUTABLE = 'bash'
 #
-#         def get_command_line(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
-#             return ['-c', '-', 'cat  -- *', 's']
+#       def get_command_line(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+#           return ['-c', '-', 'cat  -- *', 's']
 #
-#     with dlb.ex.Context():
-#         ... = ShowContent().start().read_files
+#   with dlb.ex.Context():
+#       ... = ShowContent().start().read_files
 
 __all__ = ['SYSCALL_NAME_REGEX', 'syscall_from_line', 'RunStraced']
 

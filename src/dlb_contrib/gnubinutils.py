@@ -10,13 +10,14 @@
 #
 # Usage example:
 #
-#     import dlb_contrib.gnubinutils
+#   import dlb_contrib.gnubinutils
 #
-#     with dlb.ex.Context():
-#         ...  # create 'a.o', 'b.o'
-#         dlb_contrib.gnubinutils.Archive(
-#               object_files=['a.o', 'b.o'],
-#               archive_file='libexample.a').start()
+#   with dlb.ex.Context():
+#       ...  # create 'a.o', 'b.o'
+#       dlb_contrib.gnubinutils.Archive(
+#           object_files=['a.o', 'b.o'],
+#           archive_file='libexample.a'
+#       ).start()
 
 __all__ = ['Archive']
 

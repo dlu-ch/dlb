@@ -9,11 +9,11 @@ To be used by batch files and shell scripts (see dlb_contrib.msbatch)."""
 #
 # Usage example:
 #
-#     # e.g. in a batch file
-#     python3 -m dlb_contrib.exportenv
+#   # e.g. in a batch file
+#   python3 -m dlb_contrib.exportenv
 #
-#     # 'env.json' now looks like this:
-#     # {"XY": "a line\nand another one"}
+#   # 'env.json' now looks like this:
+#   # {"XY": "a line\nand another one"}
 
 __all__ = ['export', 'read_exported']
 

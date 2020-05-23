@@ -9,37 +9,39 @@
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.clike
+#  import dlb.ex
+#  import dlb_contrib.clike
 #
-#     name = ...
-#     assert dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match(name)
+#  name = ...
+#  assert dlb_contrib.clike.SIMPLE_IDENTIFIER_REGEX.match(name)
 #
-#     ... = dlb_contrib.clike.string_literal_from_bytes('Tête-à-tête'.encode())
-#     # '"T\\xC3\\xAAte-\\xC3\\xA0-t\\xC3\\xAAte"'
+#  ... = dlb_contrib.clike.string_literal_from_bytes('Tête-à-tête'.encode())
+#  # '"T\\xC3\\xAAte-\\xC3\\xA0-t\\xC3\\xAAte"'
 #
-#     class GenerateVersionFile(dlb_contrib.clike.GenerateHeaderFile):
-#         WD_VERSION = ...
+#  class GenerateVersionFile(dlb_contrib.clike.GenerateHeaderFile):
+#      WD_VERSION = ...
 #
-#         def write_content(self, file):
-#             wd_version = dlb_contrib.clike.string_literal_from_bytes(self.WD_VERSION.encode())
-#             file.write(f'\n#define APPLICATION_VERSION {wd_version}\n')
+#      def write_content(self, file):
+#          wd_version = \
+#              dlb_contrib.clike.string_literal_from_bytes(self.WD_VERSION.encode())
+#          file.write(f'\n#define APPLICATION_VERSION {wd_version}\n')
 #
-#     class CCompiler(dlb_contrib.clike.ClikeCompiler):
-#         EXECUTABLE = 'specific-cc'
+#  class CCompiler(dlb_contrib.clike.ClikeCompiler):
+#      EXECUTABLE = 'specific-cc'
 #
-#         async def redo(self, result, context):
-#             included_files = set()
-#             for source_file, object_file in zip(result.source_files, result.object_files):
-#                 with context.temporary() as temp_object_file:
-#                     await context.execute_helper(self.EXECUTABLE, ..., '-o', temp_object_file, source_file)
-#                     included_files |= ...
-#                     context.replace_output(object_file, temp_object_file)
-#             result.included_files = sorted(included_files)
+#      async def redo(self, result, context):
+#          included_files = set()
+#          for source_file, object_file in zip(result.source_files, result.object_files):
+#              with context.temporary() as temp_object_file:
+#                  await context.execute_helper(self.EXECUTABLE, ...,
+#                                               '-o', temp_object_file, source_file)
+#                  included_files |= ...
+#                  context.replace_output(object_file, temp_object_file)
+#          result.included_files = sorted(included_files)
 #
-#     with dlb.ex.Context():
-#         GenerateVersionFile(file='Version.h').start()
-#         CCompiler(source_files=['main.c'], object_files=['main.c.o']).start()
+#  with dlb.ex.Context():
+#      GenerateVersionFile(file='Version.h').start()
+#      CCompiler(source_files=['main.c'], object_files=['main.c.o']).start()
 
 __all__ = [
     'SIMPLE_IDENTIFIER_REGEX', 'IDENTIFIER_REGEX', 'PORTABLE_C_IDENTIFIER_REGEX', 'FUNCTIONLIKE_MACRO_REGEX',

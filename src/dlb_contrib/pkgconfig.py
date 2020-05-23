@@ -10,16 +10,16 @@
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.pkgconfig
+#   import dlb.ex
+#   import dlb_contrib.pkgconfig
 #
-#     class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
-#         LIBRARY_NAMES = ('gtk+-3.0',)
-#         VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'gtk+-3.0': ['> 3.0.1', '< 4.0']}
+#   class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
+#       LIBRARY_NAMES = ('gtk+-3.0',)
+#       VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'gtk+-3.0': ['> 3.0.1', '< 4.0']}
 #
-#     with dlb.ex.Context():
-#         result = PkgConfig().start()
-#         ... = result.library_filenames
+#   with dlb.ex.Context():
+#       result = PkgConfig().start()
+#       ... = result.library_filenames
 
 __all__ = ['LIBRARY_NAME_REGEX', 'VERSION_CONSTRAINT_REGEX', 'parse_from_output', 'PkgConfig']
 

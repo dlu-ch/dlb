@@ -6,11 +6,11 @@
 
 # Usage example:
 #
-#    import dlb_contrib.mscrt
+#   import dlb_contrib.mscrt
 #
-#    cmdline = dlb_contrib.mscrt.list2cmdline(['a', 'b c', '"'])
-#    # *cmdline* is the command line that is interpreted by the Microsoft C runtime as the representation
-#    # of the command-line arguments ['a', 'b c', '"']
+#   cmdline = dlb_contrib.mscrt.list2cmdline(['a', 'b c', '"'])
+#   # *cmdline* is the command line that is interpreted by the Microsoft C runtime as the representation
+#   # of the command-line arguments ['a', 'b c', '"']
 
 __all__ = ['list2cmdline']
 

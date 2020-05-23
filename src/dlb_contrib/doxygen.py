@@ -10,14 +10,16 @@
 #
 # Usage example:
 #
-#     import dlb.ex
-#     import dlb_contrib.doxygen
+#   import dlb.ex
+#   import dlb_contrib.doxygen
 #
-#     with dlb.ex.Context():
-#         dlb_contrib.doxygen.Doxygen(
-#             configuration_template_file='Doxyfile',  # contains '${{source_directories}}', '${{output_directory}}'
-#             source_directories=['src/'],  # replaces '${{source_directories}}' in Doxyfile
-#             output_directory='build/out/').start()
+#   with dlb.ex.Context():
+#       dlb_contrib.doxygen.Doxygen(
+#           # contains '${{source_directories}}', '${{output_directory}}':
+#           configuration_template_file='Doxyfile',
+#           source_directories=['src/'],  # replaces '${{source_directories}}' in Doxyfile
+#           output_directory='build/out/'
+#       ).start()
 
 __all__ = ['PLACEHOLDER_NAME_REGEX', 'Template', 'Path', 'Doxygen']
 

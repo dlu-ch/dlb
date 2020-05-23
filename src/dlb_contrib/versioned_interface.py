@@ -7,31 +7,32 @@ define the interface."""
 
 # Usage example:
 #
-#     import dlb.fs
-#     import dlb.ex
-#     import dlb_contrib.versioned_interface
+#   import dlb.fs
+#   import dlb.ex
+#   import dlb_contrib.versioned_interface
 #
-#     # content of file 'api-version.h':
-#     #     ...
-#     #     // last checked for header file hash c58a0b430264752dab68af5efccdd8b4da222995
-#     #     // (use <none> for hash to disable check temporarily)
-#     #     #define LIBX_API_VERSION 2
-#     #     ...
+#   # content of file 'api-version.h':
+#   #     ...
+#   #     // last checked for header file hash c58a0b430264752dab68af5efccdd8b4da222995
+#   #     // (use <none> for hash to disable check temporarily)
+#   #     #define LIBX_API_VERSION 2
+#   #     ...
 #
-#     with dlb.ex.Context():
-#         source_directory = dlb.fs.Path('src/')
+#   with dlb.ex.Context():
+#       source_directory = dlb.fs.Path('src/')
 #
-#         # compare hash of header files with hash in 'api-version.h'
-#         dlb_contrib.versioned_interface.check_hash(
-#             # everything that does not end in '.c':
-#             files_to_hash=source_directory.iterdir(name_filter=r'(?!.+\.c$).+', recurse_name_filter=''),
-#             hash_line_file=source_directory / 'api-version.h',
-#             hash_line_regex=rb'^// last checked for header file hash ([0-9a-f]+|<none>)$',
-#             warnonly_hash=b'<none>'
-#         )
+#       # compare hash of header files with hash in 'api-version.h'
+#       dlb_contrib.versioned_interface.check_hash(
+#           # everything that does not end in '.c':
+#           files_to_hash=source_directory.iterdir(name_filter=r'(?!.+\.c$).+',
+#                                                  recurse_name_filter=''),
+#           hash_line_file=source_directory / 'api-version.h',
+#           hash_line_regex=rb'^// last checked for header file hash ([0-9a-f]+|<none>)$',
+#           warnonly_hash=b'<none>'
+#       )
 #
-#     # This enforces an update of 'api-version.h' after each change of a .h file (which potentially requires
-#     # an increase of LIBX_API_VERSION)
+#   # This enforces an update of 'api-version.h' after each change of a .h file
+#   # (which potentially requires an increase of LIBX_API_VERSION)
 
 __all__ = ['check_hash']
 

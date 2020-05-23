@@ -29,12 +29,12 @@ Of such terminals the DEC VT-100 (although monochrome) is best known."""
 #
 # Usage example:
 #
-#     import sys
-#     import dl.di
-#     import dlb_contrib.iso6429
+#   import sys
+#   import dl.di
+#   import dlb_contrib.iso6429
 #
-#     if sys.stderr.isatty():
-#         dlb.di.set_output_file(dlb_contrib.iso6429.MessageColorator(sys.stderr))
+#   if sys.stderr.isatty():
+#       dlb.di.set_output_file(dlb_contrib.iso6429.MessageColorator(sys.stderr))
 
 __all__ = [
     'MessageColorator',

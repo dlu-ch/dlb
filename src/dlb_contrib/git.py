@@ -10,20 +10,20 @@
 #
 # Usage example:
 #
-#     import dlb.di
-#     import dlb.ex
-#     import dlb_contrib.git
+#   import dlb.di
+#   import dlb.ex
+#   import dlb_contrib.git
 #
-#     with dlb.ex.Context():
-#         result = dlb_contrib.git.GitDescribeWorkingDirectory().start()
+#   with dlb.ex.Context():
+#       result = dlb_contrib.git.GitDescribeWorkingDirectory().start()
 #
-#         ... = result.tag_name  # e.g. 'v1.2.3'
-#         ... = result.branch_refname  # 'refs/heads/master'
+#       ... = result.tag_name  # e.g. 'v1.2.3'
+#       ... = result.branch_refname  # 'refs/heads/master'
 #
-#         if result.untracked_files:
-#             s = ','.join(repr(p.as_string()) for p in result.untracked_files)
-#             dlb.di.inform(f'repository contains {len(result.untracked_files)} untracked file(s): {s}',
-#                           level=dlb.di.WARNING)
+#       if result.untracked_files:
+#           s = ','.join(repr(p.as_string()) for p in result.untracked_files)
+#           dlb.di.inform(f'repository contains {len(result.untracked_files)} '
+#                         f'untracked file(s): {s}', level=dlb.di.WARNING)
 
 __all__ = ['GIT_DESCRIPTION_REGEX', 'modifications_from_status', 'GitDescribeWorkingDirectory']
 
