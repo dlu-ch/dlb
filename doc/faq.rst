@@ -7,55 +7,69 @@ Why another build tool?
 A common answer to a common question: Because none of the available tools met the requirements of the author,
 especially for the development of embedded software with cross-compiler toolchains and generated source code.
 
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | (Desirable) property                   | dlb           | Make          | SCons         | Ninja         |
-   +========================================+===============+===============+===============+===============+
-   | Speed of full build (huge project)     | |avg|         | |plusplus|    | |avg|         | |plusplus|    |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Speed of partial or "empty" build      | |plus|        | |plusplus|    | |minus|       | |plusplus|    |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Avoidance of unnecessary execution     | |plusplus|    | |minusminus|  | |plus|        | |plus|        |
-   | of tools                               |               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Accuracy of automatically detected     | |plusplus|    | |none|        | |plus|        | |none|        |
-   | input dependencies                     |               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Expressiveness of build description    | |plusplus|    | |minusminus|  | |avg|         | |avg|         |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Portability of build description       | |plusplus|    | |minusminus|  | |avg|         | |minus|       |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Modularity                             | |plusplus|    | |minusminus|  | |minus|       | |avg|         |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Robustness to system time jumps        | |plus|        | |minusminus|  | |plusplus|    | |minusminus|  |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Robustness to changes during build     | |plusplus|    | |minusminus|  | |plusplus|    | |minusminus|  |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Simplicity of separation between input | |plusplus|    | |minusminus|  | |plus|        | |avg|         |
-   | and output directories                 |               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Reproducibility of builds              | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Fine-grained control                   | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
-   | of parallel execution                  |               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Abstraction of tools                   | |plusplus|    | |minusminus|  | |minus|       | |avg|         |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Self-containedness                     | |plusplus|    | |minusminus|  | |plusplus|    | |minusminus|  |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Possibility to step through build      | |plus|        | |minusminus|  | |minus|       | |minusminus|  |
-   | with debugger                          |               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Safe use of paths containing "special" | |plusplus|    | |minusminus|  | |minus|       | |minus|       |
-   | characters (``' '``,  ``'$'``,         |               |               |               |               |
-   | ``'\\'``, ...)                         |               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Ability to deal with circular          | |plusplus|    | |none|        | |none|        | |none|        |
-   | dependencies                           |               |               |               |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
-   | Fundamental objects                    | contexts,     | strings       | environments, | strings,      |
-   |                                        | tools, paths  |               | strings,      | string lists  |
-   |                                        |               |               | string lists  |               |
-   +----------------------------------------+---------------+---------------+---------------+---------------+
+   +----------------------------------------------------------------------+---------------+---------------+---------------+---------------+
+   | (Desirable) property                                                 | dlb           | Make          | SCons         | Ninja         |
+   +=============================+========================================+===============+===============+===============+===============+
+   | Resource                    | Speed of full build (huge project)     | |avg|         | |plusplus|    | |avg|         | |plusplus|    |
+   | effectiveness               +----------------------------------------+---------------+---------------+---------------+---------------+
+   | [#resourceeffectiveness1]_  | Speed of partial or "empty" build      | |plus|        | |plusplus|    | |minus|       | |plusplus|    |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Avoidance of unnecessary execution     | |plusplus|    | |minusminus|  | |plus|        | |plus|        |
+   |                             | of tools                               |               |               |               |               |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Small RAM footprint (during run)       | |plus|        | |plusplus|    | |minusminus|  | |plusplus|    |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Small disk footprint (between runs)    | |minusminus|  | |plusplus|    | |minus|       | |plusplus|    |
+   +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
+   | Usability                   | Expressiveness of build description    | |plusplus|    | |minusminus|  | |avg|         | |avg|         |
+   | [#usability1]_              +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Self-containedness                     | |plusplus|    | |minusminus|  | |plusplus|    | |minusminus|  |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Simplicity of debugging a build        | |plus|        | |minusminus|  | |minus|       | |minusminus|  |
+   +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
+   | Correctness,                | Safety of use of paths with            | |plusplus|    | |minusminus|  | |minus|       | |minus|       |
+   | reliability                 | "special" characters (``' '``,         |               |               |               |               |
+   | [#correctness1]_            | ``'$'``, ``'\\'``, ...)                |               |               |               |               |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Accuracy of automatically detected     | |plusplus|    | |none|        | |plus|        | |none|        |
+   |                             | input dependencies                     |               |               |               |               |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Robustness to system time jumps        | |plus|        | |minusminus|  | |plusplus|    | |minusminus|  |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Robustness to changes during build     | |plusplus|    | |minusminus|  | |plusplus|    | |minusminus|  |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Reproducibility of builds              | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
+   +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
+   | Powerfulness,               | Portability of build description       | |plusplus|    | |minusminus|  | |avg|         | |minus|       |
+   | scalability                 +----------------------------------------+---------------+---------------+---------------+---------------+
+   | [#powerfulness1]_           | Modularity                             | |plusplus|    | |minusminus|  | |minus|       | |avg|         |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Simplicity of separation between input | |plusplus|    | |minusminus|  | |plus|        | |avg|         |
+   |                             | and output directories                 |               |               |               |               |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Abstraction of tools                   | |plusplus|    | |minusminus|  | |minus|       | |avg|         |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Ability to deal with circular          | |plusplus|    | |none|        | |none|        | |none|        |
+   |                             | dependencies                           |               |               |               |               |
+   +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Fundamental objects                    | contexts,     | strings       | environments, | strings,      |
+   |                             |                                        | tools, paths  |               | strings,      | string lists  |
+   |                             |                                        |               |               | string lists  |               |
+   +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
+
+.. rubric:: Legend
+
+.. [#resourceeffectiveness1]
+   What amount of resources is required to perform a task?
+
+.. [#usability1]
+   How easy is it to read and run a build description?
+
+.. [#correctness1]
+   How easy is it to develop a correct and reliable build description?
+
+.. [#powerfulness1]
+   How unconstrained is the future direction of the project by the build system?
 
 dlb has the unique ability to *enforce* requirements instead of just *assuming* them.
 This makes dlb not only a build tool but also a tool for quality assurance.
@@ -80,9 +94,6 @@ Tools based on declared dependency rules
 Most of them implement the functionality of Make in a more readable descriptive language
 and improve the modularity and the ability to split large projects into smaller ones.
 
-See :ref:`here <manual-explicit-is-better-than-implicit>` why a descriptive language is not the best approach to
-describe a build process.
-
 Examples are:
 
 - `Apache Ant <https://ant.apache.org/>`_ (XML, Java-centric)
@@ -96,6 +107,9 @@ Examples are:
 - https://pypi.org/project/bold/ (Python, C-centric)
 - https://pypi.org/project/buildit/ (Python, .ini-file syntax to describe rules)
 - `Bruce Eckel's builder.py <https://www.artima.com/weblogs/viewpost.jsp?thread=241209>`_ (Python)
+
+See :ref:`here <manual-explicit-is-better-than-implicit>` why a descriptive language is not the best approach to
+describe a build process.
 
 
 Tools based on directory structure
@@ -266,7 +280,7 @@ Ninja_'s mission statement reads:
   a higher-level build system, and it is designed to run builds as fast as possible.
 
 This is a clever choice. Ninja files have a elegant and well-defined syntax.
-This means: Wherever Make is suitable Ninja is better.
+This means: Wherever Make is suitable, Ninja is better.
 
 Despite its claim, Ninja has hardcoded support for compiler interfaces specific to GCC, Clang and MSVC as well as
 a file-based mechanism for dependency detection at build time.
