@@ -35,7 +35,10 @@
 #
 #       needs_update.result_file.native.raw.touch()  # mark successful completion
 #
-#   ...
+# Usage example:
+#
+#   import dlb.ex
+#   import dlb_contrib.generic
 #
 #   with dlb.ex.Context():
 #       class VersionQuery(dlb_contrib.generic.VersionQuery):

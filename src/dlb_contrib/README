@@ -10,7 +10,7 @@ Each module in this package must contain the following:
 
  - In the second comment block at the top with
     - a reference block and
-    - a complete usage example, starting with '# Usage example:' and indented by 2 spaces
+    - at least one complete usage example, starting with '# Usage example:' and indented by 2 spaces
       (this is extracted for the documentation)
 
   - A list '__all__' of all objects intended to be used by dlb scripts, grouped by their type.

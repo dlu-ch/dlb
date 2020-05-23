@@ -127,7 +127,7 @@ def table_from_header_texts_and_rows_of_paragraphs(
 
 
 ModuleSummary = collections.namedtuple('ModuleSummary', [
-    'description', 'definitions', 'usage_example', 'tool_by_name', 'nontool_by_name'
+    'description', 'definitions', 'usage_examples', 'tool_by_name', 'nontool_by_name'
 ])
 
 
@@ -248,30 +248,44 @@ class PySubModule(sphinx.directives.SphinxDirective):
                     )
                     raise self.error(msg)
 
-        usage_example = None
-        found = False
-        for i, line in enumerate(lines):
-            if line == ' Usage example:':
-                found = True
-            elif found and line:
-                usage_example = lines[i:]
-                break
+        dedented_usage_examples = []
 
-        if not usage_example:
-            raise self.error(f"second comment block in module {fq_modname!r} contains no usage example")
-
-        first = usage_example[0]
-        indentation = first[:len(first) - len(first.lstrip())]
+        indentation = None
         dedented_usage_example = []
-        for line in usage_example:
-            if line:
-                if line[:len(indentation)] != indentation:
-                    msg = f"usage example in second comment block in module {fq_modname!r} not properly indented"
-                    raise self.error(msg)
-                line = line[len(indentation):]
-            dedented_usage_example.append(line)
 
-        dedented_usage_example = '\n'.join(dedented_usage_example)
+        i = 0
+        while i < len(lines):
+            line = lines[i].rstrip()
+
+            if line == ' Usage example:':
+                if dedented_usage_example:
+                    dedented_usage_examples.append('\n'.join(dedented_usage_example))
+                    dedented_usage_example = []
+                    indentation = None
+
+                i += 1
+                while i < len(lines):
+                    line = lines[i].rstrip()
+                    if line:
+                        indentation = line[:len(line) - len(line.lstrip())]
+                        break
+                    i += 1
+            else:
+                if indentation is not None:
+                    line = line.rstrip()
+                    if line:
+                        if line[:len(indentation)] != indentation:
+                            msg = f"usage example in second comment block in module {fq_modname!r} not properly indented"
+                            raise self.error(msg)
+                        line = line[len(indentation):]
+                    dedented_usage_example.append(line)
+                i += 1
+
+        if dedented_usage_example:
+            dedented_usage_examples.append('\n'.join(dedented_usage_example))
+
+        if not dedented_usage_examples:
+            raise self.error(f"second comment block in module {fq_modname!r} contains no usage example")
 
         tool_by_name = collections.OrderedDict()
         nontool_by_name = collections.OrderedDict()
@@ -282,7 +296,7 @@ class PySubModule(sphinx.directives.SphinxDirective):
                 nontool_by_name[name] = obj
 
         return ModuleSummary(
-            description=description, definitions=definitions, usage_example=dedented_usage_example,
+            description=description, definitions=definitions, usage_examples=dedented_usage_examples,
             tool_by_name=tool_by_name, nontool_by_name=nontool_by_name)
 
     def add_summary_content(self, fq_modname: str, summary: ModuleSummary) -> docutils.nodes.Element:
@@ -324,8 +338,11 @@ class PySubModule(sphinx.directives.SphinxDirective):
             contentnode += bullet_list_with_source_link(summary.nontool_by_name, fq_modname, resolve_function)
 
         # like sphinx.directives.code.CodeBlock
-        contentnode += docutils.nodes.paragraph(text='Usage example:')
-        contentnode += docutils.nodes.literal_block(summary.usage_example, summary.usage_example)
+        if summary.usage_examples:
+            n = len(summary.usage_examples)
+            contentnode += docutils.nodes.paragraph(text='Usage example:' if n == 1 else 'Usage examples:')
+            for usage_example in summary.usage_examples:
+                contentnode += docutils.nodes.literal_block(usage_example, usage_example)
         return contentnode
 
     def get_resolve_function(self) -> Callable:
