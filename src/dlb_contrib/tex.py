@@ -225,7 +225,7 @@ class Tex(dlb.ex.Tool):
             cwd = str((context.root_path / intermediary_directory).native)
             for c in '\n\r':
                 if c in cwd:
-                    raise Exception(f'current working directory must not contain {c!r}')  # for -recorder
+                    raise RuntimeError(f'current working directory must not contain {c!r}')  # for -recorder
 
             await context.execute_helper(self.EXECUTABLE, arguments, cwd=intermediary_directory, forced_env=env)
 

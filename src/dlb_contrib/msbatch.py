@@ -93,7 +93,7 @@ class RunEnvBatch(dlb.ex.Tool):
                     f"exported environment file not found: {dlb_contrib.exportenv.FILE_NAME!r}\n"
                     f"  | create it in the batch file with 'python3 -m dlb_contrib.exportenv'"
                 )
-                raise Exception(msg) from None
+                raise RuntimeError(msg) from None
             result.exported_environment = exported_environment
 
         return True
