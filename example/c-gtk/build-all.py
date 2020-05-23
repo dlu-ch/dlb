@@ -37,6 +37,7 @@ with dlb.ex.Context():
     application_name = 'application'
     source_directory = Path('src/')
     output_directory = Path('build/out/')
+    distribution_directory = Path('dist/')
 
     version_result = build.repo.VersionQuery().start()
 
@@ -61,5 +62,12 @@ with dlb.ex.Context():
                 sources_changed=sources_changed or source_related_check)
 
     source_related_check.result_file.native.raw.touch()
+
+    with dlb.di.Cluster('distribute'), dlb.ex.Context():
+        files_to_distribute = [] if doc_archive_file is None else [application_file, doc_archive_file]
+        dlb_contrib.generic.FileCollector(
+            output_directory=distribution_directory,
+            input_files=files_to_distribute
+        ).start()
 
     build.helpersummary.summarize_context()

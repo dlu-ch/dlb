@@ -27,7 +27,8 @@ def generate_from_source(*, version_result, source_directory: dlb.fs.Path,
             configuration_template_file=doxygen_directory / 'Doxyfile.tmpl',
             source_directories=[source_directory, output_directory / 'gsrc/', doxygen_directory],
             output_directory=output_directory / 'doxygen/',
-            source_files_to_watch=doxygen_directory.list()).start(force_redo=sources_changed).output_directory
+            source_files_to_watch=doxygen_directory.list()
+        ).start(force_redo=sources_changed).output_directory
 
         doc_archive_file = \
             output_directory / '{}_{}.html.bzip'.format(application_name, version_result.wd_version)
