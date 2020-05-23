@@ -1,4 +1,4 @@
-.. _ref-workingtree-layout:
+.. _dlb-ex-workingtree-layout:
 
 Layout of working tree
 ======================
@@ -7,7 +7,7 @@ The directory :file:`.dlbroot/` is mandatory --- it marks its parent directory a
 Everything else is optional. dlb does never touch filesystem objects outside :file:`.dlbroot/` unless
 explicitly directed by a :term:`script` to do so.
 
-The directory :file:`.dlbroot/u/` is optional. dlb does never touch its content.
+The directory :file:`.dlbroot/u/` is optional. dlb never touches its content.
 Each regular file or a symbolic links to a regular file in :file:`.dlbroot/u/` whose name ends in :file:`.zip` should
 be a zip archive loadable by :mod:`zipimport`.
 You can place dlb as :file:`.dlbroot/u/dlb.zip` in this directory (under version control). This makes the
@@ -16,7 +16,7 @@ working tree almost self-contained; only an external Python interpreter is neede
 If you use Git for version control which does not support empty directories, add :file:`.dlbroot/o` (as created by dlb)
 or any file in :file:`.dlbroot/u/`.
 
-The lines marked with * show filesystem objects only given as an example.
+The lines marked with ``*`` show filesystem objects only given as an example.
 
 **Before** first run of a dlb script:
 
@@ -38,8 +38,8 @@ The lines marked with * show filesystem objects only given as an example.
        o                   empty regular file, used to probe the "current" mtime
        runs-*.sqlite       run-database
        t/                  temporary files
-           a.o             *
-           b.o             *
+           a               *
+           b               *
     src/                   *
       a.c                  *
       a.h                  *
@@ -64,8 +64,8 @@ The lines marked with * show filesystem objects only given as an example.
       b.c                  *
     test/                  *
     out/                   *
-      a.o                  *
-      b.o                  *
+      a.c.o                *
+      b.c.o                *
     dist/                  *
       p                    *
     ...

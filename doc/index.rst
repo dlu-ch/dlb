@@ -59,7 +59,7 @@ Example::
 
 Explanation:
 
-a. *Restrict paths* to ones without spaces, usable on Windows and Posix systems.
+a. *Restrict paths* to ones without spaces, usable on Windows and POSIX systems.
    The attempt to construct such a ``Path`` object for a path violating these restrictions leads to an exception
    (helps to enforce portability).
 

@@ -21,7 +21,8 @@ It also helps with filesystem abstraction (e.g. :term:`working tree time` or
 :term:`working tree paths <working tree path>`).
 
 A context is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
-The context is entered with the call of :meth:`__enter__` and exited with the return of :meth:`__exit__`.
+The context is entered with the call of :meth:`__enter__ <object.__enter__>` and exited with the return
+of :meth:`__exit__ <object.__exit__>`.
 
 Contexts can be nested::
 
@@ -43,8 +44,8 @@ Contexts can be nested::
 
 Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe what happens in the context::
 
-    with dlb.di.Cluster('this happens in the context'), dlb.ex.Context():
-        ...
+   with dlb.di.Cluster('this happens in the context'), dlb.ex.Context():
+       ...
 
 
 .. class:: Context(*, path_cls=dlb.fs.Path, max_parallel_redo_count=1, find_helpers=None)
@@ -89,17 +90,18 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
    | :exc:`ContextNestingError`  | the contexts are not properly nested                                        | exiting (any) context          |
    +-----------------------------+-----------------------------------------------------------------------------+--------------------------------+
    | :exc:`WorkingTreeTimeError` | :term:`working tree time` behaved unexpectedly                              | exiting :term:`root context`   |
-   +------------------------------+-----------------------------------------------------------------------------+-------------------------------+
+   +-----------------------------+-----------------------------------------------------------------------------+--------------------------------+
 
    .. note::
       Most attributes and methods are available "on the class" as well as "on the instance" and refer to the
       corresponding attribute of the :term:`active context`::
 
-       with dlb.ex.Context:
-           with dlb.ex.Context as c:
-               ... = dlb.ex.Context.working_tree_time_ns   # preferred
-               ... c.active.working_tree_time_ns           # also possible
-               ... c.working_tree_time_ns                  # also possible
+         with dlb.ex.Context:
+             with dlb.ex.Context as c:
+                 ... = dlb.ex.Context.active.working_tree_time_ns  # preferred
+                 ... = dlb.ex.Context.working_tree_time_ns         # also possible
+                 ... c.active.working_tree_time_ns                 # also possible
+                 ... c.working_tree_time_ns                        # also possible
 
    The :class:`Context` class supports the following methods and attributes:
 
@@ -108,32 +110,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       The :term:`active context`.
 
       Same on class and instance.
-
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
-
-   .. attribute:: path_cls
-
-      The subclass of :class:`.dlb.fs.Path` defined in the constructor.
-
-      When called on class, it refers to the :term:`active context`.
-
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
-
-   .. attribute:: max_parallel_redo_count
-
-      The maximum number of redos started in this context than can be pending at the same time, as defined in the
-      constructor.
-
-      When called on class, it refers to the :term:`active context`.
-
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
-
-   .. attribute:: find_helpers
-
-      Find dynamic helpers not defined explicitly are in :attr:`executable_search_paths`?
-      This is defined in the constructor.
-
-      When called on class, it refers to the :term:`active context`.
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -160,14 +136,78 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
+   .. attribute:: path_cls
+
+      The subclass of :class:`.dlb.fs.Path` as defined in the constructor.
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: max_parallel_redo_count
+
+      The maximum number of redos started in this context than can be pending at the same time as defined in the
+      constructor.
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: find_helpers
+
+      Find dynamic helpers not defined explicitly are in :attr:`executable_search_paths`?
+      As defined in the constructor.
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: env
+
+      The :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` with
+      this context as its associated :term:`context`.
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. attribute:: helper
+
+      The dynamic helper dictionary object with this context as its associated :term:`context`.
+
+      The dynamic helper dictionary object maps :term:`dynamic helpers <dynamic helper>` to absolute paths, either
+      explicitly or implicitly with the help of :meth:`find_path_in()`.
+
+      If the :term:`active context` and the :term:`root context` both have :attr:`find_helpers` == ``False``
+      and no paths was explicitly assigned to the dynamic helper *p* in the active context or one of its outer contexts,
+      a look-up with ``dlb.ex.Context.helper[p]`` performs a search with ``dlb.ex.Context.find_path_in(p)``.
+      (Each such search is performed only once for a given path; the result is stored.)
+
+      Examples::
+
+         >>> dlb.ex.Context.helper['gcc']
+         Path('/usr/bin/gcc')
+
+         >>> dlb.ex.Context.helper['gcc'] = '/usr/local/bin/my-very-own-very-special-gcc'  # set the path explicitly
+         >>> dlb.ex.Context.helper['gcc']
+         Path('/usr/local/bin/my-very-own-very-special-gcc')
+
+         >>> dlb.ex.Context.helper['tmp/'] = 'out/t/'  # relative path: relative to the working tree's root path
+         >>> dlb.ex.Context.helper['tmp/']
+         Path('/home/schmutzli/projects/esel/out/t')   # with '/home/schmutzli/projects/esel' as the working tree's root
+
+      When called on class, it refers to the :term:`active context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
    .. method:: find_path_in(path, search_prefixes=None)
 
       Find the first existing and accessible *path* in *search_prefixes* and return its absolute path.
       Returns ``None`` if *path* is not found in *search_prefixed*.
 
-      If *path* is a :class:`dlb.fs.Path` with ``path.is_dir()`` = ``True``, existing non-directories in
+      If *path* is a :class:`dlb.fs.Path` with ``path.is_dir() == True``, existing non-directories in
       *search_prefixes* are ignored.
-      If *path* is a :class:`dlb.fs.Path` with ``path.is_dir()`` = ``False``, existing directories in
+      If *path* is a :class:`dlb.fs.Path` with ``path.is_dir() == False``, existing directories in
       *search_prefixes* are ignored.
 
       Relative paths in *search_prefixes* are treated as relative to :attr:`root_path`.
@@ -197,10 +237,10 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       Usage example::
 
-          with context.temporary(suffix='.o') as p:
-              ...  # an empty file with absolute path *p* exists
+         with context.temporary(suffix='.o') as p:
+             ...  # an empty file with absolute path *p* exists
 
-          ... = context.temporary().path  # just get the absolute path, do not create the file
+         ... = context.temporary().path  # just get the absolute path, do not create the file
 
       The *path* attribute of the returned object is an absolute path in the same directory for all calls in the
       :term:`root context`, as a :class:`dlb.fs.Path` object. Its last component is unique among all calls
@@ -209,11 +249,12 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       The unique path component starts with a lower-case letter and ends with *suffix*.
       It contains only lower-case letters and decimal digits between its first characters and the suffix.
-      If *suffix* is not empty, is must start with a character from strings.punctuation and must not contain ``'/'``.
+      If *suffix* is not empty, is must start with a character from :data:`strings.punctuation` and must not
+      contain ``'/'``.
       The unique path component without the *suffix* is at most 12 characters long for the first 2**61 calls.
 
       When used as a context manager, an empty regular file or directory with *path* is created when entered and removed
-      (with its content) on exit. Raises :exc:`FileExistError` if the regular file or directory exists.
+      (with its content) on exit. Raises :exc:`FileExistsError` if the regular file or directory exists.
 
       Same on class and instance.
 
@@ -239,7 +280,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       If *existing* and *collapsable* are ``True`` and *path* is relative, the filesystem is never accessed.
 
       If *existing* is ``False``, :meth:`is_dir() <dlb.fs.Path.is_dir()>` of the returned path reflects the type
-      of the actual filesystem object. Raises :exc:`dlb.fs.PathNormalizationError` if *path* does not exist.
+      of the actual filesystem object. Raises :exc:`dlb.ex.WorkingTreePathError` if *path* does not exist.
 
       If *allow_nontemporary_management* is ``True``, the resulting path may denote a filesystem object in
       the :term:`management tree` except in :file:`.dlbroot/t`.
@@ -266,49 +307,36 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
          is the path permitted to denote a filesystem object in :file:`.dlbroot/t` of the :term:`management tree`?
       :type allow_temporary: bool
       :return: a :class:`dlb.fs.Path` *p* with ``p.is_absolute() == False`` and ``p.is_normalized() == True``
-      :rtype: same class as *path* if *path* is a :class:`dlb.fs.Path` and :class:`dlb.fs.Path` otherwise
+      :rtype: class of *path* if *path* is a :class:`dlb.fs.Path`, or :class:`dlb.fs.Path` otherwise
 
-      :raises dlb.fs.PathNormalizationError:
+      :raises WorkingTreePathError:
           if *path* does not exist in the parts of the :term:`working tree` that are described by
           *allow_nontemporary_management* and *allow_temporary*
       :raises ValueError: if the resulting path is not representable
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. attribute:: env
+   .. method:: summary_of_latest_runs(*, max_count=1)
 
-      The :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` with
-      this context as its associated :term:`context`.
+      Return a list of information on previous :term:`runs of dlb <run of dlb>` according to the :term:`run-database`
+      used by the current :term:`root context`.
 
-      When called on class, it refers to the :term:`active context`.
+      If there is information on more than *max_count*, the *max_count* runs with the latest UTC datetime of their start
+      are picked.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      .. note::
+         There is no guaranteed that all the datetimes differ.
 
-   .. attribute:: helper
+      Each member of the returned list is a tuple ``(start_time, duration_ns, tool_inst_run_count, tool_inst, redo_count)``.
+      *start_time* is the UTC datetime of the run's start as a :class:`datetime.datetime`.
+      *duration_ns* is the duration of the run in nanoseconds as non-negative integer.
+      *tool_inst_run_count* is the total number of runs of tool instances in the dlb run as a non-negative integer.
+      *redo_count* is the total number of redos of tool instances in the dlb run as a non-negative integer not greater
+      than *tool_inst_run_count*.
 
-      The dynamic helper dictionary object with this context as its associated :term:`context`.
+      Same on class and instance.
 
-      The dynamic helper dictionary object maps :term:`dynamic helpers <dynamic helper>` to absolute paths, either
-      explicitly or implicitly with the help of :meth:`find_path_in()`.
-
-      If the :term:`active context` and the :term:`root context` both have :attr:`find_helpers` = ``False``
-      and no paths was explicitly assigned to the dynamic helper *p* in the active context or one of its outer contexts,
-      a look-up with ``dlb.ex.Context.helper[p]`` performs a search with ``dlb.ex.Context.find_path_in(p)``.
-      (Each such search is performed only once for a given path; the result is stored.)
-
-      Examples::
-
-         >>> dlb.ex.Context.helper['gcc']
-         Path('/usr/bin/gcc')
-
-         >>> dlb.ex.Context.helper['gcc'] = '/usr/local/bin/my-very-own-very-special-gcc'  # set the path explicitly
-         >>> dlb.ex.Context.helper['gcc']
-         Path('/usr/local/bin/my-very-own-very-special-gcc')
-
-         >>> dlb.ex.Context.helper['tmp/'] = 'out/t/'  # relative path: relative to the working tree's root path
-         >>> dlb.ex.Context.helper['tmp/']
-         Path('/home/schmutzli/projects/esel/out/t')   # with '/home/schmutzli/projects/esel' as the working tree's root
-
-      When called on class, it refers to the :term:`active context`.
+      :param max_count: maximum number of runs
+      :rtype: list of tuples
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -319,65 +347,61 @@ Environment variable dictionary objects
 ---------------------------------------
 
 The environment variable dictionary object *env* returned by :attr:`c.env <Context.env>` for a :term:`context` *c*
-is a dictionary-like object of all environment variables defined in this *c*.
+is a dictionary-like object of all environment variables defined in *c*.
 *c* is called the associated :term:`context` of *env*.
 
 In addition, the environment variable dictionary object manages the import of environment variables from
-environment variables of the outer :term:`context` and validation of imported or assigned values in the
-form of regular expressions.
-
-The environment variables of the outer :term:`context` of the :term:`root context` is defined
-by :data:`python:os.environ`.
+environment variables of the outer :term:`context` (or :data:`python:os.environ` for the root context) and validation
+of imported or assigned values in the form of regular expressions.
 
 Example::
 
-    # os.environ usually contains the environment variables in the shell that called the Python interpreter
+   # os.environ usually contains the environment variables in the shell that called the Python interpreter
 
-    with dlb.ex.Context():  # takes a snapshot of os.environ
+   with dlb.ex.Context():  # takes a snapshot of os.environ
 
-        # import the environment variable 'LANG' into the context
-        dlb.ex.Context.active.env.import_from_outer(
-            'LANG', pattern=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
+       # import the environment variable 'LANG' into the context
+       dlb.ex.Context.active.env.import_from_outer(
+           'LANG', pattern=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
 
-        # now the environment variable is either undefined or matches the regular expression given
-        # (in this context and all future inner contexts)
+       # now the environment variable is either undefined or matches the regular expression given
+       # (in this context and all future inner contexts)
 
-        ... = dlb.ex.Context.active.env['LANG']
-            # value in snapshot of os.environ complying to the validation pattern(s) or KeyError
+       ... = dlb.ex.Context.active.env['LANG']
+           # value in snapshot of os.environ complying to the validation pattern(s) or KeyError
 
-        dlb.ex.Context.active.env['LANG'] = 'de_AT'
+       dlb.ex.Context.active.env['LANG'] = 'de_AT'
 
-        with dlb.ex.Context():
+       with dlb.ex.Context():
 
-            # further restrict accepted values
-            dlb.ex.Context.active.env.import_from_outer('LANG', pattern='(?P<language>de).*', example='de_CH')
+           # further restrict accepted values
+           dlb.ex.Context.active.env.import_from_outer('LANG', pattern='(?P<language>de).*', example='de_CH')
 
-            ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
-            del dlb.ex.Context.active.env['LANG']
+           ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
+           del dlb.ex.Context.active.env['LANG']
 
-            dlb.ex.Context.active.env['LANG'] = 'de_CH'
-            # dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # would raise ValueError
+           dlb.ex.Context.active.env['LANG'] = 'de_CH'
+           # dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # would raise ValueError
 
-        ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
+       ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
 
-        del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
-        dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
+       del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
+       dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
 
 Environment variable dictionary object support the following methods and attributes:
 
 .. method:: EnvVarDict.import_from_outer(name, *, pattern, value_if_undefined=None, example=None)
 
    Set the value of the environment variable named *name* from the innermost outer :term:`context` that
-   defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
+   defines it or :data:`python:os.environ` (value at the time the root context was entered) if there is no such context.
+   If neither an outer :term:`context` nor :data:`python:os.environ` defines it, the environment variable remains
+   undefined.
 
-   Also associate a validation pattern for the value with the environment variable; when it is or later becomes
+   Also associates a validation pattern for the value with the environment variable; when it is or later becomes
    defined, the regular expression *validation* must match its value.
    Use ``r'.*'`` if any value of the environment variable is valid.
 
    The possible imported value and the validation pattern apply to the context and all its future inner contexts.
-
-   When called for a root contest, the environment variables are imported from :data:`python:os.environ` at the time
-   is was entered.
 
    :param name: (non-empty) name of the environment variable
    :type name: str
@@ -389,7 +413,7 @@ Environment variable dictionary object support the following methods and attribu
    :raises ValueError:
       if an environment variable named *name* is defined in the associated or an outer :term:`context`
       and *pattern* does not match its value
-   :raises NonActiveContextAccessError: if the associated context is not an :term:`active context`
+   :raises ContextModificationError: if the associated context is not an :term:`active context`
 
 .. method:: EnvVarDict.is_imported(name)
 
@@ -436,7 +460,7 @@ Environment variable dictionary object support the following methods and attribu
    but the associated validation pattern in the associated context or in one of its any outer contexts does not
    match *value*.
 
-   Raises :exc:`NonActiveContextAccessError`, if the associated context is not an :term:`active context`.
+   Raises :exc:`ContextModificationError`, if the associated context is not an :term:`active context`.
 
 .. describe:: del env[name]
 
@@ -445,7 +469,7 @@ Environment variable dictionary object support the following methods and attribu
 
    Raises :exc:`KeyError`, if *name* is not defined in the :term:`context`.
 
-   Raises :exc:`NonActiveContextAccessError`, if the associated context is not an :term:`active context`.
+   Raises :exc:`ContextModificationError`, if the associated context is not an :term:`active context`.
 
 
 Tool objects
@@ -473,44 +497,43 @@ Tools are customized by inheritance and defining class attributes.
 
    Every tool instance assigns *concrete dependencies* for the tool's dependency roles
    (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file``),
-   while the execution parameters are the same of all instances of the some tool.
+   while the execution parameters are the same for all instances of the some tool.
 
    Dependency roles are instances of subclasses of :class:`Dependency`.
 
    A new tool can be defined by inheriting from one or more other tools.
-   When overriding a dependency roles, its overriding value must be of the same type as the overridden value
+   When overriding a dependency role, its overriding value must be of the same type as the overridden value
    and it must be at least as restrictive (e.g. if required dependency must not be overridden by a non-required one).
-   When overriding an execution parameters, its overriding value must be of the same type as the overridden value.
+   When overriding an execution parameter, its overriding value must be of the same type as the overridden value.
 
    Each subclass of :class:`Tool` must be defined in a source code location unique among all subclasses of
-   :class:`Tool`. The definition raises :exc:`DefinitionAmbiguityError`, if its location is cannot
-   be determined or if another subclass of :class:`Tool` was defined before at the same location.
+   :class:`Tool`. The definition raises :exc:`DefinitionAmbiguityError` if its location cannot be determined or
+   if another subclass of :class:`Tool` is defined at the same location.
 
    Example::
 
       class Compiler(dlb.ex.Tool):
-         WARNINGS = ('all',)
-         source_file = dlb.ex.input.RegularFile()
-         object_file = dlb.ex.output.RegularFile()
+          WARNINGS = ('all',)
+          source_file = dlb.ex.input.RegularFile()
+          object_file = dlb.ex.output.RegularFile()
 
       class Linker(dlb.ex.Tool):
-         object_files = dlb.ex.input.RegularFile[1:]()
-         linked_file = dlb.ex.output.RegularFile()
-         map_file = dlb.ex.output.RegularFile(required=False)
+          object_files = dlb.ex.input.RegularFile[1:]()
+          linked_file = dlb.ex.output.RegularFile()
+          map_file = dlb.ex.output.RegularFile(required=False)
 
       compiler = Compiler(source_file='main.cpp', object_file='main.cpp.o')
       linker = Linker(object_files=[compiler.object_file], linked_file='main')
-
 
    At construction of a tool, the dependencies given as keyword arguments to the constructor are validated by the
    tool's dependency roles and made accessible (for reading only) as an attribute with the name of the corresponding
    dependency role and a type determined by the dependency role
    (e.g. :class:`dlb.fs.Path` for :class:`input.RegularFile`)::
 
-      >>> Compiler.object_file  # dependency role
+      >>> Compiler.object_file       # dependency role
       <dlb.ex.input.RegularFile object at ...>
 
-      >>> compiler.object_file  # dependency
+      >>> Compiler(...).object_file  # concrete dependency
       Path('main.cpp.o')
 
    .. method:: start(force_redo=False)
@@ -533,22 +556,23 @@ Tools are customized by inheritance and defining class attributes.
         the context :meth:`start()` was called in
       - call of :meth:`start()` of the same tool instance
 
-      The result (proxy) object contains an attribute for every dependency role of the tool which contains the concrete
-      dependencies.
+      The result (proxy) object *result* contains an attribute for every dependency role of the tool which contains the
+      concrete dependencies.
+      *result* also has a method ``complete()`` which only returns *result*.
 
-      If ``bool(result)`` is ``True``, all attributes for dependencies have an assigned value.
-      If ``bool(result)`` is ``False``, only the attributes for explicit dependencies have an assigned value;
-      the value of all attributes for non-explicit dependencies is ``NotImplemented``.
-
-      *result* has a method ``complete()`` which only returns *result*.
       Use ``t.start(...).complete()`` for a tool instance *t* to block until the possible redo is complete.
+
+      If ``bool(result)`` is ``True``, all attributes for dependency roles have an assigned value.
+      If ``bool(result)`` is ``False``, only the attributes for explicit dependency roles have an assigned value;
+      the value of all attributes for non-explicit dependency roles is ``NotImplemented``.
+
+      :param force_redo: perform a redo even if not necessary?
+      :type force_redo: bool
+      :return: result (proxy) object
 
    .. method:: redo(result, context)
 
       Overwrite this awaitable method to implement a new :class:`Tool` (do not forget ``async``!).
-
-      *result* is the result object that will by returned by the calling :meth:`start()`.
-      *context* is the redo context as an instance of :class:`RedoContext`.
 
       Assign to attributes of *result* to define a non-explicit concrete dependency for the dependency role with the
       same name.
@@ -567,8 +591,8 @@ Tools are customized by inheritance and defining class attributes.
       to a temporary filesystem object *q* and then replace it with ``context.replace_output(p, q)``.
       This guarantees that no incomplete output dependency is left behind (like an only half-written object file)
       when the :term:`redo` is aborted.
-      A filesystem object that is an output dependencies is treated as modified by the redo if it is a non-explicit
-      dependency or if it is a explicit dependency that was replaced with `context.replace_output()`.
+      A filesystem object that is an output dependency is treated as modified by the redo if it is a non-explicit
+      dependency or if it is a explicit dependency that was replaced with ``context.replace_output()``.
 
       Raises :exc:`python:RuntimeError` on the attempt to enter a new :class:`dlb.ex.Context` as a context manager or
       to modify the :term:`active context`.
@@ -579,19 +603,26 @@ Tools are customized by inheritance and defining class attributes.
       Example::
 
          class ATool(dlb.ex.Tool):
-            EXECUTABLE = 'atool'
+             EXECUTABLE = 'atool'
 
-            source_file = dlb.ex.input.RegularFile()
-            output_file = dlb.ex.output.RegularFile()
-            included_files = dlb.ex.input.RegularFile[:](explicit=False)
+             source_file = dlb.ex.input.RegularFile()
+             output_file = dlb.ex.output.RegularFile()
+             included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
-            async def redo(self, result, context):
-                if ...:
-                    raise ValueException('invalid ...')
-                with context.temporary() as temp_file_
-                   await context.execute_helper(self.EXECUTABLE, ['-o', temp_file, result.source_file])
-                   result.included_files = ...
-                   context.replace_output(result.output_file, temp_file)
+             async def redo(self, result, context):
+                 if ...:
+                     raise ValueException('invalid ...')
+                 with context.temporary() as temp_file_
+                     await context.execute_helper(self.EXECUTABLE,
+                                                  ['-o', temp_file, result.source_file])
+                     result.included_files = ...
+                     context.replace_output(result.output_file, temp_file)
+
+      :param result: result proxy object to be returned by :meth:`start()`
+      :param context: redo context
+      :type context: RedoContext
+      :return: request a redo for the next run of the tool instance?
+      :rtype: None | bool
 
    .. attribute:: definition_location
 
@@ -614,7 +645,7 @@ Tools are customized by inheritance and defining class attributes.
       The *permanent local tool instance fingerprint* of this instance.
 
       This is a :class:`python:bytes` object of fixed size, calculated from all its concrete dependencies *d* with
-      ``d.explicit`` = ``True``.
+      ``d.explicit == True``.
 
       If two instances of the same subclass of :class:`Tool` have "similar" explicit dependencies, their
       fingerprints are equal.
@@ -650,8 +681,11 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :meth:`prepare_arguments(arguments, cwd=cwd) <prepare_arguments()>`.
 
       :attr:`env <dlb.ex.Context.env>` of this object, modified by *forced_env*, forms the environment for the
-      subprocess. Note: On Windows, in order to run a side-by-side assembly the specified *env* must include a valid
-      :envvar:`SYSTEMROOT`.
+      subprocess.
+
+      .. note::
+         On Windows, in order to run a side-by-side assembly the specified *env* must include a valid
+         :envvar:`SYSTEMROOT`.
 
       The file descriptors 1 (stdout) and 2 (stderr) are open in the subprocess. Their meaning is specified by
       *stdout_output* and *stderr_output*. No other file descriptor from the Python process is open in the subprocess.
@@ -685,17 +719,17 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
                                           chunk_processor=None)
 
       Execute the *helper_file* with command-line arguments *arguments* in a subprocess with *cwd* as
-      its working directory, wait for it to complete and return its output.
+      its working directory, wait for it to complete, and return its output.
 
       When *chunk_processor* is ``None``, the entire output of the subprocess to stdout or stderr
-      (as defined by *output_to_process*) is return as ``bytes`` objects.
+      (as defined by *output_to_process*) is returned as ``bytes`` objects.
       Example::
 
-           _, output = await context.execute_helper_with_output(..., output_to_process=2)  # without *chunk_processor*
-           # output is a 'bytes' objects containing the output of the subprocess to stderr
+         _, output = await context.execute_helper_with_output(..., output_to_process=2)  # without *chunk_processor*
+         # output is a 'bytes' objects containing the output of the subprocess to stderr
 
       When *chunk_processor* is not ``None``, the output of the subprocess is split into chunks separated by
-      the non-empty ``bytes`` object ``chunk_processor.separator`` and ``chunk_processor.process(chunk, is_last)``
+      the non-empty ``bytes`` object ``chunk_processor.separator``, and ``chunk_processor.process(chunk, is_last)``
       is called for each of the chunks (without ``chunk_processor.separator``) right after they occur.
       *is_last* is ``False`` for every call except the last one that was not delimited by ``chunk_processor.separator``
       but by the end of the stream.
@@ -703,19 +737,19 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       interesting.
       Example::
 
-          class Processor(dlb.ex.ChunkProcessor):
-              separator = b'\r\n'
-              max_chunk_size = 100  # maximum chunk size (without separator)
+         class Processor(dlb.ex.ChunkProcessor):
+             separator = b'\r\n'
+             max_chunk_size = 100  # maximum chunk size (without separator)
 
-              def __init__(self):
-                  self.result = []
+             def __init__(self):
+                 self.result = []
 
-              def process(self, chunk: bytes, is_last: bool):  # len(chunk) is <= 100, chunk does not contain '\r\n'
-                  if chunk.startswith('hello'):
-                      self.result.append(chunk)
+             def process(self, chunk: bytes, is_last: bool):  # len(chunk) is <= 100, chunk does not contain '\r\n'
+                 if chunk.startswith('hello'):
+                     self.result.append(chunk)
 
-           _, output = await context.execute_helper_with_output(..., chunk_processor=Processor())
-           # output is a list of 'bytes' objects starting with b'hello'
+          _, output = await context.execute_helper_with_output(..., chunk_processor=Processor())
+          # output is a list of 'bytes' objects starting with b'hello'
 
       The file descriptors 1 (stdout) and 2 (stderr) are open in the subprocess. Their meaning is specified by
       *output_to_process* and *other_output*. No other file descriptor from the Python process is open in the
@@ -757,10 +791,10 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
       Convert all members of *arguments* to str objects.
 
-      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``True``, is is
+      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute() == ``True``, is is
       replaced by ``str(p.native)``.
-      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute()`` = ``False``, is is
-      replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory. Is must denote
+      If a member of *arguments* is a :class:`dlb.fs.Path` object *p* with ``p.is_absolute() == ``False``, is is
+      replaced by ``str(q.native)``, where *q* is *p* expressed relative to the working directory. It must denote
       a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of the :term:`management tree`.
 
       If *cwd* is not ``None``, is must be the path of directory in the :term:`managed tree` or in :file:`.dlbroot/t/`
@@ -786,7 +820,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       The actual operation depends on the corresponding dependency role.
       If it is a :class:`dlb.ex.output.RegularFile` with
       :attr:`replace_by_same_content <dlb.ex.output.RegularFile.replace_by_same_content>` = ``False`` and *path*
-      and *source* both exist with the same content, *path* is no replaced and treated as unchanged.
+      and *source* both exist with the same content, *path* is not replaced and treated as unchanged.
 
       If *path* is replaced, this is always done by an atomic operation. If it fails, *path* is either *source*
       afterwards or it does not exist.
@@ -797,9 +831,10 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :type source: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
 
       :raises ValueError:
-         if *path* is not a :term:`managed tree path` contained in an explicit output dependency or *source* is not a
-         :term:`working tree path` of a filesystem object in the :term:`managed tree` or in :file:`.dlbroot/t/` of
-         the :term:`management tree` that is different from *path*.
+         if *path* is not a :term:`managed tree path` contained in an explicit output dependency
+      :raises ValueError:
+         if *source* is not a :term:`working tree path` of a filesystem object in the :term:`managed tree` or
+         in :file:`.dlbroot/t/` of the :term:`management tree` that is different from *path*.
 
 
 Dependency classes
@@ -825,16 +860,16 @@ b. An instance *d* of a dependency class *D* created with ``D[m](...)`` has a *m
 
 Example::
 
-    class Tool(dlb.ex.Tool):
-        # these are dependency roles of the tool 'Tool':
-        include_search_directories = dlb.ex.input.Directory[1:]()  # a sequence of at least one dlb.ex.input.Directory
-        cache_directory = dlb.ex.input.Directory()  # a single dlb.ex.input.Directory
+   class Tool(dlb.ex.Tool):
+       # these are dependency roles of the tool 'Tool':
+       include_search_directories = dlb.ex.input.Directory[1:]()  # a sequence of at least one dlb.ex.input.Directory
+       cache_directory = dlb.ex.input.Directory()  # a single dlb.ex.input.Directory
 
-    tool = Tool(include_search_directories=['build/out/Generated/', 'src/Implementation/'])
+   tool = Tool(include_search_directories=['build/out/Generated/', 'src/Implementation/'])
 
-    # these are concrete dependencies of the tool instance 'tool':
-    tool.include_search_directories  # (Path('build/out/Generated/'), Path('src/Implementation/'))
-    tool.cache_directory  # (Path('build/out/Generated/'), Path('src/Implementation/'))
+   # these are concrete dependencies of the tool instance 'tool':
+   tool.include_search_directories  # (Path('build/out/Generated/'), Path('src/Implementation/'))
+   tool.cache_directory  # (Path('build/out/Generated/'), Path('src/Implementation/'))
 
 
 Dependency classes are organized in an a hierarchy according to their meaning to a :term:`tool` by the means of the
@@ -855,11 +890,11 @@ following abstract classes:
 
    A :class:`Dependency` that describes an input dependency of a tool.
 
-   The :term:`tool instance` must be :term:`redone <redo>` if it (e.g. the :term:`mtime` of a file) has changed compared
-   to the state before the last known successful redo of the :term:`tool instance`.
+   A running :term:`tool instance` must perform a :term:`redo` if it (e.g. the :term:`mtime` of a file) has changed
+   compared to the state before the last known successful redo of the :term:`tool instance`.
 
-   An redo *must not* modify it, successful or not (the same object can be an output dependency of the same tool
-   instance though which *can* be modified).
+   An redo *must not* modify it, successful or not
+   (the same object can be an output dependency of the same tool instance though which *can* be modified, although).
 
 .. class:: OutputDependency
 
@@ -868,14 +903,14 @@ following abstract classes:
    A successful redo *must* generate it (e.g. create a regular file).
 
 
-Dependency role classes support the following methods and attributes:
+Dependency classes support the following methods and attributes:
 
 .. class:: Dependency(required=True, explicit=True)
 
    If *required* is ``True``, a concrete dependency of this dependency role will never be ``None``.
 
    If *explicit* is ``True``, the concrete dependency can and must be fully defined when the :term:`tool instance`
-   is created. Otherwise, it cannot and must not be but is automatically assigned by :meth:`Tool.start()`.
+   is created. Otherwise, it cannot and must not be; it is instead automatically assigned by :meth:`Tool.start()`.
 
    .. param required: is a value other than ``None`` required?
    .. type required: bool
@@ -884,7 +919,7 @@ Dependency role classes support the following methods and attributes:
 
    Each supported constructor argument is available as a property of the same name.
 
-   :raise DependencyError:
+   :raises DependencyError:
       if the arguments of the constructor do not match the declared dependency roles of the class
 
    .. class:: Value
@@ -892,8 +927,8 @@ Dependency role classes support the following methods and attributes:
       A (potentially abstract) class such that ``isinstance(v, Value)`` is ``True`` for each validated single value
       *v* of each instance *t* of this class.
 
-      This is the type of ``t.validate()`` if :attr:`multiplicity` is ``None`` and the type of each member
-      of ``t.validate()`` otherwise.
+      This is the type of ``t.validate()`` if :attr:`multiplicity <Dependency.multiplicity>` is ``None`` and the type
+      of each member of ``t.validate()`` otherwise.
 
    .. method:: validate(value)
 
@@ -901,7 +936,7 @@ Dependency role classes support the following methods and attributes:
       :type value: Any type the concrete dependency can convert to *T*
       :return: The validated *value* of type *T*
 
-      :raise TypeError: If :attr:`multiplicity` is not ``None`` and *value* is not iterable or is a string
+      :raises TypeError: If :attr:`multiplicity` is not ``None`` and *value* is not iterable or is a string
 
    .. method:: compatible_and_no_less_restrictive(other)
 
@@ -928,7 +963,7 @@ Dependency role classes support the following methods and attributes:
          >>> v = t.tuple_from_value(t.validate(...))
 
 
-Each non-abstract dependency role class is derived from :class:`InputDependency` or from from :class:`InputDependency`:
+Each non-abstract dependency class is derived from :class:`InputDependency` or from from :class:`InputDependency`:
 
 .. graphviz::
 
@@ -963,11 +998,11 @@ Each non-abstract dependency role class is derived from :class:`InputDependency`
    You are always safe without hard links, symbolic links and case-insensitive filesystems.
 
 
-Input dependency role classes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Input dependency classes
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 +-------------------------------------+-----------------------------------------------+----------------------------+
-| Dependency role class               | Keyword arguments of constructor              | Depended-upon state        |
+| Dependency class                    | Keyword arguments of constructor              | Depended-upon state        |
 |                                     +-----------------------+-----------------------+ for redo necessity         |
 |                                     | Name                  | Default value         |                            |
 +=====================================+=======================+=======================+============================+
@@ -990,7 +1025,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: input.RegularFile(cls=dlb.fs.Path, required=True, explicit=True)
 
-   Constructs a dependency role for regular files, identified by their paths.
+   A dependency role for regular files, identified by their paths.
 
    If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
@@ -1008,7 +1043,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    - GID
    - filesystem permissions
 
-   For a file outside the :term:`managed tree` the state is always assumed to remain unchanged between
+   For a file outside the :term:`managed tree`, the state is always assumed to remain unchanged between
    :term:`runs of dlb <run of dlb>`.
 
    Example::
@@ -1028,8 +1063,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: input.NonRegularFile(cls=dlb.fs.Path, required=True, explicit=True)
 
-   Constructs a dependency role for filesystem objects that are neither directories nor regular files,
-   identified by their paths.
+   A dependency role for filesystem objects that are neither directories nor regular files, identified by their paths.
 
    If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
@@ -1049,7 +1083,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    - GID
    - filesystem permissions
 
-   For a file outside the :term:`managed tree` the state is always assumed to remain unchanged between
+   For a file outside the :term:`managed tree`, the state is always assumed to remain unchanged between
    :term:`runs of dlb <run of dlb>`.
 
    Example::
@@ -1069,7 +1103,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: input.Directory(cls=dlb.fs.Path, required=True, explicit=True)
 
-   Constructs a dependency role for directories, identified by their paths.
+   A dependency role for directories, identified by their paths.
 
    If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
@@ -1087,7 +1121,7 @@ keyword arguments of the constructor of :class:`Dependency`.
    - GID
    - filesystem permissions
 
-   For a directory outside the :term:`managed tree` the state is always assumed to remain unchanged between
+   For a directory outside the :term:`managed tree`, the state is always assumed to remain unchanged between
    :term:`runs of dlb <run of dlb>`.
 
    Example::
@@ -1107,7 +1141,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: input.EnvVar(name, pattern, example, required=True, explicit=True)
 
-   Constructs a dependency role for a environment variable named *name*.
+   A dependency role for a environment variable named *name*.
    It must not have a multiplicity (other than ``None``).
 
    If *explicit* is ``True``, the value assigned in the constructor of the :term:`tool instance` is used for all
@@ -1160,11 +1194,11 @@ keyword arguments of the constructor of :class:`Dependency`.
          The named groups of *pattern* of the corresponding concrete dependency when matched against *raw*.
 
 
-Output dependency role classes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Output dependency classes
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 +-------------------------------------+--------------------------------------------------------+
-| Dependency role class               | Keyword arguments of constructor                       |
+| Dependency class                    | Keyword arguments of constructor                       |
 |                                     +---------------------------+----------------------------+
 |                                     | Name                      | Default value              |
 +=====================================+===========================+============================+
@@ -1185,7 +1219,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: output.RegularFile(cls=dlb.fs.Path, replace_by_same_content=True, required=True, explicit=True)
 
-   Constructs a dependency role for regular files in the :term:`managed tree`, identified by their paths.
+   A dependency role for regular files in the :term:`managed tree`, identified by their paths.
 
    If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
@@ -1216,8 +1250,8 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: output.NonRegularFile(cls=dlb.fs.Path, required=True, explicit=True)
 
-   Constructs a dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor
-   regular files, identified by their paths.
+   A dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor regular files,
+   identified by their paths.
 
    If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
@@ -1244,7 +1278,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: output.Directory(cls=dlb.fs.Path, required=True, explicit=True)
 
-   Constructs a dependency role for directories in the :term:`managed tree`, identified by their paths.
+   A dependency role for directories in the :term:`managed tree`, identified by their paths.
 
    If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
@@ -1271,7 +1305,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: output.Object(required=True, explicit=True)
 
-   Constructs a dependency role for any Python object other than ``None`` and ``NotImplemented``.
+   A dependency role for any Python object other than ``None`` and ``NotImplemented``.
    *explicit* must be ``False``.
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a
@@ -1309,8 +1343,9 @@ Exceptions
 
 .. exception:: ContextModificationError
 
-   Raised, when an :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` or
-   a helper dictionary object is modified while its associated :term:`context` is not the :term:`active context`.
+   Raised, when the modification of an
+   :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` or a
+   helper dictionary object has been attempted while its associated :term:`context` is not the :term:`active context`.
 
 .. exception:: WorkingTreePathError
 
@@ -1319,19 +1354,21 @@ Exceptions
 .. exception:: DefinitionAmbiguityError
 
    Raised at the definition of a subclass of :class:`Tool`, when the location is unknown or another subclass of
-   :class:`Tool` was defined before at the same location.
+   :class:`Tool` is defined at the same location.
 
 .. exception:: DependencyError
 
-   Raised when a running :term:`tool instance` detects a problem with its dependencies before a :term:`redo`.
+   Raised, when a running :term:`tool instance` has detected a problem with its dependencies before a :term:`redo`.
 
 .. exception:: ExecutionParameterError
 
-   Raised when a running :term:`tool instance` detects a problem with its execution parameters before a :term:`redo`.
+   Raised, when a running :term:`tool instance` has detected a problem with its execution parameters before
+   a :term:`redo`.
 
 .. exception:: RedoError
 
-   Raised when a running :term:`tool instance` detects a problem with its dependencies during or after a :term:`redo`.
+   Raised, when a running :term:`tool instance` has detected a problem with its dependencies during or after
+   a :term:`redo`.
 
 .. exception:: HelperExecutionError
 

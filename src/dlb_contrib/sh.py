@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Run commands with the Posix sh shell - the standard command language interpreter."""
+"""Run commands with the POSIX sh shell - the standard command language interpreter."""
 
 # sh: <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/sh.html>
 # Executable: 'sh'

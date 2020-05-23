@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Create Zip archives from directory content."""
+"""Create ZIP archives from directory content."""
 
 # .ZIP file format: <https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT>
 #

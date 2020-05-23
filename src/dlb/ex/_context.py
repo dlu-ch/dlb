@@ -727,7 +727,7 @@ class Context(_BaseContext):
             raise e
 
     @staticmethod
-    def summary_of_latest_runs(*, max_count: int = 1):  # TODO document
+    def summary_of_latest_runs(*, max_count: int = 1):
         self = _get_root_specifics()
         return self._rundb.get_latest_successful_run_summaries(max_count)
 

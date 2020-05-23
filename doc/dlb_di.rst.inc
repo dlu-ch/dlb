@@ -8,7 +8,9 @@
 
 In contrast to the :mod:`python:logging` module, this module focuses on hierarchical structure and unambiguity.
 Absolute time information (date and time of day) is not output in favour of high-resolution relative times.
-The output is compact, line-oriented and well readable for humans.
+The output is compact, line-oriented, and well readable for humans.
+
+.. _dlb-di-levels:
 
 Each *message* has an associated *level*, e.g. :attr:`WARNING`, with the same meaning and numerical value as in the
 :mod:`python:logging` module. The higher the associated numeric value, the more important the message is considered:
@@ -33,7 +35,7 @@ It is initialised to :data:`INFO` if :data:`sys.flags.verbose <python:sys.flags>
 Messages can be *nested* with *message clusters*. In the output, the nesting level of a message is expressed by the
 indentation of its lines.
 
-An precise syntax in enforced to make the output suitable for incremental parsing (e.g. from a named pipe) with the help
+A precise syntax in enforced to make the output suitable for incremental parsing (e.g. from a named pipe) with the help
 of simple regular expressions. [#machinereadable]_
 Any Unicode character except characters from the range U+0000 to U+001F (ASCII control characters) can be used in
 messages as long as the syntax is not violated.
@@ -86,27 +88,25 @@ Syntax
 ------
 
 Each *message* starts with a capital letter after indentation according to its nesting level (2 space characters per
-level) and ends with a ``'\n'`` after a non-space character. It can consist of any number of lines: an *initial line*
-followed by any number of *continuation lines*, separated by ``'␣\n'`` and the same indentation as the initial line
-(``'␣'`` means the character U+0020):
+level) and ends with a ``'\n'`` after a non-space character. It can consist of multiple lines: an *initial line*
+followed by any number of *continuation lines* with the same indentation as the initial line.
+The lines are separated by ``'␣\n'`` (``'␣'`` means the character U+0020):
 
 .. productionlist:: diagmessage
    message: `single_line_message` | `multi_line_message`
    single_line_message: `initial_line` '\n'
    multi_line_message: `initial_line` '␣\n' (`continuation_line` '␣\n')* `continuation_line` '\n'
-   indentation: '␣␣'*
 
 The initial line carries the essential information. Its first letter after the indentation denotes the *level* of the
 message: the first letter of the standard names of the standard loglevels of the :mod:`python:logging` module.
 An optional relative file path and 1-based line number of an *affected regular file* follows.
 
 .. productionlist:: diagmessage
-   initial_line: `indentation` `summary_prefix` `summary` `summary_suffix`
-   summary_prefix: `level_indicator` '␣' [ `file_location` '␣' ]
-   summary_suffix: [ `progress_suffix` ] [ '␣' `relative_time_suffix` ]
+   initial_line: `indentation` `level_indicator` '␣' `summary` `summary_suffix`
+   indentation: '␣␣'*
    level_indicator: 'C' | 'D' | 'E' | 'I' | 'W'
-   file_location: `relative_file_path` ':' `line_number`
    summary: `summary_first_character` [ `message_character`* `summary_last_character` ]
+   summary_suffix: [ `progress_suffix` ] [ '␣' `relative_time_suffix` ]
    progress_suffix: '.' | '...'
 
 The timing information is optional and can be enabled per message. It contains the time elapsed in seconds since the
@@ -120,14 +120,6 @@ times. The number of decimal places is the same for all output timing informatio
 .. productionlist:: diagmessage
    continuation_line: `indentation` `continuation_line_indicator` `message_character`*
    continuation_line_indicator: '␣␣|␣'
-
-.. productionlist:: diagmessage
-   relative_file_path: "'" `path_component` [ '/' `path_component` ] "'"
-   line_number: `decimal_integer`
-   path_component: `path_component_character` `path_component_character`*
-   path_component_character: `raw_path_component_character` | `escaped_path_component_character`
-   raw_path_component_character: any Unicode character except from the range U+0000 to U+001F, '/', '\', ':', "'" and '"'
-   escaped_path_component_character: '\x' `hexadecimal_digit` `hexadecimal_digit`
 
 .. productionlist:: diagmessage
    summary_first_character: any `summary_last_character` except "'" (U+0027) and '|' (U+007C)
@@ -148,17 +140,16 @@ Module content
 .. data:: ERROR
 .. data:: CRITICAL
 
-   Positive integers representing standard logging levels of the same names.
-   See the documentation of `logging <https://docs.python.org/3/library/logging.html#logging-levels>`_.
+   Positive integer representing a :ref:`message level <dlb-di-levels>` of the same name.
 
-   In contrast to :mod:`logging`, these are *not* meant to be changed by the user.
+   In contrast to :mod:`logging`, these attributes are *not* meant to be changed by the user.
    Use them to define your own positive integers representing levels like this::
 
-       ... = dlb.di.INFO + 4  # a level more important than INFO but not yet a WARNING
+      ... = dlb.di.INFO + 4  # a level more important than INFO but not yet a WARNING
 
 .. function:: set_output_file(file)
 
-   Set the output file for all future outputs of this module to *file* and return the old output file.
+   Set the output file for all future outputs of this module to *file* and return the previous output file.
 
    *file* is used by :mod:`dlb.di` exclusively like this: ``file.write(message)``. *message* is a (non-empty) string
    that can be produced by the production rule :token:`message`. Its first character is meant to represent the first
@@ -167,21 +158,25 @@ Module content
    :param file: new output file
    :type file: an object with a ``write(string)`` method
    :return: the previous value, an object with a ``write`` attribute
-   :type TypeError: if *file* has no ``write`` attribute
+   :raises TypeError: if *file* has no ``write`` attribute
 
 .. function:: set_threshold_level(level)
 
-   Set the level threshold for all future messaged to *level*.
+   Set the level threshold for all future messages to *level*.
 
    Every message with a level below *level* will be suppressed.
 
-   :param level: new level threshold (positive)
+   :param level: new (positive) level threshold
    :type level: int
+   :raises TypeError: if *level* cannot be converted to an ``int``
+   :raises ValueError: if *level* is not positive
 
 .. function:: is_unsuppressed_level(level)
 
    Is a message of level *level* unsuppressed be the current level threshold?
 
+   :param level: (positive) level
+   :type level: int
    :rtype: bool
 
 .. function:: get_level_indicator(level)
@@ -199,9 +194,13 @@ Module content
 .. function:: format_time_ns(time_ns)
 
    Return a string representation for a time in seconds, rounded towards 0 approximately to the resolution of
-   :func:`python:time.monotonic_ns()`. The time *time_ns* is given in nanoseconds as an integer.
+   :func:`python:time.monotonic_ns()`.
 
    The number of decimal places is fixed for all calls. It is a platform-dependent value in the range of 1 to 6.
+
+   :param time_ns: time in nanoseconds
+   :type time_ns: int
+   :rtype: str
 
 .. function:: format_message(message, level)
 
@@ -240,9 +239,13 @@ Module content
         | programming required: T = 127.3 s
         | difficulty:           D =  12.8
 
+   :param message: message (to be formatted)
+   :type message: str
+   :param level: (positive) level
+   :type level: int
    :return: formatted message conforming to :token:`message` after appending a single ``'\n'``
    :rtype: str
-   :raise ValueError: if *message* would violate :token:`message` or if *level* is invalid
+   :raises ValueError: if *message* would violate :token:`message` or if *level* is invalid
 
 .. function:: inform(message, *, level: int = INFO, with_time: bool = False)
 

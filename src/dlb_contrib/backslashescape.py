@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Backslash escape sequences (Python, Bash, Git, ...)."""
+"""Process backslash escape sequences (Python, Bash, Git, ...)."""
 
 # Usage example:
 #

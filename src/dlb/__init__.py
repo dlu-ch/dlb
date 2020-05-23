@@ -21,3 +21,5 @@ del sys
 #     di             ->   ut  fs
 #     cf             ->           di
 #     ex             ->   ut  fs  di  cf
+
+# TODO swap fs and di

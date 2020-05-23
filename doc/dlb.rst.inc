@@ -28,4 +28,5 @@
 
       assert (1, 0, 3) <= dlb.version_info  < (2,)
 
-   Note: For a development version, *version_info* carries less information than *__version__*.
+   .. note::
+      For a development version, *version_info* carries less information than *__version__*.

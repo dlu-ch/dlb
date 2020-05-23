@@ -30,7 +30,7 @@ This shows you the location of all installed files::
    $ python3 -m pip show -f dlb
 
 It is also possible to "install" dlb into a project as a ZIP archive.
-See :ref:`here <manual-self-contained-project>` for details.
+See :ref:`here <usage-self-contained-project>` for details.
 
 
 Update and uninstall
@@ -48,9 +48,11 @@ Uninstall it with::
 A simple project
 ----------------
 
-We assume that you want to build some software from a `Git`_ repository with dlb on a GNU/Linux system with a
-`POSIX`_ compliant shell.
+We assume that you want to build some software from a `Git`_ repository with dlb and a `POSIX`_ compliant shell
+on a GNU/Linux system.
+
 Let's call the project `hello`.
+
 
 Create the Git working directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -67,7 +69,7 @@ of Git::
    $ mkdir .dlbroot
 
 Now, the directory is ready for use by dlb as a working tree. dlb does not require or assume anything about existing
-file or directories outside :file:`.dlbroot` (see :ref:`here <ref-workingtree-layout>` for details on the
+file or directories outside :file:`.dlbroot` (see :ref:`here <dlb-ex-workingtree-layout>` for details on the
 directory layout).
 We will use a :term:`dlb script <script>` called :file:`build.py` to build our project, so let's start with an
 polite one::
@@ -79,9 +81,9 @@ Now, we can use :file:`dlb` to run :file:`build.py`::
    $ dlb build
    hello there!
 
-Instead of ``dlb build`` we could also have used ``python3 "${PWD}"/build.py``. ``dlb`` comes in handy when you are
+We could also have used ``python3 "${PWD}"/build.py`` instead of ``dlb build``. ``dlb`` comes in handy when you are
 working in a subdirectory of the :term:`working tree` or when you need modules from ZIP archives
-(e.g. :ref:`dlb itself <manual-self-contained-project>`)::
+(e.g. :ref:`dlb itself <usage-self-contained-project>`)::
 
    $ mkdir src
    $ cd src
@@ -96,7 +98,7 @@ See ``dlb --help`` for a detailed description.
 Run a custom tool in an execution context
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Replace the content of :file:`build.py` by this::
+Replace the content of :file:`build.py` with this::
 
    import dlb.ex
 
@@ -253,6 +255,12 @@ A redo of *t* from above is considered necessary if at least one of the followin
 - The :term:`mtime`, size, UID, GID, or set of filesystem permissions of :file:`build.py` has changed since the
   last known successful redo of *t* (because :file:`build.py` is a definition file for *t* in the :term:`managed tree`).
 
+.. note::
+   You may have noticed that an :term:`mtime` modification of :file:`build/out/main.c` does *not* lead to a redo.
+   A modification of an output dependency is always treated as purposeful.
+   This allows for modification of output dependencies after they were generated (e.g. for source code formatting
+   or for small fixes in a huge set of generated HTML documents). [#noredoonoutputmodification1]_
+
 Tool instances are identified by their class (file path and line number of definition) and their fingerprint.
 The fingerprint includes the concrete dependencies of the tool instance which are defined by arguments of the
 constructor matching class attributes.
@@ -308,7 +316,7 @@ another one::
 
 This mechanism is used in :dlbrepo:`example/c-minimal/`.
 
-To wait for the completion of a specific redo without referring to specific dependencies you can use
+To wait for the completion of a specific redo without referring to specific dependencies, you can use
 ``complete()`` instead::
 
    r = Replacer(...).start().complete()
@@ -340,7 +348,7 @@ this: :dlbrepo:`example/c-minimal/build-all.py`.
 The package :mod:`dlb_contrib` provides tools and utilities to build upon.
 
 
-.. _manual-self-contained-project:
+.. _usage-self-contained-project:
 
 Self-contained projects: dlb as part of the repository
 ------------------------------------------------------
@@ -390,13 +398,13 @@ from :mod:`dlb_contrib.iso6429`.
 PyCharm integration
 -------------------
 
-If you use `PyCharm`_ to edit (and/or run and debug) your :term:`dlb scripts <script>` you can take advantage
+If you use `PyCharm`_ to edit (and/or run and debug), your :term:`dlb scripts <script>` you can take advantage
 of the integrated referral to external HTML documentation: Place the caret in the editor on a dlb object
 (anything except a module) --- e.g. between the ``P`` and the ``a`` of ``dlb.fs.Path`` ---
-and press :kbd:`Shift+F1` or :kbd:`Ctrl+Q` to show the HTML documentation in you web browser.
+and press :kbd:`Shift+F1` or :kbd:`Ctrl+Q` to show the HTML documentation in your web browser.
 
-Configuration (as of PyCharm 2019.3):
-Add the following documentation URLs in the dialog :menuselection:`Tool --> External Documentation`:
+Configuration (as of PyCharm 2020.1):
+Add the following documentation URLs in the settings page :menuselection:`Tool --> External Documentation`:
 
 +-------------------+---------------------------------------------------------------------------------+
 | Module Name       | URL/Path Pattern                                                                |
@@ -415,7 +423,7 @@ Replace *<which>* by a specific version like ``v0.3.0`` or ``stable`` for the la
 Recommendations for efficiency and reliability
 ----------------------------------------------
 
-These recommendation describe the typical use case.
+These recommendations describe the typical use case.
 Use them as a starting point for most efficient and reliable operation. [#make1]_
 
 
@@ -455,7 +463,7 @@ Run dlb
   Yes, I know: it happens a lot by mistake when editing source files.
 
   dlb itself is designed to be relatively robust to such modifications.
-  As long as the size of modified regular file changes or the :term:`working tree time` is monotonic, there is no
+  As long as the size of the modified regular file changes or the :term:`working tree time` is monotonic, there is no
   :term:`redo miss` in the current or in any future :term:`run of dlb`. [#managedtree1]_ [#make3]_
 
   However, many external tools cannot guarantee proper behaviour if some of their input files are changed while they
@@ -465,7 +473,7 @@ Run dlb
 
   Use :command:`cp` instead.
 
-- Be careful when you modify a file via ``mmap`` that is an input dependency of a :term:`tool instance`. [#mmap1]_
+- Be careful when you modify a file that is an input dependency of a :term:`tool instance` via ``mmap``. [#mmap1]_
 
 - Do not put the system time used as :term:`working tree's system time` back *on purpose* while
   :term:`dlb is running <run of dlb>` or while you are modifying the :term:`managed tree`. [#workingtreetime]_
@@ -483,7 +491,8 @@ Write scripts and tools
   This would be error-prone and inefficient.
   Use scripts only on the top-level.
 
-- Split large :term:`scripts<script>` into small modules that are imported by the script.
+- Split large :term:`scripts<script>` into small modules that are imported by the script
+  (like this: :dlbrepo:`example/c-gtk/`).
   You can place these modules in the directory they control.
 
 - Use only *one* :term:`root context` and nest all other contexts inside
@@ -491,28 +500,27 @@ Write scripts and tools
 
   Do::
 
-      import dlb.ex
-      ...
-      with dlb.ex.Context():
-          with dlb.ex.Context():
-              ...
-          with dlb.ex.Context():
-              ...
-          import build_subsystem_a  # contains 'with dlb.ex.Context(): ... '
-
+     import dlb.ex
+     ...
+     with dlb.ex.Context():
+         with dlb.ex.Context():
+             ...
+         with dlb.ex.Context():
+             ...
+         import build_subsystem_a  # contains 'with dlb.ex.Context(): ... '
 
   Don't::
 
-      import dlb.ex
-      ...
+     import dlb.ex
+     ...
 
-      with dlb.ex.Context():
-         ...  # context manager exit is artificially delayed as necessary according to the
-              # filesystem's effective mtime resolution
+     with dlb.ex.Context():
+        ...  # context manager exit is artificially delayed as necessary according to the
+             # filesystem's effective mtime resolution
 
-      with dlb.ex.Context():
-         ...  # context manager exit is artificially delayed as necessary according to the
-              # filesystem's effective mtime resolution (again)
+     with dlb.ex.Context():
+        ...  # context manager exit is artificially delayed as necessary according to the
+             # filesystem's effective mtime resolution (again)
 
 - Do not modify the :term:`managed tree` in a :term:`script` -- e.g. by calling :func:`shutil.rmtree()` directly --
   unless you are sure no redo is pending that accesses the affected filesystem objects. [#managedtree1]_
@@ -550,6 +558,12 @@ Write scripts and tools
    When installed with ``python3 -m pip install --user dlb``, the command-line utility is created below
    ``python3 -m site --user-base`` according to :pep:`370`.
    Make sure this directory is part of the search paths for executables.
+
+.. [#noredoonoutputmodification1]
+   It is impossible to reliably detect an :term:`mtime` modification of a (POSIX) filesystem object after its generation
+   without the requirement of monotonic system time and real-time guarantees.
+   Without such (unrealistic) requirements, the probability of correct detection can be made arbitrarily small by
+   pausing the involved processes at the right moments.
 
 .. [#make1]
    Although they are not formally specified, Make_ has by design much stricter requirements and much looser guarantees.

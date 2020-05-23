@@ -38,6 +38,9 @@ especially for the development of embedded software with cross-compiler toolchai
    |                             +----------------------------------------+---------------+---------------+---------------+---------------+
    |                             | Robustness to changes during build     | |plusplus|    | |minusminus|  | |plusplus|    | |minusminus|  |
    |                             +----------------------------------------+---------------+---------------+---------------+---------------+
+   |                             | Robustness to manual changes of        | |none|        | |avg|         | |plusplus|    | |plus|        |
+   |                             | output files                           |               |               |               |               |
+   |                             +----------------------------------------+---------------+---------------+---------------+---------------+
    |                             | Reproducibility of builds              | |plusplus|    | |minusminus|  | |minusminus|  | |minusminus|  |
    +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
    | Powerfulness,               | Portability of build description       | |plusplus|    | |minusminus|  | |avg|         | |minus|       |
@@ -51,10 +54,10 @@ especially for the development of embedded software with cross-compiler toolchai
    |                             +----------------------------------------+---------------+---------------+---------------+---------------+
    |                             | Ability to deal with circular          | |plusplus|    | |none|        | |none|        | |none|        |
    |                             | dependencies                           |               |               |               |               |
-   +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
+   +                             +----------------------------------------+---------------+---------------+---------------+---------------+
    |                             | Fundamental objects                    | contexts,     | strings       | environments, | strings,      |
-   |                             |                                        | tools, paths  |               | strings,      | string lists  |
-   |                             |                                        |               |               | string lists  |               |
+   |                             |                                        | tools, paths, |               | builders,     | string lists  |
+   |                             |                                        | dependencies  |               | nodes         |               |
    +-----------------------------+----------------------------------------+---------------+---------------+---------------+---------------+
 
 .. rubric:: Legend
@@ -63,7 +66,7 @@ especially for the development of embedded software with cross-compiler toolchai
    What amount of resources is required to perform a task?
 
 .. [#usability1]
-   How easy is it to read and run a build description?
+   How easy is it to read a build description and run a build?
 
 .. [#correctness1]
    How easy is it to develop a correct and reliable build description?
@@ -85,7 +88,7 @@ There is a plethora of other build tools:
 Of these, SCons and doit are closest to the goals of dlb.
 See the following questions for a comparison to Make, Ninja and SCons.
 
-The other tools fall into two large categories which both have major shortcomings in the view of the author.
+The other tools fall into two large categories which both have major limitation in the view of the author.
 
 
 Tools based on declared dependency rules
@@ -108,7 +111,7 @@ Examples are:
 - https://pypi.org/project/buildit/ (Python, .ini-file syntax to describe rules)
 - `Bruce Eckel's builder.py <https://www.artima.com/weblogs/viewpost.jsp?thread=241209>`_ (Python)
 
-See :ref:`here <manual-explicit-is-better-than-implicit>` why a descriptive language is not the best approach to
+See :ref:`here <usage-explicit-is-better-than-implicit>` why a descriptive language is not the best approach to
 describe a build process.
 
 
@@ -164,18 +167,16 @@ Otherwise, you should give dlb a try. Especially if:
   dependent files).
 
 
-.. _manual-speed-comparison:
-
 How fast is dlb?
 ----------------
 
 There is a lot of controversy in comparing the speed of build tools in general and SCons in particular.
 
-In my opinion, raw speed for a single build in an ideal and static environment is not the most important benchmark for
-productivity; the necessary total effort to develop and maintain a trustworthy and complete build description is
-far from negligible. Spending hours to find subtle flaws in the build process and doing complete rebuilds out of
-mistrust in the completeness of the dependency information costs more than a few seconds per --- otherwise perfect ---
-partial build. [#makepitfall1]_
+Raw speed for a single build in an ideal and static environment is hardly the most important benchmark for productivity;
+the necessary total effort to develop and maintain a trustworthy and complete build description is far from negligible.
+Spending hours to find subtle flaws in the build process and doing complete rebuilds out of mistrust in the completeness
+of the dependency information costs more than a few seconds per --- otherwise perfect --- partial build.
+[#makepitfall1]_
 
 Having said that, here are the results of a simple benchmark used both
 `against <http://gamesfromwithin.com/the-quest-for-the-perfect-build-system>`_ and
@@ -224,8 +225,6 @@ Properties of tested builds (*n*: number of libraries, *m*: number of source fil
    | Based on                          |                         | :dlbrepo:`example/c-minimal-gnumake/` | :dlbrepo:`example/c-minimal/` | :dlbrepo:`example/c-huge/` | :dlbrepo:`example/c-huge-libraries/`  |                   |
    +-----------------------------------+-------------------------+---------------------------------------+-------------------------------+----------------------------+---------------------------------------+-------------------+
 
-
-.. _manual-make-comparison:
 
 How does dlb compare to Make?
 -----------------------------
@@ -297,7 +296,7 @@ As stated above, Ninja is meant to work as part of a higher-level build system t
 [#ninjafilegenerators1]_
 Rōnin_ is such a higher-level build system. It has a structure similar to dlb and can therefore be part of a
 :term:`dlb script <script>`.
-However, Rōnin shares the typical :ref:`limitations <manual-explicit-is-better-than-implicit>` of declarative build
+However, Rōnin shares the typical :ref:`limitations <usage-explicit-is-better-than-implicit>` of declarative build
 descriptions; it performs a lot of "magic" (with undocumented assumptions) and cannot be extended beyond the hardcoded
 and limited extension interfaces.
 
@@ -331,6 +330,13 @@ also faster.
 When dlb detects a new dependency (after the execution of a tool instance), the next execution of this
 tool instance always performs a redo. SCons can avoid "redos" right after its *first* run.
 
+SCons and dlb both use a database to store information of the last build.
+SCons builds a global dependency graph (in memory) on every run; it checks all input dependencies at the very beginning
+and stores their state at the beginning in the database.
+dlb does not rely on a global state in memory; it only checks the input dependencies per :term:`tool instance` and
+stores their state for every tool instance (hence cycles and incremental modification of filesystem objects are
+possible). The database of dlb tends to be much bigger than the one maintained by SCons.
+
 dlb is significantly faster and is designed for easy extension.
 
 
@@ -342,7 +348,7 @@ manipulating files and program output. Python and its libraries are very well su
 The language is clean and expressive and the community takes pride in elegance and simplicity.
 
 
-.. _manual-explicit-is-better-than-implicit:
+.. _usage-explicit-is-better-than-implicit:
 
 Why is explicit better than implicit?
 -------------------------------------

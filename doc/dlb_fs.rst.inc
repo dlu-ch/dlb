@@ -7,7 +7,8 @@
 This module provides classes to represent and access filesystem objects in a safe and platform-independent manner,
 most prominently :class:`dlb.fs.Path` and its subclasses.
 
-.. inheritance-diagram:: dlb.fs.Path dlb.fs.RelativePath dlb.fs.AbsolutePath dlb.fs.NoSpacePath dlb.fs.PosixPath dlb.fs.PortablePosixPath dlb.fs.PortableWindowsPath dlb.fs.WindowsPath dlb.fs.PortablePath
+The interface is similar to :mod:`pathlib`. :class:`dlb.fs.Path` is much faster than :class:`pathlib.PurePath`.
+(Lossy) conversion from and to :mod:`pathlib` paths is supported.
 
 
 Path objects
@@ -17,25 +18,27 @@ Path objects
 
    A :class:`dlb.fs.Path` represents the path of a filesystem object in a platform-independent manner and
    expresses whether the object is a directory or not.
-   All operations on instances of :class:`dlb.fs.Path` show the same behaviour on every platform
-   (with the exception of :attr:`native`).
-   Its instances are immutable and hashable_ (they can be used in sets or as keys in dictionaries).
+   The represented path is called a directory path in the former case and a non-directory path in the latter case.
 
-   All represented paths are either absolute or relative to the working directory of a process.
+   All represented paths are either absolute or relative to some other path (usually the working directory
+   of the running process).
 
-   The interface is similar to :mod:`pathlib` and conversion from and to :mod:`pathlib` paths is supported.
+   All operations on instances of :class:`dlb.fs.Path` show the same behaviour on every platform (with the exception of
+   :attr:`native`). Its instances are immutable and hashable_ (they can be used in sets or as keys in dictionaries).
 
    If the path represented by a :class:`dlb.fs.Path` is meaningful as a concrete path on the platform the code
    is running on, :attr:`native` returns it in the form of a :class:`dlb.fs.Path.Native` instance, which can
-   then be used to access the filesystem (like a :class:`pathlib.Path`).
+   then be used to access the filesystem.
 
    On all platform the following properties hold:
 
-   - ``'/'`` is used as a path component separator.
-   - A path does not contain ``'\0'``.
-   - A path is absolute if and only if it starts with ``'/'``; it is relative if and only if it is not absolute.
+   - A path does not contain ``'\0'`` (NUL).
    - A component ``'..'`` means the parent directory of the path before it.
-   - A component ``'.'`` means the directory of the path before it;
+   - A component ``'.'`` means the directory of the path before it.
+   - If the platform supports symbolic links, it resolves them as specified in `ISO 1003.1-2008`_
+     (which means that ``'..'`` cannot be collapsed without knowing the filesystem's content).
+   - ``'/'`` is used as a path component separator.
+   - A path is absolute if and only if it starts with ``'/'``.
      a non-empty path with all such components removed is equivalent to the original one.
    - A sequence of two or more consequent ``'/'`` is equivalent to a single ``'/'``, except at the beginning of
      the path.
@@ -45,112 +48,157 @@ Path objects
      - Exactly two consequent ``'/'`` (followed be a character other than ``'/'``) means that the following component
        is to be interpreted in a implementation-defined manner (e.g. `ISO 1003.1-2008`_ or UNC paths)
 
-   - If the platform supports symbolic links, it resolves them as specified in `ISO 1003.1-2008`_
-     (which means that ``'..'`` cannot be collapsed without knowing the filesystem's content).
+   :class:`dlb.fs.Path` instances are comparable with each other by ``==``, ``<`` et cetera which define a total
+   ordering. Comparison is case-sensitive and component-wise. For two :class:`dlb.fs.Path` instances *p* and *q*:
 
-   :class:`dlb.fs.Path` instances are comparable with each other by ``=``, ``<`` etc.
-   They are also comparable with strings and :class:`pathlib.PurePath`.
-   Comparison is done case-sensitively and component-wise, observing the equivalence relations described below.
-   A non-directory path is smaller than an otherwise identical directory path.
-   If a directory path *d* is a prefix of another path *p*, then *d* < *p*.
-   Any relative path is smaller than any absolute path.
+   - ``p = q`` if and only if ``p.components == q.component and p.is_dir == q.is_dir``.
+   - ``p < q`` if ``p.components < q.component``
+     (a true prefix of a path is smaller than the prefixed path, and every relative path is smaller than every
+     absolute path).
+   - ``p < q`` if ``p.components == q.component and p.is_dir < q.is_dir``
+     (a non-directory path is smaller than an otherwise equal directory path).
 
    Usage example::
 
-       p = dlb.fs.PortablePath('a/b/c/') / 'x/y'
+      >>> p = dlb.fs.PortablePath('a/b/c/') / 'x/y'
+      >>> p.relative_to('a/b/)
+      PortablePath('c/x/y')
 
-       p.relative_to(...)
+      >>> dlb.fs.Path('x/y/z.tar.gz')[:-2]
+      Path('x/')
 
-       ... = str(p.native)
-
-       with p.native.open() as f:
-           f.readline()
+      >>> dlb.fs.Path('x/y/z.tar.gz').components[-1]
+      'z.tar.gz'
 
    The :class:`dlb.fs.Path` class supports the following methods and attributes:
 
    .. method:: Path(path, *, is_dir=None)
 
-      Construct a path from another path or a string.
+      Construct a path from another path, string, or path component sequence:
 
-      If *path* is a string, it is interpreted as the string representation of a path in Posix style with ``/`` as a
-      component separator. It must not be empty.
-      If *path* is a :class:`pathlib.Path`, it must be either absolute or relative.
-      If *path* is a sequence, all its members are converted to str and are interpreted as path components;
-      its first component must be ``''`` for a relative path.
-
-      If *is_dir* is ``None``, the ending of *path* determines whether is considered a directory path or not;
-      it is if it ends with ``'/'`` or a ``'.'`` or ``'..'`` component.
+      - If *path* is a string, it is interpreted as the string representation of a path in POSIX style with ``/`` as a
+        component separator. It must not be empty.
+      - If *path* is a sequence, it is interpreted as a path component sequence after all its members have been
+        converted to str (see :attr:`components`).
+      - If *path* is an instance of :class:`dlb.fs.Path`, it is copied. This is very fast..
+      - If *path* is an instance of :class:`pathlib.PurePath` (including :class:`pathlib.Path`), it is interpreted
+        according to its meaning expressed by the class (a :class:`pathlib.PureWindowsPath` instance is interpreted as
+        an an MS Windows path, for example).
+        If *path* is neither absolute nor relative, a :exc:`ValueError` exception is raised.
+      - If *path* is an instance of :class:`dlb.fs.Path.Native`, its :class:`pathlib.Path` representation is used.
+        :attr:`native` of the constructed path is equal to *path*.
 
       If *is_dir* is ``True``, the path is considered a directory path irrespective of ``path``.
 
-      If *is_dir* is ``False``, the path is considered a non-directory path irrespective of ``path``
-      However, if *path* represents ``'.'`` or endwith a ``'..'`` component, a :exc:`ValueError` exception is raised.
+      If *is_dir* is ``False``, the path is considered a non-directory path irrespective of ``path``.
+      However, if *path* represents ``'.'`` or ends with a ``'..'`` component, a :exc:`ValueError` exception is raised.
 
-      :param path: portable string representation or path object
-      :type path: str | :class:`Path` | :class:`pathlib.PurePath`
+      If *is_dir* is ``None``, the ending of *path* determines whether it is considered a directory path or not.
+      If *path* is a string that ends with  ``'/'`` or if the last component of *path* is ``'.'`` or ``'..'`` component,
+      it is considered a directory path.
+
+      :param path: path object, portable string representation, or path component sequence
+      :type path: str | :class:`dlb.fs.Path` | :class:`dlb.fs.Path.Native` | :class:`pathlib.PurePath` | sequence of str
       :param is_dir: ``True`` if this is a directory path, ``False`` if not and ``None`` for derivation from *path*
       :type is_dir: NoneType | bool
 
-      :raises TypeError: if *path* is neither a string nor a path
+      :raises TypeError: if *path* is neither a path, string, nor path component sequence
       :raises ValueError: if *path* is an empty string
+      :raises ValueError: if *path* cannot be represented by this (subclass of) :class:`dlb.fs.Path`
       :raises ValueError: if *path* is a :class:`pathlib.PurePath` which is neither absolute nor relative
 
       Examples::
 
-          >>> p = Path('a/b/').is_dir()
-          True
+         >>> p = dlb.fs.Path('a/b/').is_dir()
+         True
 
-          >>> p = Path(pathlib.PureWindowsPath('C:\\Windows'), is_dir=True)
-          >>> p
-          Path('/C:/Windows/')
-          >>> p.is_dir()
-          True
+         >>> p = dlb.fs.Path(pathlib.PureWindowsPath('C:\\Windows'), is_dir=True)
+         >>> p
+         Path('/C:/Windows/')
+         >>> p.is_dir()
+         True
 
-          >>> p = Path('x/y/..', is_dir=False)
-          Traceback (most recent call last):
-          ...
-          ValueError: cannot be the path of a non-directory: 'x/y/..'
-
-          >>> Path('x/y/z.tar.gz')[:-2]
-          Path('x/')
-
-          >>> Path('x/y/z.tar.gz').parts[-1]
-          'z.tar.gz'
+         >>> p = dlb.fs.Path('x/y/..', is_dir=False)
+         Traceback (most recent call last):
+         ...
+         ValueError: cannot be the path of a non-directory: 'x/y/..'
 
    .. method:: is_dir()
 
-      :return: ``True`` if and only if this represents the path of a directory.
+      :return: ``True`` if and only if this represents a directory path.
       :rtype: bool
 
    .. method:: is_absolute()
+
+      .. in pathlib:
+         pathlib.PurePath.is_absolute()
 
       :return: ``True`` if and only if this represents an absolute path.
       :rtype: bool
 
       .. note::
-         While Posix_ considers paths starting with exactly two ``'/'`` *not* as absolute paths,
+         While POSIX_ considers paths starting with exactly two ``'/'`` *not* as absolute paths,
          this class does (and so does :mod:`pathlib`).
 
    .. method:: is_normalized()
 
-      :return: ``True`` if and only if this represents a normalized path
-               (i.e. it contains no ``'..'`` components)
+      .. in os.path:
+         os.path.normpath(): "Normalize a pathname by collapsing [...]"
+
+      :return:
+        ``True`` if and only if this represents a :term:`normalized path` (without ``'..'`` components)
       :rtype: bool
 
    .. method:: relative_to(other, *, collapsable=False)
 
-      Return a version of this path relative to the directory path represented by *other*.
+      .. in pathlib:
+         pathlib.PurePath.relative_to()
+
+      Return a version of this path relative to the directory path represented by ``C(other)`` where *C* is the class
+      of this path.
 
       If *collapsable* is ``False``, this path must be a prefix of *other*.
       If *collapsable* is ``True``, *other* is treated as a :term:`collapsable path` and the minimum of necessary
       :file:`..` components is prepended.
 
+      :param other: directory path
+      :type other: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :param collapsable: is *other* a :term:`collapsable path`?
+      :type collapsable: bool
+      :return: relative path
       :rtype: class of this object
 
-      :raises ValueError: if this is a non-directory path
-      :raises ValueError: if *other* is not a prefix of this
+      :raises ValueError: if ``C(other)`` is not a directory path
+      :raises ValueError: if one of this path and ``C(other)`` is a relative path and the other one is an absolute path
+      :raises ValueError: if *collapsable* is ``False`` and this path is not a prefix of ``C(other)``
+
+   .. method:: with_appended_suffix(suffix)
+
+      Return a version of this path with *suffix* appended to its last component.
+
+      :param suffix: suffix that does not change the meaning of the path
+      :type suffix: str
+      :rtype: class of this object
+
+      :raises ValueError: if *suffix* is ``'.'`` or ``'..'`` or does contain ``'/'`` or ``'\0'`` (NUL)
+
+   .. method:: as_string()
+
+      The unique representation as a POSIX-style string.
+
+      For every :class:`dlb.fs.Path` instance *p* and ``s = p.as_string()``, the following holds:
+
+      - *s* is not empty
+      - ``s[0]`` is ``'/'`` if and only if *p* is an absolute path
+      - ``s[-1]`` is ``'/'`` if and only if *p* is a directory path
+      - ``dlb.fs.Path(s) == p``
+
+      :rtype: str
 
    .. method:: iterdir(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
+
+      .. in pathlib:
+         pathlib.Path.iterdir()
 
       Yield all path objects of the directory contents denoted by this path and matched by the
       name filters.
@@ -185,8 +233,9 @@ Path objects
 
       Example::
 
-          for p in dlb.fs.Path('src/').iterdir(name_filter=r'(?i).+\.cpp', recurse_name_filter=lambda n: '.' not in n):
-              ...
+         for p in dlb.fs.Path('src/').iterdir(name_filter=r'(?i).+\.cpp',
+                                              recurse_name_filter=lambda n: '.' not in n):
+             ...
 
       :rtype: *cls* | class of this object
 
@@ -196,16 +245,16 @@ Path objects
 
    .. method:: iterdir_r(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
-      Like :meth:`iterdir`, but all returns paths are relative to this path.
+      Like :meth:`iterdir`, but all yielded paths are relative to this path.
 
    .. method:: list(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
-      Returns all paths yielded by :meth:`iterdir` as a sorted list.
+      Return all paths yielded by :meth:`iterdir` as a sorted list.
 
       Example::
 
-          >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
-          [NoSpacePath('src/Clock.cpp'), NoSpacePath('src/main.cpp')]
+         >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
+         [NoSpacePath('src/Clock.cpp'), NoSpacePath('src/main.cpp')]
 
    .. method:: list_r(*, name_filter='', is_dir=None, recurse_name_filter=None, follow_symlinks=True, cls=None)
 
@@ -213,8 +262,8 @@ Path objects
 
       Example::
 
-          >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
-          [NoSpacePath('Clock.cpp'), NoSpacePath('main.cpp')]
+         >>> dlb.fs.NoSpacePath('src/').list(name_filter=r'(?i).+\.cpp')
+         [NoSpacePath('Clock.cpp'), NoSpacePath('main.cpp')]
 
    .. method:: find_latest_mtime(*, name_filter='', is_dir=None, recurse_name_filter=None, \
                                  follow_symlinks=True, cls=None)
@@ -232,53 +281,63 @@ Path objects
       to and including this directory if the resulting mtime is later than their mtime).
       Return the resulting mtime of this directory in nanoseconds or ``None`` if it was not updated.
 
-      Note that in contrast to :meth:`iterdir` the default value for recurse_name_filter is ``''`` which means that
-      by default no subdirectory is ignored.
+      .. note::
+         In contrast to :meth:`iterdir` the default value for recurse_name_filter is ``''`` which means that
+         by default no subdirectory is ignored.
 
-   .. method:: __getitem__(key)
+   .. attribute:: components
 
-      A subpath (a slice of the path).
+      The path component sequence of this path as a tuple of strings.
 
-      The resulting path is absolute (with the same anchor) if and only if the slice starts at 0.
-      The resulting path is a non-directory path if and only if it contains the last component and if
-      this path is a non-directory path.
+      The first element is the root component. It is ``'/'`` or ``'//'`` if the path is absolute and ``''`` otherwise.
+      All other elements are the path's non-root components.
+      They do not contain ``'/'`` and are not ``'.'`` or ``'..'``.
 
-      The slice step must be positive.
+      Example::
 
-      Examples::
+         >>> dlb.fs.Path('/usr/bin/python3').component
+         ('/', 'usr', 'bin', 'python3')
+         >>> dlb.fs.Path('x/y/').component
+         ('', 'x', 'y')
+         >>> dlb.fs.Path('.').component
+         ('',)
 
-          >>> dlb.fs.Path('src/comp/lib/Core.cpp')[:-2]
-          Path('src/comp/'
+      This attribute cannot be written.
 
-          >>> dlb.fs.Path('src/comp/..')[:-1]
-          Path('src/comp/'
-
-      :param key: slice of components (indices into :attr:`parts`)
-      :type key: :class:`slice`
-      :rtype: class of this object
-      :return: subpath
-
-      :raises TypeError: if *key* is not a slice
-      :raises ValueError: if this is an absolute path and *key* is an empty slice
+      :rtype: tuple of str
 
    .. attribute:: parts
 
-      A tuple giving access to the path’s various components::
+      .. in pathlib:
+         pathlib.PurePath.parts
 
-           >>> p = Path('/usr/bin/python3')
-           >>> p.parts
-           ('/', 'usr', 'bin', 'python3')
+      The path component sequence of this path with an empty root-component removed::
 
-      :rtype: tuple(str)
+         >>> dlb.fs.Path('/usr/bin/python3').parts
+         ('/', 'usr', 'bin', 'python3')
+         >>> dlb.fs.Path('x/y/').parts
+         ('x', 'y')
+         >>> dlb.fs.Path('.').parts
+         ()
+
+      This attribute cannot be written.
+
+      :rtype: tuple of str
 
    .. attribute:: native
 
-      This path as a native path.
+      This path as a (non-portable) native path.
+
       Use it to access the filesystem::
 
-          p = Path('/usr/bin/')
-          with open(p.native) as f:
-             ...
+         p = dlb.fs.Path('/usr/bin/')
+         ... = os.stat(p.native)       # p.native is a os.PathLike
+         ... = os.stat(str(p.native))
+         ... = p.native.raw.stat()     # pathlib.Path (slower)
+
+      .. note::
+         Whether a path is a directory path can only by reconstructed from its native path if it ends with a ``'.'`` or
+         ``'..'`` component.
 
       This attribute cannot be written.
 
@@ -288,11 +347,13 @@ Path objects
 
    .. attribute:: pure_posix
 
+      .. in pathlib:
+         pathlib.PurePath.as_posix()
+
       This path as a :class:`pathlib.PurePosixPath`::
 
-          >>> p = Path('/usr/bin/')
-          >>> p.pure_posix
-          PurePosixPath('/usr/bin')
+         >>> dlb.fs.Path('/usr/bin/').pure_posix
+         PurePosixPath('/usr/bin')
 
       This attribute cannot be written.
 
@@ -302,25 +363,87 @@ Path objects
 
       This path as a :class:`pathlib.PureWindowsPath`::
 
-          >>> p = Path('/C:/Program Files/')
-          >>> p.pure_windows
-          PureWindowsPath('C:/Program Files')
+         >>> Path('/C:/Program Files/').pure_windows
+         PureWindowsPath('C:/Program Files')
 
       This attribute cannot be written.
 
       :rtype: :class:`pathlib.PureWindowsPath`
 
+   .. describe:: path[key]
+
+      Returns the path represented by a :attr:`path.parts[key] <parts>` where *key* is a slice of indices with
+      a positive slice step.
+
+      The resulting path is absolute (with the same root-component) if and only if the slice starts at 0 and *path*
+      is an absolute path.
+
+      The resulting path is a non-directory path if and only if it contains the last component and if *path* is a
+      non-directory path.
+
+      Raises :exc:`TypeError` if *key* is not a slice.
+      Raises :exc:`ValueError` if *path* is an absolute path and *key* is an empty slice.
+
+      Examples::
+
+         >>> dlb.fs.Path('src/comp/lib/Core.cpp')[:-2]
+         Path('src/comp/'
+
+         >>> dlb.fs.Path('src/comp/..')[1:-1]
+         Path('comp/')
+
+   .. describe:: left / right
+
+      .. in pathlib:
+         pathlib.PurePath.__truediv__
+         pathlib.PurePath.__rtruediv__
+
+      Concatenates the paths *left* and *right*.
+
+      *left* and *right* can be instances of :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be
+      constructed from, but at least one of them must be a :class:`dlb.fs.Path`.
+
+      The returned path *result* is of type *C* and is constructed from ``C(left).components + C(right).parts``
+      where *C* is the class either of *left* or of *right*:
+
+      - If *left* is a :class:`dlb.fs.Path` and *right* is not a subclass of the class of *left*,
+        *C* is the class of *left*.
+      - Otherwise, *C* is the class of *right*.
+
+      :attr:`result.is_dir <is_dir>` is ``C(right).is_dir``.
+
+      Raises :exc:`ValueError` if ``C(left)`` is not a directory path.
+      Raises :exc:`ValueError` if ``C(right)`` is an absolute path.
+
+      Examples::
+
+         >>> dlb.fs.NoSpacePath('path/to/glory/') / 'Stanley_Kubrick'
+         NoSpacePath('path/to/glory/Stanley_Kubrick')
+
+         >>> dlb.fs.NoSpacePath('path/to/glory/') / 'Stanley Kubrick'
+         Traceback (most recent call last):
+         ...
+         ValueError: invalid path for 'NoSpacePath': 'Stanley Kubrick' (must not contain space)
+
+         >>> title = 'Paths to Glory'; year = 1957
+         >>> dlb.fs.Path('films/') / f'{title} ({year})/' / 'video.mp4'
+         Path('films/Paths to Glory (1957)/video.mp4')
+
+          >>> 'tmp/' / dlb.fs.NoSpacePath('lock/')
+          NoSpacePath('tmp/lock/')
+
 .. class:: Path.Native
 
-   A native path whose instances can be used much like ones from :class:`pathlib.Path` and is a :class:`os.PathLike`.
+   A native path whose instances can be used much like instances of :class:`pathlib.Path`.
+   It implements the :class:`os.PathLike` protocol.
 
-   For each subclass *P* of :class:`dlb.fs.Path` there is a corresponding subclass ``P.Native`` which imposes the same
+   For each subclass *P* of :class:`dlb.fs.Path` there is a corresponding subclass ``P.Native`` that imposes the same
    restrictions on its representable paths as *P*.
 
    If *Q* is a subclass of *P* and *P* is a subclass of :class:`dlb.fs.Path`, then ``Q.Native`` is a subclass
    of ``P.Native``.
 
-   Example (on a Posix system)::
+   Example (on a POSIX system)::
 
       >>> dlb.fs.NoSpacePath.Native('/tmp/x y')
       Traceback (most recent call last):
@@ -330,26 +453,26 @@ Path objects
    In contrast to :class:`pathlib.Path`, conversion to string is done in a safe way:
    relative paths are guaranteed to start with ``'.'``.
 
-   Example (on a Posix system)::
+   Example (on a POSIX system)::
 
-       >>> str(Path.Native('-rf'))
+       >>> str(dlb.fs.Path.Native('-rf'))
        './-rf'
 
    Instances of :class:`dlb.fs.Path.Native` and its subclasses should not be constructed directly but by accessing
    :attr:`dlb.fs.Path.native`.
 
-   Example (on a Posix system)::
+   Example (on a POSIX system)::
 
-        with open(dlb.fs.NoSpacePath('/tmp/x/a').native) as f:
-            ... = f.read()
+      with open(dlb.fs.NoSpacePath('/tmp/x/a').native) as f:
+          ... = f.read()
 
    .. attribute:: raw
 
       This path as a :class:`python:pathlib.Path`.
       Use it to access the filesystem in an object-oriented manner::
 
-          p = Path('/usr/bin/')
-          ... = p.native.raw.is_dir()
+         p = dlb.fs.Path('/usr/bin/')
+         ... = p.native.raw.stat()
 
       This attribute cannot be written.
 
@@ -363,23 +486,41 @@ Path objects
 Restricting paths
 -----------------
 
-By subclassing :class:`dlb.fs.Path`, additional restrictions to the set of value values can be imposed
-(trying to construct a :class:`dlb.fs.Path` from an invalid value raises an :exc:`ValueError` exception).
-A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restriction_to_base`.
+Trying to construct a :class:`dlb.fs.Path` from an invalid value raises an :exc:`ValueError` exception.
+Additional restrictions to the set of valid values can be imposed on instances of :class:`dlb.fs.Path` by subclassing.
+
+A subclass of :class:`dlb.fs.Path` should only implement :meth:`check_restriction_to_base`.
+:meth:`p.check_restriction_to_base()` should raise :exc:`ValueError` if it considers
+:attr:`p.components <dlb.fs.Path.components>` or :attr:`p.is_dir <dlb.fs.Path.is_dir>` as invalid::
+
+   class NoBullshitPath(Path):
+
+       def check_restriction_to_base(self, components_checked: bool):
+           # This is called during construction of a NoBullshitPath after all
+           # attributes have been assigned and the check_restriction_to_base() of all its
+           # base classes have been called successfully.
+           # *components_checked* is True if this method was called before on a path p
+           # whose p.components contained all members of self.components.
+
+           if not components_checked and any(c == 'bullshit' for c in self.components):
+               raise ValueError('no bullshit, please')
+
+   NoBullshitPath('thats/bullshit/)  # raises ValueError
+
 
 .. inheritance-diagram:: dlb.fs.Path dlb.fs.RelativePath dlb.fs.AbsolutePath dlb.fs.NoSpacePath dlb.fs.PosixPath dlb.fs.PortablePosixPath dlb.fs.PortableWindowsPath dlb.fs.WindowsPath dlb.fs.PortablePath
 
 .. class:: RelativePath
 
-   A :class:`dlb.fs.Path` which represents a relative path.
+   A :class:`dlb.fs.Path` that represents a relative path.
 
 .. class:: AbsolutePath
 
-   A :class:`dlb.fs.Path` which represents an absolute path.
+   A :class:`dlb.fs.Path` that represents an absolute path.
 
 .. class:: NormalizedPath
 
-   A :class:`dlb.fs.Path` which represents a normalized path (without  ``'..'`` components).
+   A :class:`dlb.fs.Path` that represents a :term:`normalized path` (without  ``'..'`` components).
 
 .. class:: NoSpacePath
 
@@ -387,10 +528,9 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: PosixPath
 
-   A :class:`dlb.fs.Path` which represents a POSIX-compliant (`ISO 1003.1-2008`_) paths in its least-constricted form.
+   A :class:`dlb.fs.Path` that represents a POSIX-compliant (`ISO 1003.1-2008`_) paths in its least-constricted form.
 
-   Every non-empty string, which does not contain ``'/'`` or U+0000 (NUL) is a valid component.
-   Components are separated by ``'/'``.
+   Every non-empty string that does not contain ``'/'`` or U+0000 (NUL) is a valid component.
 
    For every path prefix (in the POSIX sense) *{NAME_MAX}* and *{PATH_MAX}* are considered unlimited.
 
@@ -406,11 +546,10 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: PortablePosixPath
 
-   A :class:`dlb.fs.PosixPath` which represents a POSIX-compliant (`ISO 1003.1-2008`_) path in its strictest form.
+   A :class:`dlb.fs.PosixPath` that represents a POSIX-compliant (`ISO 1003.1-2008`_) path in its strictest form.
    Any path whose support is not required by POSIX or is declared as non-portable is considered invalid.
 
-   A component cannot be longer than 14 characters, which must all be members of the
-   *Portable Filename Character Set*.
+   A component cannot be longer than 14 characters, which must all be members of the *Portable Filename Character Set*.
 
    The length of the string representation of the path is limited to 255 characters.
 
@@ -418,16 +557,16 @@ A subclass of :class:`dlb.fs.Path` should implement only :meth:`check_restrictio
 
 .. class:: WindowsPath
 
-   A :class:`dlb.fs.Path` which represents a Microsoft Windows-compliant file or directory path in its
+   A :class:`dlb.fs.Path` that represents a Microsoft Windows-compliant file or directory path in its
    least-constricted form, which is either relative or absolute and is not a reserved non-directory path (e.g. ``NUL``).
 
-   It cannot represent incomplete paths which are neither absolute nor relative to the current working
-   directory (e.g. ``C:a\b`` and ``\\name``).
-   It cannot represent NTFS stream names, Win32 file namespaces or Win32 device namespaces.
+   It cannot represent incomplete paths which are neither absolute nor relative to the current working directory
+   (e.g. ``C:a\b`` and ``\\name``).
+   It cannot represent NTFS stream names, Win32 file namespaces, or Win32 device namespaces.
 
 .. class:: PortableWindowsPath
 
-   A :class:`dlb.fs.WindowsPath` which represents a Microsoft Windows-compliant path in its strictest form.
+   A :class:`dlb.fs.WindowsPath` that represents a Microsoft Windows-compliant path in its strictest form.
 
    A component cannot end with ``' '`` or ``'.'`` (except ``'.'`` and ``'..'``) and
    cannot be longer than 255 characters.

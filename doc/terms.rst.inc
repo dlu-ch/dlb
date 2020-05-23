@@ -6,28 +6,38 @@ Terms
    run of dlb
       The execution of a part of a :term:`script` inside the same :term:`root context`.
 
+   script
+      A Python program that potentially creates an :term:`active context` at least once.
+
+   context
+      An (execution) context describes how running :term:`tool instances <tool instance>` shall interact with the
+      execution environment outside the :term:`working tree` and with each other.
+
+      It is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
+
+   active context
+      The innermost :term:`context`, if any.
+
+   root context
+      The outermost :term:`context`, if any.
+
    tool
-      Describes the abstract behaviour and the way a tool is run by a sub class of :class:`dlb.ex.Tool`.
+      Describes the abstract behaviour and the way a tool is run by a subclass of :class:`dlb.ex.Tool`.
 
       It is concretized by instantiation.
 
    tool instance
       A (concrete) instance of an (abstract) :term:`tool` with concrete dependencies.
 
-      Can be run in an active context with ``r = t.start()`` (once or multiple times), which happens sequentially in the
-      following stages:
+      Can be run in an active context (once or multiple times), which happens sequentially in the following stages:
 
-      #. start of execution: call of :meth:`t.start() <dlb.ex.Tool.start()>`.
-      #. dynamic helper resolution:
-         if this is the first instance of the tool being run in the :term:`active context`:
-         find the absolute path of every :term:`dynamic helper` (e.g. executable) that might be needed during a
-         redo of any instance of this tool and memorize it.
+      #. start of execution: call of :meth:`r = t.start() <dlb.ex.Tool.start()>`.
       #. redo check:
-         decide whether a registered dependency required a redo by inspecting its state and memorize it if it does.
-      #. if redo necessary:
+         decide whether a redo is necessary by inspecting its state and memorize it if it does.
+      #. if redo necessary or explicitly requested:
 
          #. redo: generate all output dependencies.
-         #. dependency finalization: update registered dependencies and their state in the :term:`run-database`.
+         #. dependency finalization: update dependencies and their state in the :term:`run-database`.
 
       #. completion of execution:
 
@@ -54,12 +64,12 @@ Terms
       statements is true:
 
       - There is no last known successful redo of *t* (see below).
-      - Any of the output dependencies of *t* does not exist in the expected form.
-      - Any of the non-explicit input dependencies set by the the last known successful redo of *t* does not exist
+      - *t* has an output dependency that does not exist in the expected form.
+      - *t* has a non-explicit input dependency set by the the last known successful redo of *t* that does not exist
         in the expected form.
-      - Any of the input dependencies of *t* has changed a depended-upon state (e.g. a filesystem attribute or
-        a value of environment variable) since the start of the last known successful redo of *t*.
-      - Any of the execution parameters *t* has changed since the start of the last known successful redo of *t*.
+      - *t* has an input dependency whose depended-upon state (e.g. a filesystem attribute or a value of environment
+        variable) has changed since the start of the last known successful redo of *t*.
+      - *t* has an execution parameter that has changed since the start of the last known successful redo of *t*.
       - The last known successful redo of *t* requested a redo for the next run.
       - The :term:`mtime`, size, UID, GID, or set of filesystem permissions of any of the definition files for *t* in
         the :term:`managed tree` has changed since the last known successful redo of *t*; a definition file for *t* is
@@ -75,21 +85,6 @@ Terms
 
       It is caused by bugs of dlb or :term:`dynamic helpers <dynamic helper>` and violations of assumptions (e.g. on the
       behaviour of the filesystem).
-
-   context
-      An (execution) context describes how running :term:`tool instances <tool instance>` shall interact with the
-      execution environment outside the :term:`working tree` and with each other.
-
-      It is represented as an instance of :class:`dlb.ex.Context` used as a context manager.
-
-   active context
-      The innermost :term:`context`, if any.
-
-   root context
-      The outermost :term:`context`, if any.
-
-   script
-      A Python program that potentially creates an :term:`active context` at least once.
 
    working tree
       The filesystem tree rooted at a directory (directly) containing a directory :file:`.dlbroot/`
@@ -111,15 +106,16 @@ Terms
       `sense of ISO 1003.1-2008 <https://pubs.opengroup.org/onlinepubs/009695399/functions/stat.html>`_.
 
    working tree time
-      The time according to the :term:`mtime` of an imaginary filesystem object created at a certain instant
-      (assuming a single filesystem).
+      The time according to the :term:`mtime` of an imaginary filesystem object created in the :term:`working tree`
+      at a certain instant, assuming a single filesystem (|assumption-f1|).
 
    mtime update
-      Setting the :term:`mtime` of a filesystem object to the current :term:`working tree time`.
+      Setting the :term:`mtime` of a filesystem object (on the same filesystem as the :term:`working tree`) to the
+      current :term:`working tree time`.
 
    working tree's system time
-      The system time used as source for every :term:`mtime update` of every filesystem object in the working tree
-      (assuming there is one).
+      The system time used as source for every :term:`mtime update` of every filesystem object in the working tree,
+      assuming there is one (|assumption-t1|).
 
    effective mtime resolution
       The effective :term:`mtime` resolution for a filesystem object *p* is defined by the following
@@ -156,11 +152,11 @@ Terms
       On a case-insensitive filesystem or directory, multiple paths that differ in case or character encoding can point
       to the same filesystem object. Only one of them is a canonical-case path.
 
-   normal path
+   normalized path
       A path without :file:`..` components.
 
    working tree path
-      The :term:`normal path` of an existing filesystem object relative to the :term:`working tree`'s root.
+      The :term:`normalized path` of an existing filesystem object relative to the :term:`working tree`'s root.
 
    managed tree path
       A working tree path of a file system object in the :term:`managed tree`.
@@ -174,23 +170,23 @@ Terms
 
    true input dependency
       A true input dependency of a :term:`tool instance` *t* is an input of *t* that is not known to have been generated
-      by a previous running :term:`tool instance` (in the current or a previous :term:`run of dlb`).
+      by a previously running :term:`tool instance` (in the current or a previous :term:`run of dlb`).
 
    redo-safe
       An action (e.g. a modification of the :term:`managed tree`) is said to be redo-safe if it cannot lead to a
       :term:`redo miss` for any :term:`tool instance` in the current run or any future :term:`run of dlb`.
 
    benign managed tree modification
-      A modification of the :term:`managed tree` is benign, if it consist only of an arbitrary number of the
+      A modification of the :term:`managed tree` is benign if it consist only of an arbitrary number of the
       following actions in any order:
 
       - Remove or create a filesystem object
         (this includes symbolic links and hard links)
       - Write to a regular file
 
-      Examples of modifications of the managed tree that are no benign managed tree modifications:
+      Examples of modifications of the managed tree that are *not* benign managed tree modifications:
 
-      - Replace a regular file by any other one with :command:`mv`
+      - Replace a regular file by another one with :command:`mv`
         (does not :term:`update mtime <mtime update>` of the target)
       - Swap two directories
       - Set the :term:`mtime` of a filesystem object to something different from the current working tree time

@@ -88,7 +88,7 @@ Modification of the working tree
 
 **A-A3** (manual modification of mtime)
    Except from modifications requested by a running :term:`tool instance`, every modification of the :term:`mtime` of a
-   filesystem object in the working tree is a :term:`mtime update`. [#touch1]_
+   filesystem object in the working tree is an :term:`mtime update`. [#touch1]_
 
    Acceptable when violated:
 
@@ -100,7 +100,7 @@ Modification of the working tree
 
 **A-A4**
    No part of the filesystem outside of the :term:`working tree` is modified while a :term:`tool instance` *t* is
-   running, unless it cannot affect the behaviour of *t*.
+   running unless it cannot affect the behaviour of *t*.
 
    Acceptable when violated:
 
@@ -166,7 +166,7 @@ Filesystems behaviour of working tree
 .. |assumption-f4| replace:: :ref:`A-F4 <assumption-f4>`
 
 **A-F4** (mtime update for directory)
-   Every creation, removal, renaming and attribute change of a filesystem object in the
+   Every creation, removal, renaming, and attribute change of a filesystem object in the
    :term:`working tree` :term:`updates the mtime <mtime update>` of the (directly) containing directory.
    [#lazytime1]_
 
@@ -179,7 +179,7 @@ Filesystems behaviour of working tree
 .. |assumption-f5| replace:: :ref:`A-F5 <assumption-f5>`
 
 **A-F5** (moving is atomic)
-   Moving a regular file, a directory or a symbolic link in the :term:`working tree` to a different directory in
+   Moving a regular file, a directory, or a symbolic link in the :term:`working tree` to a different directory in
    the working tree is possible in an reasonably secure, efficient and atomic operation that does not affect the moved
    object's filesystem attributes (including :term:`mtime` in full resolution).
 
@@ -191,7 +191,7 @@ Filesystems behaviour of working tree
 .. |assumption-f6| replace:: :ref:`A-F6 <assumption-f6>`
 
 **A-F6** (moving makes invisible)
-   Immediately after a regular file, a directory or a symbolic link in the :term:`working tree` has been
+   Immediately after a regular file, a directory, or a symbolic link in the :term:`working tree` has been
    successfully moved to a different directory within the same working tree, no other process "sees" it in
    the original directory.
 
@@ -204,7 +204,7 @@ Filesystems behaviour of working tree
 .. |assumption-f7| replace:: :ref:`A-F7 <assumption-f7>`
 
 **A-F7** (no corruption)
-   A filesystem object in :term:`working tree` is never corrupted (e.g. by failure of software, memory or power).
+   A filesystem object in the :term:`working tree` is never corrupted (e.g. by failure of software, memory or power).
 
    Acceptable when violated:
 
@@ -224,9 +224,11 @@ Timing and concurrency
 **A-T1** (working tree time exists)
    The :term:`mtime` of every filesystem object in the working tree is updated from the same system time
    (local or remote), the working tree's system time.
-   Whenever a :term:`mtime update` occurs for a filesystem object *p* after one occurs for
-   filesystem object *q*, where *p* and *q* are in the working tree, the :term:`mtime`
-   of *p* is not later than the :term:`mtime` of *q*. [#linuxfstime1]_
+
+   Whenever an :term:`mtime update` occurs for a filesystem object *p* at working tree's system time *tp* and one occurs
+   for a different filesystem object *q* at working tree's system time *tq*, where *p* and *q* are in the working tree
+   and *tp* is not later than *tq*, the :term:`mtime` of *p* is not later than the :term:`mtime` of *q*.
+   [#linuxfstime1]_
 
    Acceptable when violated:
 
@@ -279,7 +281,7 @@ Dependencies
 .. |assumption-d1| replace:: :ref:`A-D1 <assumption-d1>`
 
 **A-D1** (regular files)
-   Most of the filesystem objects in the managed tree that serve as input dependency of
+   Most of the filesystem objects in the managed tree that serve as input dependencies of
    :term:`tool instances <tool instance>` are regular files.
 
 .. _assumption-d2:
@@ -387,5 +389,5 @@ Timing and concurrency
 .. |guarantee-t4| replace:: :ref:`G-T4 <guarantee-t4>`
 
 **G-T4** (threads)
-   dlb does not create threads.
+   dlb does not (directly) create threads.
 

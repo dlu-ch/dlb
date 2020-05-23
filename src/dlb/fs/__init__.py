@@ -285,6 +285,7 @@ class Path(metaclass=_PathMeta):
                 components = ('',) + components
             if components[0] not in ('', '/', '//'):
                 raise ValueError("if 'path' is a parts tuple, its first element must be one of '', '/', '//'")
+                # TODO rename parts tuple to component sequence
             nonroot_components = tuple(c for c in components[1:] if c and c != '.')
             if any('/' in c for c in nonroot_components):
                 raise ValueError("if 'path' is a parts tuple, none except its first element must contain '/'")
@@ -303,6 +304,7 @@ class Path(metaclass=_PathMeta):
 
             if not isinstance(path, pathlib.PurePath):
                 msg = f"'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not {type(path)!r}"
+                # TODO add dlb.fs.Path.Native
                 raise TypeError(msg)
 
             anchor = path.anchor
@@ -590,8 +592,8 @@ class Path(metaclass=_PathMeta):
             return self
         return self._with_components(self._components + o[1:], is_dir=other._is_dir, components_checked=True)
 
-    def __rtruediv__(self, other: PathLike) -> 'Path':
-        return self._cast(other) / self
+    def __rtruediv__(self, other: PathLike) -> 'Path':  # TODO remove?
+        return self._cast(other) / self  # TODO replace by __truediv__ to remove operator precedence amiguity
 
     def __eq__(self, other: PathLike) -> bool:
         # on all platform, comparison is case sensitive
@@ -616,6 +618,7 @@ class Path(metaclass=_PathMeta):
     def __getitem__(self, item) -> 'Path':
         if not isinstance(item, slice):
             raise TypeError("slice of component indices expected (use 'parts' for single components)")
+            # TODO part indices instead of component indices
 
         n = len(self.parts)
         start, stop, step = item.indices(n)
