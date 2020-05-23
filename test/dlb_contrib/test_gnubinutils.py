@@ -31,7 +31,8 @@ class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             object_file_groups = [
-                dlb_contrib.gcc.CCompilerGcc(source_files=[src_file], object_files=[src_file + '.o']).start().object_files
+                dlb_contrib.gcc.CCompilerGcc(source_files=[src_file],
+                                             object_files=[src_file + '.o']).start().object_files
                 for src_file in ['a.c', 'b.c']
             ]
             dlb_contrib.gnubinutils.Archive(object_files=[o for g in object_file_groups for o in g],
@@ -42,6 +43,7 @@ class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
+        # noinspection PyPep8Naming
         Tool = dlb_contrib.gnubinutils.Archive
 
         class QueryVersion(dlb_contrib.generic.VersionQuery):

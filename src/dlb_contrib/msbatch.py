@@ -38,6 +38,7 @@ __all__ = ['RunEnvBatch']
 import sys
 import os.path
 
+import dlb.fs
 import dlb.ex
 import dlb_contrib.exportenv
 

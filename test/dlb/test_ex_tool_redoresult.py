@@ -61,6 +61,7 @@ class IsCompleteTest(testenv.TemporaryWorkingDirectoryTestCase):
 
 class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
 
+    # noinspection PyPep8Naming
     def setUp(self):
         super().setUp()
         open('a.cpp', 'xb').close()

@@ -269,6 +269,7 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
+        # noinspection PyPep8Naming
         Tools = [
             dlb_contrib.tex.Tex,
             dlb_contrib.tex.Latex,

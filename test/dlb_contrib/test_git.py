@@ -227,6 +227,7 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
+        # noinspection PyPep8Naming
         Tool = dlb_contrib.git.GitDescribeWorkingDirectory
 
         class QueryVersion(dlb_contrib.generic.VersionQuery):

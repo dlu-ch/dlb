@@ -298,6 +298,7 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
+        # noinspection PyPep8Naming
         Tools = [
             dlb_contrib.gcc.CCompilerGcc,
             dlb_contrib.gcc.CplusplusCompilerGcc,

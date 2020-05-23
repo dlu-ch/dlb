@@ -240,7 +240,7 @@ class Tex(dlb.ex.Tool):
                 context.replace_output(state_file, new_state_file)
 
             try:
-                read_files.remove(self.toplevel_file)
+                read_files.remove(result.toplevel_file)
             except ValueError:
                 pass
             if self.state_files:

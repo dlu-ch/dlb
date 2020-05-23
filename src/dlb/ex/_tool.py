@@ -12,7 +12,7 @@ import os
 import collections
 import hashlib
 import inspect
-from typing import Dict, Optional, Tuple, Type
+from typing import Optional, Tuple, Type
 
 from .. import ut
 from .. import fs

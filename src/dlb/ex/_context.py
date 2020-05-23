@@ -67,7 +67,7 @@ class _BaseEnvVarDict:
             return True
         return self._context.parent is not None and self._context.parent.env.is_imported(name)
 
-    def _find_violated_validation_pattern(self, name, value) -> Pattern:
+    def _find_violated_validation_pattern(self, name, value) -> Optional[Pattern]:
         pattern = self._pattern_by_name.get(name)
         if pattern is not None and not pattern.fullmatch(value):
             return pattern

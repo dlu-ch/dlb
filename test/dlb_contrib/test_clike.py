@@ -35,8 +35,10 @@ class RegexTest(unittest.TestCase):
         self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)'))
         self.assertTrue(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(  x  , y  , ...  )'))
 
-        self.assertEqual('_a1Z', dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)').group('name'))
-        self.assertEqual('x, y, ...', dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)').group('arguments'))
+        self.assertEqual('_a1Z',
+                         dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)').group('name'))
+        self.assertEqual('x, y, ...',
+                         dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z(x, y, ...)').group('arguments'))
 
         self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z'))
         self.assertFalse(dlb_contrib.clike.FUNCTIONLIKE_MACRO_REGEX.match('_a1Z ()'))

@@ -1082,7 +1082,7 @@ class PropagateMtimeTest(testenv.TemporaryDirectoryTestCase):
         self.assertEqual("cannot list non-directory path: 'f'", str(cm.exception))
 
     def test_fails_for_nonexistent(self):
-        with self.assertRaises(FileNotFoundError) as cm:
+        with self.assertRaises(FileNotFoundError):
             dlb.fs.Path('d/').propagate_mtime()
 
     @unittest.skipIf(sys.platform == 'win32', 'POSIX filesystem only')
@@ -1150,5 +1150,5 @@ class FindLatestMtimeTest(testenv.TemporaryDirectoryTestCase):
         self.assertEqual("cannot list non-directory path: 'f'", str(cm.exception))
 
     def test_fails_for_nonexistent(self):
-        with self.assertRaises(FileNotFoundError) as cm:
+        with self.assertRaises(FileNotFoundError):
             dlb.fs.Path('d/').find_latest_mtime()

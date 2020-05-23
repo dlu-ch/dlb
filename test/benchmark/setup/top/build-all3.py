@@ -44,7 +44,8 @@ with dlb.ex.Context():
 
                     with dlb.di.Cluster(f'check API versioning'):
                         # make sure api_version.h is the non-.cpp file with the latest mtime
-                        latest_path = library_source_path.find_latest_mtime(name_filter=r'(?!.+\.cpp$).+', recurse_name_filter='')
+                        latest_path = library_source_path.find_latest_mtime(name_filter=r'(?!.+\.cpp$).+',
+                                                                            recurse_name_filter='')
                         api_version_file = library_source_path / 'api_version.h'
                         if latest_path != api_version_file:
                             api_version_file.native.raw.touch()

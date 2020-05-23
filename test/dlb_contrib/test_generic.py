@@ -68,6 +68,22 @@ class CheckResultTest(testenv.TemporaryWorkingDirectoryTestCase):
                 r.result_file.native.raw.touch()  # mark as completed
 
 
+class VersionWordTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_matches_space_delimited_version_word(self):
+        self.assertEqual(b'1.2.3', dlb_contrib.generic.VERSION_WORD_REGEX.search(b' 1.2.3').group('version'))
+        self.assertEqual(b'v1.2.3-alpha4',
+                         dlb_contrib.generic.VERSION_WORD_REGEX.search(b'v1.2.3-alpha4 ').group('version'))
+        self.assertTrue(b'ver1.2.3-456f+h_e@4',
+                        dlb_contrib.generic.VERSION_WORD_REGEX.search(b' \vver1.2.3-456f+h_e@4\t ').group('version'))
+        self.assertTrue(b'8.30',
+                        dlb_contrib.generic.VERSION_WORD_REGEX.search(b'ls (GNU coreutils) 8.30').group('version'))
+
+    def test_does_not_match_nonspace_delimited_version_word(self):
+        self.assertIsNone(dlb_contrib.generic.VERSION_WORD_REGEX.search(b'\xFF1.2.3'))
+        self.assertIsNone(dlb_contrib.generic.VERSION_WORD_REGEX.search(b'1.2.3\xFF'))
+
+
 class EmptyVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_is_empty(self):
         with dlb.ex.Context():
@@ -87,4 +103,4 @@ class LsVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
             version_by_path = VersionQuery().start().version_by_path
 
         self.assertEqual([dlb.fs.Path('/bin/ls')], sorted(version_by_path.keys()))
-        self.assertRegex(version_by_path[dlb.fs.Path('/bin/ls')], '[0-9]+(\.[0-9]+)+')
+        self.assertRegex(version_by_path[dlb.fs.Path('/bin/ls')], r'[0-9]+(\.[0-9]+)+')

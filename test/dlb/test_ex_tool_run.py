@@ -613,6 +613,7 @@ class RedoIfExecutionParameterModifiedTest(testenv.TemporaryWorkingDirectoryTest
             self.assertTrue(t.start())
             self.assertFalse(t.start())
 
+        # noinspection PyTypeChecker
         a_list.append(None)
 
         with dlb.ex.Context():

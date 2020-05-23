@@ -98,7 +98,7 @@ class CheckHashTest(testenv.TemporaryWorkingDirectoryTestCase):
                 hash_line_file='version.h',
                 hash_line_regex=rb'^// last checked for header file hash ([0-9a-f]+|<none>)$',
             )
-        self.assertEqual( "'version.h' contains no hash line", str(cm.exception))
+        self.assertEqual("'version.h' contains no hash line", str(cm.exception))
 
     def test_fail_for_multiple_hash_line(self):
         with open('version.h', 'wb') as f:

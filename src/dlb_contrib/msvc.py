@@ -63,6 +63,7 @@ import os.path
 import re
 from typing import Iterable, Set, Tuple, Union
 
+import dlb.fs
 import dlb.ex
 import dlb_contrib.clike
 import dlb_contrib.mscrt
