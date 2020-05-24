@@ -8,8 +8,8 @@
 #    python3 -m build-all           # in the directory of this file
 #    python3 "$PWD"/build-all.py'   # in the directory of this file
 
-import dlb.fs
 import dlb.di
+import dlb.fs
 import dlb.cf
 import dlb.ex
 import dlb_contrib.generic

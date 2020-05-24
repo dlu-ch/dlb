@@ -34,8 +34,8 @@ import os
 import shutil
 from typing import Iterable, List, Tuple, Union
 
-import dlb.fs
 import dlb.di
+import dlb.fs
 import dlb.ex
 
 assert sys.version_info >= (3, 7)

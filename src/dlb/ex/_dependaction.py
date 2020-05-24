@@ -12,8 +12,8 @@ import stat
 from typing import Hashable, Optional, Sequence, Set, Type
 
 from .. import ut
-from .. import fs
 from .. import di
+from .. import fs
 from .. import cf
 from . import _rundb
 from . import _worktree

@@ -25,8 +25,8 @@ class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
         with open('b.c', 'w') as f:
             f.write('int g() {return 0;}\n')
 
-        import dlb.cf
         import dlb.di
+        import dlb.cf
         dlb.cf.level.helper_execution = dlb.di.ERROR
 
         with dlb.ex.Context():

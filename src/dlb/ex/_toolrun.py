@@ -11,9 +11,9 @@ import hashlib
 from typing import Any, Collection, Dict, List, Iterable, Mapping, Optional, Set, Tuple, Union
 
 from .. import ut
+from .. import di
 from .. import fs
 from .. import cf
-from .. import di
 from . import _error
 from . import _rundb
 from . import _worktree

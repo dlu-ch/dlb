@@ -4,8 +4,8 @@
 
 from typing import Tuple
 
-import dlb.fs
 import dlb.di
+import dlb.fs
 import dlb.ex
 import dlb_contrib.pkgconfig
 import dlb_contrib.clike

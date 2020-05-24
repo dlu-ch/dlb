@@ -15,9 +15,9 @@ import inspect
 from typing import Optional, Tuple, Type
 
 from .. import ut
+from .. import di
 from .. import fs
 from .. import cf
-from .. import di
 from . import _error
 from . import _rundb
 from . import _worktree

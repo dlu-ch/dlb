@@ -2,8 +2,8 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-import dlb.fs
 import dlb.di
+import dlb.fs
 import dlb.ex
 import dlb_contrib.zip
 #
