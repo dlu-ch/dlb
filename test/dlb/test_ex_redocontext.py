@@ -111,8 +111,8 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
                     asyncio.get_event_loop().run_until_complete(
                         rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=f))
             msg = (
-                "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, "
-                "not <class '_io.BufferedWriter'>"
+                "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
+                "or a path component sequence, not <class '_io.BufferedWriter'>"
             )
             self.assertEqual(msg, str(cm.exception))
 
@@ -122,7 +122,10 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(TypeError) as cm:
                 asyncio.get_event_loop().run_until_complete(
                     rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=asyncio.subprocess.PIPE))
-            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'int'>"
+            msg = (
+                "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
+                "or a path component sequence, not <class 'int'>"
+            )
             self.assertEqual(msg, str(cm.exception))
 
     def test_changes_cwd(self):
@@ -424,7 +427,10 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=1)
             with self.assertRaises(TypeError) as cm:
                 asyncio.get_event_loop().run_until_complete(e)
-            msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'int'>"
+            msg = (
+                "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
+                "or a path component sequence, not <class 'int'>"
+            )
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_unexpected_return_code(self):

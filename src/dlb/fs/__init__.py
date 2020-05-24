@@ -284,11 +284,12 @@ class Path(metaclass=_PathMeta):
             if not components or components[0][:1] != '/':
                 components = ('',) + components
             if components[0] not in ('', '/', '//'):
-                raise ValueError("if 'path' is a parts tuple, its first element must be one of '', '/', '//'")
-                # TODO rename parts tuple to component sequence
+                msg = "if 'path' is a path component sequence, its first element must be one of '', '/', '//'"
+                raise ValueError(msg)
             nonroot_components = tuple(c for c in components[1:] if c and c != '.')
             if any('/' in c for c in nonroot_components):
-                raise ValueError("if 'path' is a parts tuple, none except its first element must contain '/'")
+                msg = "if 'path' is a path component sequence, none except its first element must contain '/'"
+                raise ValueError(msg)
             self._components = (components[0],) + nonroot_components
             self._is_dir = False
             self._native = None
@@ -303,8 +304,10 @@ class Path(metaclass=_PathMeta):
                 self._native = None
 
             if not isinstance(path, pathlib.PurePath):
-                msg = f"'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not {type(path)!r}"
-                # TODO add dlb.fs.Path.Native
+                msg = (
+                    f"'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
+                    f"or a path component sequence, not {type(path)!r}"
+                )
                 raise TypeError(msg)
 
             anchor = path.anchor
@@ -617,8 +620,7 @@ class Path(metaclass=_PathMeta):
 
     def __getitem__(self, item) -> 'Path':
         if not isinstance(item, slice):
-            raise TypeError("slice of component indices expected (use 'parts' for single components)")
-            # TODO part indices instead of component indices
+            raise TypeError("slice of part indices expected (use 'parts' for single components)")
 
         n = len(self.parts)
         start, stop, step = item.indices(n)

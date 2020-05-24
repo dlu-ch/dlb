@@ -117,7 +117,7 @@ class PathFromPathlibTest(unittest.TestCase):
 
 class PathFromSequenceTest(unittest.TestCase):
 
-    def test_from_tuple(self):
+    def test_from_path_component_sequence(self):
         self.assertEqual(dlb.fs.Path('.'), dlb.fs.Path(()))
         self.assertEqual(dlb.fs.Path('.'), dlb.fs.Path(('',)))
         self.assertEqual(dlb.fs.Path('a\\b/c'), dlb.fs.Path(('a\\b', 'c')))
@@ -127,17 +127,17 @@ class PathFromSequenceTest(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('///',))
-        msg = "if 'path' is a parts tuple, its first element must be one of '', '/', '//'"
+        msg = "if 'path' is a path component sequence, its first element must be one of '', '/', '//'"
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('', 'a/b'))
-        msg = "if 'path' is a parts tuple, none except its first element must contain '/'"
+        msg = "if 'path' is a path component sequence, none except its first element must contain '/'"
         self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(('', '/a'))
-        msg = "if 'path' is a parts tuple, none except its first element must contain '/'"
+        msg = "if 'path' is a path component sequence, none except its first element must contain '/'"
         self.assertEqual(msg, str(cm.exception))
 
 
@@ -147,14 +147,20 @@ class PathFromOtherTest(unittest.TestCase):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.Path(None)
-        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'NoneType'>"
+        msg = (
+            "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, or a path component sequence, "
+            "not <class 'NoneType'>"
+        )
         self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_int(self):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.fs.Path(1)
-        msg = "'path' must be a str, dlb.fs.Path or pathlib.PurePath object or a sequence, not <class 'int'>"
+        msg = (
+            "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, or a path component sequence, "
+            "not <class 'int'>"
+        )
         self.assertEqual(msg, str(cm.exception))
 
 
@@ -443,7 +449,7 @@ class PartsAndSliceTest(unittest.TestCase):
 
         with self.assertRaises(TypeError) as cm:
             p[0]
-        self.assertEqual("slice of component indices expected (use 'parts' for single components)", str(cm.exception))
+        self.assertEqual("slice of part indices expected (use 'parts' for single components)", str(cm.exception))
 
 
 class DirectoryListingTest(unittest.TestCase):
