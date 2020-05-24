@@ -52,7 +52,7 @@ with dlb.ex.Context():
             application_name=application_name)
 
         doc_archive_file = None
-        if dlb.ex.Context.helper.get(dlb_contrib.doxygen.Doxygen.EXECUTABLE):  # Doxygen installed?
+        if dlb.ex.Context.active.helper.get(dlb_contrib.doxygen.Doxygen.EXECUTABLE):  # Doxygen installed?
             doc_archive_file = build.documentation.generate_from_source(
                 version_result=version_result,
                 source_directory=source_directory,

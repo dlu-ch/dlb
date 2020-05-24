@@ -72,7 +72,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_output_file(output)
 
         with dlb.ex.Context():
-            self.assertEqual(1, dlb.ex.Context.max_parallel_redo_count)
+            self.assertEqual(1, dlb.ex.Context.active.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').start()
             rb = ATool(source_file='b.cpp', object_file='b.o').start()
             self.assertIsNotNone(ra)
@@ -93,7 +93,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_output_file(output)
 
         with dlb.ex.Context(max_parallel_redo_count=2):
-            self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
+            self.assertEqual(2, dlb.ex.Context.active.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').start()
             rb = ATool(source_file='b.cpp', object_file='b.o').start()
             self.assertIsNotNone(ra)
@@ -102,7 +102,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertFalse(rb.iscomplete)
 
             with dlb.ex.Context():
-                self.assertEqual(1, dlb.ex.Context.max_parallel_redo_count)
+                self.assertEqual(1, dlb.ex.Context.active.max_parallel_redo_count)
 
         regex = (
             r"(?m)"
@@ -116,7 +116,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_output_file(output)
 
         with dlb.ex.Context(max_parallel_redo_count=2):
-            self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
+            self.assertEqual(2, dlb.ex.Context.active.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').start()
             self.assertIsNotNone(ra)
             self.assertFalse(ra.iscomplete)
@@ -142,7 +142,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_output_file(output)
 
         with dlb.ex.Context(max_parallel_redo_count=2):
-            self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
+            self.assertEqual(2, dlb.ex.Context.active.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').start()
             self.assertIsNotNone(ra)
             self.assertFalse(ra.iscomplete)
@@ -167,7 +167,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb.di.set_output_file(output)
 
         with dlb.ex.Context(max_parallel_redo_count=2):
-            self.assertEqual(2, dlb.ex.Context.max_parallel_redo_count)
+            self.assertEqual(2, dlb.ex.Context.active.max_parallel_redo_count)
             ra = ATool(source_file='a.cpp', object_file='a.o').start()
             self.assertIsNotNone(ra)
             self.assertFalse(ra.iscomplete)

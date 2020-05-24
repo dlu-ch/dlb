@@ -180,20 +180,21 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       If the :term:`active context` and the :term:`root context` both have :attr:`find_helpers` == ``False``
       and no paths was explicitly assigned to the dynamic helper *p* in the active context or one of its outer contexts,
-      a look-up with ``dlb.ex.Context.helper[p]`` performs a search with ``dlb.ex.Context.find_path_in(p)``.
+      a look-up with ``dlb.ex.Context.active.helper[p]`` performs a search with
+      ``dlb.ex.Context.active.find_path_in(p)``.
       (Each such search is performed only once for a given path; the result is stored.)
 
       Examples::
 
-         >>> dlb.ex.Context.helper['gcc']
+         >>> dlb.ex.Context.active.helper['gcc']
          Path('/usr/bin/gcc')
 
-         >>> dlb.ex.Context.helper['gcc'] = '/usr/local/bin/my-very-own-very-special-gcc'  # set the path explicitly
-         >>> dlb.ex.Context.helper['gcc']
+         >>> dlb.ex.Context.active.helper['gcc'] = '/usr/local/bin/my-very-own-very-special-gcc'  # set the path explicitly
+         >>> dlb.ex.Context.active.helper['gcc']
          Path('/usr/local/bin/my-very-own-very-special-gcc')
 
-         >>> dlb.ex.Context.helper['tmp/'] = 'out/t/'  # relative path: relative to the working tree's root path
-         >>> dlb.ex.Context.helper['tmp/']
+         >>> dlb.ex.Context.active.helper['tmp/'] = 'out/t/'  # relative path: relative to the working tree's root path
+         >>> dlb.ex.Context.active.helper['tmp/']
          Path('/home/schmutzli/projects/esel/out/t')   # with '/home/schmutzli/projects/esel' as the working tree's root
 
       When called on class, it refers to the :term:`active context`.
@@ -1027,7 +1028,8 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    A dependency role for regular files, identified by their paths.
 
-   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   If a path is relative, it is treated as relative to
+   :attr:`dlb.ex.Context.active.root_path <dlb.ex.Context.root_path>`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
    :file:`..` components, these requirements are met).
 
@@ -1065,7 +1067,8 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    A dependency role for filesystem objects that are neither directories nor regular files, identified by their paths.
 
-   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   If a path is relative, it is treated as relative to
+   :attr:`dlb.ex.Context.active.root_path <dlb.ex.Context.root_path>`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
    :file:`..` components, these requirements are met).
 
@@ -1105,7 +1108,8 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    A dependency role for directories, identified by their paths.
 
-   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   If a path is relative, it is treated as relative to
+   :attr:`dlb.ex.Context.active.root_path <dlb.ex.Context.root_path>`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
    :file:`..` components, these requirements are met).
 
@@ -1169,7 +1173,7 @@ keyword arguments of the constructor of :class:`Dependency`.
       'CH'
       >>> tool.cflags_string
       NotImplemented
-      >>> tool.start().cflags_string.raw  # assuming dlb.ex.Context.env['CFLAGS'] of '-O2'
+      >>> tool.start().cflags_string.raw  # assuming dlb.ex.Context.active.env['CFLAGS'] of '-O2'
       '-O2'
 
    :param pattern: validation pattern for value as a regular expression
@@ -1221,7 +1225,8 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    A dependency role for regular files in the :term:`managed tree`, identified by their paths.
 
-   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   If a path is relative, it is treated as relative to
+   :attr:`dlb.ex.Context.active.root_path <dlb.ex.Context.root_path>`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
    :file:`..` components, these requirements are met).
 
@@ -1253,7 +1258,8 @@ keyword arguments of the constructor of :class:`Dependency`.
    A dependency role for filesystem objects in the :term:`managed tree` that are neither directories nor regular files,
    identified by their paths.
 
-   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   If a path is relative, it is treated as relative to
+   :attr:`dlb.ex.Context.active.root_path <dlb.ex.Context.root_path>`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
    :file:`..` components, these requirements are met).
 
@@ -1280,7 +1286,8 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    A dependency role for directories in the :term:`managed tree`, identified by their paths.
 
-   If a path is relative, it is treated as relative to :attr:`dlb.ex.Context.root_path`, and it must be
+   If a path is relative, it is treated as relative to
+   :attr:`dlb.ex.Context.active.root_path <dlb.ex.Context.root_path>`, and it must be
    :term:`collapsable <collapsable path>` and :term:`non-upwards <non-upwards path>` (if the path does not contain
    :file:`..` components, these requirements are met).
 

@@ -61,7 +61,7 @@ class RunSummaryTest(testenv.TemporaryWorkingDirectoryTestCase):
             pass
 
         with dlb.ex.Context():
-            summaries = dlb.ex.Context.summary_of_latest_runs(max_count=10)
+            summaries = dlb.ex.Context.active.summary_of_latest_runs(max_count=10)
 
         self.assertEqual(1, len(summaries))
         summary = summaries[0]
@@ -74,7 +74,7 @@ class RunSummaryTest(testenv.TemporaryWorkingDirectoryTestCase):
                 assert False
 
         with dlb.ex.Context():
-            summaries = dlb.ex.Context.summary_of_latest_runs(max_count=10)
+            summaries = dlb.ex.Context.active.summary_of_latest_runs(max_count=10)
 
         self.assertEqual(0, len(summaries))
 

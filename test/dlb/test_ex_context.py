@@ -274,11 +274,11 @@ class RootContextPathTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_root_is_unavailable_if_not_running(self):
         with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.root_path
+            dlb.ex.Context.root_path  # TODO remove?
 
         c = dlb.ex.Context()
         with self.assertRaises(dlb.ex._error.NotRunningError):
-            c.root_path
+            c.root_path  # TODO remove?
 
     def test_root_is_correct(self):
         with dlb.ex.Context() as c:
@@ -288,17 +288,20 @@ class RootContextPathTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertTrue(p.is_dir())
             self.assertEqual(str(os.getcwd()), str(p.native))
 
-            cl = dlb.ex.Context.root_path
+            cl = dlb.ex.Context.root_path  # TODO remove?
             self.assertEqual(p, cl)
 
     def test_path_class_is_correct(self):
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
-            self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.NoSpacePath)
-            self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
+            self.assertEqual(dlb.ex.Context.active.path_cls, dlb.fs.NoSpacePath)  # TODO remove?
+            self.assertEqual(dlb.ex.Context.active.root_path.__class__, dlb.fs.NoSpacePath)
             with dlb.ex.Context(path_cls=dlb.fs.Path) as c:
                 self.assertEqual(c.path_cls, dlb.fs.Path)
+
+                # TODO remove?
                 self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.Path)  # refers to active context
-                self.assertEqual(dlb.ex.Context.root_path.__class__, dlb.fs.NoSpacePath)
+
+                self.assertEqual(dlb.ex.Context.active.root_path.__class__, dlb.fs.NoSpacePath)
 
 
 class RootContextInvalidPathTest(testenv.TemporaryDirectoryTestCase):
@@ -341,23 +344,23 @@ class WorkingTreeTimeTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_time_is_unavailable_if_not_running(self):
         with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.working_tree_time_ns
+            dlb.ex.Context.working_tree_time_ns  # TODO remove?
 
     def test_time_does_change_after_at_most_15secs(self):
         with dlb.ex.Context():
             start_time = time.monotonic_ns()
-            start_working_tree_time = dlb.ex.Context.working_tree_time_ns
+            start_working_tree_time = dlb.ex.Context.active.working_tree_time_ns
 
-            while dlb.ex.Context.working_tree_time_ns == start_working_tree_time:
+            while dlb.ex.Context.active.working_tree_time_ns == start_working_tree_time:
                 self.assertLessEqual((time.monotonic_ns() - start_time) / 1e9, 15.0)
                 time.sleep(0.015)  # typical effective working tree time resolution: 10 ms
 
     def test_exit_does_delay_to_next_change(self):
         for i in range(10):  # might also pass by chance (transition of working tree time too close to context exit)
             with dlb.ex.Context():
-                enter_time = dlb.ex.Context.working_tree_time_ns
+                enter_time = dlb.ex.Context.active.working_tree_time_ns
             with dlb.ex.Context():
-                exit_time = dlb.ex.Context.working_tree_time_ns
+                exit_time = dlb.ex.Context.active.working_tree_time_ns
             self.assertNotEqual(enter_time, exit_time)
 
     def test_fails_if_working_tree_time_ns_does_not_change(self):
@@ -470,24 +473,24 @@ class TemporaryNotRunningTest(unittest.TestCase):
 
     def test_fails_for_if_not_running(self):
         with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.temporary(is_dir=False)
+            dlb.ex.Context.temporary(is_dir=False)  # TODO remove?
         with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.temporary(is_dir=True)
+            dlb.ex.Context.temporary(is_dir=True)  # TODO remove?
 
 
 class TemporaryTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_creates_regular_file(self):
         with dlb.ex.Context():
-            t = dlb.ex.Context.root_path / '.dlbroot/t'
+            t = dlb.ex.Context.active.root_path / '.dlbroot/t'
 
-            with dlb.ex.Context.temporary() as p:
+            with dlb.ex.Context.active.temporary() as p:
                 self.assertIsInstance(p, dlb.fs.Path)
                 self.assertFalse(p.is_dir())
                 self.assertTrue(p.native.raw.is_file())
                 self.assertEqual(t.native.raw, p.native.raw.parent)
 
-            with dlb.ex.Context.temporary(is_dir=False, suffix='.o') as p:
+            with dlb.ex.Context.active.temporary(is_dir=False, suffix='.o') as p:
                 self.assertTrue(p.native.raw.is_file())
                 self.assertEqual(t.native.raw, p.native.raw.parent)
                 self.assertTrue(p.parts[-1].endswith('.o'), repr(p))
@@ -496,15 +499,15 @@ class TemporaryTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_creates_directory(self):
         with dlb.ex.Context():
-            t = dlb.ex.Context.root_path / '.dlbroot/t'
+            t = dlb.ex.Context.active.root_path / '.dlbroot/t'
 
-            with dlb.ex.Context.temporary(is_dir=True) as p:
+            with dlb.ex.Context.active.temporary(is_dir=True) as p:
                 self.assertIsInstance(p, dlb.fs.Path)
                 self.assertTrue(p.is_dir())
                 self.assertTrue(p.native.raw.is_dir())
                 self.assertEqual(t.native.raw, p.native.raw.parent)
 
-            with dlb.ex.Context.temporary(is_dir=True, suffix='.o') as p:
+            with dlb.ex.Context.active.temporary(is_dir=True, suffix='.o') as p:
                 self.assertIsInstance(p, dlb.fs.Path)
                 self.assertTrue(p.native.raw.is_dir())
                 self.assertEqual(t.native.raw, p.native.raw.parent)
@@ -515,14 +518,14 @@ class TemporaryTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_slash_in_suffix(self):
         with dlb.ex.Context():
             with self.assertRaises(ValueError) as cm:
-                dlb.ex.Context.temporary(suffix='./y')
+                dlb.ex.Context.active.temporary(suffix='./y')
             msg = "'suffix' must not contain '/': './y'"
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_if_suffix_does_not_starts_with_punctuation(self):
         with dlb.ex.Context():
             with self.assertRaises(ValueError) as cm:
-                dlb.ex.Context.temporary(suffix='x')
+                dlb.ex.Context.active.temporary(suffix='x')
             msg = "non-empty 'suffix' must start with character from strings.punctuation, not 'x'"
             self.assertEqual(msg, str(cm.exception))
 
@@ -543,19 +546,20 @@ class ManagedTreePathTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         # noinspection PyTypeChecker
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
-            cls = dlb.ex.Context.path_cls
-            p = dlb.ex.Context.working_tree_path_of(dlb.ex.Context.root_path)
+            cls = dlb.ex.Context.active.path_cls
+            p = dlb.ex.Context.active.working_tree_path_of(dlb.ex.Context.active.root_path)
             self.assertIs(p.__class__, cls)
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
             self.assertEqual(p, cls('.', is_dir=True))
 
-            p = dlb.ex.Context.working_tree_path_of(dlb.ex.Context.root_path / dlb.fs.Path('a/b'))
+            p = dlb.ex.Context.active.working_tree_path_of(dlb.ex.Context.active.root_path / dlb.fs.Path('a/b'))
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
             self.assertEqual(p, cls('a/b', is_dir=True))
 
-            p = dlb.ex.Context.working_tree_path_of((dlb.ex.Context.root_path / dlb.fs.Path('a/b/c')).native.raw)
+            p = dlb.ex.Context.active.working_tree_path_of(
+                (dlb.ex.Context.active.root_path / dlb.fs.Path('a/b/c')).native.raw)
             self.assertFalse(p.is_absolute())
             self.assertTrue(p.is_normalized())
             self.assertEqual(p, cls('a/b/c', is_dir=False))
@@ -564,43 +568,45 @@ class ManagedTreePathTest(testenv.TemporaryWorkingDirectoryTestCase):
         os.makedirs(os.path.join('a', 'b', 'c'))
 
         with dlb.ex.Context():
-            p = dlb.ex.Context.working_tree_path_of(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
+            p = dlb.ex.Context.active.working_tree_path_of(dlb.fs.Path.Native(os.getcwd()), is_dir=True)
             self.assertEqual(dlb.fs.Path('.'), p)
 
-            p = dlb.ex.Context.working_tree_path_of(
+            p = dlb.ex.Context.active.working_tree_path_of(
                 dlb.fs.Path.Native(os.path.join(os.getcwd(), 'a',  'b',  'c',  '..')))
             self.assertEqual(dlb.fs.Path('a/b/'), p)
 
     def test_is_class_of_argument(self):
         with dlb.ex.Context():
-            p = dlb.ex.Context.working_tree_path_of(dlb.fs.NoSpacePath('a/../b'), existing=True, collapsable=True)
+            p = dlb.ex.Context.active.working_tree_path_of(
+                dlb.fs.NoSpacePath('a/../b'), existing=True, collapsable=True)
             self.assertIs(p.__class__, dlb.fs.NoSpacePath)
 
     def test_fails_on_nonrepresentable(self):
         with dlb.ex.Context():
             regexp = r"\A()invalid path for 'ManagedTreePathTest\.StupidPath': .+\Z"
             with self.assertRaisesRegex(ValueError, regexp):
-                dlb.ex.Context.working_tree_path_of(ManagedTreePathTest.StupidPath('a/../b'),
-                                                    existing=True, collapsable=True)
+                dlb.ex.Context.active.working_tree_path_of(
+                    ManagedTreePathTest.StupidPath('a/../b'),
+                    existing=True, collapsable=True)
 
     def test_fails_on_upwards(self):
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
             regexp = r"\A()is an upwards path: .+\Z"
             with self.assertRaisesRegex(dlb.ex.WorkingTreePathError, regexp):
-                dlb.ex.Context.working_tree_path_of(dlb.fs.Path('a/../..'), existing=True, collapsable=True)
+                dlb.ex.Context.active.working_tree_path_of(dlb.fs.Path('a/../..'), existing=True, collapsable=True)
 
     def test_succeeds_on_nonexistent_if_assuming(self):
         with dlb.ex.Context():
-            dlb.ex.Context.working_tree_path_of('a/b', existing=True)
+            dlb.ex.Context.active.working_tree_path_of('a/b', existing=True)
 
     def test_fails_on_nonexistent_if_not_assuming(self):
         with dlb.ex.Context():
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                dlb.ex.Context.working_tree_path_of('a/b')
+                dlb.ex.Context.active.working_tree_path_of('a/b')
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                dlb.ex.Context.working_tree_path_of('a/..')
+                dlb.ex.Context.active.working_tree_path_of('a/..')
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_on_symlink_in_managedtree_if_not_assuming(self):
@@ -614,29 +620,29 @@ class ManagedTreePathTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                dlb.ex.Context.working_tree_path_of('a/../b', collapsable=True)
+                dlb.ex.Context.active.working_tree_path_of('a/../b', collapsable=True)
             self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_on_management_tree_if_not_permitted(self):
         with dlb.ex.Context():
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                dlb.ex.Context.working_tree_path_of('.dlbroot')
+                dlb.ex.Context.active.working_tree_path_of('.dlbroot')
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot'", str(cm.exception))
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                dlb.ex.Context.working_tree_path_of('.dlbroot/o')
+                dlb.ex.Context.active.working_tree_path_of('.dlbroot/o')
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot/o'", str(cm.exception))
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                dlb.ex.Context.working_tree_path_of('.dlbroot/t')
+                dlb.ex.Context.active.working_tree_path_of('.dlbroot/t')
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot/t'", str(cm.exception))
 
-            p = dlb.ex.Context.working_tree_path_of('.dlbroot/o', allow_nontemporary_management=True)
+            p = dlb.ex.Context.active.working_tree_path_of('.dlbroot/o', allow_nontemporary_management=True)
             self.assertEqual(dlb.fs.Path('.dlbroot/o'), p)
 
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                dlb.ex.Context.working_tree_path_of('.dlbroot/t', allow_nontemporary_management=True)
+                dlb.ex.Context.active.working_tree_path_of('.dlbroot/t', allow_nontemporary_management=True)
             self.assertEqual("path in non-permitted part of the working tree: '.dlbroot/t'", str(cm.exception))
 
-            p = dlb.ex.Context.working_tree_path_of('.dlbroot/t', allow_temporary=True)
+            p = dlb.ex.Context.active.working_tree_path_of('.dlbroot/t', allow_temporary=True)
             self.assertEqual(dlb.fs.Path('.dlbroot/t/'), p)
 
     # noinspection PyCallingNonCallable,PyTypeChecker
@@ -645,14 +651,14 @@ class ManagedTreePathTest(testenv.TemporaryWorkingDirectoryTestCase):
         open('f', 'w').close()
 
         with dlb.ex.Context():
-            cls = dlb.ex.Context.path_cls
-            self.assertEqual(dlb.ex.Context.working_tree_path_of('d'), cls('d/'))
-            self.assertEqual(dlb.ex.Context.working_tree_path_of('f/'), cls('f'))
+            cls = dlb.ex.Context.active.path_cls
+            self.assertEqual(dlb.ex.Context.active.working_tree_path_of('d'), cls('d/'))
+            self.assertEqual(dlb.ex.Context.active.working_tree_path_of('f/'), cls('f'))
 
     def test_fail_if_unsupported_type(self):
         with dlb.ex.Context():
             with self.assertRaises(TypeError) as cm:
-                dlb.ex.Context.working_tree_path_of(3)
+                dlb.ex.Context.active.working_tree_path_of(3)
             msg = (
                 "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
                 "or a path component sequence, not <class 'int'>"
@@ -661,10 +667,10 @@ class ManagedTreePathTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_isdir_is_respected(self):
         with dlb.ex.Context():
-            self.assertTrue(dlb.ex.Context.working_tree_path_of('a', is_dir=True, existing=True).is_dir())
-            self.assertFalse(dlb.ex.Context.working_tree_path_of('a', is_dir=False, existing=True).is_dir())
-            self.assertFalse(dlb.ex.Context.working_tree_path_of(dlb.fs.Path('a/'),
-                                                                 is_dir=False, existing=True).is_dir())
+            self.assertTrue(dlb.ex.Context.active.working_tree_path_of('a', is_dir=True, existing=True).is_dir())
+            self.assertFalse(dlb.ex.Context.active.working_tree_path_of('a', is_dir=False, existing=True).is_dir())
+            self.assertFalse(dlb.ex.Context.active.working_tree_path_of(
+                dlb.fs.Path('a/'), is_dir=False, existing=True).is_dir())
 
 
 class ManagedTreePathOutsideTest(testenv.TemporaryDirectoryTestCase):
@@ -679,7 +685,8 @@ class ManagedTreePathOutsideTest(testenv.TemporaryDirectoryTestCase):
             os.mkdir('.dlbroot')
             with dlb.ex.Context():
                 with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
-                    dlb.ex.Context.working_tree_path_of(dlb.fs.Path.Native(os.path.join(old_cw, 'a', 'b2', 'c2')))
+                    dlb.ex.Context.active.working_tree_path_of(
+                        dlb.fs.Path.Native(os.path.join(old_cw, 'a', 'b2', 'c2')))
                 msg = "does not start with the working tree's root path"
                 self.assertEqual(msg, str(cm.exception))
 
@@ -689,7 +696,7 @@ class ManagedTreePathOutsideTest(testenv.TemporaryDirectoryTestCase):
             os.mkdir('.dlbroot')
             with dlb.ex.Context():
                 with self.assertRaises(ValueError):
-                    dlb.ex.Context.working_tree_path_of('../')
+                    dlb.ex.Context.active.working_tree_path_of('../')
 
 
 class ReprTest(unittest.TestCase):
@@ -781,16 +788,16 @@ class ForgetOldInformationTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.cf.max_dependency_age = datetime.timedelta(days=1001)
 
             with dlb.ex.Context():
-                self.assertEqual(0, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+                self.assertEqual(0, len(dlb.ex.Context.active.summary_of_latest_runs(max_count=3)))
             with dlb.ex.Context():
-                self.assertEqual(1, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+                self.assertEqual(1, len(dlb.ex.Context.active.summary_of_latest_runs(max_count=3)))
             with dlb.ex.Context():
-                self.assertEqual(2, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+                self.assertEqual(2, len(dlb.ex.Context.active.summary_of_latest_runs(max_count=3)))
 
             time.sleep(0.5)
 
             dlb.cf.max_dependency_age = datetime.timedelta(seconds=1e-6)
             with dlb.ex.Context():
-                self.assertEqual(0, len(dlb.ex.Context.summary_of_latest_runs(max_count=3)))
+                self.assertEqual(0, len(dlb.ex.Context.active.summary_of_latest_runs(max_count=3)))
         finally:
             dlb.cf.max_dependency_age = orig

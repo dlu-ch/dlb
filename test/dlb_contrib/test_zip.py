@@ -37,7 +37,7 @@ class ZipDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.zip.ZipDirectory(
                 content_directory='d/',
                 archive_file='a.bzip').start()
-        with dlb.ex.Context(), dlb.ex.Context.temporary(is_dir=True) as t:
+        with dlb.ex.Context(), dlb.ex.Context.active.temporary(is_dir=True) as t:
             with zipfile.ZipFile('a.bzip', 'r') as z:
                 self.assertEqual(['a/b', 'c'], [fi.filename for fi in z.filelist])
                 z.extractall(t.native)
@@ -55,7 +55,7 @@ class ZipDirectorySpecialTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.zip.ZipDirectory(
                 content_directory='d/',
                 archive_file='a.bzip').start()
-        with dlb.ex.Context(), dlb.ex.Context.temporary(is_dir=True) as t:
+        with dlb.ex.Context(), dlb.ex.Context.active.temporary(is_dir=True) as t:
             with zipfile.ZipFile('a.bzip', 'r') as z:
                 self.assertEqual(['a\\b'], [fi.filename for fi in z.filelist])
                 z.extractall(t.native)
