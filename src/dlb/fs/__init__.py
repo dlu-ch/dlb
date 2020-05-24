@@ -595,8 +595,7 @@ class Path(metaclass=_PathMeta):
             return self
         return self._with_components(self._components + o[1:], is_dir=other._is_dir, components_checked=True)
 
-    def __rtruediv__(self, other: PathLike) -> 'Path':  # TODO remove?
-        return self._cast(other) / self  # TODO replace by __truediv__ to remove operator precedence amiguity
+    # note: there is no __rtruediv__ on purpuse
 
     def __eq__(self, other: PathLike) -> bool:
         # on all platform, comparison is case sensitive

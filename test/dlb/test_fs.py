@@ -291,11 +291,11 @@ class AppendTest(unittest.TestCase):
         p = dlb.fs.Path('..') / 'a/b/c/d/'
         self.assertEqual(p, dlb.fs.Path('../a/b/c/d/'))
 
-        p = '/u/v/../' / dlb.fs.Path('a/b/c/d')
-        self.assertEqual(p, dlb.fs.Path('/u/v/../a/b/c/d'))
-
-        p = '/u/v/' / dlb.fs.Path('.')
-        self.assertEqual(p, dlb.fs.Path('/u/v/'))
+    def test_fails_if_left_side_is_no_path(self):
+        with self.assertRaises(TypeError):
+            '/u/v/' / dlb.fs.Path('.')
+        # dlb.fs.Path has no __rtruediv__ on purpuse.
+        # reason: less surprises if type of right side is a subclass of type of left side
 
     def test_fails_for_nondir(self):
         with self.assertRaises(ValueError) as cm:

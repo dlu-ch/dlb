@@ -392,28 +392,23 @@ Path objects
          >>> dlb.fs.Path('src/comp/..')[1:-1]
          Path('comp/')
 
-   .. describe:: left / right
+   .. describe:: path / other
 
       .. in pathlib:
          pathlib.PurePath.__truediv__
          pathlib.PurePath.__rtruediv__
 
-      Concatenates the paths *left* and *right*.
+      Concatenates the paths *path* and *other*.
 
-      *left* and *right* can be instances of :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be
-      constructed from, but at least one of them must be a :class:`dlb.fs.Path`.
+      *path* must be a :class:`dlb.fs.Path`.
+      *other* can be a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from.
 
-      The returned path *result* is of type *C* and is constructed from ``C(left).components + C(right).parts``
-      where *C* is the class either of *left* or of *right*:
+      The returned path *result* is of type *C* and is constructed from ``path.components + C(other).parts``
+      where *C* is the class of *path*.
+      :attr:`result.is_dir <is_dir>` is ``C(other).is_dir``.
 
-      - If *left* is a :class:`dlb.fs.Path` and *right* is not a subclass of the class of *left*,
-        *C* is the class of *left*.
-      - Otherwise, *C* is the class of *right*.
-
-      :attr:`result.is_dir <is_dir>` is ``C(right).is_dir``.
-
-      Raises :exc:`ValueError` if ``C(left)`` is not a directory path.
-      Raises :exc:`ValueError` if ``C(right)`` is an absolute path.
+      Raises :exc:`ValueError` if *path* is not a directory path.
+      Raises :exc:`ValueError` if ``C(other)`` is an absolute path.
 
       Examples::
 
@@ -428,9 +423,6 @@ Path objects
          >>> title = 'Paths to Glory'; year = 1957
          >>> dlb.fs.Path('films/') / f'{title} ({year})/' / 'video.mp4'
          Path('films/Paths to Glory (1957)/video.mp4')
-
-          >>> 'tmp/' / dlb.fs.NoSpacePath('lock/')
-          NoSpacePath('tmp/lock/')
 
 .. class:: Path.Native
 
