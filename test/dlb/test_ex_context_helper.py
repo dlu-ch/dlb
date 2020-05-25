@@ -87,13 +87,6 @@ class ExecutableSearchPathTest(testenv.TemporaryWorkingDirectoryTestCase):
             os.environ['PATH'] = orig_path
 
 
-class FindPathInNotRunningTest(unittest.TestCase):
-
-    def test_fails_if_not_running(self):
-        with self.assertRaises(dlb.ex.NotRunningError):
-            dlb.ex.Context.find_path_in('a', [])  # TODO remove?
-
-
 class FindPathInTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_absolute(self):

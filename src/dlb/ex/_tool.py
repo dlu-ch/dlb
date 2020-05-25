@@ -55,6 +55,7 @@ class _ToolBase:
             if name not in dependency_names_set:
                 names = ', '.join(repr(n) for n in dependency_names)
                 msg = (
+                    # TODO include module?
                     f"keyword argument does not name a dependency role of {self.__class__.__qualname__!r}: {name!r}\n"
                     f"  | dependency roles: {names}"
                 )

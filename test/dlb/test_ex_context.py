@@ -21,7 +21,7 @@ class AttributeNameTest(unittest.TestCase):
 
     def test_attributes_of_contextmeta_and_rootsspecifics_to_not_clash(self):
         rs = set(n for n in dlb.ex._context._RootSpecifics.__dict__ if not n.startswith('_'))
-        mc = set(n for n in dlb.ex._context._ContextMeta.__dict__ if not n.startswith('_'))
+        mc = set(n for n in dlb.ex._context._BaseContextMeta.__dict__ if not n.startswith('_'))
         self.assertEqual(set(), rs.intersection(mc))
 
 
@@ -29,17 +29,31 @@ class AttributeNameTest(unittest.TestCase):
 class AccessTest(unittest.TestCase):
 
     def test_public_attribute_are_readonly(self):
-        with self.assertRaises(AttributeError):
-            dlb.ex.Context.active = None
-        with self.assertRaises(AttributeError):
-            dlb.ex.Context.root = None
+        msg = "public attributes of 'dlb.ex.ReadOnlyContext' are read-only"
 
         with self.assertRaises(AttributeError) as cm:
-            dlb.ex.Context.xyz = 1
-        self.assertEqual("public attributes of 'dlb.ex.Context' are read-only", str(cm.exception))
+            dlb.ex.ReadOnlyContext.active = None
+        self.assertEqual(msg, str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
-            dlb.ex.Context().xyz = 1
+            dlb.ex.ReadOnlyContext.non_existent_attribute = None
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(AttributeError):
+            dlb.ex.ReadOnlyContext.root = None
+
+        msg = "public attributes of 'dlb.ex.Context' are read-only"
+
+        with self.assertRaises(AttributeError) as cm:
+            dlb.ex.Context.active = 1
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            dlb.ex.Context.non_existent_attribute = 1
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            dlb.ex.Context().non_existent_attribute = 1
         self.assertEqual("public attributes of 'dlb.ex.Context' instances are read-only", str(cm.exception))
 
 
@@ -73,27 +87,26 @@ class NestingTest(testenv.TemporaryWorkingDirectoryTestCase):
                     dlb.ex._context._contexts.pop()
 
     def test_meaningful_exception_on_attribute_error(self):
-        with self.assertRaises(dlb.ex._error.NotRunningError):
+        with self.assertRaises(AttributeError) as cm:
             dlb.ex.Context.non_existent_attribute
+        self.assertEqual("type object 'Context' has no attribute 'non_existent_attribute'", str(cm.exception))
 
         with dlb.ex.Context() as c:
             with self.assertRaises(AttributeError) as cm:
                 dlb.ex.Context._non_existent_attribute
-            self.assertEqual(str(cm.exception), "type object 'Context' has no attribute '_non_existent_attribute'")
+            self.assertEqual("type object 'Context' has no attribute '_non_existent_attribute'", str(cm.exception))
 
             with self.assertRaises(AttributeError) as cm:
                 c._non_existent_attribute
-            self.assertEqual(str(cm.exception), "'Context' object has no attribute '_non_existent_attribute'")
-
-            msg = "'Context' object has no attribute 'non_existent_attribute'"
+            self.assertEqual("'Context' object has no attribute '_non_existent_attribute'", str(cm.exception))
 
             with self.assertRaises(AttributeError) as cm:
                 dlb.ex.Context.non_existent_attribute
-            self.assertEqual(str(cm.exception), msg)
+            self.assertEqual("type object 'Context' has no attribute 'non_existent_attribute'", str(cm.exception))
 
             with self.assertRaises(AttributeError) as cm:
                 c.non_existent_attribute
-            self.assertEqual(str(cm.exception), msg)
+            self.assertEqual("'Context' object has no attribute 'non_existent_attribute'", str(cm.exception))
 
 
 class ReuseTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -272,14 +285,6 @@ class ManagementTreeCleanupTest(testenv.TemporaryWorkingDirectoryTestCase):
 
 class RootContextPathTest(testenv.TemporaryWorkingDirectoryTestCase):
 
-    def test_root_is_unavailable_if_not_running(self):
-        with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.root_path  # TODO remove?
-
-        c = dlb.ex.Context()
-        with self.assertRaises(dlb.ex._error.NotRunningError):
-            c.root_path  # TODO remove?
-
     def test_root_is_correct(self):
         with dlb.ex.Context() as c:
             p = c.root_path
@@ -288,19 +293,12 @@ class RootContextPathTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertTrue(p.is_dir())
             self.assertEqual(str(os.getcwd()), str(p.native))
 
-            cl = dlb.ex.Context.root_path  # TODO remove?
-            self.assertEqual(p, cl)
-
     def test_path_class_is_correct(self):
         with dlb.ex.Context(path_cls=dlb.fs.NoSpacePath):
-            self.assertEqual(dlb.ex.Context.active.path_cls, dlb.fs.NoSpacePath)  # TODO remove?
+            self.assertEqual(dlb.ex.Context.active.path_cls, dlb.fs.NoSpacePath)
             self.assertEqual(dlb.ex.Context.active.root_path.__class__, dlb.fs.NoSpacePath)
             with dlb.ex.Context(path_cls=dlb.fs.Path) as c:
                 self.assertEqual(c.path_cls, dlb.fs.Path)
-
-                # TODO remove?
-                self.assertEqual(dlb.ex.Context.path_cls, dlb.fs.Path)  # refers to active context
-
                 self.assertEqual(dlb.ex.Context.active.root_path.__class__, dlb.fs.NoSpacePath)
 
 
@@ -341,10 +339,6 @@ class RootContextInvalidPathTest(testenv.TemporaryDirectoryTestCase):
 
 
 class WorkingTreeTimeTest(testenv.TemporaryWorkingDirectoryTestCase):
-
-    def test_time_is_unavailable_if_not_running(self):
-        with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.working_tree_time_ns  # TODO remove?
 
     def test_time_does_change_after_at_most_15secs(self):
         with dlb.ex.Context():
@@ -473,9 +467,9 @@ class TemporaryNotRunningTest(unittest.TestCase):
 
     def test_fails_for_if_not_running(self):
         with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.temporary(is_dir=False)  # TODO remove?
+            dlb.ex.Context.active.temporary(is_dir=False)
         with self.assertRaises(dlb.ex._error.NotRunningError):
-            dlb.ex.Context.temporary(is_dir=True)  # TODO remove?
+            dlb.ex.Context.active.temporary(is_dir=True)
 
 
 class TemporaryTest(testenv.TemporaryWorkingDirectoryTestCase):

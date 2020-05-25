@@ -93,15 +93,8 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
    +-----------------------------+-----------------------------------------------------------------------------+--------------------------------+
 
    .. note::
-      Most attributes and methods are available "on the class" as well as "on the instance" and refer to the
-      corresponding attribute of the :term:`active context`::
-
-         with dlb.ex.Context:
-             with dlb.ex.Context as c:
-                 ... = dlb.ex.Context.active.working_tree_time_ns  # preferred
-                 ... = dlb.ex.Context.working_tree_time_ns         # also possible
-                 ... c.active.working_tree_time_ns                 # also possible
-                 ... c.working_tree_time_ns                        # also possible
+      You probably want to use the :term:`active context` only.
+      Use :attr:`dlb.ex.Context.active` to get it.
 
    The :class:`Context` class supports the following methods and attributes:
 
@@ -109,7 +102,11 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       The :term:`active context`.
 
-      Same on class and instance.
+      This is a class attribute to be used like this::
+
+         with dlb.ex.Context:
+             ... = dlb.ex.Context.active.root_path
+             ... = dlb.ex.Context.active.find_path_in(...)
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -121,8 +118,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       is representable as an instance of :attr:`path_cls <Context.path_cls>` of the :term:`active context` and every
       possible outer context.
 
-      Same on class and instance.
-
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: executable_search_paths
@@ -132,15 +127,11 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       It is compiled from the members :func:`python:os.get_exec_path()` when the root context is entered.
 
-      Same on class and instance.
-
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: path_cls
 
       The subclass of :class:`.dlb.fs.Path` as defined in the constructor.
-
-      When called on class, it refers to the :term:`active context`.
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -149,8 +140,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       The maximum number of redos started in this context than can be pending at the same time as defined in the
       constructor.
 
-      When called on class, it refers to the :term:`active context`.
-
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: find_helpers
@@ -158,16 +147,12 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       Find dynamic helpers not defined explicitly are in :attr:`executable_search_paths`?
       As defined in the constructor.
 
-      When called on class, it refers to the :term:`active context`.
-
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. attribute:: env
 
       The :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` with
       this context as its associated :term:`context`.
-
-      When called on class, it refers to the :term:`active context`.
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
@@ -197,8 +182,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
          >>> dlb.ex.Context.active.helper['tmp/']
          Path('/home/schmutzli/projects/esel/out/t')   # with '/home/schmutzli/projects/esel' as the working tree's root
 
-      When called on class, it refers to the :term:`active context`.
-
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: find_path_in(path, search_prefixes=None)
@@ -227,8 +210,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       The current :term:`working tree time` in nanoseconds as an integer.
 
-      Same on class and instance.
-
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: temporary(*, suffix='', is_dir=False)
@@ -256,8 +237,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       When used as a context manager, an empty regular file or directory with *path* is created when entered and removed
       (with its content) on exit. Raises :exc:`FileExistsError` if the regular file or directory exists.
-
-      Same on class and instance.
 
       :param suffix: suffix of the unique path component
       :type suffix: str
@@ -289,8 +268,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       of the :term:`management tree`.
 
       Does *not* raise :exc:`OSError`.
-
-      Same on class and instance.
 
       :param path: a path of a filesystem object in the managed tree
       :type path: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
@@ -333,8 +310,6 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       *tool_inst_run_count* is the total number of runs of tool instances in the dlb run as a non-negative integer.
       *redo_count* is the total number of redos of tool instances in the dlb run as a non-negative integer not greater
       than *tool_inst_run_count*.
-
-      Same on class and instance.
 
       :param max_count: maximum number of runs
       :rtype: list of tuples

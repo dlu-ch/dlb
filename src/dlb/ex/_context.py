@@ -333,27 +333,20 @@ _HelperDict.__qualname__ = 'Context.HelperDict'
 ut.set_module_name_to_parent(_HelperDict)
 
 
-class _ContextMeta(type):
-    def __getattribute__(self, name):
-        refer = not name.startswith('_')
-        try:
-            a = super().__getattribute__(name)
-            refer = refer and isinstance(a, property)
-        except AttributeError:
-            if not refer:
-                raise
-        if refer:
-            if not _contexts:
-                raise _error.NotRunningError
-            a = getattr(_contexts[-1], name)  # delegate to active context
-
-        # noinspection PyUnboundLocalVariable
-        return a
-
-    def __setattr__(self, key, value):
+class _BaseContextMeta(type):
+    def __setattr__(cls, key, value):
         if not key.startswith('_'):
-            raise AttributeError("public attributes of 'dlb.ex.Context' are read-only")
+            name = f'{cls.__module__}.{cls.__qualname__}'
+            raise AttributeError(f'public attributes of {name!r} are read-only')
         return super().__setattr__(key, value)
+
+
+class _ContextMeta(_BaseContextMeta):
+    @property
+    def active(cls) -> 'Context':
+        if not _contexts:
+            raise _error.NotRunningError
+        return _contexts[-1]
 
 
 def _show_summary(summaries: List[Tuple[datetime.datetime, int, int, int]]):
@@ -519,7 +512,7 @@ class _RootSpecifics:
             raise _error.ManagementTreeError(msg) from None
 
 
-class _BaseContext(metaclass=_ContextMeta):
+class _BaseContext(metaclass=_BaseContextMeta):
 
     # only Context should construct instances of these:
     EnvVarDict = NotImplemented
@@ -533,6 +526,10 @@ class _BaseContext(metaclass=_ContextMeta):
         self._path_cls = path_cls
         self._max_parallel_redo_count = max(1, int(max_parallel_redo_count))
         self._find_helpers = None if find_helpers is None else bool(find_helpers)
+
+    @property
+    def _active_root_specifics(self):
+        return _get_root_specifics()
 
     @property
     def path_cls(self) -> Type[fs.Path]:
@@ -560,9 +557,9 @@ class _BaseContext(metaclass=_ContextMeta):
     def working_tree_time_ns(self) -> int:
         return _get_root_specifics().working_tree_time_ns
 
-    @staticmethod
-    def find_path_in(path: fs.PathLike, search_prefixes: Optional[Iterable[fs.PathLike]] = None) -> Optional[fs.Path]:
-        self = _get_root_specifics()
+    def find_path_in(self, path: fs.PathLike,
+                     search_prefixes: Optional[Iterable[fs.PathLike]] = None) -> Optional[fs.Path]:
+        self = self._active_root_specifics
 
         if not isinstance(path, fs.Path):
             path = fs.Path(path)
@@ -592,14 +589,13 @@ class _BaseContext(metaclass=_ContextMeta):
             except (ValueError, OSError):
                 pass
 
-    @staticmethod
-    def working_tree_path_of(path: fs.PathLike, *, is_dir: Optional[bool] = None,
+    def working_tree_path_of(self, path: fs.PathLike, *, is_dir: Optional[bool] = None,
                              existing: bool = False, collapsable: bool = False,
                              allow_temporary: bool = False,
                              allow_nontemporary_management: bool = False) -> fs.Path:
         # this must be very fast for relative dlb.fs.Path with existing = True
 
-        self = _get_root_specifics()
+        self = self._active_root_specifics
 
         if not isinstance(path, fs.Path) or is_dir is not None and is_dir != path.is_dir():
             path = fs.Path(path, is_dir=is_dir)
@@ -651,9 +647,8 @@ class _BaseContext(metaclass=_ContextMeta):
 
         return rel_path
 
-    @staticmethod
-    def temporary(*, suffix: str = '', is_dir: bool = False) -> _worktree.Temporary:
-        self = _get_root_specifics()
+    def temporary(self, *, suffix: str = '', is_dir: bool = False) -> _worktree.Temporary:
+        self = self._active_root_specifics
         return _worktree.Temporary(path_provider=self._temp_path_provider, suffix=suffix, is_dir=is_dir)
 
     def __setattr__(self, key, value):
@@ -662,7 +657,7 @@ class _BaseContext(metaclass=_ContextMeta):
         return super().__setattr__(key, value)
 
 
-class Context(_BaseContext):
+class Context(_BaseContext, metaclass=_ContextMeta):
 
     def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1,
                  find_helpers: Optional[bool] = None):
@@ -688,14 +683,12 @@ class Context(_BaseContext):
         return self._redo_sequencer.get_result_proxy(tool_instance_dbid)
 
     @property
-    def active(self) -> 'Context':
-        if not _contexts:
-            raise _error.NotRunningError
-        return _contexts[-1]
-
-    @property
     def parent(self) -> Optional['Context']:
         return self._parent
+
+    @property
+    def active(self) -> 'Context':
+        return self.__class__.active
 
     @property
     def env(self) -> _EnvVarDict:
@@ -726,9 +719,8 @@ class Context(_BaseContext):
             _, e = redo_exceptions[0]
             raise e
 
-    @staticmethod
-    def summary_of_latest_runs(*, max_count: int = 1):
-        self = _get_root_specifics()
+    def summary_of_latest_runs(self, *, max_count: int = 1):
+        self = self._active_root_specifics
         return self._rundb.get_latest_successful_run_summaries(max_count)
 
     def __enter__(self):
