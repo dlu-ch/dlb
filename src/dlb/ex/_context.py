@@ -342,6 +342,10 @@ class _BaseContextMeta(type):
 
 
 class _ContextMeta(_BaseContextMeta):
+
+    # As of PyCharm 2020.1, the type hint is not enough to enable code completion.
+    # There is also a dummy attribute Context.active with the same type hint.
+
     @property
     def active(cls) -> 'Context':
         if not _contexts:
@@ -659,6 +663,10 @@ class _BaseContext(metaclass=_BaseContextMeta):
 
 class Context(_BaseContext, metaclass=_ContextMeta):
 
+    # For PyCharm's code completion only.
+    # Pitfall: Context().active and Context.active are different.
+    active: Optional['Context'] = None
+
     def __init__(self, *, path_cls: Type[fs.Path] = fs.Path, max_parallel_redo_count: int = 1,
                  find_helpers: Optional[bool] = None):
         super().__init__(path_cls=path_cls, max_parallel_redo_count=max_parallel_redo_count, find_helpers=find_helpers)
@@ -687,19 +695,15 @@ class Context(_BaseContext, metaclass=_ContextMeta):
         return self._parent
 
     @property
-    def active(self) -> 'Context':
-        return self.__class__.active
-
-    @property
     def env(self) -> _EnvVarDict:
         # noinspection PyStatementEffect
-        self.active
+        self._active_root_specifics
         return self._env
 
     @property
     def helper(self) -> _HelperDict:
         # noinspection PyStatementEffect
-        self.active
+        self._active_root_specifics
         return self._helper
 
     def complete_pending_redos(self):
@@ -788,6 +792,7 @@ class ReadOnlyContext(_BaseContext):
     def __init__(self, context: Context):
         if not isinstance(context, Context):
             raise TypeError("'context' must be a Context object")
+        _get_root_specifics()
         super().__init__(path_cls=context.path_cls, max_parallel_redo_count=context.max_parallel_redo_count,
                          find_helpers=context.find_helpers)
         self._env = _ReadOnlyEnvVarDictView(context.env)

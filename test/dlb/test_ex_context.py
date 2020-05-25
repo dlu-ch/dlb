@@ -62,6 +62,7 @@ class NestingTestNotRunning(unittest.TestCase):
     def test_fails_if_not_running(self):
         with self.assertRaises(dlb.ex._error.NotRunningError):
             dlb.ex.Context.active
+        self.assertIsNone(dlb.ex.Context().active)
 
 
 class NestingTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -69,11 +70,11 @@ class NestingTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_can_by_nested(self):
         with dlb.ex.Context() as c1:
             self.assertIs(dlb.ex.Context.active, c1)
-            self.assertIs(c1.active, c1)
+            self.assertIsNone(c1.active)
 
             with dlb.ex.Context() as c2:
                 self.assertIs(dlb.ex.Context.active, c2)
-                self.assertIs(c1.active, c2)
+                self.assertIsNone(c1.active)
 
             self.assertIs(dlb.ex.Context.active, c1)
 
