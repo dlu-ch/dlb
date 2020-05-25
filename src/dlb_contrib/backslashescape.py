@@ -11,7 +11,7 @@
 #   s = b'"tmp/x\\076y"'
 #   ... = dlb_contrib.backslashescape.unquote(s)  # b'tmp/x\076y'
 
-__all__ = ['PYTHON_ESCAPES', 'unquote']
+__all__ = ['PYTHON_ESCAPES', 'unquote', 'unquote_octal']
 
 import sys
 import string
@@ -103,20 +103,20 @@ def unquote(literal: AnyStr, replacement_by_escaped_character: Dict[str, int] = 
         between = literal
 
     parts = between.split(to_literal(0x5C))
-    unquoted_paths = [checked_part(parts[0])]
+    unquoted_parts = [checked_part(parts[0])]
     i = 1
     while i < len(parts):
         p = parts[i]
         if p:
             c = to_chr(p[0])
             if c in replacement_by_escaped_character:
-                unquoted_paths.append(to_literal(replacement_by_escaped_character[c]) + checked_part(p[1:]))
+                unquoted_parts.append(to_literal(replacement_by_escaped_character[c]) + checked_part(p[1:]))
             elif with_oct and c in string.digits:
                 # Octal: exactly 3 octal digits or less than 3 octal digits not followed by an octal digit
                 n = 1
                 while n < 3 and n < len(p) and to_chr(p[n]) in string.digits:
                     n += 1
-                unquoted_paths.append(to_literal(int(p[:n], 8)) + checked_part(p[n:]))
+                unquoted_parts.append(to_literal(int(p[:n], 8)) + checked_part(p[n:]))
             elif with_hex and c == 'x':
                 # Hexadecimal: exactly 2 hexadecimal digits or less than 2 hexadecimal digits not followed by
                 # a hexadecimal digit.
@@ -127,19 +127,24 @@ def unquote(literal: AnyStr, replacement_by_escaped_character: Dict[str, int] = 
                     n += 1
                 if n < 2:
                     raise ValueError(f"truncated \\xXX escape sequence")
-                unquoted_paths.append(to_literal(int(p[1:n], 16)) + checked_part(p[n:]))
+                unquoted_parts.append(to_literal(int(p[1:n], 16)) + checked_part(p[n:]))
             else:
                 e = f'\\{c}'
                 raise ValueError(f"unknown escape sequence: {e!r}")
         else:
-            unquoted_paths.append(to_literal(0x5C))
+            unquoted_parts.append(to_literal(0x5C))
             if i + 1 >= len(parts):
                 raise ValueError(f"truncated escape sequence")
             if not parts[i + 1]:
                 i += 1  # is escaped backslash at end of string
         i += 1
 
-    return empty.join(unquoted_paths)
+    return empty.join(unquoted_parts)
+
+
+def unquote_octal(literal: AnyStr) -> AnyStr:
+    return unquote(literal, replacement_by_escaped_character={}, with_hex=False, with_oct=True,
+                   opening=None, closing=None)
 
 
 # Bash (https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#ANSI_002dC-Quoting):

@@ -129,3 +129,19 @@ class UnquoteStrTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             dlb_contrib.backslashescape.unquote('\\123', {}, with_oct=False, opening=None)
         self.assertEqual("unknown escape sequence: '\\\\1'", str(cm.exception))
+
+
+class UnquoteOctalTest(unittest.TestCase):
+
+    def test_replaces_escape_sequences(self):
+        self.assertEqual('a\123\\', dlb_contrib.backslashescape.unquote_octal('a\\123\\\\'))
+
+    def test_fails_for_lf(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.backslashescape.unquote_octal('\\n')
+        self.assertEqual("unknown escape sequence: '\\\\n'", str(cm.exception))
+
+    def test_fails_for_hex(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.backslashescape.unquote_octal('\\xab')
+        self.assertEqual("unknown escape sequence: '\\\\x'", str(cm.exception))
