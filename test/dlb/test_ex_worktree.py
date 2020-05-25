@@ -281,7 +281,7 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
         os.makedirs('a')
         os.makedirs(os.path.join('c', 'd', 'e'))
         c = dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
-                                                               ref_dir_path=os.getcwd())
+                                                                ref_dir_path=os.getcwd())
         self.assertEqual(('c', 'd'), c)
 
         c = dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path='/tmp')
@@ -298,7 +298,7 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
             raise unittest.SkipTest from None
 
         c = dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
-                                                               ref_dir_path=os.getcwd())
+                                                                ref_dir_path=os.getcwd())
         self.assertEqual(('c', 'd'), c)
 
     def test_fails_for_relative_ref_dir(self):
@@ -318,7 +318,7 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
         os.makedirs(os.path.join('c', 'd'))
         with self.assertRaises(dlb.ex._error.WorkingTreePathError) as cm:
             dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
-                                                               ref_dir_path=os.getcwd())
+                                                                ref_dir_path=os.getcwd())
         self.assertIsInstance(cm.exception.oserror, FileNotFoundError)
 
     def test_fails_for_parent_symlink(self):

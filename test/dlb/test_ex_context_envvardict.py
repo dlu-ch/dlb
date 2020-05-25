@@ -144,6 +144,7 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('ABC', pattern=r'.*', example='')
             with self.assertRaises(TypeError) as cm:
+                # noinspection PyTypeChecker
                 dlb.ex.Context.active.env['ABC'] = 1
             self.assertEqual("'value' must be a str", str(cm.exception))
 

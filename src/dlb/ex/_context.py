@@ -563,6 +563,7 @@ class _BaseContext(metaclass=_BaseContextMeta):
 
     def find_path_in(self, path: fs.PathLike,
                      search_prefixes: Optional[Iterable[fs.PathLike]] = None) -> Optional[fs.Path]:
+        # noinspection PyMethodFirstArgAssignment
         self = self._active_root_specifics
 
         if not isinstance(path, fs.Path):
@@ -599,6 +600,7 @@ class _BaseContext(metaclass=_BaseContextMeta):
                              allow_nontemporary_management: bool = False) -> fs.Path:
         # this must be very fast for relative dlb.fs.Path with existing = True
 
+        # noinspection PyMethodFirstArgAssignment
         self = self._active_root_specifics
 
         if not isinstance(path, fs.Path) or is_dir is not None and is_dir != path.is_dir():
@@ -652,6 +654,7 @@ class _BaseContext(metaclass=_BaseContextMeta):
         return rel_path
 
     def temporary(self, *, suffix: str = '', is_dir: bool = False) -> _worktree.Temporary:
+        # noinspection PyMethodFirstArgAssignment
         self = self._active_root_specifics
         return _worktree.Temporary(path_provider=self._temp_path_provider, suffix=suffix, is_dir=is_dir)
 
@@ -724,6 +727,7 @@ class Context(_BaseContext, metaclass=_ContextMeta):
             raise e
 
     def summary_of_latest_runs(self, *, max_count: int = 1):
+        # noinspection PyMethodFirstArgAssignment
         self = self._active_root_specifics
         return self._rundb.get_latest_successful_run_summaries(max_count)
 

@@ -12,6 +12,7 @@ import importlib.util
 import unittest
 import dlb.di
 
+
 class ThisIsAUnitTest(unittest.TestCase):
     pass
 
@@ -27,29 +28,12 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb_contrib.exctrace.enable_compact_with_cwd()
         output = io.StringIO()
         dlb.di.set_output_file(output)
+        # noinspection PyTypeChecker
         sys.excepthook(Exception, Exception('[?]'), None)
         self.assertEqual("C aborted by exception: \n  | 'Exception: [?]'\n", output.getvalue())
 
     def test_write_traceback_to_file(self):
-        try:
-            raise Exception('[?]')
-        except Exception:
-            etype, value, tb = sys.exc_info()
-
-        dlb_contrib.exctrace.enable_compact_with_cwd(traceback_file='traceback.log')
-        output = io.StringIO()
-        dlb.di.set_output_file(output)
-
-        sys.excepthook(etype, value, tb)
-
-        p = os.path.realpath('traceback.log')
-        self.assertEqual(f"C aborted by exception: \n  | 'Exception: [?]' \n  | traceback: {p!r}\n", output.getvalue())
-        with open('traceback.log', 'r') as f:
-            content = f.read()
-        self.assertTrue(content.startswith('Traceback (most recent call last):'))
-        self.assertIn('\nException: [?]\n', content)
-
-    def test_write_traceback_to_file(self):
+        # noinspection PyBroadException
         try:
             raise Exception('[?]')
         except Exception:
@@ -82,6 +66,7 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
         spec = importlib.util.spec_from_file_location('failing_script', os.path.realpath('failing_script.py'))
         module = importlib.util.module_from_spec(spec)
 
+        # noinspection PyBroadException
         try:
             spec.loader.exec_module(module)
         except Exception:
@@ -93,6 +78,7 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
+        # noinspection PyUnboundLocalVariable
         sys.excepthook(etype, value, tb)
         msg = (
             "C aborted by exception: \n"
@@ -146,4 +132,5 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_nonint_limit(self):
         with self.assertRaises(TypeError):
+            # noinspection PyTypeChecker
             dlb_contrib.exctrace.enable_compact_with_cwd(involved_line_limit=1.5)
