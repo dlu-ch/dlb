@@ -112,7 +112,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
    .. attribute:: root_path
 
-      The absolute path to the :term:`working tree`'s root.
+      The absolute path of the :term:`working tree`'s root.
 
       It is an instance of :attr:`Context.active.path_cls <Context.path_cls>` and
       is representable as an instance of :attr:`path_cls <Context.path_cls>` of the :term:`active context` and every
@@ -179,8 +179,8 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
          Path('/usr/local/bin/my-very-own-very-special-gcc')
 
          >>> dlb.ex.Context.active.helper['tmp/'] = 'out/t/'  # relative path: relative to the working tree's root path
-         >>> dlb.ex.Context.active.helper['tmp/']
-         Path('/home/schmutzli/projects/esel/out/t')   # with '/home/schmutzli/projects/esel' as the working tree's root
+         >>> dlb.ex.Context.active.helper['tmp/']  # with '/home/schmutzli/projects/esel' as the working tree's root
+         Path('/home/schmutzli/projects/esel/out/t')
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 

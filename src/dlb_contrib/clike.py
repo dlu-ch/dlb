@@ -2,7 +2,8 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""The C language family and its tools."""
+"""Check elements of the syntax, generate code and build compilers and linkers with a common interface
+for the C language family."""
 
 # C:   ISO/IEC 9899:1999 (E)
 # C++: ISO/IEC 14882:1998 (E)

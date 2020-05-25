@@ -19,7 +19,7 @@ class VersionQuery(dlb_contrib.git.GitDescribeWorkingDirectory):
     SHORTENED_COMMIT_HASH_LENGTH = 8  # number of characters of the SHA1 commit hash in the *wd_version*
 
     # working directory version
-    # examples: '1.2.3', '1.2.3c4-dev5+deadbeef?'
+    # examples: '1.2.3', '1.2.3c4-dev5+deadbeef@'
     wd_version = dlb.ex.output.Object(explicit=False)
 
     # tuple of the version according to the version tag

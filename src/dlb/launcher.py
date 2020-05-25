@@ -57,6 +57,9 @@ def complete_command_line(history_file_path, arguments):
 
     import ast
     try:
+        # ast.literal_eval():
+        #   "It is possible to crash the Python interpreter with a sufficiently large/complex string due to stack depth
+        #   limitations in Python’s AST compiler."
         last_arguments = ast.literal_eval(last_arguments.decode())
         if not (isinstance(last_arguments, list) and all(isinstance(a, str) for a in last_arguments)):
             raise TypeError

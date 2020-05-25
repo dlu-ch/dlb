@@ -2,9 +2,40 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Add input dependencies to any tool instance."""
+"""Group or combine multiple tool instances or tool classes."""
 
 # Usage example:
+#
+#   # Request a redo tool instance based on a dynamic condition with
+#   # dlb_contrib.generic.Check.
+#
+#   import dlb.ex
+#   import dlb_contrib.generic
+#
+#   with dlb.ex.Context():
+#       # request a redo (no redo miss even if condition cannot be
+#       # reproduced in the next run)
+#       problem_detected = ....
+#
+#       needs_update = dlb_contrib.generic.Check(
+#           result_file='build/out/result.uptodate'
+#       ).start(force_redo=problem_detected)
+#       # performs redo if *result_file* this does not exist; redo removes *result_file*
+#
+#       with dlb.ex.Context:  # waits for previous redos to complete
+#           if needs_update:
+#               # perform actual work
+#               # *needs_update* will be True next time if this fails with an exception
+#               ...
+#
+#       needs_update.result_file.native.raw.touch()  # mark successful completion
+#
+# Usage example:
+#
+#   # Before checking dependencies in detail, check necessary precondition for redo with
+#   # dlb_contrib.generic.Check:
+#   # Check the source code dependencies of a huge library only if at least one file in
+#   # the source code directory has changed (much faster if no changes).
 #
 #   import dlb.ex
 #   import dlb_contrib.generic
@@ -12,14 +43,14 @@
 #   with dlb.ex.Context():
 #       # contains all source files of a huge library:
 #       library_source_directory = dlb.fs.Path('src/libx/')
-#       archive_file = dlb.fs.Path(...)  # compiled from *library_source_directory*
+#       archive_file = dlb.fs.Path(...)
 #
-#       # 1. check if update of *archive_file* may be necessary - fast but coarse
 #       # update mtime of directory if content has later mtime
 #       # (requires monotonic system time to detect all mtime changes)
 #       mtime = dlb.fs.propagate_mtime(library_source_directory)
 #       assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
 #
+#       # 1. check fast but course whether a update may be necessary
 #       needs_update = dlb_contrib.generic.Check(
 #           input_directories=[library_source_directory],
 #           output_files=[archive_file]
@@ -29,13 +60,16 @@
 #
 #       with dlb.ex.Context:  # waits for previous redos to complete
 #           if needs_update:  # need to take a closer look?
-#               # 2. compile library to *archive_file* - slow but fine
+#               # 2. check in detail and perform actual work if necessary
 #               # *needs_update* will be True next time if this fails with an exception
 #               ...
 #
 #       needs_update.result_file.native.raw.touch()  # mark successful completion
 #
 # Usage example:
+#
+#   # Query the version of executables used by tool classes with
+#   # dlb_contrib.generic.VersionQuery.
 #
 #   import dlb.ex
 #   import dlb_contrib.generic
@@ -49,6 +83,9 @@
 #       version_by_path = VersionQuery().start().version_by_path
 #
 # Usage example:
+#
+#   # "Atomically" collect a set of files in a directory with
+#   # dlb_contrib.generic.FileCollector.
 #
 #   import dlb.ex
 #   import dlb_contrib.generic
@@ -169,6 +206,7 @@ def hardlink_or_copy(src: Union[str, os.PathLike], dst: Union[str, os.PathLike],
     return use_hard_link
 
 
+# TODO move to own module
 class FileCollector(dlb.ex.Tool):
     # Collect *input_files* in a directory as hardlinks or copies.
     # The last components of the paths in *input_files* are used as filenames in *output_directory*.

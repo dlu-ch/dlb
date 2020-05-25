@@ -137,7 +137,7 @@ def accessed_files_from_recorded(recorder_output_file: dlb.fs.Path, context) \
     return read_files, written_files
 
 
-# TODO improve name (express purpuse of execution)
+# TODO improve name (express purpose of execution)
 class Tex(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'tex'
