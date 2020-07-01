@@ -13,7 +13,9 @@ be a zip archive loadable by :mod:`zipimport`.
 You can place dlb as :file:`.dlbroot/u/dlb.zip` in this directory (under version control). This makes the
 working tree almost self-contained; only an external Python interpreter is needed.
 
-If you use Git for version control which does not support empty directories, add :file:`.dlbroot/o` (as created by dlb)
+The file or directory :file:`.dlbroot/z` is optional. dlb never touches it.
+
+If you use Git for version control which does not support empty directories, add :file:`.dlbroot/z`
 or any file in :file:`.dlbroot/u/`.
 
 The lines marked with ``*`` show filesystem objects only given as an example.
