@@ -35,6 +35,7 @@ Please see there for details.
 
 .. dlbcontrib:module:: backslashescape
 .. dlbcontrib:module:: iso6429
+.. dlbcontrib:module:: exctrace
 .. dlbcontrib:module:: partition
 .. dlbcontrib:module:: exportenv
 .. dlbcontrib:module:: generic

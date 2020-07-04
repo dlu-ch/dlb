@@ -14,9 +14,11 @@ import dlb.di
 import dlb.fs
 import dlb.ex
 import dlb_contrib.tex
+import dlb_contrib.exctrace
 import dlb_contrib.iso6429
 
 
+dlb_contrib.exctrace.enable_compact_with_cwd()
 if sys.stderr.isatty():
     # assume terminal compliant with ISO/IEC 6429 ("VT-100 compatible")
     dlb.di.set_output_file(dlb_contrib.iso6429.MessageColorator(sys.stderr))

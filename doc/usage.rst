@@ -206,6 +206,9 @@ It is good practice to output some summary of a successful build even if no redo
 This can be a relevant information on the most important build product (e.g. code size of an application)
 or just the line ``dlb.di.inform('finished successfully')`` at the end of the dlb script.
 
+In case you find the standard Python traceback (output on uncaught exceptions) too verbose or cluttered,
+you can replace it by the one provided by :mod:`dlb_contrib.exctrace`.
+
 
 Commit the changes
 ^^^^^^^^^^^^^^^^^^
