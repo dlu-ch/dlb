@@ -48,7 +48,6 @@ def parse_from_output(line, options=''):  # parse an output line of pkg-config
     return arguments_by_option, tuple(others)
 
 
-# TODO improve name (express purpose of execution)
 class PkgConfig(dlb.ex.Tool):
     # Query paths as well as compile and link options for libraries *VERSION_CONSTRAINTS_BY_LIBRARY_NAME*
     # with pkg-config.

@@ -34,3 +34,6 @@ by one of its tools.
 See dlb_contrib.git for an example.
 
 The content of the modules should be described by comments (not docstrings) with emphasis on examples.
+
+The name of a subclass of dlb.ex.Tool should denote the task it performs (e.g. 'CCompilerGcc') or the tool itself
+(e.g. 'Doxygen') if the executable(s) can only serve a single purpose.

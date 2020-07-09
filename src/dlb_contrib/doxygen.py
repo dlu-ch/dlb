@@ -104,7 +104,6 @@ def _transform_replacement(replacements: Dict[str, Any]):
     return d
 
 
-# TODO improve name (express purpose of execution)
 class Doxygen(dlb.ex.Tool):
     # Generate documentation from source files with Doxygen, using a configuration file generated from a
     # configuration template file *configuration_template_file* by replacing (unescaped) placeholders according to
