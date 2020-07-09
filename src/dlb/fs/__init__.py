@@ -345,7 +345,7 @@ class Path(metaclass=_PathMeta):
                 raise ValueError(f"invalid path: {path!r} (must not contain NUL)")
             self._sanitize_is_dir()
             if self.__class__.__bases__ != (object,):  # dlb.fs.Path() must be fast
-                self._check_constrains(False)
+                self._check_constraints(False)
 
     def _cast(self, other: PathLike) -> 'Path':
         if other.__class__ is self.__class__:
@@ -354,19 +354,6 @@ class Path(metaclass=_PathMeta):
 
     def _sanitize_is_dir(self):
         self._is_dir = self._is_dir or len(self._components) <= 1 or self._components[-1:] == ('..',)
-
-    def _check_constrains(self, components_checked: bool):
-        # must be fast
-        try:
-            for c in reversed(self.__class__.__mro__):
-                # noinspection PyUnresolvedReferences
-                'check_restriction_to_base' not in c.__dict__ or c.check_restriction_to_base(self, components_checked)
-        except ValueError as e:
-            reason = str(e)
-            msg = f'invalid path for {self.__class__.__qualname__!r}: {str(self.as_string())!r}'
-            if reason:
-                msg = f'{msg} ({reason})'
-            raise ValueError(msg) from None
 
     def _with_components(self, components: Tuple[str, ...], *, is_dir: Optional[bool] = None,
                          components_checked: bool) -> 'Path':
@@ -378,8 +365,21 @@ class Path(metaclass=_PathMeta):
             p._is_dir = bool(is_dir)
         p._native = None
         p._sanitize_is_dir()
-        p._check_constrains(components_checked)
+        p._check_constraints(components_checked)
         return p
+
+    def _check_constraints(self, components_checked: bool):
+        # must be fast
+        try:
+            for c in reversed(self.__class__.__mro__):
+                # noinspection PyUnresolvedReferences
+                'check_restriction_to_base' not in c.__dict__ or c.check_restriction_to_base(self, components_checked)
+        except ValueError as e:
+            reason = str(e)
+            msg = f'invalid path for {self.__class__.__qualname__!r}: {str(self.as_string())!r}'
+            if reason:
+                msg = f'{msg} ({reason})'
+            raise ValueError(msg) from None
 
     def _check_dir_list_args(self, name_filter, is_dir, recurse_name_filter, cls):
         if not self._is_dir:
@@ -396,6 +396,14 @@ class Path(metaclass=_PathMeta):
             raise TypeError("'cls' must be None or a subclass of 'dlb.fs.Path'")
 
         return name_filter, is_dir, recurse_name_filter, cls
+
+    def _check_suffix(self, suffix: str):
+        if not isinstance(suffix, str):
+            raise TypeError("'suffix' must be a str")
+        if '/' in suffix or '\0' in suffix:
+            raise ValueError(f"invalid suffix: {suffix!r}")
+        if not self._components[-1] or self._components[-1] == '..':
+            raise ValueError("cannot append suffix to '.' or '..' component")
 
     def is_dir(self) -> bool:
         return self._is_dir
@@ -542,13 +550,15 @@ class Path(metaclass=_PathMeta):
         return _parts_from_components(self._components)
 
     def with_appended_suffix(self, suffix: str) -> 'Path':
-        if not isinstance(suffix, str):
-            raise TypeError("'suffix' must be a str")
-        if not self._components[-1] or self._components[-1] == '..':
-            raise ValueError("cannot append suffix to '.' or '..' component")
-        if not suffix or '/' in suffix or '\0' in suffix:
-            raise ValueError(f"invalid suffix: {suffix!r}")
+        self._check_suffix(suffix)
         return self._with_components(self._components[:-1] + (self._components[-1] + suffix,), components_checked=False)
+
+    def with_replacing_suffix(self, suffix: str) -> 'Path':
+        self._check_suffix(suffix)
+        name, ext = os.path.splitext(self._components[-1])
+        if not ext:
+            raise ValueError(f'does not contain an extension suffix')
+        return self._with_components(self._components[:-1] + (name + suffix,), components_checked=False)
 
     @property
     def pure_posix(self) -> pathlib.PurePosixPath:

@@ -317,11 +317,10 @@ class AppendTest(unittest.TestCase):
 
 class WithAppendedSuffixTest(unittest.TestCase):
 
-    def test_relative(self):
+    def test_typical_is_correct(self):
         self.assertEqual(dlb.fs.Path('a/b.o'), dlb.fs.Path('a/b').with_appended_suffix('.o'))
-
-    def test_absolute(self):
         self.assertEqual(dlb.fs.Path('/a/b.o'), dlb.fs.Path('/a/b').with_appended_suffix('.o'))
+        self.assertEqual(dlb.fs.Path('a'), dlb.fs.Path('a').with_appended_suffix(''))
 
     def test_fails_for_bytes(self):
         with self.assertRaises(TypeError) as cm:
@@ -339,11 +338,6 @@ class WithAppendedSuffixTest(unittest.TestCase):
             dlb.fs.Path('a/..').with_appended_suffix('a')
         self.assertEqual("cannot append suffix to '.' or '..' component", str(cm.exception))
 
-    def test_fails_for_empty(self):
-        with self.assertRaises(ValueError) as cm:
-            dlb.fs.Path('a').with_appended_suffix('')
-        self.assertEqual("invalid suffix: ''", str(cm.exception))
-
     def test_fails_for_slash(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('a').with_appended_suffix('a/b')
@@ -352,6 +346,53 @@ class WithAppendedSuffixTest(unittest.TestCase):
     def test_fails_for_nul(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path('a').with_appended_suffix('a\0b')
+        self.assertEqual("invalid suffix: 'a\\x00b'", str(cm.exception))
+
+
+class WithReplacingSuffixTest(unittest.TestCase):
+
+    def test_typical_is_correct(self):
+        self.assertEqual(dlb.fs.Path('a/b.x.o'), dlb.fs.Path('a/b.x.c').with_replacing_suffix('.o'))
+        self.assertEqual(dlb.fs.Path('/a/b.x.o.p/'), dlb.fs.Path('/a/b.x.c/').with_replacing_suffix('.o.p'))
+        self.assertEqual(dlb.fs.Path('a.o'), dlb.fs.Path('a.').with_replacing_suffix('.o'))
+        self.assertEqual(dlb.fs.Path('a'), dlb.fs.Path('a.b').with_replacing_suffix(''))
+        self.assertEqual(dlb.fs.Path('ax'), dlb.fs.Path('a.b').with_replacing_suffix('x'))
+
+    def test_fails_without_extension_suffix(self):
+        msg = 'does not contain an extension suffix'
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('x').with_replacing_suffix('.o')
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('.bashrc').with_replacing_suffix('.o')
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_bytes(self):
+        with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
+            dlb.fs.Path('a').with_replacing_suffix(b'.o')
+        self.assertEqual("'suffix' must be a str", str(cm.exception))
+
+    def test_fails_for_dot(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('.').with_replacing_suffix('a')
+        self.assertEqual("cannot append suffix to '.' or '..' component", str(cm.exception))
+
+    def test_fails_for_dotdot(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('a/..').with_replacing_suffix('a')
+        self.assertEqual("cannot append suffix to '.' or '..' component", str(cm.exception))
+
+    def test_fails_for_slash(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('a').with_replacing_suffix('a/b')
+        self.assertEqual("invalid suffix: 'a/b'", str(cm.exception))
+
+    def test_fails_for_nul(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb.fs.Path('a').with_replacing_suffix('a\0b')
         self.assertEqual("invalid suffix: 'a\\x00b'", str(cm.exception))
 
 

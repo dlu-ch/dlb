@@ -176,11 +176,29 @@ Path objects
 
       Return a version of this path with *suffix* appended to its last component.
 
-      :param suffix: suffix that does not change the meaning of the path
+      :param suffix:
+          suffix that does not change the meaning of the path (number of components or the containing directory)
       :type suffix: str
       :rtype: class of this object
 
-      :raises ValueError: if *suffix* is ``'.'`` or ``'..'`` or does contain ``'/'`` or ``'\0'`` (NUL)
+      :raises ValueError: if this is ``'.'`` or ``'..'`` or *suffix* does contain ``'/'`` or ``'\0'`` (NUL)
+
+   .. method:: with_replacing_suffix(suffix)
+
+      Return a version of this path with the extension suffix of its last component replaced by *suffix*.
+
+      A string *s* is an extension suffix of a path component *c* if and only if
+
+      - *c* ends with *s* and *s* differs from *c*, and
+      - *s* starts with ``'.'`` and contains exactly one ``'.'``.
+
+      :param suffix:
+          suffix that does not change the meaning of the path (number of components or the containing directory)
+      :type suffix: str
+      :rtype: class of this object
+
+      :raises ValueError: if this is ``'.'`` or ``'..'`` or *suffix* does contain ``'/'`` or ``'\0'`` (NUL)
+      :raises ValueError: if the last component does not have an extension suffix.
 
    .. method:: as_string()
 
