@@ -93,7 +93,8 @@ def exception_to_line(exc: BaseException, force_classname: bool = False):
 
     parts = []
     if force_classname or not first_line:
-        parts.append('.'.join([exc.__class__.__module__, exc.__class__.__qualname__]))
+        cls = exc.__class__
+        parts.append(f'{cls.__module__}.{cls.__qualname__}')
     if first_line:
         parts.append(first_line)
 
