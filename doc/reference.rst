@@ -55,7 +55,3 @@ Reference
    (`Linux <http://man7.org/linux/man-pages/man3/adjtime.3.html>`_,
    `OpenBSD <https://man.openbsd.org/adjtime>`_,
    `FreeBSD <https://www.freebsd.org/cgi/man.cgi?query=adjtime&sektion=2>`_).
-
-.. [#resolution1]
-   Resolution for this situation: Try later (delay should be part of the message) or correct the :term:`mtime` of the
-   affected filesystem objects (list should be part of the message).

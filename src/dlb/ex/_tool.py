@@ -265,6 +265,7 @@ class _ToolBase:
                             di.inform(msg, level=cf.level.redo_reason)
                             needs_redo = True
                             break
+                        # TODO redo if mtime of true input not in the past (G-D4)
 
         if not needs_redo:
             _context._register_successful_run(False)

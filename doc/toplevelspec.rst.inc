@@ -42,6 +42,13 @@ For every assumption at set of acceptable effects of its violation is given:
    .. _assumptionviolationeffect-redo-miss:
    .. |assumptionviolationeffect-redo-miss| replace:: :ref:`redo-miss <assumptionviolationeffect-redo-miss>`
 
+   performance-degradation
+      A build may take significantly longer than expected (e.g. due to unnecessary :term:`redos <redo>`).
+
+   .. _assumptionviolationeffect-performance-degradation:
+   .. |assumptionviolationeffect-performance-degradation| replace::
+      :ref:`performance-degradation <assumptionviolationeffect-performance-degradation>`
+
 
 Modification of the working tree
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -260,7 +267,8 @@ Timing and concurrency
 
    Acceptable when violated:
 
-   - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-graceful-fail| (only if courser than 5 s)
+   - |assumptionviolationeffect-performance-degradation|
 
 .. _assumption-t4:
 .. |assumption-t4| replace:: :ref:`A-T4 <assumption-t4>`
@@ -271,7 +279,11 @@ Timing and concurrency
 
    Acceptable when violated:
 
-   - |assumptionviolationeffect-graceful-fail|
+   - |assumptionviolationeffect-performance-degradation|
+
+   A violation of this assumption means that an :term:`mtime update` after the :term:`run of dlb` does not necessarily
+   change the mtime, even with a monotonically increasing :term:`working tree time`.
+   To avoid :term:`redo misses <redo miss>`, otherwise unnecessary redos may therefore have to be performed.
 
 
 Dependencies
@@ -287,14 +299,20 @@ Dependencies
 .. _assumption-d2:
 .. |assumption-d2| replace:: :ref:`A-D2 <assumption-d2>`
 
-**A-D2** (no links to input dependencies)
-   A filesystem object in the :term:`managed tree` that serves as an input dependency of a :term:`tool instance`
-   has no hard link or symbolic link pointing to it in the :term:`managed tree`.
+**A-D2** (no shared target of input and output dependencies)
+   If *i* and *o* are two different :term:`managed tree paths <managed tree path>` where
+   *i* serves as an input dependency of a :term:`tool instance` and *o* as an output dependency of a
+   different tool instance,
+   then *i* and *o* never point to the same existing filesystem object while one of the tool instances is
+   :term:`running <tool instance>`.
 
    Acceptable when violated:
 
    - |assumptionviolationeffect-redo-miss|
    - |assumptionviolationeffect-graceful-fail|
+
+   Possible cause of a violation of this assumption:
+   Use of hard links, symbolic links or union mounting of file systems.
 
 .. _assumption-d3:
 .. |assumption-d3| replace:: :ref:`A-D3 <assumption-d3>`
@@ -356,8 +374,8 @@ Dependencies
 .. |guarantee-d4| replace:: :ref:`G-D4 <guarantee-d4>`
 
 **G-D4**
-   When assumption |assumption-t2| is violated at a certain time at the start of the "redo check" phase of a running
-   :term:`tool instance`, the build is aborted with a meaningful diagnostic message. [#resolution1]_
+   When assumption |assumption-t4| is violated at a certain time at the start of the "redo check" phase of a running
+   :term:`tool instance`, a :term:`redo` of this tool instance is performed.
 
 
 Timing and concurrency
@@ -390,4 +408,3 @@ Timing and concurrency
 
 **G-T4** (threads)
    dlb does not (directly) create threads.
-

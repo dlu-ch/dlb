@@ -63,6 +63,9 @@ class FileCollector(dlb.ex.Tool):
     # Creates hardlinks for all files if the filesystem supports it and copies otherwise.
     # Is atomic in the following sense: *output_directory* contains exactly the files *input_files* (successful
     # completion), or does not exist, or is unchanged.
+    #
+    # Note: Do not use the created file system objects in *output_directory* as input or output dependencies
+    # (only *output_directory* itself) of another tool instance. If you do, make sure assumption A-D2 is not violated.
 
     input_files = dlb.ex.input.RegularFile[:]()
     output_directory = dlb.ex.output.Directory()
