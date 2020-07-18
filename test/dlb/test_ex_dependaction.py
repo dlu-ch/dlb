@@ -160,18 +160,3 @@ class EnvVarInputPermanentLocalValueIdTest(unittest.TestCase):
         plvi1 = dlb.ex._dependaction.get_action(d1, 'd').get_permanent_local_value_id(d1.validate('xy'))
         plvi2 = dlb.ex._dependaction.get_action(d2, 'd').get_permanent_local_value_id(d2.validate('xy'))
         self.assertEqual(plvi1, plvi2)
-
-
-class EnvVarInputFilesystemOperationTest(unittest.TestCase):
-
-    def test_fails_on_filesystem_operations(self):
-        d = dlb.ex.input.EnvVar(name='AB', pattern='x.', example='xy', explicit=False, required=False)
-        a = dlb.ex._dependaction.get_action(d, 'd')
-
-        with self.assertRaises(ValueError):
-            # noinspection PyTypeChecker
-            a.check_filesystem_object_memo(None)
-
-        with self.assertRaises(ValueError):
-            # noinspection PyTypeChecker
-            a.replace_filesystem_object(None, None, None)

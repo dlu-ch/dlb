@@ -74,18 +74,8 @@ class Action:
         # note: *required* does _not_ affect the meaning or treatment of a the _validated_ value.
         return ut.to_permanent_local_bytes((dependency_id, d.explicit))
 
-    # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
-    def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
-        raise ValueError("is not a filesystem object")
 
-    # overwrite in subclass; only called for an existing filesystem object that is an explicit dependency
-    def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
-        # *source* and *destination* (relative path) are different managed tree paths with same *is_dir()*
-        # remove *source* if successful
-        # return bool if *destination* is possibly changed
-        raise ValueError("is not a filesystem object that is an output dependency")
-
-
+# only for action with action.dependency.Value is dlb.fs.Path
 class _FilesystemObjectMixin(Action):
     def get_permanent_local_value_id(self, validated_values: Optional[Sequence[fs.Path]]) -> bytes:
         if validated_values is not None:
@@ -95,6 +85,24 @@ class _FilesystemObjectMixin(Action):
 
     def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
         pass
+
+
+# only for action with isinstance(self.action.dependency, _depend.OutputDependency) and
+# action.dependency.Value is dlb.fs.Path.
+class _ReplaceableFilesystemObjectMixin(Action):
+
+    # overwrite in subclass
+    def treat_as_modified_after_redo(self):
+        # True if a file system object is considered modified once a redo is started.
+        return True
+
+    # overwrite in subclass
+    def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
+        # *source* and *destination* (relative path) are different managed tree paths to existing filesystem object
+        # with same *is_dir()*.
+        # Remove *source* if successful
+        # Return bool if *destination* is possibly changed
+        raise ValueError("do not know how to replace")
 
 
 class _RegularFileMixin(_FilesystemObjectMixin):
@@ -140,7 +148,7 @@ class EnvVarInputAction(Action):
         return super().get_permanent_local_instance_id() + ut.to_permanent_local_bytes((d.name,))
 
 
-class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action):
+class RegularFileOutputAction(_RegularFileMixin, _ReplaceableFilesystemObjectMixin, _FilesystemObjectMixin, Action):
 
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
         do_replace = self.dependency.replace_by_same_content
@@ -188,8 +196,12 @@ class RegularFileOutputAction(_RegularFileMixin, _FilesystemObjectMixin, Action)
 
         return True
 
+    def treat_as_modified_after_redo(self):
+        return self.dependency.replace_by_same_content
 
-class NonRegularFileOutputAction(_NonRegularFileMixin, _FilesystemObjectMixin, Action):
+
+class NonRegularFileOutputAction(_NonRegularFileMixin, _ReplaceableFilesystemObjectMixin,
+                                 _FilesystemObjectMixin, Action):
 
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
         r = context.root_path
@@ -211,7 +223,7 @@ class NonRegularFileOutputAction(_NonRegularFileMixin, _FilesystemObjectMixin, A
         return True
 
 
-class DirectoryOutputAction(_DirectoryMixin, _FilesystemObjectMixin, Action):
+class DirectoryOutputAction(_DirectoryMixin, _ReplaceableFilesystemObjectMixin, _FilesystemObjectMixin, Action):
 
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
         r = context.root_path

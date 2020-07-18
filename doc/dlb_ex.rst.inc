@@ -805,6 +805,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :type path: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
       :param source: a path of a filesystem object in the managed tree
       :type source: :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can be constructed from
+      :return: `False` if *path* was not changed by this operation, `True` otherwise.
 
       :raises ValueError:
          if *path* is not a :term:`managed tree path` contained in an explicit output dependency

@@ -495,7 +495,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             file_action = dlb.ex._dependaction.RegularFileOutputAction(
                 dlb.ex.output.RegularFile(), 'test_file')
-            directory_action = dlb.ex._dependaction.RegularFileOutputAction(
+            directory_action = dlb.ex._dependaction.DirectoryOutputAction(
                 dlb.ex.output.Directory(), 'test_directory')
             rd = dlb.ex._toolrun.RedoContext(c, {
                 dlb.fs.Path('a/b'): file_action,
@@ -537,6 +537,19 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b', dlb.fs.Path('a/b'))
             msg = "cannot replace a path by itself: 'a/b'"
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_if_not_replaceable(self):
+        with dlb.ex.Context() as c:
+            action = dlb.ex._dependaction.ObjectOutputAction(dlb.ex.output.Object(explicit=False), 'test_file')
+            rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a/b'): action})
+
+            os.mkdir('a')
+            open(os.path.join('a', 'b'), 'wb').close()
+
+            with self.assertRaises(ValueError) as cm:
+                rd.replace_output('a/b', dlb.fs.Path('a/b'))
+            msg = "do not know how to replace: 'a/b'"
             self.assertEqual(msg, str(cm.exception))
 
 

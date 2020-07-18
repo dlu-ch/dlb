@@ -39,9 +39,14 @@ class RedoContext(_context.ReadOnlyContext):
         if not isinstance(dependency_action_by_path, dict):
             raise TypeError
 
+        # must be True for all values *v* of *dependency_action_by_path*:
+        # isinstance(v.dependency, _depend.OutputDependency) and v.dependency.Value is dlb.fs.Path.
+
         super().__init__(context)
         self._dependency_action_by_path = dependency_action_by_path
-        self._unchanged_paths = set()
+        self._paths_of_modified = set(
+            p for p, a in dependency_action_by_path.items()
+            if not hasattr(a, 'treat_as_modified_after_redo') or a.treat_as_modified_after_redo())
 
     def prepare_arguments(self, arguments: Iterable[Any], *, cwd: Optional[fs.PathLike] = None) \
             -> Tuple[List[str], fs.Path]:
@@ -288,6 +293,12 @@ class RedoContext(_context.ReadOnlyContext):
             msg = f"path is not contained in any explicit output dependency: {path.as_string()!r}"
             raise ValueError(msg)
 
+        try:
+            replacer = action.replace_filesystem_object
+        except AttributeError:
+            msg = f"do not know how to replace: {path.as_string()!r}"
+            raise ValueError(msg) from None
+
         if path.is_dir() != source.is_dir():
             if path.is_dir():
                 msg = f"cannot replace directory by non-directory: {path.as_string()!r}"
@@ -310,15 +321,15 @@ class RedoContext(_context.ReadOnlyContext):
         if path == source:
             raise ValueError(f"cannot replace a path by itself: {path.as_string()!r}")
 
-        output_possibly_changed = action.replace_filesystem_object(destination=path, source=source, context=self)
-        if output_possibly_changed:
-            self._unchanged_paths.discard(path)
-        else:
-            self._unchanged_paths.add(path)
+        did_replace = replacer(destination=path, source=source, context=self)
+        if did_replace:
+            self._paths_of_modified.add(path)
+
+        return did_replace
 
     @property
     def modified_outputs(self) -> Set[fs.Path]:
-        return set(self._dependency_action_by_path) - self._unchanged_paths
+        return self._paths_of_modified
 
 
 class RunResult:
