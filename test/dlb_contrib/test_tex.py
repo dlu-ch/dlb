@@ -188,29 +188,41 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             f.write('there')
 
         output_path = dlb.fs.Path('build/out/')
-        with dlb.ex.Context():
-            r = dlb_contrib.tex.Latex(
-                toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-                input_search_directories=['src/'],
-                state_files=[output_path / 'report.aux', output_path / 'report.toc']).start()
-        self.assertTrue(r)
-        self.assertEqual((dlb.fs.Path('src/loc ation.tex'),), r.included_files)
-        self.assertTrue((output_path / 'report.aux').native.raw.is_file())
-        self.assertTrue((output_path / 'report.toc').native.raw.is_file())
+        latex = dlb_contrib.tex.Latex(
+            toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
+            input_search_directories=['src/'],
+            state_files=[output_path / 'report.aux', output_path / 'report.toc']
+        )
 
         with dlb.ex.Context():
-            r = dlb_contrib.tex.Latex(
-                toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-                input_search_directories=['src/'],
-                state_files=[output_path / 'report.aux', output_path / 'report.toc']).start()
-        self.assertTrue(r)
+            r = latex.start()
+            self.assertTrue(r)
+            self.assertEqual((dlb.fs.Path('src/loc ation.tex'),), r.included_files)
+            self.assertTrue((output_path / 'report.aux').native.raw.is_file())
+            self.assertTrue((output_path / 'report.toc').native.raw.is_file())
 
+            r = latex.start()
+            self.assertTrue(r)
+            r = latex.start()
+            self.assertFalse(r)
+
+        with open(os.path.join('src', 'report.tex'), 'w', encoding='utf-8') as f:
+            f.write(
+                '\\documentclass{article}\n'
+                '\\begin{document}\n'
+                '    \\tableofcontents\n'
+                '    \\section{Greetings}\n'
+                '    \\subsection{Hello again}\n'
+                '    Hello \\input{"loc ation.tex"}!\n'
+                '\\end{document}\n'
+            )
         with dlb.ex.Context():
-            r = dlb_contrib.tex.Latex(
-                toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
-                input_search_directories=['src/'],
-                state_files=[output_path / 'report.aux', output_path / 'report.toc']).start()
-        self.assertFalse(r)
+            r = latex.start()
+            self.assertTrue(r)
+            r = latex.start()
+            self.assertTrue(r)  # because index had been changed
+            r = latex.start()
+            self.assertFalse(r)
 
     def test_finds_file_in_texinputs(self):
         os.mkdir('src')
@@ -262,6 +274,52 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertRegex(output.getvalue(), regex)
         finally:
             dlb.di.set_output_file(sys.stderr)
+
+    def test_creates_log_on_error(self):
+        os.mkdir('src')
+        with open(os.path.join('src', 'report.tex'), 'x', encoding='utf-8') as f:
+            f.write(
+                '\\documentclass{article}\n'
+                '\\begin{document}\n'
+            )
+
+        output_path = dlb.fs.Path('build/out/')
+        log_file = output_path / 'report.log'
+
+        try:
+            with dlb.ex.Context():
+                dlb.di.set_output_file(io.StringIO())
+                dlb_contrib.tex.Latex(toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
+                                      state_files=[], log_file=log_file).start()
+        except dlb.ex.HelperExecutionError:
+            pass
+
+        self.assertTrue(log_file.native.raw.exists())
+
+    def test_removes_log_file_before(self):
+        os.mkdir('src')
+        with open(os.path.join('src', 'report.tex'), 'x', encoding='utf-8') as f:
+            f.write(
+                '\\documentclass{article}\n'
+                '\\begin{document}\n'
+            )
+
+        output_path = dlb.fs.Path('build/out/')
+        log_file = output_path / 'report.log'
+        output_path.native.raw.mkdir(parents=True)
+        log_file.native.raw.touch()
+
+        self.assertTrue(log_file.native.raw.exists())
+        try:
+            with dlb.ex.Context():
+                dlb.ex.Context.active.helper[dlb_contrib.tex.Latex.EXECUTABLE] = output_path / 'non/existent'
+                dlb.di.set_output_file(io.StringIO())
+                dlb_contrib.tex.Latex(toplevel_file='src/report.tex', output_file=output_path / 'report.dvi',
+                                      state_files=[], log_file=log_file).start()
+        except FileNotFoundError:
+            pass
+
+        self.assertFalse(log_file.native.raw.exists())
 
 
 @unittest.skipIf(not os.path.isfile('/usr/bin/tex'), 'requires tex')

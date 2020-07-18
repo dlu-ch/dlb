@@ -33,13 +33,17 @@ with dlb.ex.Context():
     source_directory = dlb.fs.Path('src/')
     output_directory = dlb.fs.Path('build/out/')
 
+    latex = PdfLatex(
+        toplevel_file='src/report.tex',
+        output_file=output_directory / 'report.pdf',
+        input_search_directories=['src/'],
+        log_file = output_directory / 'report.log',
+        state_files=[output_directory / 'report.aux', output_directory / 'report.toc']
+    )
+
     # repeat redo until all state files exist and their content remains unchanged but at most 10 times
     for i in range(10):
-        r = PdfLatex(toplevel_file='src/report.tex',
-                     output_file=output_directory / 'report.pdf',
-                     input_search_directories=['src/'],
-                     state_files=[output_directory / 'report.aux', output_directory / 'report.toc']).start()
-        if not r:
+        if not latex.start():
             break
 
 dlb.di.inform('finished successfully')
