@@ -337,7 +337,7 @@ to split the build into sequential phases like this::
    with dlb.ex.Context():  # waits for all pending redos to complete
        CCompiler(source_files=['build/out/main.c'], object_files=['build/out/main.c.o']).start()
 
-This mechanism is used in :dlbrepo:`example/c-gtk/`.
+This mechanism is used in :dlbrepo:`example/c-gtk-doxygen/`.
 
 
 Real stuff
@@ -495,7 +495,7 @@ Write scripts and tools
   Use scripts only on the top-level.
 
 - Split large :term:`scripts<script>` into small modules that are imported by the script
-  (like this: :dlbrepo:`example/c-gtk/`).
+  (like this: :dlbrepo:`example/c-gtk-doxygen/`).
   You can place these modules in the directory they control.
 
 - Use only *one* :term:`root context` and nest all other contexts inside
