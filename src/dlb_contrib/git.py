@@ -24,8 +24,24 @@
 #           s = ','.join(repr(p.as_string()) for p in result.untracked_files)
 #           dlb.di.inform(f'repository contains {len(result.untracked_files)} '
 #                         f'untracked file(s): {s}', level=dlb.di.WARNING)
+#
+# Usage example:
+#
+#   # Check the syntax of all tag names and that local annotated tags match with annoated tags in remote 'origin'.
+#
+#   import dlb.ex
+#   import dlb_contrib.git
+#
+#   with dlb.ex.Context():
+#       class GitCheckTags(dlb_contrib.git.GitCheckTags):
+#           ANNOTATED_TAG_NAME_REGEX = r'v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){2}'  # e.g. 'v1.23.0'
+#       version_tag_names = set(GitCheckTags().start().commit_by_annotated_tag_name)
 
-__all__ = ['GIT_DESCRIPTION_REGEX', 'modifications_from_status', 'check_refname', 'GitDescribeWorkingDirectory']
+__all__ = [
+    'GIT_DESCRIPTION_REGEX',
+    'modifications_from_status', 'check_refname',
+    'GitDescribeWorkingDirectory', 'GitCheckTags'
+]
 
 import sys
 import re
@@ -242,5 +258,121 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
                 potential_branch_refname = None  # is detached
 
         result.branch_refname = potential_branch_refname
+
+        return True
+
+
+class GitCheckTags(dlb.ex.Tool):
+    # Query and check tags of the Git working directory at the working tree's root and optionally one of its remotes.
+    # Fails if a tag violates the rules expressed by *ANNOTATED_TAG_NAME_REGEX* and *LIGHTWEIGHT_TAG_NAME_REGEX*.
+
+    # Dynamic helper, looked-up in the context.
+    EXECUTABLE = 'git'
+
+    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    VERSION_PARAMETERS = ('--version',)
+
+    # Regular expression that every annotated tag name must match and no lightweight tag name must match.
+    ANNOTATED_TAG_NAME_REGEX = \
+        r'v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))*([a-z]+(0|[1-9][0-9]*))?'
+    # default: dotted integers without leading zeros and optional letter-only suffix (always ends in decimal digit)
+    # e.g. 'v0.2' or 'v1.2.3pre47'
+
+    # Regular expression that every lightweight tag name must match.
+    LIGHTWEIGHT_TAG_NAME_REGEX = r'(?!v[0-9]).+'  # exclude names that would match `git describe --match "v[0-9]*"'
+
+    # Optional remote whos tags must match the local tags in name and tagged commit.
+    # Must be None (for local tags) or a valid refname that names a remote.
+    # If empty, no remote repository is accessed.
+    REMOTE_NAME_TO_SYNC_CHECK = 'origin'
+
+    # If False, do not sync lightweight tags with remote *REMOTE_NAME_TO_SYNC_CHECK*.
+    # Ignored if *REMOTE_NAME_TO_SYNC_CHECK* is empty.
+    DO_SYNC_CHECK_LIGHTWEIGHT_TAGS = False
+
+    # Dictionary of tagged commits.
+    # Keys: name of annotated tag.
+    # Values: SHA-1 hash of the tagged commit as a hex string of 40 characters ('0' - '9', 'a' - 'f').
+    commit_by_annotated_tag_name = dlb.ex.output.Object(explicit=False)  # e.g. {'v1.2.3': 'deadbeef1234...'}
+
+    # Dictionary of tagged commits.
+    # Keys: name of lightweight tag.
+    # Values: SHA-1 hash of the tagged commit as a hex string of 40 characters ('0' - '9', 'a' - 'f').
+    commit_by_lightweight_tag_name = dlb.ex.output.Object(explicit=False)  # e.g. {'vw': '1234adee...'}
+
+    async def get_tagged_commits(self, context, remote_or_url_or_path: str):
+        arguments = ['ls-remote', '--tags', '--quiet', remote_or_url_or_path]
+        # if *remote_or_url_or_path* is an existing remote and an existing path, the remote takes precedence
+        # (which means: always start paths with '.' or '/')
+
+        _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
+
+        commit_by_annotated_tag_name = {}
+        commit_by_lightweight_tag_name = {}
+
+        line_regex = re.compile(rb'(?P<commit>[a-f0-9]{40})\trefs/tags/(?P<tag>[^ ^]+)(?P<peeled>\^{})?')
+        for line in stdout.splitlines():
+            m = line_regex.fullmatch(line)
+            commit_hash = m.group('commit').decode()
+            tag_name = m.group('tag').decode()
+            d = commit_by_lightweight_tag_name if m.group('peeled') is None else commit_by_annotated_tag_name
+            d[tag_name] = commit_hash
+
+        for tag_name in commit_by_annotated_tag_name:
+            del commit_by_lightweight_tag_name[tag_name]
+
+        return commit_by_annotated_tag_name, commit_by_lightweight_tag_name
+
+    async def redo(self, result, context):
+        annotated_tag_regex = re.compile(self.ANNOTATED_TAG_NAME_REGEX)
+        lightweight_tag_regex = re.compile(self.LIGHTWEIGHT_TAG_NAME_REGEX)
+        if self.REMOTE_NAME_TO_SYNC_CHECK:
+            check_refname(self.REMOTE_NAME_TO_SYNC_CHECK)
+
+        commit_by_annotated_tag_name, commit_by_lightweight_tag_name = await self.get_tagged_commits(context, '.')
+        if self.REMOTE_NAME_TO_SYNC_CHECK:
+            remote_commit_by_annotated_tag_name, remote_commit_by_lightweight_tag_name = \
+                await self.get_tagged_commits(context, self.REMOTE_NAME_TO_SYNC_CHECK)
+
+            remote_commit_by_tag_name = remote_commit_by_annotated_tag_name
+            commit_by_tag_name = commit_by_annotated_tag_name
+            if self.DO_SYNC_CHECK_LIGHTWEIGHT_TAGS and remote_commit_by_lightweight_tag_name != commit_by_lightweight_tag_name:
+                remote_commit_by_tag_name.update(remote_commit_by_lightweight_tag_name)
+                commit_by_tag_name.update(commit_by_lightweight_tag_name)
+
+            if remote_commit_by_tag_name != commit_by_tag_name:
+                local_tags = set(commit_by_tag_name)
+                remote_tags = set(remote_commit_by_tag_name)
+                tags_only_in_local = local_tags - remote_tags
+                tags_only_in_remote = remote_tags - local_tags
+
+                def tag_list_str_for(tags):
+                    return ', '.join(repr(t) for t in sorted(tags))
+
+                if tags_only_in_local:
+                    raise ValueError('local tags missing on remotely: {}'.format(tag_list_str_for(tags_only_in_local)))
+                if tags_only_in_remote:
+                    raise ValueError('remote tags missing locally: {}'.format(tag_list_str_for(tags_only_in_remote)))
+
+                tags_with_different_commits = set(
+                    n for n, c in commit_by_tag_name.items()
+                    if remote_commit_by_tag_name[n] != c
+                )
+                if tags_with_different_commits:
+                    raise ValueError('tags for different commits locally and remotely: {}'.format(
+                        tag_list_str_for(tags_with_different_commits)))
+
+        for tag_name in commit_by_annotated_tag_name:
+            if not annotated_tag_regex.fullmatch(tag_name):
+                raise ValueError(f"name of annotated tag does not match 'ANNOTATED_TAG_NAME_REGEX': {tag_name!r}")
+
+        for tag_name in commit_by_lightweight_tag_name:
+            if annotated_tag_regex.fullmatch(tag_name):
+                raise ValueError(f"name of lightweight tag does match 'ANNOTATED_TAG_NAME_REGEX': {tag_name!r}")
+            if not lightweight_tag_regex.fullmatch(tag_name):
+                raise ValueError(f"name of lightweight tag does not match 'LIGHTWEIGHT_TAG_NAME_REGEX': {tag_name!r}")
+
+        result.commit_by_annotated_tag_name = commit_by_annotated_tag_name
+        result.commit_by_lightweight_tag_name = commit_by_lightweight_tag_name
 
         return True

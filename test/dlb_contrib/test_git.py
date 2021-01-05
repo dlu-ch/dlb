@@ -11,6 +11,8 @@ import dlb_contrib.git
 import dlb_contrib.sh
 import os.path
 import shutil
+import tempfile
+import subprocess
 import re
 import unittest
 
@@ -208,11 +210,15 @@ class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):
 
 @unittest.skipIf(not shutil.which('git'), 'requires git in $PATH')
 @unittest.skipIf(not shutil.which('sh'), 'requires sh in $PATH')
-class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
+class GitDescribeWorkingDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
         with dlb.ex.Context():
-            PrepareGitRepo().start()
+            class AddLightWeightTag(dlb_contrib.sh.ShScriptlet):
+                SCRIPTLET = 'git tag v2'  # light-weight tag does not affect 'git describe'
+
+            PrepareGitRepo().start().complete()
+            AddLightWeightTag().start().complete()
             result = DescribeWorkingDirectory().start()
 
         dlb.di.inform(f"version: {result.version_components!r}, wd version: {result.wd_version!r}")
@@ -262,20 +268,201 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
 
 
+class DefaultVersionTagTest(unittest.TestCase):
+    REGEX = re.compile(dlb_contrib.git.GitCheckTags.ANNOTATED_TAG_NAME_REGEX)
+
+    def test_fails_for_empty(self):
+        self.assertFalse(self.REGEX.fullmatch(''))
+
+    def test_fails_for_missing_v(self):
+        self.assertFalse(self.REGEX.fullmatch('1.2.3'))
+
+    def test_fails_for_leading_zero(self):
+        self.assertFalse(self.REGEX.fullmatch('v01.2.3'))
+        self.assertFalse(self.REGEX.fullmatch('v1.02.3'))
+        self.assertFalse(self.REGEX.fullmatch('v1.02.03'))
+
+    def test_matches_dotted_integers(self):
+        self.assertTrue(self.REGEX.fullmatch('v1'))
+        self.assertTrue(self.REGEX.fullmatch('v1.2'))
+        self.assertTrue(self.REGEX.fullmatch('v1.2.3'))
+        self.assertTrue(self.REGEX.fullmatch('v1.20.345.6789'))
+        self.assertTrue(self.REGEX.fullmatch('v0.0.0'))
+
+    def test_fails_without_trailing_decimal_digit(self):
+        self.assertFalse(self.REGEX.fullmatch('v1.2.3pre'))
+
+    def test_matches_dotted_integers_with_suffix(self):
+        self.assertTrue(self.REGEX.fullmatch('v1.2.3a4'))
+        self.assertTrue(self.REGEX.fullmatch('v1.2.3rc0'))
+        self.assertTrue(self.REGEX.fullmatch('v1.2.3patch747'))
+
+
+@unittest.skipIf(not shutil.which('git'), 'requires git in $PATH')
+@unittest.skipIf(not shutil.which('sh'), 'requires sh in $PATH')
+class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_local_only(self):
+        class GitCheckTags(dlb_contrib.git.GitCheckTags):
+            REMOTE_NAME_TO_SYNC_CHECK = ''
+
+        class GitCheckTags2(GitCheckTags):
+            LIGHTWEIGHT_TAG_NAME_REGEX = 'latest_.*'
+
+        with dlb.ex.Context():
+            PrepareGitRepo().start().complete()
+            subprocess.check_output(['git', 'tag', '-a', 'v2.0.0', '-m', 'Release'])
+            subprocess.check_output(['git', 'tag', 'vw'])
+            result = GitCheckTags().start()
+
+        self.assertEqual({'v1.2.3c4', 'v2.0.0'}, set(result.commit_by_annotated_tag_name))
+        self.assertEqual({'vw'}, set(result.commit_by_lightweight_tag_name))
+
+        with dlb.ex.Context():
+            output = subprocess.check_output(['git', 'rev-parse', 'v1.2.3c4^{}', 'v2.0.0^{}', 'vw'])
+            commit_hashes = output.decode().splitlines()
+
+            self.assertEqual({
+                'v1.2.3c4': commit_hashes[0],
+                'v2.0.0': commit_hashes[1]
+            }, result.commit_by_annotated_tag_name)
+
+            self.assertEqual({
+                'vw': commit_hashes[2]
+            }, result.commit_by_lightweight_tag_name)
+
+        with dlb.ex.Context():
+            subprocess.check_output(['git', 'tag', 'v2'])
+            with self.assertRaises(ValueError) as cm:
+                GitCheckTags().start().complete()
+            msg = "name of lightweight tag does match 'ANNOTATED_TAG_NAME_REGEX': 'v2'"
+            self.assertEqual(msg, str(cm.exception))
+
+        with dlb.ex.Context():
+            subprocess.check_output(['git', 'tag', '-d', 'v2'])
+            subprocess.check_output(['git', 'tag', '-a', 'v_3.0', '-m', 'Release'])
+            with self.assertRaises(ValueError) as cm:
+                GitCheckTags().start().complete()
+            msg = "name of annotated tag does not match 'ANNOTATED_TAG_NAME_REGEX': 'v_3.0'"
+            self.assertEqual(msg, str(cm.exception))
+
+        with dlb.ex.Context():
+            subprocess.check_output(['git', 'tag', '-d', 'v_3.0'])
+            with self.assertRaises(ValueError) as cm:
+                GitCheckTags2().start().complete()
+            msg = "name of lightweight tag does not match 'LIGHTWEIGHT_TAG_NAME_REGEX': 'vw'"
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_remote_too(self):
+        class GitCheckTags(dlb_contrib.git.GitCheckTags):
+            pass
+
+        class GitCheckTags2(GitCheckTags):
+            DO_SYNC_CHECK_LIGHTWEIGHT_TAGS = True
+
+        origin_repo_dir = os.path.abspath(tempfile.mkdtemp())
+        with testenv.DirectoryChanger(origin_repo_dir):
+            subprocess.check_output(['git', 'init'])
+            subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
+            subprocess.check_output(['git', 'config', 'user.name', 'user.name'])
+            subprocess.check_output(['touch', 'x'])
+            subprocess.check_output(['git', 'add', 'x'])
+            subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
+            subprocess.check_output(['git', 'tag', '-a', 'v1.2.3c4', '-m', 'Release'])
+            subprocess.check_output(['touch', 'y'])
+            subprocess.check_output(['git', 'add', 'y'])
+            subprocess.check_output(['git', 'commit', '-m', 'Add y'])
+            subprocess.check_output(['git', 'tag', '-a', 'v2.0.0', '-m', 'Release'])
+            subprocess.check_output(['git', 'tag', '-a', 'v2.0.1', '-m', 'Release'])
+            subprocess.check_output(['git', 'tag', 'vm'])
+            subprocess.check_output(['git', 'tag', 'v'])
+            subprocess.check_output(['git', 'tag', 'w'])
+
+        subprocess.check_output(['git', 'init'])
+        subprocess.check_output(['touch', 'x'])
+        subprocess.check_output(['git', 'add', 'x'])
+        subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
+        subprocess.check_output(['git', 'remote', 'add', 'origin', origin_repo_dir])
+        subprocess.check_output(['git', 'fetch'])
+        subprocess.check_output(['git', 'fetch', '--tags'])
+
+        with dlb.ex.Context():
+            GitCheckTags().start()
+
+        with dlb.ex.Context():
+            subprocess.check_output(['git', 'tag', '-d', 'vm'])
+            subprocess.check_output(['git', 'tag', '-d', 'v'])
+            GitCheckTags().start()  # do not sync lightweight tags by default
+
+            with self.assertRaises(ValueError) as cm:
+                GitCheckTags2().start().complete()
+            msg = "remote tags missing locally: 'v', 'vm'"
+            self.assertEqual(msg, str(cm.exception))
+
+            subprocess.check_output(['git', 'tag', '-d', 'v1.2.3c4'])
+            subprocess.check_output(['git', 'tag', '-d', 'v2.0.1'])
+            with self.assertRaises(ValueError) as cm:
+                GitCheckTags().start().complete()
+            msg = "remote tags missing locally: 'v1.2.3c4', 'v2.0.1'"
+            self.assertEqual(msg, str(cm.exception))
+
+            subprocess.check_output(['git', 'tag', '-a', 'v1.2.3c4', '-m', 'Release'])  # different commit
+            subprocess.check_output(['git', 'tag', '-a', 'v2.0.1', '-m', 'Release'])  # different commit
+            with self.assertRaises(ValueError) as cm:
+                GitCheckTags().start().complete()
+            msg = "tags for different commits locally and remotely: 'v1.2.3c4', 'v2.0.1'"
+            self.assertEqual(msg, str(cm.exception))
+
+            subprocess.check_output(['git', 'tag', '-a', 'v3.0.0', '-m', 'Release'])
+            subprocess.check_output(['git', 'tag', '-a', 'v3.0.1', '-m', 'Release'])
+            with self.assertRaises(ValueError) as cm:
+                GitCheckTags().start().complete()
+            msg = "local tags missing on remotely: 'v3.0.0', 'v3.0.1'"
+            self.assertEqual(msg, str(cm.exception))
+
+    def test_example(self):
+        origin_repo_dir = os.path.abspath(tempfile.mkdtemp())
+        with testenv.DirectoryChanger(origin_repo_dir):
+            subprocess.check_output(['git', 'init'])
+            subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
+            subprocess.check_output(['git', 'config', 'user.name', 'user.name'])
+            subprocess.check_output(['touch', 'x'])
+            subprocess.check_output(['git', 'add', 'x'])
+            subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
+            subprocess.check_output(['git', 'tag', '-a', 'v1.2.3', '-m', 'Release'])
+
+        subprocess.check_output(['git', 'init'])
+        subprocess.check_output(['git', 'remote', 'add', 'origin', origin_repo_dir])
+        subprocess.check_output(['git', 'fetch'])
+        subprocess.check_output(['git', 'fetch', '--tags'])
+
+        with dlb.ex.Context():
+            class GitCheckTags(dlb_contrib.git.GitCheckTags):
+                ANNOTATED_TAG_NAME_REGEX = r'v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){2}'  # e.g. 'v1.23.0'
+            version_tag_names = set(GitCheckTags().start().commit_by_annotated_tag_name)
+            self.assertEquals({'v1.2.3'}, version_tag_names)
+
 @unittest.skipIf(not shutil.which('git'), 'requires git in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
         # noinspection PyPep8Naming
-        Tool = dlb_contrib.git.GitDescribeWorkingDirectory
+        Tools = [
+            dlb_contrib.git.GitDescribeWorkingDirectory,
+            dlb_contrib.git.GitCheckTags
+        ]
 
         class QueryVersion(dlb_contrib.generic.VersionQuery):
-            VERSION_PARAMETERS_BY_EXECUTABLE = {Tool.EXECUTABLE: Tool.VERSION_PARAMETERS}
+            VERSION_PARAMETERS_BY_EXECUTABLE = {
+                Tool.EXECUTABLE: Tool.VERSION_PARAMETERS
+                for Tool in Tools
+            }
 
         with dlb.ex.Context():
             version_by_path = QueryVersion().start().version_by_path
-            path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
-            self.assertEqual(1, len(version_by_path))
-            version = version_by_path[path]
-            self.assertIsInstance(version, str)
-            self.assertGreaterEqual(version.count('.'), 2)
+            self.assertEqual(len(QueryVersion.VERSION_PARAMETERS_BY_EXECUTABLE), len(version_by_path))
+            for Tool in Tools:
+                path = dlb.ex.Context.active.helper[Tool.EXECUTABLE]
+                version = version_by_path[path]
+                self.assertIsInstance(version, str)
+                self.assertGreaterEqual(version.count('.'), 2)
