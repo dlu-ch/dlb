@@ -189,7 +189,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'git'
 
-    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    # Command line parameters for *EXECUTABLE* to output version information on standard output
     VERSION_PARAMETERS = ('--version',)
 
     # Consider only annotated tags with a name that matches this glob(7) pattern.
@@ -269,7 +269,7 @@ class GitCheckTags(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'git'
 
-    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    # Command line parameters for *EXECUTABLE* to output version information on standard output
     VERSION_PARAMETERS = ('--version',)
 
     # Regular expression that every annotated tag name must match and no lightweight tag name must match.

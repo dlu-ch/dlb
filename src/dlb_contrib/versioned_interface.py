@@ -57,14 +57,14 @@ def check_hash(*, files_to_hash: Iterator[dlb.fs.PathLike], hash_line_file: dlb.
     # Calculate the SHA1 hash of each non-directory object yielded by *files_to_hash* and file *hash_line_file*
     # (expect the hash line). Then compare it to the hash in the hash line.
     #
-    # If the hashes do not match and the hash in the hash line is not *hash_to_ignore* a HashMismatch exception is
+    # If the hashes do not match and the hash in the hash line is not *hash_to_ignore*, a HashMismatch exception is
     # raised with the correct hash line in the exception message.
-    # If the hashes do not match and the hash in the hash line is *hash_to_ignore* a UserWarning is issued.
+    # If the hashes do not match and the hash in the hash line is *hash_to_ignore*, a UserWarning is issued.
     #
-    # If *hash_line_file* does not contain exactly one hash line - a line that matches *hash_line_regex* - a
-    # HashLineFileError exception is raised.
+    # If *hash_line_file* does not contain exactly one hash line - a line that matches *hash_line_regex* -,
+    # a HashLineFileError exception is raised.
     #
-    # Use this to avoid accidental changes of an versioned interface without updateing the version information.
+    # Use this to avoid accidental changes of a versioned interface without updating the version information.
 
     hash_line_regex = re.compile(hash_line_regex)
 

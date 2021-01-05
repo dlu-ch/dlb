@@ -33,7 +33,7 @@ class Archive(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'ar'
 
-    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    # Command line parameters for *EXECUTABLE* to output version information on standard output
     VERSION_PARAMETERS = ('--version',)
 
     # String of operation modifiers for operation 'r' (each modifier is a ASCII letter).

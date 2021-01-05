@@ -99,7 +99,6 @@ The lines are separated by ``'␣\n'`` (``'␣'`` means the character U+0020):
 
 The initial line carries the essential information. Its first letter after the indentation denotes the *level* of the
 message: the first letter of the standard names of the standard loglevels of the :mod:`python:logging` module.
-An optional relative file path and 1-based line number of an *affected regular file* follows.
 
 .. productionlist:: diagmessage
    initial_line: `indentation` `level_indicator` '␣' `summary` `summary_suffix`
@@ -128,7 +127,6 @@ times. The number of decimal places is the same for all output timing informatio
    decimal_integer: `nonzero_decimal_digit` `decimal_digit`*
    nonzero_decimal_digit: '1' | ... | '9'
    decimal_digit: '0' | `nonzero_decimal_digit`
-   hexadecimal_digit: `decimal_digit` | 'a' | ... | 'f'
 
 
 Module content
@@ -204,7 +202,7 @@ Module content
 
 .. function:: format_message(message, level)
 
-   Return a formatted message with aligned fields, assuming nesting level 0.
+   Return a formatted message with aligned fields, assuming nesting level *level*.
 
    First, empty lines are removed from the beginning and the end of *message* and trailing white space characters is
    removed from each line.

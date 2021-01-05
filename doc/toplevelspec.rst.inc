@@ -116,6 +116,7 @@ Modification of the working tree
    - |assumptionviolationeffect-redo-miss|
    - |assumptionviolationeffect-graceful-fail|
 
+  .. For example: No update of the compiler while compiling.
 
 Filesystems behaviour of working tree
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -206,6 +207,10 @@ Filesystems behaviour of working tree
 
    - |assumptionviolationeffect-obscure-fail|
    - |assumptionviolationeffect-graceful-fail|
+
+   .. The same is not true for file *deletion* on MS Windows:
+      DeleteFile() only marks a file for deletion on closed. It remains present as long as any handle to the
+      file is open.
 
 .. _assumption-f7:
 .. |assumption-f7| replace:: :ref:`A-F7 <assumption-f7>`

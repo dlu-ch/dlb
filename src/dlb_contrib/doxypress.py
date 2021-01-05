@@ -113,7 +113,7 @@ class DoxyPress(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'doxypress'
 
-    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    # Command line parameters for *EXECUTABLE* to output version information on standard output
     VERSION_PARAMETERS = ('--version',)
 
     # Placeholders in DoxyPress project file template.

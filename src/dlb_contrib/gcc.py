@@ -83,7 +83,7 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'gcc'
 
-    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    # Command line parameters for *EXECUTABLE* to output version information on standard output
     VERSION_PARAMETERS = ('--version',)
 
     # Names of warnings to be suppressed (e.g. 'unused-value').
@@ -170,7 +170,7 @@ class _LinkerGcc(dlb.ex.Tool):
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = ''  # define in subclass
 
-    # Command line parameters for *EXECUTABLE* to output version information of standard output
+    # Command line parameters for *EXECUTABLE* to output version information on standard output
     VERSION_PARAMETERS = ('--version',)
 
     # Tuple of library name to be searched in the library search directories and linked against.

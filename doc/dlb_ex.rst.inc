@@ -756,8 +756,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
          Otherwise, ``chunk_processor.result`` after each chunk was fed to *chunk_processor* as described above.
 
       :raises HelperExecutionError: if the subprocess exits with a returncode not in *expected_returncodes*.
-      :raises asyncio.LimitOverrunError: if *chunk_processor* is not ``None`` and the subprocess output
-         more than ``chunk_processor`` bytes without a ``chunk_processor.separator``.
+      :raises asyncio.LimitOverrunError: if *chunk_processor* is not ``None`` and the subprocess outputs
+         more than ``chunk_processor.max_chunk_size`` bytes without a ``chunk_processor.separator``.
 
       Returns a tuple ``(returncode, output)``. *returncode* is the returncode of the subprocess and *output* its
       output to stdout or stderr --- processed by ``chunk_processor`` if *chunk_processor* is ``None`` ---
