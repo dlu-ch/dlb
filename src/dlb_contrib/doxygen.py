@@ -126,12 +126,13 @@ class Doxygen(dlb.ex.Tool):
     # The name of a placeholder must be a non-empty string from ASCII letters, decimal digits and '_' that does not
     # start with a decial digit.
     #
-    # The replacement value can be None, bool, int, a dlb.fs.Path, a non-nested iterable or anything, a str can be
+    # The replacement value can be None, bool, int, a dlb.fs.Path, a non-nested iterable or anything a str can be
     # constructed from. It must not contain the substring '\\"'.
     # *True* is replaced by 'YES', *False* is replaced by 'NO', *None* is replaced by the empty string, and
     # a dlb.fs.Path object *p* is replaced by str(p.native).
     #
     # The dictionary items for placeholder name equal to a name of dependency role are ignored.
+    # Can be modified by overwriting *get_replacements()*.
     TEXTUAL_REPLACEMENTS = {}
 
     # When any if these change: redo.
@@ -146,13 +147,18 @@ class Doxygen(dlb.ex.Tool):
 
     output_directory = dlb.ex.output.Directory(cls=Path)
 
+    def get_replacements(self) -> Dict[str, Any]:
+        # Return dictionary of replacements.
+        # See TEXTUAL_REPLACEMENTS for details.
+        return self.TEXTUAL_REPLACEMENTS
+
     async def redo(self, result, context):
 
         with open(result.configuration_template_file.native, 'rb') as f:
             doxyfile_template = f.read().decode()  # preserve line separators
 
         with context.temporary() as doxyfile, context.temporary(is_dir=True) as output_directory:
-            replacements = dict(self.TEXTUAL_REPLACEMENTS)
+            replacements = self.get_replacements()
 
             replacements['output_directory'] = output_directory
             for name in ('source_directories', 'configuration_template_file', 'source_files_to_watch'):
