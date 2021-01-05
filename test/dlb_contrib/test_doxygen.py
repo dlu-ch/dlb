@@ -8,6 +8,7 @@ import dlb.ex
 import dlb_contrib.generic
 import dlb_contrib.doxygen
 import os.path
+import shutil
 import unittest
 
 
@@ -120,8 +121,8 @@ class DoxygenWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestCas
         self.assertEqual(msg, str(cm.exception))
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/doxygen'), 'requires doxygen')
-class Doxygen2Test(testenv.TemporaryWorkingDirectoryTestCase):
+@unittest.skipIf(not shutil.which('doxygen'), 'requires doxygen in $PATH')
+class DoxygenExecutionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_empty_doxyfile(self):
         open('Doxyfile', 'xb').close()
@@ -133,7 +134,7 @@ class Doxygen2Test(testenv.TemporaryWorkingDirectoryTestCase):
                 output_directory='d/').start()
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/doxygen'), 'requires doxygen')
+@unittest.skipIf(not shutil.which('doxygen'), 'requires doxygen in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

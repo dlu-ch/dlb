@@ -10,6 +10,7 @@ import dlb_contrib.generic
 import dlb_contrib.git
 import dlb_contrib.sh
 import os.path
+import shutil
 import re
 import unittest
 
@@ -168,7 +169,8 @@ class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):
         return True
 
 
-@unittest.skipIf(not (os.path.isfile('/bin/sh') and os.path.isfile('/usr/bin/git')), 'requires sh and Git')
+@unittest.skipIf(not shutil.which('git'), 'requires git in $PATH')
+@unittest.skipIf(not shutil.which('sh'), 'requires sh in $PATH')
 class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
@@ -223,7 +225,7 @@ class GitTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/git'), 'requires Git')
+@unittest.skipIf(not shutil.which('git'), 'requires git in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

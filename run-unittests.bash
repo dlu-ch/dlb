@@ -11,7 +11,7 @@ script_dir="$("${READLINK:?}" -e -- "$0")"
 script_dir="${script_dir%/*}"
 cd -- "${script_dir}"
 
-test_dir=test/
+test_dir=test
 packages_under_test=("$@")
 if [ "${#packages_under_test[@]}" -eq 0 ]; then
     packages_under_test=(dlb dlb_contrib)

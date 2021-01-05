@@ -9,6 +9,7 @@ import dlb.ex
 import dlb_contrib.generic
 import dlb_contrib.strace
 import os.path
+import shutil
 import unittest
 from typing import Tuple, List, Iterable, Union
 
@@ -127,10 +128,10 @@ class ParseLineTest(unittest.TestCase):
             dlb_contrib.strace.syscall_from_line(b'')
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/strace'), 'requires strace')
-@unittest.skipIf(not os.path.isfile('/bin/bash'), 'requires bash')
-@unittest.skipIf(not os.path.isfile('/bin/cat'), 'requires cat')
-@unittest.skipIf(not os.path.isfile('/bin/cp'), 'requires cp')
+@unittest.skipIf(not shutil.which('strace'), 'requires strace in $PATH')
+@unittest.skipIf(not shutil.which('bash'), 'requires bash in $PATH')
+@unittest.skipIf(not shutil.which('cat'), 'requires cat in $PATH')
+@unittest.skipIf(not shutil.which('cp'), 'requires cat in $PATH')
 class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_discovers_read_files(self):
@@ -170,7 +171,7 @@ class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual((dlb.fs.Path('y'),), r.written_files)
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/strace'), 'requires strace')
+@unittest.skipIf(not shutil.which('strace'), 'requires strace in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

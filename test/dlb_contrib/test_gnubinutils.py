@@ -8,6 +8,7 @@ import dlb_contrib.generic
 import dlb_contrib.gcc
 import dlb_contrib.gnubinutils
 import os.path
+import shutil
 import unittest
 
 
@@ -15,8 +16,8 @@ class ThisIsAUnitTest(unittest.TestCase):
     pass
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
-@unittest.skipIf(not os.path.isfile('/usr/bin/ar'), 'requires ar')
+@unittest.skipIf(not shutil.which('gcc'), 'requires gcc in $PATH')
+@unittest.skipIf(not shutil.which('ar'), 'requires ar in $PATH')
 class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
@@ -39,7 +40,7 @@ class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
                                             archive_file='libexample.a').start()
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/ar'), 'requires ar')
+@unittest.skipIf(not shutil.which('ar'), 'requires ar in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

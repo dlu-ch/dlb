@@ -11,6 +11,7 @@ import dlb_contrib.sh
 import dlb_contrib.gcc
 import sys
 import os.path
+import shutil
 import textwrap
 import unittest
 from typing import Iterable, Union
@@ -44,7 +45,7 @@ class PathTest(unittest.TestCase):
             dlb_contrib.gcc.ObjectOrArchivePath('..a')
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
+@unittest.skipIf(not shutil.which('gcc'), 'requires gcc in $PATH')
 class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
@@ -159,7 +160,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual("not a macro: 'a('", str(cm.exception))
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/g++'), 'requires g++')
+@unittest.skipIf(not shutil.which('g++'), 'requires g++ in $PATH')
 class CplusplusTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
@@ -212,7 +213,7 @@ class CplusplusTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.gcc.CplusplusLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').start()
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
+@unittest.skipIf(not shutil.which('gcc'), 'requires gcc in $PATH')
 class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     # noinspection PyPep8Naming
@@ -294,7 +295,7 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
                        linked_file='e').start()
 
 
-@unittest.skipIf(not os.path.isfile('/usr/bin/gcc'), 'requires gcc')
+@unittest.skipIf(not shutil.which('gcc'), 'requires gcc in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
