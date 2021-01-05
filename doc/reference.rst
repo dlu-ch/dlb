@@ -35,8 +35,8 @@ Reference
 .. [#touch1]
    Especially, :term:`mtime` is not manually set with :command:`touch -t` or any tool that uses a coarser time
    resolution than the :term:`effective mtime resolution`.
-   See `touch <http://man7.org/linux/man-pages/man1/touch.1.html>`_  and
-   `utimensat() <http://man7.org/linux/man-pages/man2/utimensat.2.html>`_.
+   See `touch <https://man7.org/linux/man-pages/man1/touch.1.html>`_  and
+   `utimensat() <https://man7.org/linux/man-pages/man2/utimensat.2.html>`_.
 
 .. [#linuxfstime1]
    Linux currently (2020) `uses <https://elixir.bootlin.com/linux/v5.5/source/fs/inode.c#L2220>`_
@@ -52,6 +52,6 @@ Reference
    :c:func:`adjtime()` is not covered by `ISO 1003.1-2008`_.
    It originated in 4.3BSD and System V.
    For many operating systems it states "the clock is always monotonically increasing"
-   (`Linux <http://man7.org/linux/man-pages/man3/adjtime.3.html>`_,
+   (`Linux <https://man7.org/linux/man-pages/man3/adjtime.3.html>`_,
    `OpenBSD <https://man.openbsd.org/adjtime>`_,
    `FreeBSD <https://www.freebsd.org/cgi/man.cgi?query=adjtime&sektion=2>`_).

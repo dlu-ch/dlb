@@ -4,7 +4,7 @@
 
 """Generate documents from source code with Doxygen."""
 
-# Doxygen: <http://www.doxygen.nl/>
+# Doxygen: <https://www.doxygen.nl/>
 # Tested with: Doxygen 1.8.13
 # Executable: 'doxygen'
 #

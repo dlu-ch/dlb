@@ -7,7 +7,7 @@
 # TeX: <https://www.tug.org/books/index.html#texbook>
 # TeX: <https://ctan.org/tex-archive/systems/knuth/dist/tex/texbook.tex>
 # LaTeX: <https://www.latex-project.org/>
-# pdflatex: <http://www.tug.org/applications/pdftex/>
+# pdflatex: <https://www.tug.org/applications/pdftex/>
 # Tested with: pdfTeX 3.14159265-2.6-1.40.19 with kpathsea version 6.3.1/dev
 # Executable: 'tex'
 # Executable: 'latex'

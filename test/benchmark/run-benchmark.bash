@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # https://github.com/SCons/scons/wiki/WhySconsIsNotSlow
-# Run benchmark as suggested by http://gamesfromwithin.com/the-quest-for-the-perfect-build-system.
+# Run benchmark as suggested by https://gamesfromwithin.com/the-quest-for-the-perfect-build-system.
 # Result: text file $result_file with a line for each build configuration (duration in seconds)
 #
 # Some thoughts:
@@ -43,7 +43,7 @@ setup_dir="setup/"
 "${MKDIR:?}" -p -- "${build_dir:?}"
 if ! [ -f  "${build_dir:?}/generate_libs.py" ]; then
     "${CURL:?}" -o "${build_dir:?}/generate_libs.py" \
-        'http://www.gamesfromwithin.com/wp-content/uploads/bin/generate_libs_py.txt'
+        'https://www.gamesfromwithin.com/wp-content/uploads/bin/generate_libs_py.txt'
 fi
 
 
@@ -196,7 +196,7 @@ run_builds_and_append_results_to_result_file 4 10 100
 run_builds_and_append_results_to_result_file 2 20 100
 run_builds_and_append_results_to_result_file 2 35 100
 
-# orginal setup of http://gamesfromwithin.com/the-quest-for-the-perfect-build-system:
+# orginal setup of https://gamesfromwithin.com/the-quest-for-the-perfect-build-system:
 #
 # The specific parameters I used for this test were:
 #

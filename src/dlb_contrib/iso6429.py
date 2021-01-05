@@ -7,9 +7,9 @@ compliant with ISO/IEC 6429 (ECMA-48, ANSI X3.64).
 Of such terminals the DEC VT-100 (although monochrome) is best known."""
 
 # ISO/IEC 6429: <https://www.iso.org/standard/12782.html>
-# ECMA-48: <http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf>
+# ECMA-48: <https://www.ecma-international.org/publications-and-standards/standards/ecma-48/>
 # DEC VT-100: <https://www.vt100.net/docs/vt100-ug/contents.html>
-# ANSI escape code: <https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences>
+# ANSI escape code: <https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences>
 # Tested with: console of Linux 4.19
 # Tested with: tilix 1.8.9
 # Tested with: Terminal of PyCharm 2020.1.1 (Community Edition)
@@ -18,7 +18,7 @@ Of such terminals the DEC VT-100 (although monochrome) is best known."""
 # compliant with ISO/IEC 6429:
 #
 #  - DEC VT-100
-#  - Linux console <http://man7.org/linux/man-pages/man4/console_codes.4.html>
+#  - Linux console <https://man7.org/linux/man-pages/man4/console_codes.4.html>
 #  - xterm (emulates DEC VT-100)
 #  - Terminal emulators based on the GTK widget VteTerminal <https://developer.gnome.org/vte/>
 #    (tilix, GNOME Terminal, ...)

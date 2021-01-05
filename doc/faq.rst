@@ -130,7 +130,7 @@ Examples are:
 
 - `Apache Maven <https://maven.apache.org/>`_ (XML, Java-centric)
 - https://www.pantsbuild.org/
-- http://www.buildout.org/
+- https://www.buildout.org/
 
 
 Who should use dlb?
@@ -179,8 +179,8 @@ of the dependency information costs more than a few seconds per --- otherwise pe
 [#makepitfall1]_
 
 Having said that, here are the results of a simple benchmark used both
-`against <http://gamesfromwithin.com/the-quest-for-the-perfect-build-system>`_ and
-`in defense of <https://github.com/SCons/scons/wiki/WhySconsIsNotSlow>`_ SCons
+`against <https://gamesfromwithin.com/the-quest-for-the-perfect-build-system>`_ and
+`in defense of <https://web.archive.org/web/20200920000840/https://github.com/SCons/scons/wiki/WhySconsIsNotSlow>`_ SCons
 (which means it has some significance):
 
 .. image:: grph/benchmark-2.svg

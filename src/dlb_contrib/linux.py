@@ -4,7 +4,7 @@
 
 """Query Linux-specific information on hardware, filesystems and operating system as exposed by /proc."""
 
-# /proc of Linux: <http://man7.org/linux/man-pages/man5/proc.5.html>
+# /proc of Linux: <https://man7.org/linux/man-pages/man5/proc.5.html>
 # Source code of Linux 4.19: <https://github.com/torvalds/linux/tree/v4.19>
 # Tested with: Linux 4.19.0-9-amd64 #1 SMP Debian 4.19.118-2 (2020-04-29) x86_64 GNU/Linux
 #
@@ -76,7 +76,7 @@ def get_kernel_info(*, proc_root_directory: dlb.fs.PathLike = PROC_ROOT_DIRECTOR
     def get_info(p):
         return _get_limited_text(proc_root_directory / 'sys/kernel/' / p, max_size).strip().decode()
 
-    # http://man7.org/linux/man-pages/man5/proc.5.html
+    # https://man7.org/linux/man-pages/man5/proc.5.html
     return get_info('ostype'), get_info('osrelease'), get_info('version')
 
 
@@ -100,7 +100,7 @@ def get_memory_info(*, proc_root_directory: dlb.fs.PathLike = PROC_ROOT_DIRECTOR
     except KeyError as e:
         raise RuntimeError(f"missing key in {meminfo_file.as_string()!r}: {e.args[0]!r}")
 
-    # http://man7.org/linux/man-pages/man5/proc.5.html
+    # https://man7.org/linux/man-pages/man5/proc.5.html
     #
     #    total_usable:
     #        Total usable RAM (i.e., physical RAM minus a few reserved bits and the kernel binary code).
@@ -217,10 +217,10 @@ def get_mounted_filesystems(contained_paths: Optional[Iterable[dlb.fs.PathLike]]
     # for any member of *contained_paths*.
 
     # /proc/mounts, /proc/self/mounts:
-    #   http://man7.org/linux/man-pages/man5/proc.5.html:
+    #   https://man7.org/linux/man-pages/man5/proc.5.html:
     #     [...] lists the mount points of the process's own mount namespace
     #     [...] is documented in fstab(5).
-    #   http://man7.org/linux/man-pages/man5/fstab.5.html:
+    #   https://man7.org/linux/man-pages/man5/fstab.5.html:
 
     # source code of Linux 4.19:
     #

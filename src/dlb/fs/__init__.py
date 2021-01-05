@@ -211,7 +211,7 @@ class _Native:
         return self
 
 
-# http://stackoverflow.com/questions/13762231/python-metaclass-arguments
+# https://stackoverflow.com/questions/13762231/python-metaclass-arguments
 # noinspection PyMethodParameters,PyProtectedMember,PyUnresolvedReferences
 class _Meta(type):
     def __subclasscheck__(mcl, subclass):
@@ -719,7 +719,7 @@ class PortablePosixPath(PosixPath):
 
 
 class WindowsPath(Path):
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+    # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
     RESERVED_CHARACTERS = frozenset('\\"|?*<>:')  # besides: '/'
 
     # from pathlib._WindowsFlavour.reserved_names of Python 3.7.3
@@ -747,7 +747,7 @@ class WindowsPath(Path):
                     raise ValueError("must not contain reserved characters: {0}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
-                # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+                # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
                 min_codepoint = ord(min(c))
                 if min_codepoint < 0x20:
                     raise ValueError(f'must not contain characters with codepoint lower '
@@ -772,7 +772,7 @@ class PortableWindowsPath(WindowsPath):
                 if len(c) > self.MAX_COMPONENT_LENGTH:
                     raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
                 if c != '..' and c[-1] in ' .':
-                    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
+                    # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
                     raise ValueError("component must not end with ' ' or '.'")
 
         n = sum(len(c) for c in components) + max(0, len(components) - 2)
