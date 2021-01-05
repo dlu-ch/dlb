@@ -33,9 +33,9 @@ See here for more: https://dlb.readthedocs.io/.
    :alt: Build of C11 application
    :target: example/c-typical/build-all.py
 
-.. |batch-unittest| image:: https://travis-ci.org/dlu-ch/dlb.svg?branch=master
+.. |batch-unittest| image:: https://travis-ci.com/dlu-ch/dlb.svg?branch=master
    :alt: Build status (unittests)
-   :target: https://travis-ci.org/dlu-ch/dlb
+   :target: https://travis-ci.com/dlu-ch/dlb
 
 .. |batch-doc| image:: https://readthedocs.org/projects/dlb/badge/?version=latest
    :alt: Documentation status (Sphinx)
