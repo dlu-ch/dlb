@@ -25,7 +25,7 @@
 #           dlb.di.inform(f'repository contains {len(result.untracked_files)} '
 #                         f'untracked file(s): {s}', level=dlb.di.WARNING)
 
-__all__ = ['GIT_DESCRIPTION_REGEX', 'modifications_from_status', 'GitDescribeWorkingDirectory']
+__all__ = ['GIT_DESCRIPTION_REGEX', 'modifications_from_status', 'check_refname', 'GitDescribeWorkingDirectory']
 
 import sys
 import re
@@ -142,6 +142,27 @@ def modifications_from_status(lines: Iterable[str]) \
 
     return modification_by_file, untracked_files, \
            branch_refname, upstream_branch_refname, before_upstream, behind_upstream
+
+
+def check_refname(name: str):
+    # Check if *name* is a valid refname according to https://git-scm.com/docs/git-check-ref-format.
+    # Raises ValueError if not.
+
+    components = name.split('/')
+    if not components:
+        raise ValueError('refname must not be empty')
+    for c in components:
+        if not c:
+            raise ValueError('refname component must not be empty')
+        if c.startswith('.') or c.endswith('.'):
+            raise ValueError("refname component must not start or end with '.'")
+        if c.endswith('.lock'):
+            raise ValueError("refname component must not end with '.lock'")
+        if min(c) < ' ' or '\x7F' in c:
+            raise ValueError('refname component must not contain ASCII control character')
+        for s in ('..', '/', '\\', ' ', '~', '^', ':', '?', '*', '[', '@{̣'):
+            if s in c:
+                raise ValueError('refname component must not contain {}'.format(repr(s)))
 
 
 class GitDescribeWorkingDirectory(dlb.ex.Tool):

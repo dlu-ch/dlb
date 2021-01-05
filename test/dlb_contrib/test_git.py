@@ -133,6 +133,43 @@ class ModificationsFromStatusTest(unittest.TestCase):
             dlb_contrib.git.modifications_from_status(['2 R.'])
 
 
+class CheckRefNameTest(unittest.TestCase):
+
+    def test_empty_is_invalid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('')
+        self.assertEqual(str(cm.exception), 'refname component must not be empty')
+
+    def test_single_slashes_are_valid(self):
+        dlb_contrib.git.check_refname('a/b/c')
+
+    def test_consecutive_slashes_are_valid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('a//b')
+        self.assertEqual(str(cm.exception), 'refname component must not be empty')
+
+    def test_single_dot_in_the_middle_is_valid(self):
+        dlb_contrib.git.check_refname('a/b.c')
+
+    def test_double_dot_in_the_middle_is_invalid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('a/b..c')
+        self.assertEqual(str(cm.exception), "refname component must not contain '..'")
+
+    def test_control_character_is_invalid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('a\0b')
+        self.assertEqual(str(cm.exception), "refname component must not contain ASCII control character")
+
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('a\nb')
+        self.assertEqual(str(cm.exception), "refname component must not contain ASCII control character")
+
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('a\x7Fb')
+        self.assertEqual(str(cm.exception), "refname component must not contain ASCII control character")
+
+
 class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):
     SHORTENED_COMMIT_HASH_LENGTH = 8  # number of characters of the SHA1 commit hash in the *wd_version*
 
