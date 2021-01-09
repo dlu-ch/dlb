@@ -40,6 +40,7 @@ Please see there for details.
 .. dlbcontrib:module:: exportenv
 .. dlbcontrib:module:: generic
 .. dlbcontrib:module:: filesystem
+.. dlbcontrib:module:: url
 .. dlbcontrib:module:: zip
 .. dlbcontrib:module:: versioned_interface
 .. dlbcontrib:module:: linux
