@@ -214,10 +214,10 @@ Commit the changes
 ^^^^^^^^^^^^^^^^^^
 
 Git does not track empty directories. If we want Git to create :file:`.dlbroot` as part of the repository, a file
-must be added. We can use an empty file :file:`.dlbroot/z` to that end::
+must be added. We :ref:`can use <dlb-ex-workingtree-layout>` an empty file :file:`.dlbroot/z` to that end::
 
    $ touch .dlbroot/z
-   $ git add .dlbroot/z
+   $ git add -f .dlbroot/z
    $ git commit
 
 

@@ -73,7 +73,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
    :param max_parallel_redo_count: maximum number of redos started in this context than can be pending at the same time
    :type max_parallel_redo_count: int
    :param find_helpers: are dynamic helpers not defined explicitly to be searched for in :attr:`executable_search_paths`?
-   :param find_helpers: None | bool
+   :type find_helpers: None | bool
    :raises TypeError: if *path_cls* is not a subclass of :class:`dlb.fs.Path`
 
    Entering or exiting a context may raise the following exceptions:
@@ -144,7 +144,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
    .. attribute:: find_helpers
 
-      Find dynamic helpers not defined explicitly are in :attr:`executable_search_paths`?
+      Find dynamic helpers not defined explicitly in :attr:`executable_search_paths`?
       As defined in the constructor.
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
@@ -676,15 +676,15 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :param forced_env: dictionary of values to override in :attr:`env <dlb.ex.Context.env>` or ``None``
       :type forced_env: None | Dict[str, str]
       :param stdout_output:
-         If ``None``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
+         If ``None``: inherit stdout of the Python process (the file descriptor, not :data:`sys.stdout`).
          If ``NotImplemented``: suppress the output.
          Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
-         be constructed from (opened with mode ``''wb``).
+         be constructed from (opened with mode ``'wb'``).
       :param stderr_output:
          If ``None``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
          If ``NotImplemented``: suppress the output.
          Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
-         be constructed from (opened with mode ``''wb``).
+         be constructed from (opened with mode ``'wb'``).
       :rtype: int
       :return: return code of the subprocesses (one of *expected_returncodes*)
 
@@ -746,10 +746,11 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :param output_to_process: 1 to return stdout and 2 to return stderr of the subprocess
       :param other_output:
          Output for stdout of the subprocess if *output_to_process* is 2 and for *stderr* otherwise.
-         If ``None``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
+         If ``None``: inherit stdout/stderr of the Python process
+         (the file descriptor, not :data:`sys.stdout`/:data:`sys.stderr`).
          If ``NotImplemented``: suppress the output.
          Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
-         be constructed from (opened with mode ``''wb``).
+         be constructed from (opened with mode ``'wb'``).
       :type chunk_processor: None | dlb.ex.ChunkProcessor
       :param chunk_processor:
          If ``None`` the entire output is returned.

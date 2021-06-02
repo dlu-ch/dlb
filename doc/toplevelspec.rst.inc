@@ -57,10 +57,15 @@ Modification of the working tree
 .. |assumption-a1| replace:: :ref:`A-A1 <assumption-a1>`
 
 **A-A1** (access to management tree)
-   Except for modifications by dlb internals, the :term:`management tree` is not modified while
-   :term:`dlb is running <run of dlb>` and only as suggested by diagnostic messages of dlb.
+   The :term:`management tree` is not modified while :term:`dlb is running <run of dlb>` and
+   only as suggested by diagnostic messages of dlb.
 
-   Changing the absolute path of the :term:`working tree`'s root is considered a modification.
+   Exceptions:
+
+   - Modifications by dlb internals.
+   - Modifications of ``u`` and ``z`` (including their content if they are directories) in the management tree.
+
+   Changing the absolute path of the :term:`working tree`'s root is considered a modification of the management tree.
 
    Acceptable when violated:
 
@@ -116,7 +121,7 @@ Modification of the working tree
    - |assumptionviolationeffect-redo-miss|
    - |assumptionviolationeffect-graceful-fail|
 
-  .. For example: No update of the compiler while compiling.
+   .. For example: No update of the compiler while compiling.
 
 Filesystems behaviour of working tree
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -149,7 +154,7 @@ Filesystems behaviour of working tree
 .. |assumption-f3| replace:: :ref:`A-F3 <assumption-f3>`
 
 **A-F3** (mtime update at write to regular file)
-   Every write to regular file in the :term:`working tree` :term:`updates its mtime <mtime update>` as soon as it is
+   Every write to a regular file in the :term:`working tree` :term:`updates its mtime <mtime update>` as soon as it is
    completed. [#lazytime1]_ [#mmap1]_
 
    Between start and completion of a write, a reader of the file may observe an intermediate state of the
@@ -337,6 +342,18 @@ Guarantees
 ----------
 
 A guarantee (**G-**...) is a specification of behaviour observable by the user.
+
+Filesystems access in working tree
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. _guarantee-f1:
+.. |guarantee-f1| replace:: :ref:`G-F1 <guarantee-f1>`
+
+**G-F1** (reserved names)
+   dlb does not create or access a file system object ``z`` (or its contents if it is a directory)
+   in its :term:`management tree` in any way.
+
+   dlb does not create or modify a directory ``u`` (or its contents) in its management tree.
 
 
 Dependencies

@@ -249,7 +249,7 @@ Make is significantly faster than dlb when only a small fraction of the output d
 (Make: only a few sources are newer than their targets).
 The available Make implementations have been carefully optimized for speed over the years.
 dlb is executed by an instance of a Python interpreter; starting a Python interpreter and importing some modules
-typically takes approximately 70 ms.
+alone typically takes some 70 ms.
 
 Make executes a rule's command if one of the rule's source has a later :term:`mtime` than any of the the rule's
 targets (or if one of the output dependencies does not exist).
@@ -386,7 +386,7 @@ But: Less is more.
 Can I use dlb in closed-source projects?
 ----------------------------------------
 
-dlb is licensed under LGPLv3_ (which is a supplement to the GPLv3_), dlb being "The Library" and each dlb scripts being
+dlb is licensed under LGPLv3_ (which is a supplement to the GPLv3_), dlb being "The Library" and each dlb script being
 a "Combined Work". [#lgpl1]_
 
 dlb scripts can be part of commercial closed-source software without the need to publish any of it.

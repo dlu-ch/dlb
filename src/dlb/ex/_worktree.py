@@ -22,12 +22,12 @@ from . import _rundb
 MANAGEMENTTREE_DIR_NAME = '.dlbroot'
 
 # a directory containing a directory with this name is considered a working tree of dlb
-MTIME_PROBE_FILE_NAME = 'o'
+MTIME_PROBE_FILE_NAME = 'o'  # see G-F1
 assert MTIME_PROBE_FILE_NAME.upper() != MTIME_PROBE_FILE_NAME
 
-LOCK_DIRNAME = 'lock'
-TEMPORARY_DIR_NAME = 't'
-RUNDB_FILE_NAME_TEMPLATE = 'runs-{}.sqlite'
+LOCK_DIRNAME = 'lock'  # see G-F1
+TEMPORARY_DIR_NAME = 't'  # see G-F1
+RUNDB_FILE_NAME_TEMPLATE = 'runs-{}.sqlite'  # see G-F1
 
 
 class _KeepFirstRmTreeException:
