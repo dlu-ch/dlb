@@ -92,8 +92,8 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
         self.assertEqual(str(cm.exception), tmpl.format(repr('x_')))
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
-    def test_lowercase_noncallable_attribute_must_be_concrete_dependency(self):
-        msg = "the value of 'x_y_z' must be callable or an instance of a concrete subclass of 'dlb.ex.Dependency'"
+    def test_lowercase_nonmethod_attribute_must_be_concrete_dependency(self):
+        msg = "attribute 'x_y_z' must be a method or an instance of a concrete subclass of 'dlb.ex.Dependency'"
 
         with self.assertRaises(TypeError) as cm:
             class ATool(dlb.ex.Tool):
@@ -111,60 +111,353 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
         self.assertEqual(msg, str(cm.exception))
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
-    def test_lowercase_callable_attribute_must_not_have_different_signature(self):
+    def test_lowercase_attribute_must_be_method_if_in_base(self):
         class ATool(dlb.ex.Tool):
             # noinspection PyUnusedLocal
-            def x_y_z(self, s: str) -> int:  # ok, not in a base class
+            def i_m(self, s: str) -> int:
                 return 0
 
-            async def u_v(self):  # ok, not in a base class
+            async def a_i_m(self):
+                return 0
+
+            @classmethod
+            def c_m(cls):
+                return 0
+
+            # noinspection PyUnusedLocal
+            @classmethod
+            async def a_c_m(cls, *, x: int):
+                return 0
+
+            # noinspection PyUnusedLocal
+            @staticmethod
+            def s_m(y: bool):
+                return 0
+
+            @staticmethod
+            async def a_s_m():
                 return 0
 
             some_thing = dlb.ex.input.RegularFile()
 
         class BTool(ATool):
-            def x_y_z(self, s: str) -> int:  # ok, same signature in base class
+            def i_m(self, s: str) -> int:
                 return 1
+
+            async def a_i_m(self):
+                return 1
+
+            @classmethod
+            def c_m(cls):
+                return 1
+
+            # noinspection PyUnusedLocal
+            @classmethod
+            async def a_c_m(cls, *, x: int):
+                return 1
+
+            # noinspection PyUnusedLocal
+            @staticmethod
+            def s_m(y: bool):
+                return 1
+
+            @staticmethod
+            async def a_s_m():
+                return 1
+
+            def other_thing(self):  # not method in base class
+                pass
 
         with self.assertRaises(TypeError) as cm:
             class CTool(ATool):
-                # noinspection PyMethodOverriding
-                def x_y_z(self) -> int:  # not ok, different signature in base class
-                    return 1
-        msg = "the value of 'x_y_z' must be an callable with this signature: <Signature (self, s: str) -> int>"
-        self.assertEqual(msg, str(cm.exception))
-
-        with self.assertRaises(TypeError) as cm:
-            class DTool(ATool):
-                async def x_y_z(self, s: str) -> int:  # not ok, not a coroutine function in base class
-                    return 1
-        msg = "the value of 'x_y_z' must be an callable that is not a coroutine function"
-        self.assertEqual(msg, str(cm.exception))
-
-        with self.assertRaises(TypeError) as cm:
-            class ETool(ATool):
-                def u_v(self):  # not ok, coroutine function in base class
-                    return 0
-        msg = "the value of 'u_v' must be an coroutine function (defined with 'async def')"
-        self.assertEqual(msg, str(cm.exception))
-
-        with self.assertRaises(TypeError) as cm:
-            class FTool(ATool):
-                u_v = dlb.ex.input.RegularFile()
-        regex = r"\A()the value of 'u_v' must be callable since it is callable in <.*>\Z"
+                i_m = dlb.ex.input.RegularFile()
+        regex = r"\A()attribute 'i_m' must be a method since it is a method in <.*>\Z"
         self.assertRegex(str(cm.exception), regex)
 
         with self.assertRaises(TypeError) as cm:
-            class GTool(ATool):
-                def some_thing(self):
-                    pass
-        regex = r"\A()the value of 'some_thing' must not be callable since it is not callable in <.*>\Z"
+            class DTool(ATool):
+                a_i_m = dlb.ex.input.RegularFile()
+        regex = r"\A()attribute 'a_i_m' must be a method since it is a method in <.*>\Z"
+        self.assertRegex(str(cm.exception), regex)
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                c_m = dlb.ex.input.RegularFile()
+        regex = r"\A()attribute 'c_m' must be a method since it is a method in <.*>\Z"
+        self.assertRegex(str(cm.exception), regex)
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                a_c_m = dlb.ex.input.RegularFile()
+        regex = r"\A()attribute 'a_c_m' must be a method since it is a method in <.*>\Z"
+        self.assertRegex(str(cm.exception), regex)
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                s_m = dlb.ex.input.RegularFile()
+        regex = r"\A()attribute 's_m' must be a method since it is a method in <.*>\Z"
+        self.assertRegex(str(cm.exception), regex)
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                a_s_m = dlb.ex.input.RegularFile()
+        regex = r"\A()attribute 'a_s_m' must be a method since it is a method in <.*>\Z"
         self.assertRegex(str(cm.exception), regex)
 
         with self.assertRaises(TypeError) as cm:
             class HTool(ATool):
-                u_v = 27
-        msg = "the value of 'u_v' must be callable or an instance of a concrete subclass of 'dlb.ex.Dependency'"
+                def some_thing(self):
+                    pass
+        regex = r"\A()attribute 'some_thing' must not be a method since it is not a method in <.*>\Z"
+        self.assertRegex(str(cm.exception), regex)
+
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
+    def test_lowercase_method_attribute_must_have_same_signature_as_in_base(self):
+        class ATool(dlb.ex.Tool):
+            # noinspection PyUnusedLocal
+            def x_y(self, s: str) -> int:
+                return 0
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                # noinspection PyMethodOverriding
+                def x_y(self) -> int:  # not ok, different signature in base class
+                    return 1
+        msg = "attribute 'x_y' must be a (instance) method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                # noinspection PyMethodOverriding
+                @classmethod
+                def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a (instance) method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            # noinspection
+            class DTool(ATool):
+                # noinspection PyMethodOverriding,PyShadowingNames
+                @staticmethod
+                def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a (instance) method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                async def x_y(self, s: str) -> int:  # not ok, same signature but not a coroutine function in base class
+                    return 1
+        msg = "attribute 'x_y' must not be a coroutine function (defined with 'async def')"
+        self.assertEqual(msg, str(cm.exception))
+
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
+    def test_lowercase_async_method_attribute_must_have_same_signature_as_in_base(self):
+        class ATool(dlb.ex.Tool):
+            # noinspection PyUnusedLocal
+            async def x_y(self, s: str) -> int:
+                return 0
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                # noinspection PyMethodOverriding
+                async def x_y(self) -> int:  # not ok, different signature in base class
+                    return 1
+        msg = "attribute 'x_y' must be a (instance) method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                # noinspection PyMethodOverriding
+                @classmethod
+                async def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a (instance) method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class DTool(ATool):
+                # noinspection PyMethodOverriding,PyShadowingNames
+                @staticmethod
+                async def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a (instance) method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                def x_y(self, s: str) -> int:  # not ok, same signature but a coroutine function in base class
+                    return 1
+        msg = "attribute 'x_y' must be a coroutine function (defined with 'async def')"
+        self.assertEqual(msg, str(cm.exception))
+
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
+    def test_lowercase_class_method_attribute_must_have_same_signature_as_in_base(self):
+        class ATool(dlb.ex.Tool):
+            # noinspection PyUnusedLocal
+            @classmethod
+            def x_y(self, s: str) -> int:
+                return 0
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                # noinspection PyMethodOverriding
+                @classmethod
+                def x_y(self) -> int:  # not ok, different signature in base class
+                    return 1
+        msg = "attribute 'x_y' must be a class method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                # noinspection PyMethodOverriding
+                def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a class method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class DTool(ATool):
+                # noinspection PyMethodOverriding,PyShadowingNames
+                @staticmethod
+                def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a class method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                @classmethod
+                async def x_y(self, s: str) -> int:  # not ok, same signature but not a coroutine function in base class
+                    return 1
+        msg = "attribute 'x_y' must not be a coroutine function (defined with 'async def')"
+        self.assertEqual(msg, str(cm.exception))
+
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
+    def test_lowercase_async_class_method_attribute_must_have_same_signature_as_in_base(self):
+        class ATool(dlb.ex.Tool):
+            # noinspection PyUnusedLocal
+            @classmethod
+            async def x_y(self, s: str) -> int:
+                return 0
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                # noinspection PyMethodOverriding
+                @classmethod
+                async def x_y(self) -> int:  # not ok, different signature in base class
+                    return 1
+        msg = "attribute 'x_y' must be a class method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                # noinspection PyMethodOverriding
+                async def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a class method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class DTool(ATool):
+                # noinspection PyMethodOverriding,PyShadowingNames
+                @staticmethod
+                async def x_y(self, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a class method with this signature: <Signature (self, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                @classmethod
+                def x_y(self, s: str) -> int:  # not ok, same signature but a coroutine function in base class
+                    return 1
+        msg = "attribute 'x_y' must be a coroutine function (defined with 'async def')"
+        self.assertEqual(msg, str(cm.exception))
+
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
+    def test_lowercase_static_method_attribute_must_have_same_signature_as_in_base(self):
+        class ATool(dlb.ex.Tool):
+            # noinspection PyUnusedLocal
+            @staticmethod
+            def x_y(se, s: str) -> int:
+                return 0
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                # noinspection PyMethodOverriding
+                @staticmethod
+                def x_y(se) -> int:  # not ok, different signature in base class
+                    return 1
+        msg = "attribute 'x_y' must be a static method with this signature: <Signature (se, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                # noinspection PyMethodOverriding
+                def x_y(se, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a static method with this signature: <Signature (se, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class DTool(ATool):
+                # noinspection PyMethodOverriding
+                @classmethod
+                def x_y(se, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a static method with this signature: <Signature (se, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                @staticmethod
+                async def x_y(se, s: str) -> int:  # not ok, same signature but not a coroutine function in base class
+                    return 1
+        msg = "attribute 'x_y' must not be a coroutine function (defined with 'async def')"
+        self.assertEqual(msg, str(cm.exception))
+
+    # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
+    def test_lowercase_async_static_method_attribute_must_have_same_signature_as_in_base(self):
+        class ATool(dlb.ex.Tool):
+            # noinspection PyUnusedLocal
+            @staticmethod
+            async def x_y(se, s: str) -> int:
+                return 0
+
+        with self.assertRaises(TypeError) as cm:
+            class BTool(ATool):
+                # noinspection PyMethodOverriding
+                @staticmethod
+                async def x_y(se) -> int:  # not ok, different signature in base class
+                    return 1
+        msg = "attribute 'x_y' must be a static method with this signature: <Signature (se, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class CTool(ATool):
+                # noinspection PyMethodOverriding
+                async def x_y(se, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a static method with this signature: <Signature (se, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class DTool(ATool):
+                # noinspection PyMethodOverriding
+                @classmethod
+                async def x_y(se, s: str) -> int:  # not ok, same signature but different method kind in base class
+                    return 1
+        msg = "attribute 'x_y' must be a static method with this signature: <Signature (se, s: str) -> int>"
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(TypeError) as cm:
+            class ETool(ATool):
+                @staticmethod
+                def x_y(se, s: str) -> int:  # not ok, same signature but a coroutine function in base class
+                    return 1
+        msg = "attribute 'x_y' must be a coroutine function (defined with 'async def')"
         self.assertEqual(msg, str(cm.exception))
 
     # noinspection PyUnusedLocal,PyRedeclaration,PyAbstractClass
@@ -396,7 +689,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 399  # of this line
+        lineno = 692  # of this line
 
         class A(dlb.ex.Tool):
             pass

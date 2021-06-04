@@ -39,6 +39,15 @@ _registered_info_by_tool = {}
 ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'definition_paths'))
 
 
+def _classify_potential_method(value):
+    if callable(value):
+        return None, value
+    elif isinstance(value, classmethod):  # not yet bound (has no __self__)
+        return 'c', value.__func__  # as created by @classmethod
+    elif isinstance(value, staticmethod):
+        return 's', value.__func__  # as created by @staticmethod
+
+
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class _ToolBase:
     def __init__(self, **kwargs):
@@ -428,7 +437,7 @@ class _ToolMeta(type):
         attrs = set(cls.__dict__) & protected_attrs
         if attrs:
             raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
-        cls.check_own_attributes()
+        cls._check_own_attributes()
         dependency_names, execution_parameter_names = cls._get_names()
 
         super().__setattr__('_dependency_names', dependency_names)
@@ -505,7 +514,7 @@ class _ToolMeta(type):
 
         return location
 
-    def check_own_attributes(cls):
+    def _check_own_attributes(cls):
         for name, value in cls.__dict__.items():
             defining_base_classes = tuple(c for c in cls.__bases__ if name in c.__dict__)
             if UPPERCASE_NAME_REGEX.match(name):
@@ -519,43 +528,49 @@ class _ToolMeta(type):
                         )
                         raise TypeError(msg)
             elif LOWERCASE_MULTIWORD_NAME_REGEX.match(name):
-                if callable(value):
-                    isasync, sig = inspect.iscoroutinefunction(value), inspect.signature(value)
+                method_kind = _classify_potential_method(value)
+                if method_kind is not None:
                     for base_class in defining_base_classes:
                         base_value = base_class.__dict__[name]
-                        if not callable(base_value):
-                            msg = (
-                                f"the value of {name!r} must not be callable since it is "
-                                f"not callable in {base_value!r}"
-                            )
+                        base_method_kind = _classify_potential_method(base_value)
+                        if base_method_kind is None:
+                            msg = f"attribute {name!r} must not be a method since it is not a method in {base_value!r}"
                             raise TypeError(msg)
-                        base_isasync = inspect.iscoroutinefunction(base_value)
-                        if base_isasync != isasync:
+
+                        method_k, func = method_kind
+                        sig = inspect.signature(func)
+                        base_method_kind, base_func = base_method_kind
+                        base_sig = inspect.signature(base_func, follow_wrapped=False)  # beware: slow
+                        if (method_k, sig) != (base_method_kind, base_sig):
+                            base_method_descr = '{} method'.format({
+                                None: '(instance)',
+                                'c': 'class',
+                                's': 'static'
+                            }[base_method_kind])
+                            msg = f"attribute {name!r} must be a {base_method_descr} with this signature: {base_sig!r}"
+                            raise TypeError(msg)
+
+                        isasync = inspect.iscoroutinefunction(func)
+                        base_isasync = inspect.iscoroutinefunction(base_func)
+                        if isasync != base_isasync:
                             if base_isasync:
-                                msg = (
-                                    f"the value of {name!r} must be an coroutine function "
-                                    f"(defined with 'async def')"
-                                )
+                                msg = f"attribute {name!r} must be a coroutine function (defined with 'async def')"
                             else:
-                                msg = f"the value of {name!r} must be an callable that is not a coroutine function"
-                            raise TypeError(msg)
-                        base_sig = inspect.signature(base_value, follow_wrapped=False)  # beware: slow
-                        if base_sig != sig:
-                            msg = f"the value of {name!r} must be an callable with this signature: {base_sig!r}"
+                                msg = f"attribute {name!r} must not be a coroutine function (defined with 'async def')"
                             raise TypeError(msg)
                 else:
                     # noinspection PyUnresolvedReferences
                     if not (isinstance(value, _depend.Dependency) and hasattr(value.__class__, 'Value')):
                         msg = (
-                            f"the value of {name!r} must be callable or an instance of a concrete subclass of "
-                            f"'dlb.ex.Dependency'"
+                            f"attribute {name!r} must be a method or an instance of a "
+                            f"concrete subclass of 'dlb.ex.Dependency'"
                         )
                         raise TypeError(msg)
                     for base_class in defining_base_classes:
                         value: _depend.Dependency
                         base_value = base_class.__dict__[name]
-                        if callable(base_value):
-                            msg = f"the value of {name!r} must be callable since it is callable in {base_value!r}"
+                        if _classify_potential_method(base_value) is not None:
+                            msg = f"attribute {name!r} must be a method since it is a method in {base_value!r}"
                             raise TypeError(msg)
                         if base_value is not None and not value.compatible_and_no_less_restrictive(base_value):
                             msg = (

@@ -477,10 +477,15 @@ Tools are customized by inheritance and defining class attributes.
 
    Dependency roles are instances of subclasses of :class:`Dependency`.
 
+   A tool also can define methods. The name of a method must consist of at least two lower-case
+   words separated by ``_``.
+
    A new tool can be defined by inheriting from one or more other tools.
    When overriding a dependency role, its overriding value must be of the same type as the overridden value
    and it must be at least as restrictive (e.g. if required dependency must not be overridden by a non-required one).
    When overriding an execution parameter, its overriding value must be of the same type as the overridden value.
+   When overriding an method, its overriding method must be of the same kind and have the same signature as the
+   overridden method.
 
    Each subclass of :class:`Tool` must be defined in a source code location unique among all subclasses of
    :class:`Tool`. The definition raises :exc:`DefinitionAmbiguityError` if its location cannot be determined or
