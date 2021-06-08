@@ -215,3 +215,62 @@ class GenerateHeaderFileTest(testenv.TemporaryWorkingDirectoryTestCase):
         with self.assertRaises(ValueError):
             with dlb.ex.Context():
                 GenerateVersionFile(file='empty.h').start()
+
+
+class CCompileCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails(self):
+        with dlb.ex.Context():
+            with self.assertRaises(NotImplementedError):
+                self.assertFalse(dlb_contrib.clike.ClikeCompiler.does_source_compile(''))
+
+    def test_restores_configuration_on_failure(self):
+        old_level_redo_reason = dlb.cf.level.redo_reason
+        old_level_redo_start = dlb.cf.level.redo_start
+        old_execute_helper_inherits_files_by_default = dlb.cf.execute_helper_inherits_files_by_default
+
+        dlb.cf.level.redo_reason = dlb.di.INFO
+        dlb.cf.level.redo_start = dlb.di.ERROR
+        dlb.cf.execute_helper_inherits_files_by_default = True
+
+        try:
+            with dlb.ex.Context():
+                with self.assertRaises(NotImplementedError):
+                    dlb_contrib.clike.ClikeCompiler.does_source_compile('')
+
+            self.assertEqual(dlb.di.INFO, dlb.cf.level.redo_reason)
+            self.assertEqual(dlb.di.ERROR, dlb.cf.level.redo_start)
+            self.assertIs(True, dlb.cf.execute_helper_inherits_files_by_default)
+        finally:
+            dlb.cf.level.redo_reason = old_level_redo_reason
+            dlb.cf.level.redo_start = old_level_redo_start
+            dlb.cf.execute_helper_inherits_files_by_default = old_execute_helper_inherits_files_by_default
+
+
+class CConstantConditionCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails_for_valid(self):
+        with dlb.ex.Context():
+            with self.assertRaises(NotImplementedError):
+                dlb_contrib.clike.ClikeCompiler.check_constant_expression('1 < 2')
+
+    def test_fails_for_byte_string_argument(self):
+        with dlb.ex.Context():
+            with self.assertRaises(TypeError) as cm:
+                dlb_contrib.clike.ClikeCompiler.check_constant_expression(b'')
+        msg = "'constant_expression' must be a str"
+        self.assertEqual(msg, str(cm.exception))
+
+        with dlb.ex.Context():
+            with self.assertRaises(TypeError) as cm:
+                dlb_contrib.clike.ClikeCompiler.check_constant_expression('', preamble=b'')
+        msg = "'preamble' must be a str"
+        self.assertEqual(msg, str(cm.exception))
+
+
+class CSizeOfCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_fails(self):
+        with dlb.ex.Context():
+            with self.assertRaises(NotImplementedError):
+                dlb_contrib.clike.ClikeCompiler.get_size_of('int')

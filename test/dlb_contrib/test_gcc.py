@@ -113,15 +113,22 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-    def test_fails_for_different_number_of_inputs_and_output(self):
+    def test_fails_for_more_outputs_than_inputs(self):
         open('a.c', 'w').close()
 
         t = CCompiler(source_files=['a.c'], object_files=['a.o', 'b.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
                 t.start()
-        msg = "'object_files' must be of same length as 'source_files'"
+        msg = "'object_files' must be of at most the same length as 'source_files'"
         self.assertEqual(msg, str(cm.exception))
+
+    def test_succeeds_for_less_outputs_than_inputs(self):
+        open('a.c', 'w').close()
+
+        t = CCompiler(source_files=['a.c'], object_files=[])
+        with dlb.ex.Context():
+            t.start()
 
     def test_fails_for_multiple_inputs(self):
         open('a.c', 'w').close()
@@ -321,3 +328,141 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
                 version = version_by_path[path]
                 self.assertIsInstance(version, str)
                 self.assertGreaterEqual(version.count('.'), 2)
+
+
+@unittest.skipIf(not shutil.which('gcc'), 'requires gcc in $PATH')
+class CCompileCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_not_overwritten(self):
+        import dlb_contrib.clike
+        self.assertIs(dlb_contrib.clike.ClikeCompiler.does_source_compile.__func__,
+                      dlb_contrib.gcc.CCompilerGcc.does_source_compile.__func__)
+
+    def test_empty_does_compile(self):
+        with dlb.ex.Context():
+            self.assertTrue(dlb_contrib.gcc.CCompilerGcc.does_source_compile(''))
+
+    def test_existing_include_does_compile(self):
+        with dlb.ex.Context():
+            self.assertTrue(dlb_contrib.gcc.CCompilerGcc.does_source_compile('#include <stdint.h>'))
+            self.assertFalse(dlb_contrib.gcc.CCompilerGcc.does_source_compile('#include "does/not/exist"'))
+
+    def test_error_does_not_compile(self):
+        with dlb.ex.Context():
+            self.assertFalse(dlb_contrib.gcc.CCompilerGcc.does_source_compile('#error'))
+
+    def test_does_no_output_messages(self):
+        import io
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        with dlb.ex.Context():
+            dlb_contrib.gcc.CCompilerGcc.does_source_compile('')
+            dlb_contrib.gcc.CCompilerGcc.does_source_compile('#error')
+        self.assertEqual('', output.getvalue())
+
+
+@unittest.skipIf(not shutil.which('gcc'), 'requires gcc in $PATH')
+class CConstantConditionCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_not_overwritten(self):
+        import dlb_contrib.clike
+        self.assertIs(dlb_contrib.clike.ClikeCompiler.check_constant_expression.__func__,
+                      dlb_contrib.gcc.CCompilerGcc.check_constant_expression.__func__)
+
+    def test_valid_condition_is_not_none(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression('1 < 2')
+            self.assertIsNotNone(r)
+            self.assertTrue(r)
+
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression('1 > 2')
+            self.assertIsNotNone(r)
+            self.assertFalse(r)
+
+    def test_invalid_condition_is_none(self):
+        with dlb.ex.Context():
+            self.assertIsNone(dlb_contrib.gcc.CCompilerGcc.check_constant_expression('1 <'))
+
+    def test_condition_can_use_preamble(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression('UINT_LEAST8_MAX <= UINT_LEAST16_MAX',
+                                                                       preamble='#include <stdint.h>')
+            self.assertTrue(r)
+
+    def test_valid_condition_with_invalid_preamble_is_none(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression('UINT_LEAST8_MAX <= UINT_LEAST16_MAX',
+                                                                       preamble='#include')
+            self.assertIsNone(r)
+
+    def test_white_space_condition_is_none(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression('', check_syntax=False)
+            self.assertIsNone(r)
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression('\r   \n\t', check_syntax=False)
+            self.assertIsNone(r)
+
+    def test_without_check_is_none(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression('1', by_compiler=False, by_preprocessor=False,
+                                                                       check_syntax=False)
+            self.assertIsNone(r)
+
+    def test_sizeof_is_none_for_preprocessor(self):
+        expr = 'sizeof(char) == 1'
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression(expr, by_compiler=False, by_preprocessor=True)
+            self.assertIsNone(r)
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression(expr,  by_compiler=True, by_preprocessor=False)
+            self.assertTrue(r)
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression(expr, by_compiler=True, by_preprocessor=True)
+            self.assertIsNone(r)
+
+    def test_undefined_is_none_for_compiler(self):
+        expr = 'xy == 0'
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression(expr, by_compiler=False, by_preprocessor=True)
+            self.assertTrue(r)
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression(expr, by_compiler=True, by_preprocessor=False)
+
+            self.assertIsNone(r)
+            r = dlb_contrib.gcc.CCompilerGcc.check_constant_expression(expr, by_compiler=True, by_preprocessor=True)
+            self.assertIsNone(r)
+
+
+@unittest.skipIf(not shutil.which('gcc'), 'requires gcc in $PATH')
+class CSizeOfCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_not_overwritten(self):
+        import dlb_contrib.clike
+        self.assertIs(dlb_contrib.clike.ClikeCompiler.get_size_of.__func__,
+                      dlb_contrib.gcc.CCompilerGcc.get_size_of.__func__)
+
+    def test_char_is_one(self):
+        with dlb.ex.Context():
+            self.assertEqual(1, dlb_contrib.gcc.CCompilerGcc.get_size_of('char'))
+
+    def test_uint16_is_at_least_two(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.get_size_of('uint_least16_t', preamble='#include <stdint.h>')
+            self.assertLessEqual(2, r)
+
+    def test_chararray_is_count(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.get_size_of('char[9999]', preamble='#include <stdint.h>')
+            self.assertEqual(9999, r)
+            r = dlb_contrib.gcc.CCompilerGcc.get_size_of('char[10000]', preamble='#include <stdint.h>')
+            self.assertEqual(10000, r)
+            r = dlb_contrib.gcc.CCompilerGcc.get_size_of('char[10001]', preamble='#include <stdint.h>')
+            self.assertEqual(10001, r)
+
+    def test_invalid_is_none(self):
+        with dlb.ex.Context():
+            r = dlb_contrib.gcc.CCompilerGcc.get_size_of(')', preamble='#include <stdint.h>')
+            self.assertIsNone(r)
+
+            r = dlb_contrib.gcc.CCompilerGcc.get_size_of('xyz')
+            self.assertIsNone(r)
+
+            r = dlb_contrib.gcc.CCompilerGcc.get_size_of('int', preamble='#error')
+            self.assertIsNone(r)

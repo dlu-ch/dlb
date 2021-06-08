@@ -189,7 +189,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertRegex(str(cm.exception), regex)
         self.assertTrue(os.path.isfile('a.o'))
 
-    def test_fails_for_different_number_of_inputs_and_output(self):
+    def test_fails_for_more_outputs_than_inputs(self):
         open('a.c', 'w').close()
 
         t = CCompiler(source_files=['a.c'], object_files=['a.o', 'b.o'])
@@ -200,8 +200,22 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                                                             example='C:\\X;D:\\Y')
                 dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
                 t.start()
-        msg = "'object_files' must be of same length as 'source_files'"
+        msg = "'object_files' must be of at most the same length as 'source_files'"
         self.assertEqual(msg, str(cm.exception))
+
+    def test_succeeds_for_less_outputs_than_inputs(self):
+        open('a.c', 'w').close()
+
+        binary_path = dlb.fs.Path(dlb.fs.Path.Native(vctools_install_dir), is_dir=True) / 'bin/Hostx64/x64/'
+
+        t = CCompiler(source_files=['a.c'], object_files=[])
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
+            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
+                                                        example='C:\\X;D:\\Y')
+            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
+            t.start()
 
     def test_fails_for_invalid_macro(self):
         open('a.c', 'w').close()

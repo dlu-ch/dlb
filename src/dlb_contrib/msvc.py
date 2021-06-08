@@ -177,8 +177,9 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         required=True, explicit=False)
 
     async def redo(self, result, context):
-        if len(result.object_files) != len(result.source_files):
-            raise ValueError("'object_files' must be of same length as 'source_files'")
+        if len(result.object_files) > len(result.source_files):
+            raise ValueError("'object_files' must be of at most the same length as 'source_files'")
+        optional_object_files = result.object_files + (None,) * (len(result.source_files) - len(result.object_files))
 
         if self.LANGUAGE == 'c':
             language_option = '/Tc'
@@ -218,7 +219,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         # compile
         included_file_native_paths: Set[bytes] = set()
         with context.temporary(is_dir=True) as temp_dir:
-            for source_file, object_file in zip(result.source_files, result.object_files):
+            for source_file, optional_object_file in zip(result.source_files, optional_object_files):
                 processor = IncludeLineProcessor(include_line_prefix, working_tree_native_path_prefix, encoding)
                 with context.temporary(suffix='.o') as temp_object_file:
                     _, included_file_paths = await context.execute_helper_with_output(
@@ -234,7 +235,8 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
                         chunk_processor=processor
                     )
                     included_file_native_paths |= included_file_paths
-                    context.replace_output(object_file, temp_object_file)
+                    if optional_object_file is not None:
+                        context.replace_output(optional_object_file, temp_object_file)
 
         included_file_paths = []
         for p in included_file_native_paths:

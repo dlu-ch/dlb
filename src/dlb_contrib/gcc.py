@@ -96,8 +96,9 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
     include_search_directories = dlb.ex.input.Directory[:](required=False, cls=Path)
 
     async def redo(self, result, context):
-        if len(result.object_files) != len(result.source_files):
-            raise ValueError("'object_files' must be of same length as 'source_files'")
+        if len(result.object_files) > len(result.source_files):
+            raise ValueError("'object_files' must be of at most the same length as 'source_files'")
+        optional_object_files = result.object_files + (None,) * (len(result.source_files) - len(result.object_files))
 
         compile_arguments = [c for c in self.get_compile_arguments()]
 
@@ -127,15 +128,17 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
                 else:
                     compile_arguments += ['-D', f'{macro}={replacement}']
 
+        compile_arguments += ['-x', self.LANGUAGE, '-std=' + self.DIALECT]
+
         included_files = set()
 
         # compile
-        for source_file, object_file in zip(result.source_files, result.object_files):
+        for source_file, optional_object_file in zip(result.source_files, optional_object_files):
             with context.temporary() as make_rules_file, context.temporary() as temp_object_file:
                 await context.execute_helper(
                     self.EXECUTABLE,
                     compile_arguments + [
-                        '-x', self.LANGUAGE, '-std=' + self.DIALECT, '-c', '-o', temp_object_file,
+                        '-c', '-o', temp_object_file,
                         '-MMD', '-MT', '_ ', '-MF', make_rules_file,
                         source_file
                     ]
@@ -149,7 +152,8 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
                         except ValueError:
                             pass
 
-                context.replace_output(object_file, temp_object_file)
+                if optional_object_file is not None:
+                    context.replace_output(optional_object_file, temp_object_file)
 
         result.included_files = sorted(included_files)
 

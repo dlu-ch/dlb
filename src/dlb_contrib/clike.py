@@ -31,13 +31,18 @@ for the C language family."""
 #      EXECUTABLE = 'specific-cc'
 #
 #      async def redo(self, result, context):
+#          if len(result.object_files) > len(result.source_files):
+#              raise ValueError("'object_files' must be of at most the same length as 'source_files'")
+#          optional_object_files = result.object_files + (None,) * (len(result.source_files) - len(result.object_files))
+#
 #          included_files = set()
-#          for source_file, object_file in zip(result.source_files, result.object_files):
+#          for source_file, optional_object_file in zip(result.source_files, optional_object_files):
 #              with context.temporary() as temp_object_file:
 #                  await context.execute_helper(self.EXECUTABLE, ...,
 #                                               '-o', temp_object_file, source_file)
 #                  included_files |= ...
-#                  context.replace_output(object_file, temp_object_file)
+#                  if optional_object_file is not None:
+#                      context.replace_output(optional_object_file, temp_object_file)
 #          result.included_files = sorted(included_files)
 #
 #  with dlb.ex.Context():
@@ -56,6 +61,8 @@ import re
 from typing import Iterable, Optional, Union
 
 import dlb.fs
+import dlb.cf
+import dlb.di
 import dlb.ex
 
 assert sys.version_info >= (3, 7)
@@ -217,8 +224,9 @@ class ClikeCompiler(dlb.ex.Tool):
 
     source_files = dlb.ex.input.RegularFile[1:]()
 
-    # object_files[i] is object file for source_files[i]
-    object_files = dlb.ex.output.RegularFile[1:](replace_by_same_content=False)
+    # If i < len(object_files): object_files[i] is object file for source_files[i].
+    # Otherwise: there is no object corresponding file for source_files[i].
+    object_files = dlb.ex.output.RegularFile[0:](replace_by_same_content=False)
 
     # Tuple of paths of directories that are to be searched for include files in addition to the system include files.
     include_search_directories = dlb.ex.input.Directory[:](required=False)
@@ -229,6 +237,155 @@ class ClikeCompiler(dlb.ex.Tool):
     def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         # Return iterable of additional commandline arguments for *EXECUTABLE*.
         return []
+
+    @classmethod
+    def does_source_compile(cls, source: str) -> bool:
+        # Check whether *source* compiles without (fatal) errors.
+        #
+        # Every occurrence of dlb.ex.HelperExecutionError is consideres a compilation error and suppressed.
+        # Every other raise exception is considered as unrelated to the compilation.
+        #
+        # Use for concrete subclasses of this class, e.g. dlb_contrib.gcc.CCompilerGcc.
+        #
+        # Example:
+        #    >>> with dlb.ex.Context(): dlb_contrib.gcc.CCompilerGcc.does_source_compile('#include <stdint.h>')
+        #    True
+        #    >>> with dlb.ex.Context(): dlb_contrib.gcc.CCompilerGcc.does_source_compile('#include "does/not/exist"')
+        #    False
+
+        with dlb.ex.Context.active.temporary() as s, dlb.ex.Context.active.temporary() as o:
+            with open(s.native, 'w', encoding='utf-8') as f:
+                f.write(source + '\n')
+
+            with dlb.ex.Context():  # complete redos with previous message levels
+                pass
+
+            old_level_level_redo_reason = dlb.cf.level.redo_reason
+            old_level_redo_start = dlb.cf.level.redo_start
+            old_execute_helper_inherits_files_by_default = dlb.cf.execute_helper_inherits_files_by_default
+            try:
+                dlb.cf.execute_helper_inherits_files_by_default = False
+                dlb.cf.level.redo_reason = dlb.di.DEBUG
+                dlb.cf.level.redo_start = dlb.di.DEBUG
+                cls(source_files=[s], object_files=[]).start(force_redo=True).complete()
+                return True
+            except dlb.ex.HelperExecutionError:
+                return False
+            finally:
+                dlb.cf.execute_helper_inherits_files_by_default = old_execute_helper_inherits_files_by_default
+                dlb.cf.level.redo_reason = old_level_level_redo_reason
+                dlb.cf.level.redo_start = old_level_redo_start
+
+    @classmethod
+    def check_constant_expression(cls, constant_expression: str, *,
+                                  preamble: str = '',
+                                  by_preprocessor: bool = True,
+                                  by_compiler: bool = True,
+                                  check_syntax: bool = True) -> Optional[bool]:
+        # Check whether *constant_expression* is non-zero when evaluated the preprocessor or the actual compiler.
+        #
+        # *preamble* is prependend (and separated by a new line) to the source code for the evaluation
+        # of *constant_expression*.
+        #
+        # If *check_syntax* is True, the negated *constant_expression* is also checked. If its result is not the
+        # negated result of *constant_expression*, *None* is returned.
+        #
+        # If *constant_expression* consists only of white space (space, HT, CR, LF), *None* is returned.
+        #
+        # If *by_preprocessor* is True, *constant_expression* is checked by the preprocessor ('#if' directive).
+        # If *by_compiler* is True, *constant_expression* is checked by the compiler after preprocessing.
+        # If *by_preprocessor* and *by_compiler* are both False, *None* is returned.
+        #
+        # Use for concrete subclasses of this class, e.g. dlb_contrib.gcc.CCompilerGcc.
+        #
+        # Example:
+        #    >>> with dlb.ex.Context(): dlb_contrib.gcc.CCompilerGcc.check_constant_expression('1 < 2')
+        #    True
+        #    >>> with dlb.ex.Context(): dlb_contrib.gcc.CCompilerGcc.check_constant_expression('1 <')
+        #    None
+        #    >>> with dlb.ex.Context():
+        #    ... dlb_contrib.gcc.CCompilerGcc.check_constant_expression('UINT_LEAST8_MAX <= UINT_LEAST16_MAX',
+        #    ...                                                        preamble='#include <stdint.h>')
+        #    True
+
+        if not isinstance(constant_expression, str):
+            raise TypeError("'constant_expression' must be a str")
+        if not isinstance(preamble, str):
+            raise TypeError("'preamble' must be a str")
+
+        constant_expression = constant_expression.strip(' \t\r\n')
+        preamble = preamble.strip(' \t\r\n')
+
+        tmpl = ''
+        if by_compiler:
+            tmpl += '\nstruct main {{ char main[{0} ? 1 : -1]; }};'
+        if by_preprocessor:
+            tmpl += '\n#if !{0}\n#error\n#endif'
+            # - undefined identifiers (except 'defined') are replaced by 0
+            # - may be undefined if expression contains 'defined' after or before macro replacement
+            # - all integer types act as if they have the same representation as intmax_t
+            #   (for all signed integer types) or uintmax_t (for all unsigned integer types),
+
+        if not (constant_expression and tmpl):
+            return
+
+        positive_result = cls.does_source_compile(preamble + tmpl.format(f'({constant_expression})'))
+        if not check_syntax:
+            return positive_result
+        negative_result = cls.does_source_compile(preamble + tmpl.format(f'!({constant_expression})'))
+        if (not negative_result) == positive_result:
+            return positive_result
+
+    @classmethod
+    def get_size_of(cls, expression: str, *, preamble: str = '') -> Optional[int]:
+        # Returns size of expression *expression* (as returned by 'sizeof' operator) or *None* if it cannot be
+        # determined.
+        #
+        # *preamble* is prependend (and separated by a new line) to the source code for evaluation of
+        # 'sizeof' *expression*.
+        #
+        # Use for concrete subclasses of this class, e.g. dlb_contrib.gcc.CCompilerGcc.
+        #
+        # Example:
+        #    >>> with dlb.ex.Context(): dlb_contrib.gcc.CCompilerGcc.get_size_of('char[10]')
+        #    10
+
+        if not isinstance(preamble, str):
+            raise TypeError("'preamble' must be a str")
+
+        maximum = 1
+        while True:
+            previous_maximum = maximum
+            maximum = 2 * (maximum + 1) - 1
+            r = cls.check_constant_expression(
+                f'sizeof({expression}) > {maximum}u && {maximum}u > {previous_maximum}u',
+                preamble=preamble, by_preprocessor=False, check_syntax=False)
+            if not r:
+                break
+
+        # sizeof(...) <= maximum
+        # or maximum is the largest representable unsigned integer of the form 2^i - 1 for integer n
+        # or something is wrong with *expression* or *preamble*
+        r = cls.check_constant_expression(
+                f'sizeof({expression}) > {maximum}u',
+                preamble=preamble, by_preprocessor=False)
+        if not (r is False):
+            return
+
+        minimum = 1
+        while True:
+            n = (minimum + maximum) // 2
+            if n >= maximum:
+                break
+
+            # minimum <= n < maximum
+            if cls.check_constant_expression(f'sizeof({expression}) <= {n}u',
+                                             preamble=preamble, by_preprocessor=False, check_syntax=False):
+                maximum = n
+            else:
+                minimum = n + 1
+
+        return n
 
 
 class GenerateHeaderFile(dlb.ex.Tool):
