@@ -103,7 +103,7 @@ async def _detect_include_line_representation(compiler_executable, context) -> T
             f.write(b'#include "include_probe_file.h"\n')
         _, output = await context.execute_helper_with_output(
             compiler_executable, ['/nologo', '/showIncludes', '/c', temp_source_file],
-            cwd=temp_dir, other_output=NotImplemented
+            cwd=temp_dir, other_output=False
         )
         native_path_suffix = str(context.working_tree_path_of(probe_file, existing=True, collapsable=True,
                                                               allow_temporary=True).native)

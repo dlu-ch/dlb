@@ -177,7 +177,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
             asyncio.get_event_loop().run_until_complete(rd.execute_helper(
-                'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c'), stdout_output=NotImplemented))  # 'a/b/..'
+                'ls', [dlb.fs.Path('a/b')], cwd=dlb.fs.Path('a/b/c'), stdout_output=False))  # 'a/b/..'
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:
                 asyncio.get_event_loop().run_until_complete(rd.execute_helper(
                     'ls', [dlb.fs.Path('a/b'), dlb.fs.Path('a')], cwd=dlb.fs.Path('a/b/c')))  # 'a/b/../..'
@@ -221,7 +221,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_can_write_to_devnull(self):
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
-            e = rd.execute_helper('ls', ['ls --unsupported-option '], stderr_output=NotImplemented,
+            e = rd.execute_helper('ls', ['ls --unsupported-option '], stderr_output=False,
                                   expected_returncodes=[2])
             asyncio.get_event_loop().run_until_complete(e)
 
@@ -233,7 +233,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
             with dlb.ex.Context() as c:
                 rd = dlb.ex._toolrun.RedoContext(c, dict())
-                e = rd.execute_helper('ls', ['-l'], stdout_output=NotImplemented)
+                e = rd.execute_helper('ls', ['-l'], stdout_output=False)
 
                 output = io.StringIO()
                 dlb.di.set_output_file(output)
@@ -276,13 +276,13 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             rd = dlb.ex._toolrun.RedoContext(c, dict())
 
             e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_ >&2; echo 3'],
-                                              output_to_process=1, other_output=NotImplemented)
+                                              output_to_process=1, other_output=False)
             r, output = asyncio.get_event_loop().run_until_complete(e)
             self.assertEqual(0, r)
             self.assertEqual(b'1_\n3\n', output)
 
             e = rd.execute_helper_with_output('sh', ['-c', 'echo 1_; echo 2_ >&2; echo 3'],
-                                              output_to_process=2, other_output=NotImplemented)
+                                              output_to_process=2, other_output=False)
             r, output = asyncio.get_event_loop().run_until_complete(e)
             self.assertEqual(0, r)
             self.assertEqual(b'2_\n', output)
@@ -437,7 +437,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(dlb.ex.HelperExecutionError) as cm:
-                e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=NotImplemented,
+                e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=False,
                                                   expected_returncodes=[1])
                 asyncio.get_event_loop().run_until_complete(e)
             msg = "execution of 'sh' returned unexpected exit code 0"

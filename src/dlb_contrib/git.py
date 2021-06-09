@@ -253,7 +253,7 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         if potential_branch_refname == 'refs/heads/(detached)':  # detached?
             returncode = \
                 await context.execute_helper(self.EXECUTABLE, ['symbolic-ref', '-q', 'HEAD'],
-                                             stdout_output=NotImplemented, expected_returncodes=[0, 1])
+                                             stdout_output=False, expected_returncodes=[0, 1])
             if returncode == 1:
                 potential_branch_refname = None  # is detached
 

@@ -14,5 +14,10 @@ latest_run_summary_max_count: int = 0
 # 'max_dependency_age > datetime.timedelta(0)' must be True.
 max_dependency_age: datetime.timedelta = datetime.timedelta(days=30)
 
-# remove everyhing that is not an configuration parameter
+# Default value for output files of execute_helper*(), that is used when *None* is given.
+# False means: Output is suppressed by default.
+# True means: Output file is inherited from the Python process by default.
+execute_helper_inherits_files_by_default: bool = True
+
+# Remove everyhing that is not an configuration parameter:
 del datetime

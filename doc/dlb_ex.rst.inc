@@ -681,13 +681,15 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :param forced_env: dictionary of values to override in :attr:`env <dlb.ex.Context.env>` or ``None``
       :type forced_env: None | Dict[str, str]
       :param stdout_output:
-         If ``None``: inherit stdout of the Python process (the file descriptor, not :data:`sys.stdout`).
-         If ``NotImplemented``: suppress the output.
+         If ``None``: use :data:`dlb.cf.execute_helper_inherits_files_by_default`.
+         If ``True``: inherit stdout of the Python process (the file descriptor, not :data:`sys.stdout`).
+         If ``False``: suppress the output.
          Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
          be constructed from (opened with mode ``'wb'``).
       :param stderr_output:
-         If ``None``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
-         If ``NotImplemented``: suppress the output.
+         If ``None``: use :data:`dlb.cf.execute_helper_inherits_files_by_default`.
+         If ``True``: inherit stderr of the Python process (the file descriptor, not :data:`sys.stderr`).
+         If ``False``: suppress the output.
          Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
          be constructed from (opened with mode ``'wb'``).
       :rtype: int
@@ -751,9 +753,10 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       :param output_to_process: 1 to return stdout and 2 to return stderr of the subprocess
       :param other_output:
          Output for stdout of the subprocess if *output_to_process* is 2 and for *stderr* otherwise.
-         If ``None``: inherit stdout/stderr of the Python process
+         If ``None``: use :data:`dlb.cf.execute_helper_inherits_files_by_default`.
+         If ``True``: inherit stdout/stderr of the Python process
          (the file descriptor, not :data:`sys.stdout`/:data:`sys.stderr`).
-         If ``NotImplemented``: suppress the output.
+         If ``False``: suppress the output.
          Otherwise: the path of the output file as a :class:`dlb.fs.Path` or anything a :class:`dlb.fs.Path` can
          be constructed from (opened with mode ``'wb'``).
       :type chunk_processor: None | dlb.ex.ChunkProcessor

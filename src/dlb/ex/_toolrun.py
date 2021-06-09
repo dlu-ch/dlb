@@ -109,12 +109,15 @@ class RedoContext(_context.ReadOnlyContext):
 
         return helper_file, commandline_tokens, env, cwd
 
-    def _open_potential_file(self, potential_file: Union[None, type(NotImplemented), fs.PathLike]):
+    def _open_potential_file(self, potential_file: Union[Optional[bool], fs.PathLike]):
         if potential_file is None:
+            potential_file = cf.execute_helper_inherits_files_by_default
+
+        if potential_file is True:
             return
 
-        import asyncio
-        if potential_file is NotImplemented:
+        if not potential_file:
+            import asyncio
             return asyncio.subprocess.DEVNULL
 
         potential_file = fs.Path(potential_file)
@@ -134,8 +137,8 @@ class RedoContext(_context.ReadOnlyContext):
     async def execute_helper(self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
                              cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
                              forced_env: Optional[Mapping[str, str]] = None,
-                             stdout_output: Union[None, type(NotImplemented), fs.PathLike] = None,
-                             stderr_output: Union[None, type(NotImplemented), fs.PathLike] = None) -> int:
+                             stdout_output: Union[Optional[bool], fs.PathLike] = None,
+                             stderr_output: Union[Optional[bool], fs.PathLike] = None) -> int:
 
         helper_file, commandline_tokens, env, cwd = \
              self._prepare_for_subprocess(helper_file, arguments, cwd, forced_env)
@@ -166,7 +169,7 @@ class RedoContext(_context.ReadOnlyContext):
             self, helper_file: fs.PathLike, arguments: Iterable[Any] = (), *,
             cwd: Optional[fs.PathLike] = None, expected_returncodes: Collection[int] = frozenset([0]),
             forced_env: Optional[Dict[str, str]] = None,
-            output_to_process: int = 1, other_output: Union[None, type(NotImplemented), fs.PathLike] = None,
+            output_to_process: int = 1, other_output: Union[Optional[bool], fs.PathLike] = None,
             chunk_processor: Optional[ChunkProcessor] = None) -> Tuple[int, Any]:
 
         import asyncio

@@ -21,6 +21,13 @@ To change the behaviour of dlb, change the values of the following variables.
 
    ``max_dependency_age > datetime.timedelta(0)`` must be ``True``.
 
+.. data:: execute_helper_inherits_files_by_default
+
+   Default value for output files of :meth:`dlb.ex.RedoContext.execute_helper()` etc..
+
+   ``False`` means: Output is suppressed by default.
+   ``True`` means: Output file is inherited from the Python process by default.
+
 .. module:: dlb.cf.level
    :synopsis: Categorical message levels
 
