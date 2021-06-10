@@ -41,7 +41,7 @@ with dlb.ex.Context():
     source_directory = Path('src/')
     output_directory = Path('build/out/')
 
-    with dlb.di.Cluster('compile'), dlb.ex.Context():
+    with dlb.di.Cluster('compile'), dlb.ex.Context(max_parallel_redo_count=4):
         compile_results = [
             CCompiler(
                 source_files=[p],

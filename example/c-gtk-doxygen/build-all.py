@@ -63,7 +63,7 @@ with dlb.ex.Context():
 
     source_related_check.result_file.native.raw.touch()
 
-    with dlb.di.Cluster('distribute'), dlb.ex.Context():
+    with dlb.di.Cluster('collect for distribution'), dlb.ex.Context():
         files_to_distribute = [] if doc_archive_file is None else [application_file, doc_archive_file]
         dlb_contrib.filesystem.FileCollector(
             output_directory=distribution_directory,
