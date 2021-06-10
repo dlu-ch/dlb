@@ -13,6 +13,7 @@ import dlb.fs
 import dlb.cf
 import dlb.ex
 import dlb_contrib.generic
+import dlb_contrib.filesystem
 import dlb_contrib.doxygen
 
 import build.repo
