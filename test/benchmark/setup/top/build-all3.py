@@ -4,7 +4,7 @@ import dlb.ex
 import dlb_contrib.generic
 import dlb_contrib.gcc
 import dlb_contrib.gnubinutils
-from typing import Iterable, Union
+from typing import List, Union
 
 
 source_directory = dlb.fs.Path('.')
@@ -12,7 +12,7 @@ output_directory = dlb.fs.Path('out/')
 
 
 class CplusplusCompiler(dlb_contrib.gcc.CplusplusCompilerGcc):
-    def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+    def get_extra_compile_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return ['-g']
 
 

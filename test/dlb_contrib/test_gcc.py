@@ -14,7 +14,7 @@ import os.path
 import shutil
 import textwrap
 import unittest
-from typing import Iterable, Union
+from typing import List, Iterable, Union
 
 
 class CCompiler(dlb_contrib.gcc.CCompilerGcc):
@@ -134,7 +134,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         open('a.c', 'w').close()
 
         class C(CCompiler):
-            def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+            def get_extra_compile_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
                 return ['a.c']
 
         t = C(source_files=['a.c'], object_files=['a.o'])
@@ -288,7 +288,7 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_finds_shared_library(self):
         class CSharedLibraryLinkerGcc(dlb_contrib.gcc.CLinkerGcc):
-            def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+            def get_extra_link_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
                 return ['-shared']
 
         class CLinkerGcc(dlb_contrib.gcc.CLinkerGcc):

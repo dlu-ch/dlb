@@ -58,7 +58,7 @@ __all__ = [
 import sys
 import string
 import re
-from typing import Iterable, Optional, Union
+from typing import List, Optional, Union
 
 import dlb.fs
 import dlb.cf
@@ -234,8 +234,8 @@ class ClikeCompiler(dlb.ex.Tool):
     # Paths of all files in the managed tree directly or indirectly included by *source_file*.
     included_files = dlb.ex.input.RegularFile[:](explicit=False)
 
-    def get_compile_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
-        # Return iterable of additional commandline arguments for *EXECUTABLE*.
+    def get_extra_compile_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+        # Return list of additional commandline arguments for *EXECUTABLE*.
         return []
 
     @classmethod

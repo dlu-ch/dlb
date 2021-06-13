@@ -62,7 +62,7 @@ __all__ = ['CCompilerMsvc', 'CplusplusCompilerMsvc', 'LinkerMsvc']
 import sys
 import os.path
 import re
-from typing import Iterable, Set, Tuple, Union
+from typing import List, Set, Tuple, Union
 
 import dlb.fs
 import dlb.ex
@@ -176,24 +176,15 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         name='INCLUDE', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y',
         required=True, explicit=False)
 
-    async def redo(self, result, context):
-        if len(result.object_files) > len(result.source_files):
-            raise ValueError("'object_files' must be of at most the same length as 'source_files'")
-        optional_object_files = result.object_files + (None,) * (len(result.source_files) - len(result.object_files))
-
-        if self.LANGUAGE == 'c':
-            language_option = '/Tc'
-        elif self.LANGUAGE == 'c++':
-            language_option = '/Tp'
-        else:
-            raise ValueError(f"invalid 'LANGUAGE': {self.LANGUAGE!r}")
-
-        compile_arguments = [c for c in self.get_compile_arguments()]
-
+    def get_include_compile_arguments(self) -> List[Union[str, dlb.fs.Path]]:
+        compile_arguments = []
         if self.include_search_directories:
             for p in self.include_search_directories:
                 compile_arguments.extend(['/I', p])
+        return compile_arguments
 
+    def get_definition_compile_arguments(self) -> List[Union[str, dlb.fs.Path]]:
+        compile_arguments = []
         # https://docs.microsoft.com/en-us/cpp/build/reference/d-preprocessor-definitions?view=vs-2019:
         # The /D option doesn't support function-like macro definitions.
         for macro, replacement in self.DEFINITIONS.items():
@@ -211,10 +202,50 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
                     compile_arguments += ['/D', macro]
                 else:
                     compile_arguments += ['/D', f'{macro}={replacement}']
+        return compile_arguments
+
+    def get_all_compile_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+        # Return list of all commandline arguments for *EXECUTABLE* that do not depend on source files
+        compile_arguments = self.get_extra_compile_arguments()
+        compile_arguments += self.get_include_compile_arguments()
+        compile_arguments += self.get_definition_compile_arguments()
+        return compile_arguments
+
+    def get_included_files_from_paths(self, included_file_native_paths: Set[str], encoding, context) \
+            -> Set[dlb.fs.Path]:
+        included_file_paths = []
+        for p in included_file_native_paths:
+            p = dlb.fs.Path(dlb.fs.Path.Native(p))
+            try:
+                included_file_paths.append(context.working_tree_path_of(p))
+            except dlb.ex.WorkingTreePathError as e:
+                if isinstance(e.oserror, OSError):
+                    msg = (
+                        f"reportedly included file not found: {p.as_string()!r}\n"
+                        f"  | ambiguity in the ANSI encoding ({encoding!r}) of its path?"
+                    )
+                    raise FileNotFoundError(msg)
+        included_file_paths.sort()
+        return included_file_paths
+
+    async def redo(self, result, context):
+        if len(result.object_files) > len(result.source_files):
+            raise ValueError("'object_files' must be of at most the same length as 'source_files'")
+        optional_object_files = result.object_files + (None,) * (len(result.source_files) - len(result.object_files))
+
+        compile_arguments = self.get_all_compile_arguments()
 
         include_line_prefix, working_tree_native_path_prefix, encoding = \
             await _detect_include_line_representation(self.EXECUTABLE, context)
         # each line emitted due to '/showIncludes' starts with *include_line_prefix*
+
+        # TODO -> compile_arguments?
+        if self.LANGUAGE == 'c':
+            language_option = '/Tc'
+        elif self.LANGUAGE == 'c++':
+            language_option = '/Tp'
+        else:
+            raise ValueError(f"invalid 'LANGUAGE': {self.LANGUAGE!r}")
 
         # compile
         included_file_native_paths: Set[bytes] = set()
@@ -238,20 +269,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
                     if optional_object_file is not None:
                         context.replace_output(optional_object_file, temp_object_file)
 
-        included_file_paths = []
-        for p in included_file_native_paths:
-            p = dlb.fs.Path(dlb.fs.Path.Native(p))
-            try:
-                included_file_paths.append(context.working_tree_path_of(p))
-            except dlb.ex.WorkingTreePathError as e:
-                if isinstance(e.oserror, OSError):
-                    msg = (
-                        f"reportedly included file not found: {p.as_string()!r}\n"
-                        f"  | ambiguity in the ANSI encoding ({encoding!r}) of its path?"
-                    )
-                    raise FileNotFoundError(msg)
-        included_file_paths.sort()
-        result.included_files = included_file_paths
+        result.included_files = self.get_included_files_from_paths(included_file_native_paths, encoding, context)
 
 
 class CCompilerMsvc(_CompilerMsvc):
@@ -283,11 +301,11 @@ class LinkerMsvc(dlb.ex.Tool):
     # Tuple of paths of directories that are to be searched for libraries in addition to the standard system directories
     library_search_directories = dlb.ex.input.Directory[:](required=False)
 
-    def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+    def get_extra_link_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return []  # e.g. '/DLL'
 
     async def redo(self, result, context):
-        link_arguments = ['/NOLOGO'] + [c for c in self.get_link_arguments()]
+        link_arguments = ['/NOLOGO'] + self.get_extra_link_arguments()
 
         if self.library_search_directories:
             for p in self.library_search_directories:

@@ -11,7 +11,7 @@ import sys
 import os.path
 import textwrap
 import unittest
-from typing import Iterable, Union
+from typing import List, Union
 
 
 # VCTOOLSINSTALLDIR - see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
@@ -28,7 +28,7 @@ class CCompiler(dlb_contrib.msvc.CCompilerMsvc):
 
 
 class DllLinker(dlb_contrib.msvc.LinkerMsvc):
-    def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+    def get_extra_link_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
         return [
             '/NODEFAULTLIB',
             '/NOENTRY',
@@ -235,7 +235,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_argument_with_at(self):
         class Linker(dlb_contrib.msvc.LinkerMsvc):
-            def get_link_arguments(self) -> Iterable[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
+            def get_extra_link_arguments(self) -> List[Union[str, dlb.fs.Path, dlb.fs.Path.Native]]:
                 return ['/DLL', '@x']
 
         with self.assertRaises(ValueError) as cm:
