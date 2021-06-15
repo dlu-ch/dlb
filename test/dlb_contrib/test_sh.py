@@ -8,7 +8,6 @@ import dlb.fs
 import dlb.ex
 import dlb_contrib.sh
 import os.path
-import shutil
 import unittest
 from typing import Optional, Iterable, Union
 
@@ -59,7 +58,7 @@ class QuoteTest(unittest.TestCase):
         self.assertEqual("'a'\\''b'", dlb_contrib.sh.quote("a'b"))
 
 
-@unittest.skipIf(not shutil.which('sh'), 'requires sh in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('sh'), 'requires sh in $PATH')
 class ShTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):

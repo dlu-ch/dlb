@@ -9,7 +9,6 @@ import dlb.ex
 import dlb_contrib.generic
 import dlb_contrib.pkgconfig
 import os.path
-import shutil
 import unittest
 from typing import Iterable, Union
 
@@ -105,7 +104,7 @@ class PkgConfigWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
         self.assertEqual(({}, ('--libs', 'abc')), r)
 
 
-@unittest.skipIf(not shutil.which('pkg-config'), 'requires pkg-config in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
 @unittest.skipIf(not os.path.isdir('/usr/include/gtk-3.0/'), 'requires GTK+ 3.0')
 class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
 
@@ -123,7 +122,7 @@ class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual(('-pthread',), result.other_options)
 
 
-@unittest.skipIf(not shutil.which('pkg-config'), 'requires pkg-config in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

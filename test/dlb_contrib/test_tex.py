@@ -10,7 +10,6 @@ import dlb_contrib.generic
 import dlb_contrib.tex
 import sys
 import os.path
-import shutil
 import io
 import unittest
 from typing import Iterable, Union
@@ -132,7 +131,7 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual("invalid line in 'recorded.fls': b'PWD he/he'", str(cm.exception))
 
 
-@unittest.skipIf(not shutil.which('latex'), 'requires latex in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('latex'), 'requires latex in $PATH')
 class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_missing_extension(self):
@@ -323,8 +322,8 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertFalse(log_file.native.raw.exists())
 
 
-@unittest.skipIf(not shutil.which('tex'), 'requires tex in $PATH')
-@unittest.skipIf(not shutil.which('latex'), 'requires latex in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('tex'), 'requires tex in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('latex'), 'requires latex in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
