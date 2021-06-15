@@ -107,6 +107,7 @@ class MemoryInfoTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb_contrib.linux.get_memory_info()
 
 
+@unittest.skipIf(sys.platform != 'linux', 'Linux only')  # involves native absolute paths
 class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_is_correct_for_typical(self):
@@ -161,14 +162,12 @@ class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.linux.get_mounted_filesystems(['.'], proc_root_directory='.')
         self.assertEqual("not a real path: '/tmp/this/does/not/exist'", str(cm.exception))
 
-    @unittest.skipIf(sys.platform != 'linux', 'Linux only')
     def test_can_query_running_kernel(self):
         vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems()
         self.assertIn(dlb.fs.Path('/'), vfstype_name_by_mountpoint)
         self.assertTrue(all(p.is_absolute() for p in vfstype_name_by_mountpoint))
         self.assertTrue(all(p.is_dir() for p in vfstype_name_by_mountpoint))
 
-    @unittest.skipIf(sys.platform != 'linux', 'Linux only')
     def test_filter_does_work(self):
         vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems()
 
