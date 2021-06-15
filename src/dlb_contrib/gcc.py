@@ -138,7 +138,7 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
         compile_arguments += ['-x', self.LANGUAGE, '-std=' + self.DIALECT]
         return compile_arguments
 
-    def get_included_files_from_make_rules_file(self, make_rules_file: dlb.fs.Path, context) -> Set[dlb.fs.Path]:
+    def get_included_files_from_make_rules_file(self, context, make_rules_file: dlb.fs.Path) -> Set[dlb.fs.Path]:
         # parse content of make_rules_file as a Makefile and add all paths in managed tree to included_files
         included_files = set()
         with open(make_rules_file.native, 'r', encoding=sys.getfilesystemencoding()) as dep_file:
@@ -169,7 +169,7 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
                     ]
                 )
 
-                included_files |= self.get_included_files_from_make_rules_file(make_rules_file, context)
+                included_files |= self.get_included_files_from_make_rules_file(context, make_rules_file)
                 if optional_object_file is not None:
                     context.replace_output(optional_object_file, temp_object_file)
 

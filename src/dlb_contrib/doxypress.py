@@ -70,7 +70,7 @@ class Template(string.Template):  # like dlb_contrib.doxygen.Template
         super(Template, self).__init__(template)
 
 
-def _transform_value(value, context):
+def _transform_value(context, value):
     if value is None:
         return
     if isinstance(value, (int, str)):
@@ -84,18 +84,18 @@ def _transform_value(value, context):
     if isinstance(value, bytes):
         raise TypeError
     if isinstance(value, collections.abc.Iterable):
-        return [_transform_value(v, context) for v in value]
+        return [_transform_value(context, v) for v in value]
     raise TypeError
 
 
-def _transform_replacement(replacements: Dict[str, Any], context):
+def _transform_replacement(context, replacements: Dict[str, Any]):
     d = {}
     for name, value in replacements.items():
         if not isinstance(name, str):
             raise TypeError('placeholder name must be str')
         if not PLACEHOLDER_NAME_REGEX.match(name):
             raise ValueError(f'invalid placeholder name: {name!r}')
-        d[name] = json.dumps(_transform_value(value, context))
+        d[name] = json.dumps(_transform_value(context, value))
         # DoxyPress parses the project file with QJsonDocument::fromJson(file.readAll())
     return d
 
@@ -158,7 +158,7 @@ class DoxyPress(dlb.ex.Tool):
             replacements['output_directory'] = output_directory
             for name in ('source_directories', 'project_template_file', 'source_files_to_watch'):
                 replacements[name] = getattr(result, name)
-            replacements = _transform_replacement(replacements, context)
+            replacements = _transform_replacement(context, replacements)
 
             try:
                 projectfile_content = Template(projectfile_template).substitute(replacements)

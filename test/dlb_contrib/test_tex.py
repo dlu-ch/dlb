@@ -78,7 +78,7 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
                     b'INPUT report.aux\n'
                 )
             read_files, written_files = \
-                dlb_contrib.tex.accessed_files_from_recorded(recorded_file, context)
+                dlb_contrib.tex.accessed_files_from_recorded(context, recorded_file)
 
         self.assertEqual([dlb.fs.Path('src/report.tex'), dlb.fs.Path('out/report.aux')], read_files)
         self.assertEqual([dlb.fs.Path('out/report.log')], written_files)
@@ -87,7 +87,7 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
         open('recorded.fls', 'xb').close()
         with dlb.ex.Context() as context:
             read_files, written_files = \
-                dlb_contrib.tex.accessed_files_from_recorded(dlb.fs.Path('recorded.fls'), context)
+                dlb_contrib.tex.accessed_files_from_recorded(context, dlb.fs.Path('recorded.fls'))
         self.assertEqual([], read_files)
         self.assertEqual([], written_files)
 
@@ -103,7 +103,7 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
                     b'INPUT report.aux\n'
                 )
             read_files, written_files = \
-                dlb_contrib.tex.accessed_files_from_recorded(dlb.fs.Path('recorded.fls'), context)
+                dlb_contrib.tex.accessed_files_from_recorded(context, dlb.fs.Path('recorded.fls'))
 
         self.assertEqual([dlb.fs.Path('report.aux')], read_files)
         self.assertEqual([dlb.fs.Path('report.log')], written_files)
@@ -117,7 +117,7 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
                     b'INPUT /var/lib/texmf/web2c/pdftex/pdflatex.fmt\n'
                 )
             with self.assertRaises(ValueError) as cm:
-                dlb_contrib.tex.accessed_files_from_recorded(dlb.fs.Path('recorded.fls'), context)
+                dlb_contrib.tex.accessed_files_from_recorded(context, dlb.fs.Path('recorded.fls'))
             self.assertEqual("invalid line in 'recorded.fls': b'GUGUSELI dada'", str(cm.exception))
 
     def test_fails_for_relative_cwd(self):
@@ -128,7 +128,7 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
                     b'INPUT /var/lib/texmf/web2c/pdftex/pdflatex.fmt\n'
                 )
             with self.assertRaises(ValueError) as cm:
-                dlb_contrib.tex.accessed_files_from_recorded(dlb.fs.Path('recorded.fls'), context)
+                dlb_contrib.tex.accessed_files_from_recorded(context, dlb.fs.Path('recorded.fls'))
             self.assertEqual("invalid line in 'recorded.fls': b'PWD he/he'", str(cm.exception))
 
 

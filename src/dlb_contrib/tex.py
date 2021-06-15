@@ -84,7 +84,7 @@ class TexPath(dlb.fs.Path):
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
 
-def accessed_files_from_recorded(recorder_output_file: dlb.fs.Path, context) \
+def accessed_files_from_recorded(context, recorder_output_file: dlb.fs.Path) \
         -> Tuple[List[dlb.fs.Path], List[dlb.fs.Path]]:
 
     # -recorder:
@@ -246,7 +246,7 @@ class Tex(dlb.ex.Tool):
                     if os.path.isfile(new_log_file.native):
                         context.replace_output(result.log_file, new_log_file)
 
-            read_files, written_files = accessed_files_from_recorded(recorder_output_file, context)
+            read_files, written_files = accessed_files_from_recorded(context, recorder_output_file)
 
             needs_redo = False
             for state_file in self.state_files:

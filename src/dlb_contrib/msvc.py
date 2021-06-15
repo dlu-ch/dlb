@@ -76,7 +76,7 @@ INCLUDE_LINE_REGEX = re.compile(rb'^[^ \t][^:]*: [^ \t][^:]*: +')
 assert INCLUDE_LINE_REGEX.match(b'Note: including file: D:\\dir\\included_file.h')
 
 
-async def _detect_include_line_representation(compiler_executable, context) -> Tuple[bytes, bytes, str]:
+async def _detect_include_line_representation(context, compiler_executable) -> Tuple[bytes, bytes, str]:
     try:
         # https://docs.microsoft.com/en-us/windows/console/getconsoleoutputcp
         import ctypes
@@ -211,7 +211,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         compile_arguments += self.get_definition_compile_arguments()
         return compile_arguments
 
-    def get_included_files_from_paths(self, included_file_native_paths: Set[str], encoding, context) \
+    def get_included_files_from_paths(self, context, included_file_native_paths: Set[str], encoding) \
             -> Set[dlb.fs.Path]:
         included_file_paths = []
         for p in included_file_native_paths:
@@ -236,7 +236,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         compile_arguments = self.get_all_compile_arguments()
 
         include_line_prefix, working_tree_native_path_prefix, encoding = \
-            await _detect_include_line_representation(self.EXECUTABLE, context)
+            await _detect_include_line_representation(context, self.EXECUTABLE)
         # each line emitted due to '/showIncludes' starts with *include_line_prefix*
 
         # TODO -> compile_arguments?
@@ -269,7 +269,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
                     if optional_object_file is not None:
                         context.replace_output(optional_object_file, temp_object_file)
 
-        result.included_files = self.get_included_files_from_paths(included_file_native_paths, encoding, context)
+        result.included_files = self.get_included_files_from_paths(context, included_file_native_paths, encoding)
 
 
 class CCompilerMsvc(_CompilerMsvc):

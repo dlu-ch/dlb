@@ -336,7 +336,8 @@ class GitCheckTags(dlb.ex.Tool):
 
             remote_commit_by_tag_name = remote_commit_by_annotated_tag_name
             commit_by_tag_name = commit_by_annotated_tag_name
-            if self.DO_SYNC_CHECK_LIGHTWEIGHT_TAGS and remote_commit_by_lightweight_tag_name != commit_by_lightweight_tag_name:
+            if self.DO_SYNC_CHECK_LIGHTWEIGHT_TAGS \
+                    and remote_commit_by_lightweight_tag_name != commit_by_lightweight_tag_name:
                 remote_commit_by_tag_name.update(remote_commit_by_lightweight_tag_name)
                 commit_by_tag_name.update(commit_by_lightweight_tag_name)
 
