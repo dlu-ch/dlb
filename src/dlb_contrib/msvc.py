@@ -239,7 +239,6 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
             await _detect_include_line_representation(context, self.EXECUTABLE)
         # each line emitted due to '/showIncludes' starts with *include_line_prefix*
 
-        # TODO -> compile_arguments?
         if self.LANGUAGE == 'c':
             language_option = '/Tc'
         elif self.LANGUAGE == 'c++':
@@ -261,7 +260,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
                             # must have a suffix, otherwise '.obj' is appended:
                             '/Fo' + str(temp_object_file.native),
 
-                            language_option, source_file
+                            language_option, source_file  # source_file must be preceded immediately by language_option
                         ], forced_env={'TMP': str(temp_dir.native)},
                         chunk_processor=processor
                     )

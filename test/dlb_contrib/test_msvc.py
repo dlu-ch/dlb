@@ -246,3 +246,45 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                 dlb.ex.Context.active.env['LIB'] = os.getcwd()
                 Linker(linkable_files=['a.o'], linked_file='a').start()
         self.assertEqual("argument must not start with '@': '@x'", str(cm.exception))
+
+    def test_ignores_extension(self):
+        with open('a.cpp', 'wb') as f:
+            f.write(
+                b'#ifdef __cplusplus\n'
+                b'#error is C++ compiler\n'
+                b'#endif\n'
+            )
+
+        binary_path = dlb.fs.Path(dlb.fs.Path.Native(vctools_install_dir), is_dir=True) / 'bin/Hostx64/x64/'
+
+        t = dlb_contrib.msvc.CCompilerMsvc(source_files=['a.cpp'], object_files=['a.o'])
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
+            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
+                                                        example='C:\\X;D:\\Y')
+            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
+            t.start()
+
+
+@unittest.skipIf(not os.path.isdir(vctools_install_dir), 'requires msvc')
+class CppTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_ignores_extension(self):
+        with open('a.c', 'wb') as f:
+            f.write(
+                b'#ifndef __cplusplus\n'
+                b'#error is C compiler\n'
+                b'#endif\n'
+            )
+
+        binary_path = dlb.fs.Path(dlb.fs.Path.Native(vctools_install_dir), is_dir=True) / 'bin/Hostx64/x64/'
+
+        t = dlb_contrib.msvc.CplusplusCompilerMsvc(source_files=['a.c'], object_files=['a.o'])
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
+            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
+                                                        example='C:\\X;D:\\Y')
+            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
+            t.start()
