@@ -152,6 +152,19 @@ class CheckRefNameTest(unittest.TestCase):
     def test_single_dot_in_the_middle_is_valid(self):
         dlb_contrib.git.check_refname('a/b.c')
 
+    def test_at_at_certain_position_is_valid(self):
+        dlb_contrib.git.check_refname('a/{@}/b')
+
+    def test_single_at_is_invalid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('a/@/b')
+        self.assertEqual(str(cm.exception), "refname component must not be '@'")
+
+    def test_at_followed_by_brace_is_invalid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_refname('a@{b')
+        self.assertEqual(str(cm.exception), "refname component must not contain '@{'")
+
     def test_double_dot_in_the_middle_is_invalid(self):
         with self.assertRaises(ValueError) as cm:
             dlb_contrib.git.check_refname('a/b..c')
@@ -265,6 +278,30 @@ class GitDescribeWorkingDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase)
 
         self.assertIsNone(result.branch_refname)
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
+
+    def test_gitignore_can_hide_every_modification(self):
+        class PrepareRepoWithHiddenModifications(dlb_contrib.sh.ShScriptlet):
+            SCRIPTLET = """
+                git init
+                git config user.email "dlu-ch@users.noreply.github.com"
+                git config user.name "dlu-ch"
+                
+                echo x > x
+                git add x
+                git commit -m 'Initial commit'
+                git tag -a v0.0.0 -m 'Initial tag'
+                
+                echo .gitignore > .gitignore
+                echo .dlbroot >> .gitignore                
+                echo ignored >> .gitignore
+                touch ignored                 
+                """
+
+        with dlb.ex.Context():
+            PrepareRepoWithHiddenModifications().start().complete()
+            result = DescribeWorkingDirectory().start()
+
+        self.assertEqual({}, result.modification_by_file)
 
 
 class DefaultVersionTagTest(unittest.TestCase):
@@ -442,7 +479,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEquals({'v1.2.3'}, version_tag_names)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('git'), 'requires git in $PATH')  # fix on Windows ('git' vs 'git.exe')
+@unittest.skipIf(not testenv.has_executable_in_path('git'), 'requires git in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

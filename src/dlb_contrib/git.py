@@ -156,8 +156,11 @@ def modifications_from_status(lines: Iterable[str]) \
             untracked_files.add(dlb.fs.Path(_unquote_path(untracked)))
             continue
 
-    return modification_by_file, untracked_files, \
-           branch_refname, upstream_branch_refname, before_upstream, behind_upstream
+    return (
+        modification_by_file, untracked_files,
+        branch_refname, upstream_branch_refname,
+        before_upstream, behind_upstream
+    )
 
 
 def check_refname(name: str):
@@ -174,9 +177,11 @@ def check_refname(name: str):
             raise ValueError("refname component must not start or end with '.'")
         if c.endswith('.lock'):
             raise ValueError("refname component must not end with '.lock'")
+        if c == '@':
+            raise ValueError("refname component must not be '@'")
         if min(c) < ' ' or '\x7F' in c:
             raise ValueError('refname component must not contain ASCII control character')
-        for s in ('..', '/', '\\', ' ', '~', '^', ':', '?', '*', '[', '@{̣'):
+        for s in ('..', '/', '\\', ' ', '~', '^', ':', '?', '*', '[', '@{'):
             if s in c:
                 raise ValueError('refname component must not contain {}'.format(repr(s)))
 
@@ -232,21 +237,29 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
             f'--candidates={self.MATCHING_TAG_CANDIDATE_COUNT}', '--match', self.TAG_PATTERN
         ]
         _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
+        # Note: untracked files in working directory do not make it dirty in terms of 'git describe'
 
         m = GIT_DESCRIPTION_REGEX.match(stdout.strip().decode())
         result.tag_name = m.group('tag')
         result.latest_commit_hash = m.group('latest_commit_hash')
         result.commit_number_from_tag_to_latest_commit = int(m.group('commit_number'), 10)
 
-        arguments = ['status', '--porcelain=v2', '--untracked-files', '--branch']
+        # Does not include files covered by pattern in a .gitignore file (even if not committed),
+        # in $GIT_DIR/info/exclude, or in the file specified by core.excludesFile
+        # (if not set: $XDG_CONFIG_HOME/git/ignore or $HOME/.config/git/ignore is used).
+        #
+        # So, if an untracked .gitignore file is added that contains a rule to ignore itself, all untracked files
+        # covered by a rule in this .gitignore file are silently ignored.
+        arguments = ['-c', 'core.excludesFile=', 'status', '--porcelain=v2', '--untracked-files', '--branch']
         _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
 
         # https://github.com/git/git/blob/v2.20.1/Documentation/i18n.txt:
         # Path names are encoded in UTF-8 normalization form C
-        result.modification_by_file, result.untracked_files, \
-        potential_branch_refname, result.upstream_branch_refname, \
-        before_upstream, behind_upstream = \
-            modifications_from_status(line.decode() for line in stdout.strip().splitlines())
+        (
+            result.modification_by_file, result.untracked_files,
+            potential_branch_refname, result.upstream_branch_refname,
+            before_upstream, behind_upstream
+        ) = modifications_from_status(line.decode() for line in stdout.strip().splitlines())
 
         result.has_changes_in_tracked_files = bool(m.group('dirty')) or bool(result.modification_by_file)
 
