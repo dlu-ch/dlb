@@ -108,6 +108,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(TypeError) as cm:
                 with open('stdout.txt', 'xb') as f:
+                    # noinspection PyTypeChecker
                     asyncio.get_event_loop().run_until_complete(
                         rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=f))
             msg = (
@@ -120,6 +121,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
             with self.assertRaises(TypeError) as cm:
+                # noinspection PyTypeChecker
                 asyncio.get_event_loop().run_until_complete(
                     rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=asyncio.subprocess.PIPE))
             msg = (
@@ -424,6 +426,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
 
+            # noinspection PyTypeChecker
             e = rd.execute_helper_with_output('sh', ['-c', 'echo'], other_output=1)
             with self.assertRaises(TypeError) as cm:
                 asyncio.get_event_loop().run_until_complete(e)

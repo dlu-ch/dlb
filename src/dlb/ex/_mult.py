@@ -17,7 +17,7 @@ class MultiplicityRange:
     # If MultiplicityRange(m) is valid:
     # An integer ``n`` is considered a multiplicity in the range iff ``n in [i for i in range(n + 1)[m]``.
 
-    def __init__(self, multiplicity=Union[int, slice]):
+    def __init__(self, multiplicity: Union[int, slice]):
         if isinstance(multiplicity, int):
             multiplicity = slice(multiplicity, multiplicity + 1)
 

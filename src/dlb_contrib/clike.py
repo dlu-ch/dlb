@@ -253,7 +253,7 @@ class ClikeCompiler(dlb.ex.Tool):
         #    >>> with dlb.ex.Context(): dlb_contrib.gcc.CCompilerGcc.does_source_compile('#include "does/not/exist"')
         #    False
 
-        with dlb.ex.Context.active.temporary() as s, dlb.ex.Context.active.temporary() as o:
+        with dlb.ex.Context.active.temporary() as s, dlb.ex.Context.active.temporary():
             with open(s.native, 'w', encoding='utf-8') as f:
                 f.write(source + '\n')
 

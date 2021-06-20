@@ -485,9 +485,8 @@ class ValueOfNonAbstractDependencyTest(unittest.TestCase):
 
         public_dependency_classes_except_abstract_ones = {
             v for n, v in dlb.ex._depend.__dict__.items()
-            if isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency) and
-               v is not dlb.ex._depend.Dependency and not n.startswith('_') and
-               v not in abstract_dependencies
+            if (isinstance(v, type) and issubclass(v, dlb.ex._depend.Dependency) and
+                v is not dlb.ex._depend.Dependency and not n.startswith('_') and v not in abstract_dependencies)
         }
 
         for v in public_dependency_classes_except_abstract_ones:

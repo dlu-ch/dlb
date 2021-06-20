@@ -23,6 +23,7 @@ class ConstructionTest(unittest.TestCase):
 
     def test_fails_from_none(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex._mult.MultiplicityRange(None)
         self.assertEqual("'multiplicity' must be int or slice of int, not None", str(cm.exception))
 
@@ -46,6 +47,7 @@ class ConstructionTest(unittest.TestCase):
 
     def test_fails_from_noninteger_slice(self):
         with self.assertRaises(TypeError) as cm:
+            # noinspection PyTypeChecker
             dlb.ex._mult.MultiplicityRange('-3')
         self.assertEqual("'multiplicity' must be int or slice of int, not '-3'", str(cm.exception))
 

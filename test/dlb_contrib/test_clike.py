@@ -257,12 +257,14 @@ class CConstantConditionCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_byte_string_argument(self):
         with dlb.ex.Context():
             with self.assertRaises(TypeError) as cm:
+                # noinspection PyTypeChecker
                 dlb_contrib.clike.ClikeCompiler.check_constant_expression(b'')
         msg = "'constant_expression' must be a str"
         self.assertEqual(msg, str(cm.exception))
 
         with dlb.ex.Context():
             with self.assertRaises(TypeError) as cm:
+                # noinspection PyTypeChecker
                 dlb_contrib.clike.ClikeCompiler.check_constant_expression('', preamble=b'')
         msg = "'preamble' must be a str"
         self.assertEqual(msg, str(cm.exception))

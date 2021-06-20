@@ -658,12 +658,14 @@ class RelativePath(Path):
 
 
 class AbsolutePath(Path):
+    # noinspection PyUnusedLocal
     def check_restriction_to_base(self, components_checked: bool):
         if not self.is_absolute():
             raise ValueError('must be absolute')
 
 
 class NormalizedPath(Path):
+    # noinspection PyUnusedLocal
     def check_restriction_to_base(self, components_checked: bool):
         if not self.is_normalized():
             raise ValueError('must be normalized')

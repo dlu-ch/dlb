@@ -111,6 +111,8 @@ async def _detect_include_line_representation(context, compiler_executable) -> T
     native_path_suffix = native_path_suffix[1:].encode('ascii')
 
     include_line_prefix = None
+    working_tree_native_path_prefix = None
+
     for line in output.splitlines():
         if line.endswith(native_path_suffix):
             m = INCLUDE_LINE_REGEX.match(line)
@@ -212,7 +214,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
         return compile_arguments
 
     def get_included_files_from_paths(self, context, included_file_native_paths: Set[str], encoding) \
-            -> Set[dlb.fs.Path]:
+            -> List[dlb.fs.Path]:
         included_file_paths = []
         for p in included_file_native_paths:
             p = dlb.fs.Path(dlb.fs.Path.Native(p))
@@ -247,7 +249,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
             raise ValueError(f"invalid 'LANGUAGE': {self.LANGUAGE!r}")
 
         # compile
-        included_file_native_paths: Set[bytes] = set()
+        included_file_native_paths: Set[str] = set()
         with context.temporary(is_dir=True) as temp_dir:
             for source_file, optional_object_file in zip(result.source_files, optional_object_files):
                 processor = IncludeLineProcessor(include_line_prefix, working_tree_native_path_prefix, encoding)
