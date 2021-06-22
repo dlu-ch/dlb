@@ -274,7 +274,11 @@ class _BaseHelperDict:
     def __getitem__(self, helper_path: fs.PathLike) -> fs.Path:
         p = self.get(helper_path)
         if p is None:
-            raise KeyError(fs.Path(helper_path))
+            msg = (
+                f"not a known dynamic helper in the context: {helper_path!r}\n"
+                f"  | use 'dlb.ex.Context.active.helper[...] = ...'"
+            )
+            raise KeyError(msg)
         return p
 
     def __iter__(self):

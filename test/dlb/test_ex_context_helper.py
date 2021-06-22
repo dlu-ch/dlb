@@ -207,8 +207,12 @@ class ExplicitHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context(find_helpers=False):
             self.assertNotIn('a', dlb.ex.Context.active.helper)
             self.assertIsNone(dlb.ex.Context.active.helper.get('a'))
-            with self.assertRaises(KeyError):
+            with self.assertRaises(KeyError) as cm:
                 dlb.ex.Context.active.helper['a']
+            self.assertEqual(
+                "\"not a known dynamic helper in the context: 'a'\\n"
+                "  | use 'dlb.ex.Context.active.helper[...] = ...'\"",
+                str(cm.exception))
             dlb.ex.Context.active.helper[dlb.fs.Path('a')] = '/a'
             self.assertIn('a', dlb.ex.Context.active.helper)
 
