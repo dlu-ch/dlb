@@ -105,7 +105,7 @@ class _BaseEnvVarDict:
         if value is None:
             msg = (
                 f"not a defined environment variable in the context: {name!r}\n"
-                f"  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
+                f"  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
             )
             raise KeyError(msg)
         return value

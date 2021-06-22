@@ -455,7 +455,7 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
                 t.start()
         msg = (
             "not a defined environment variable in the context: 'LANG'\n"
-            "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
+            "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
         )
         self.assertEqual(msg, str(cm.exception))
 

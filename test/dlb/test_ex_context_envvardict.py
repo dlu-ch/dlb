@@ -126,7 +126,7 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
                     dlb.ex.Context.active.env['A_B_C']
                 msg = (
                     "not a defined environment variable in the context: 'A_B_C'\n"
-                    "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...]' = ..."
+                    "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
                 )
                 self.assertEqual(str(cm.exception), repr(msg))
 
