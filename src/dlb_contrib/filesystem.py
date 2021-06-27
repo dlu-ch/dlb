@@ -57,8 +57,10 @@ def hardlink_or_copy(src: Union[str, os.PathLike], dst: Union[str, os.PathLike],
 
 
 class FileCollector(dlb.ex.Tool):
-    # Collect *input_files* in a directory as hardlinks or copies.
-    # The last components of the paths in *input_files* are used as filenames in *output_directory*.
+    # Collect *input_files* in a directory *output_directory* as hardlinks or copies, removing the content of an
+    # existing *output_directory* if it exists.
+    #
+    # Uses the last components of the paths in *input_files* as filenames in *output_directory*.
     #
     # Creates hardlinks for all files if the filesystem supports it and copies otherwise.
     # Is atomic in the following sense: *output_directory* contains exactly the files *input_files* (successful
