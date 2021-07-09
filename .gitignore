@@ -1,6 +1,6 @@
-__pycache__
+/build/out/
+/dist/
+/.idea/
+__pycache__/
 .coverage
-.idea/
 .DS_Store
-build/out/
-dist/

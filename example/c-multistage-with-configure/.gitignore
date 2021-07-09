@@ -1,2 +1,3 @@
-.dlbroot/
-build/out/
+/.dlbroot/
+/build/out/
+/dist/
