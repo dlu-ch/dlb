@@ -419,7 +419,7 @@ Environment variable dictionary object support the following methods and attribu
 
 .. describe:: name in env
 
-   Returns `True` if there is a environment variable named *name* defined in *env*, else `False`.
+   Returns `True` if there is an environment variable named *name* defined in *env*, else `False`.
 
 .. describe:: name not in env
 
@@ -573,7 +573,7 @@ Tools are customized by inheritance and defining class attributes.
       This guarantees that no incomplete output dependency is left behind (like an only half-written object file)
       when the :term:`redo` is aborted.
       A filesystem object that is an output dependency is treated as modified by the redo if it is a non-explicit
-      dependency or if it is a explicit dependency that was replaced with ``context.replace_output()``.
+      dependency or if it is an explicit dependency that was replaced with ``context.replace_output()``.
 
       Raises :exc:`python:RuntimeError` on the attempt to enter a new :class:`dlb.ex.Context` as a context manager or
       to modify the :term:`active context`.
@@ -1130,14 +1130,14 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: input.EnvVar(name, pattern, example, required=True, explicit=True)
 
-   A dependency role for a environment variable named *name*.
+   A dependency role for an environment variable named *name*.
    It must not have a multiplicity (other than ``None``).
 
    If *explicit* is ``True``, the value assigned in the constructor of the :term:`tool instance` is used for all
    future runs of the tool instance.
    Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.start()` is called.
 
-   The value of the environment variable is valid if it is a string that the regular expression *pattern* matches
+   The value of the environment variable is valid if it is a string that matches the regular expression *pattern*
    or if it is ``None`` and *required* is ``False``.
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
@@ -1163,7 +1163,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    :param pattern: validation pattern for value as a regular expression
    :type pattern: str | :class:`python:typing.Pattern`
-   :param example: typical value of a environment variable, *pattern* must match this
+   :param example: typical value of an environment variable, *pattern* must match this
    :type example: str
 
    .. class:: Value

@@ -226,8 +226,8 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     # The keys are relative paths in the Git index as dlb.fs.Path objects.
     modification_by_file = dlb.ex.output.Object(explicit=False)
 
-    # Set of relative paths of files not in the Git index and not to be ignored according to '.gitignore' in the
-    # Git working directory as dlb.fs.Path objects.
+    # Set of relative paths of files not in the Git index and not to be ignored (according to '.gitignore' in the
+    # Git working directory or 'info/exclude' in the Git directory) as dlb.fs.Path objects.
     untracked_files = dlb.ex.output.Object(explicit=False)
 
     async def redo(self, result, context):
@@ -244,12 +244,12 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
         result.latest_commit_hash = m.group('latest_commit_hash')
         result.commit_number_from_tag_to_latest_commit = int(m.group('commit_number'), 10)
 
-        # Does not include files covered by pattern in a .gitignore file (even if not committed),
-        # in $GIT_DIR/info/exclude, or in the file specified by core.excludesFile
-        # (if not set: $XDG_CONFIG_HOME/git/ignore or $HOME/.config/git/ignore is used).
+        # Does not include files covered by pattern in a '.gitignore' file (even if not committed),
+        # in '$GIT_DIR/info/exclude', or in the file specified by 'core.excludesFile'
+        # (if not set: '$XDG_CONFIG_HOME/git/ignore' or '$HOME/.config/git/ignore' is used).
         #
-        # So, if an untracked .gitignore file is added that contains a rule to ignore itself, all untracked files
-        # covered by a rule in this .gitignore file are silently ignored.
+        # So, if an untracked '.gitignore' file is added that contains a rule to ignore itself, all untracked files
+        # covered by a rule in this '.gitignore' file are silently ignored.
         arguments = ['-c', 'core.excludesFile=', 'status', '--porcelain=v2', '--untracked-files', '--branch']
         _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
 

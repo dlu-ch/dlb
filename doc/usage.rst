@@ -272,6 +272,7 @@ The fingerprint includes the concrete dependencies of the tool instance which ar
 constructor matching class attributes.
 Consider the following tool instances::
 
+   t = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c')  # from above
    t2 = Replacer(template_file=dlb.fs.Path('src/main.c.tmpl'), output_file='build/out/main.c')
    t3 = Replacer(template_file='src/MAIN.C.TMPL', output_file='build/out/main.c')
 
