@@ -3,7 +3,7 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 import testenv  # also sets up module search paths
-import dlb.launcher
+import dlb_launcher
 import dlb
 import sys
 import os.path
@@ -22,7 +22,7 @@ class FindWorkingtreeRootTest(testenv.CommandlineToolTestCase,
 
     def test_chdir_stays_in_workingtree_root(self):
         root = os.getcwd()
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(2, r)
         self.assertEqual(root, os.getcwd())
 
@@ -31,14 +31,14 @@ class FindWorkingtreeRootTest(testenv.CommandlineToolTestCase,
         os.makedirs(os.path.join('a', 'b', 'c'))
         os.chdir(os.path.join('a', 'b', 'c'))
         self.assertNotEqual(root, os.getcwd())
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(2, r)
         self.assertEqual(root, os.getcwd())
 
     def test_fails_outside_workingtree(self):
         os.chdir(pathlib.Path.cwd().anchor)
         root = os.getcwd()
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(1, r)
         msg = "error: current working directory not in a dlb working tree (no '.dlbroot' found)\n"
         self.assertEqual(msg, sys.stderr.getvalue())
@@ -52,7 +52,7 @@ class HelpTest(testenv.CommandlineToolTestCase,
 
     def test_displays_help_inside_working_tree(self):
         sys.argv = [sys.argv[0]] + ['--help']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         regex = r"(?s)\A()Run a dlb script .*\.\n\Z"
         self.assertRegex(sys.stdout.getvalue(), regex)
@@ -60,28 +60,28 @@ class HelpTest(testenv.CommandlineToolTestCase,
     def test_displays_help_outside_working_tree(self):
         os.chdir(pathlib.Path.cwd().anchor)
         sys.argv = [sys.argv[0]] + ['--help']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         regex = r"(?s)\A()Run a dlb script .*\.\n\Z"
         self.assertRegex(sys.stdout.getvalue(), regex)
 
     def test_help_lines_are_short(self):
         sys.argv = [sys.argv[0]] + ['--help']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         lines = sys.stdout.getvalue().split('\n')
         self.assertLessEqual(max(len(li) for li in lines), 80)
 
     def test_help_includes_version(self):
         sys.argv = [sys.argv[0]] + ['--help']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         regex = r'.*\ndlb version: {}.\n'.format(re.escape(dlb.__version__))
         self.assertRegex(sys.stdout.getvalue(), regex)
 
     def test_help_includes_documentation_url(self):
         sys.argv = [sys.argv[0]] + ['--help']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         regex = r'.*\nFull documentation at: <{}.*>.\n'.format(re.escape(self.documentation_url))
         self.assertRegex(sys.stdout.getvalue(), regex)
@@ -94,7 +94,7 @@ class HelpTest(testenv.CommandlineToolTestCase,
             dlb.__version__ = '1.2.3'
             dlb.version_info = (1, 2, 3)
             sys.argv = [sys.argv[0]] + ['--help']
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(0, r)
             regex = r'.*\nFull documentation at: <{}.*>.\n'.format(re.escape(self.documentation_url + 'en/v1.2.3'))
             self.assertRegex(sys.stdout.getvalue(), regex)
@@ -110,7 +110,7 @@ class HelpTest(testenv.CommandlineToolTestCase,
             dlb.__version__ = '1.2.3c4'
             dlb.version_info = (1, 2, 3, 'c', 4)
             sys.argv = [sys.argv[0]] + ['--help']
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(0, r)
             regex = r'.*\nFull documentation at: <{}.*>.\n'.format(re.escape(self.documentation_url))
             self.assertRegex(sys.stdout.getvalue(), regex)
@@ -126,7 +126,7 @@ class HelpTest(testenv.CommandlineToolTestCase,
             dlb.__version__ = '1.2.3.dev1+a747'
             dlb.version_info = (1, 2, 3)
             sys.argv = [sys.argv[0]] + ['--help']
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(0, r)
             regex = r'.*\nFull documentation at: <{}.*>.\n'.format(re.escape(self.documentation_url))
             self.assertRegex(sys.stdout.getvalue(), regex)
@@ -141,7 +141,7 @@ class HelpTest(testenv.CommandlineToolTestCase,
         try:
             del dlb.version_info
             sys.argv = [sys.argv[0]] + ['--help']
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(0, r)
         finally:
             dlb.__version__ = version
@@ -152,7 +152,7 @@ class UsageTest(testenv.CommandlineToolTestCase,
                 testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_outputs_usage_without_parameters(self):
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(2, r)
         regex = r'usage: .* {}\n'.format(re.escape('[ --help ] [ <script-name> [ <script-parameter> ... ] ]'))
         self.assertRegex(sys.stderr.getvalue(), regex)
@@ -171,14 +171,14 @@ class ScriptTest(testenv.CommandlineToolTestCase,
         for script_name in invalid_script_names:
             sys.stderr = io.StringIO()
             sys.argv = [sys.argv[0]] + [script_name]
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(1, r)
             self.assertEqual(f'error: not a script name: {script_name!r}\n', sys.stderr.getvalue())
 
     def test_fails_for_nonexistent(self):
         script_name = 'build'
         sys.argv = [sys.argv[0]] + [script_name]
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(1, r)
         self.assertEqual(f"error: not an existing script: {script_name + '.py'!r}\n", sys.stderr.getvalue())
 
@@ -186,7 +186,7 @@ class ScriptTest(testenv.CommandlineToolTestCase,
         os.mkdir('build.py')
         script_name = 'build'
         sys.argv = [sys.argv[0]] + [script_name]
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(1, r)
         self.assertEqual(f"error: not an existing script: {script_name + '.py'!r}\n", sys.stderr.getvalue())
 
@@ -198,7 +198,7 @@ class ScriptTest(testenv.CommandlineToolTestCase,
             )
 
         sys.argv = [sys.argv[0]] + ['build', 'a\nb', 'c ']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         self.assertEqual("['a\\nb', 'c ']\n", sys.stdout.getvalue())
 
@@ -213,7 +213,7 @@ class ScriptTest(testenv.CommandlineToolTestCase,
             )
 
         sys.argv = [sys.argv[0]] + ['build']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         msg = f"{script_path!r}\n{script_path!r}\n{'__main__'!r}\n"
         self.assertEqual(msg, sys.stdout.getvalue())
@@ -226,7 +226,7 @@ class HistoryTest(testenv.CommandlineToolTestCase,
         open('build.py', 'xb').close()
 
         sys.argv = [sys.argv[0]] + ['build', 'a\nb', 'c ']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
 
         with open(os.path.join('.dlbroot', f'last.{os.name}'), 'rb') as f:
@@ -243,7 +243,7 @@ class HistoryTest(testenv.CommandlineToolTestCase,
                 "print(repr(sys.argv[1:]))\n"
             )
 
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         self.assertEqual("['a\\nb', 'c ']\n", sys.stdout.getvalue())
         self.assertEqual("using arguments of last successful run: 'build.py', 'a\\nb', 'c '\n", sys.stderr.getvalue())
@@ -265,7 +265,7 @@ class HistoryTest(testenv.CommandlineToolTestCase,
             with open(history_file_path, 'wb') as f:
                 f.write(history_content.encode())
             sys.stderr = io.StringIO()
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(1, r)
             self.assertEqual(f'error: invalid dlb history file (remove it manually): {history_file_path!r}\n',
                              sys.stderr.getvalue())
@@ -281,7 +281,7 @@ class InaccessibleHistoryTest(testenv.TemporaryDirectoryWithChmodTestCase,
         try:
             os.chmod(history_file_path, 0o000)
             sys.stderr = io.StringIO()
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(2, r)
             self.assertRegex(sys.stderr.getvalue(), r'usage: .*\n')
         finally:
@@ -297,7 +297,7 @@ class InaccessibleHistoryTest(testenv.TemporaryDirectoryWithChmodTestCase,
             os.chmod(history_file_path, 0o000)
             sys.stderr = io.StringIO()
             sys.argv = [sys.argv[0]] + ['build']
-            r = dlb.launcher.main()
+            r = dlb_launcher.main()
             self.assertEqual(0, r)
             self.assertEqual('', sys.stderr.getvalue())
         finally:
@@ -327,7 +327,7 @@ class ModuleSearchPathTest(testenv.CommandlineToolTestCase,
             )
 
         sys.argv = [sys.argv[0]] + ['build']
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
 
         rel_module_search_paths = ['.', os.path.join(u_path, 'x.zip'), os.path.join(u_path, 'y.zip')]
@@ -345,6 +345,6 @@ class ModuleSearchPathTest(testenv.CommandlineToolTestCase,
             )
 
         sys.argv = [sys.argv[0]] + [os.path.join('build', 'show')]
-        r = dlb.launcher.main()
+        r = dlb_launcher.main()
         self.assertEqual(0, r)
         self.assertEqual(repr(os.path.dirname(script_path)) + '\n', sys.stdout.getvalue())

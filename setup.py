@@ -59,10 +59,12 @@ def zip_modified_src_tree(*, src_path, zip_path):
         pass
 
     with zipfile.ZipFile(zip_path.native, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
-        # for zipimport on MSYS2, adding directories to the archive seems to be necessary
-        files = src_path.list(name_filter=r'.+\.py', recurse_name_filter=r'')
+        files = [f for f in src_path.list_r(name_filter=r'.+\.py', recurse_name_filter=r'') if len(f.parts) > 1]
+        # without files in directly in *src_path*
+
         for p in sorted(set(p[:-1] for p in files)) + files:
-            zip.write(p.native, arcname=p.relative_to(src_path).as_string())
+            # for zipimport on MSYS2, adding directories to the archive seems to be necessary
+            zip.write((src_path / p).native, arcname=p.as_string())
 
 
 dist_path = dlb.fs.Path('dist/')
@@ -144,7 +146,12 @@ setuptools.setup(
     # simple. Or you can use find_packages().
     packages=setuptools.find_packages(where=modified_src_path.as_string().rstrip('/')),
 
-    py_modules=[p[-2:].as_string()[:-3] for p in (modified_src_path / 'dlb_contrib/').list(name_filter=r'.*\.py')],
+    py_modules=[
+        p[-2:].as_string()[:-3] for p in (modified_src_path / 'dlb_contrib/').list(name_filter=r'.*\.py')
+    ] + ['dlb_launcher'],
+    # Important: 'dlb_launcher' must not be a submodule of 'dlb' or 'dlb_contrib'.
+    # Otherwise the module 'dlb' would already be loaded at the beginning of the dlb script and before a different
+    # version of dlb could have been added to the module search path.
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
@@ -174,6 +181,6 @@ setuptools.setup(
     # pip to create the appropriate form of executable for the target platform.
     # https://packaging.python.org/specifications/entry-points/
     entry_points={
-        'console_scripts': ['dlb=dlb.launcher:main'],
+        'console_scripts': ['dlb=dlb_launcher:main'],
     },
 )
