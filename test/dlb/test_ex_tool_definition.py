@@ -547,6 +547,26 @@ class ExecutionParameterOverrideTest(unittest.TestCase):
             str(cm.exception),
             "attribute 'X' of base class may only be overridden with a value which is a <class 'int'>")
 
+    def test_can_only_be_overridden_in_constructor_with_same_type(self):
+        # noinspection PyAbstractClass
+        class ATool(dlb.ex.Tool):
+            X = 1
+
+        with self.assertRaises(TypeError) as cm:
+            ATool(X='')
+        self.assertEqual(
+            str(cm.exception),
+            "attribute 'X' of base class may only be overridden with a value which is a <class 'int'>")
+
+        class BTool(ATool):
+            pass
+        with self.assertRaises(TypeError) as cm:
+            BTool(X='')
+        self.assertEqual(
+            str(cm.exception),
+            "attribute 'X' of base class may only be overridden with a value which is a <class 'int'>")
+
+
 
 class DependencyRoleOverrideTest(unittest.TestCase):
 
@@ -689,7 +709,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 692  # of this line
+        lineno = 712  # of this line
 
         class A(dlb.ex.Tool):
             pass
@@ -888,11 +908,13 @@ class ToolInstanceConstructionTest(unittest.TestCase):
 
     # noinspection PyAbstractClass
     class ATool(dlb.ex.Tool):
+        X_Y = 2
         source_file = dlb.ex.input.RegularFile()
         object_file = dlb.ex.output.RegularFile()
 
     # noinspection PyAbstractClass
     class BTool(ATool):
+        U_V_W = '?'
         map_file = dlb.ex.output.RegularFile(required=False)
         log_file = dlb.ex.output.RegularFile(required=True, explicit=False)
 
@@ -955,9 +977,21 @@ class ToolInstanceConstructionTest(unittest.TestCase):
 
     def test_must_not_have_argument_for_undeclared_dependency(self):
         msg = (
-            "keyword argument does not name a dependency role of 'ToolInstanceConstructionTest.BTool': "
-            "'temporary_file'\n"
-            "  | dependency roles: 'source_file', 'log_file', 'object_file', 'map_file'"
+            "keyword argument does not name a dependency role or execution parameter "
+            "of 'Tool': 'temporary_file'\n"
+            "  | dependency roles: -\n"
+            "  | execution parameters: -"
+        )
+
+        with self.assertRaises(dlb.ex.DependencyError) as cm:
+            dlb.ex.Tool(temporary_file='x.cpp.o._')
+        self.assertEqual(msg, str(cm.exception))
+
+        msg = (
+            "keyword argument does not name a dependency role or execution parameter "
+            "of 'ToolInstanceConstructionTest.BTool': 'temporary_file'\n"
+            "  | dependency roles: 'source_file', 'log_file', 'object_file', 'map_file'\n"
+            "  | execution parameters: 'U_V_W', 'X_Y'"
         )
 
         with self.assertRaises(dlb.ex.DependencyError) as cm:
@@ -982,6 +1016,15 @@ class ToolInstanceConstructionTest(unittest.TestCase):
             ToolInstanceConstructionTest.BTool(log_file=None)
         self.assertEqual(msg, str(cm.exception))
 
+    def test_execution_parameters_are_assigned(self):
+        tool = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o', U_V_W='!')
+        self.assertEqual(2, tool.X_Y)  # unchanged
+        self.assertEqual('!', tool.U_V_W)
+
+        tool = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o', X_Y=3)
+        self.assertEqual(3, tool.X_Y)  # unchanged
+        self.assertEqual('?', tool.U_V_W)   # unchanged
+
 
 class ToolInstanceFingerprintTest(unittest.TestCase):
 
@@ -990,6 +1033,7 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
         source_file = dlb.ex.input.RegularFile[:]()
         object_file = dlb.ex.output.RegularFile(required=False)
         map_file = dlb.ex.output.RegularFile(required=False)
+        X = 'blabliblu'
 
     def test_is_equal_for_same_concrete_dependencies(self):
         tool1 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c', 'src/d.c'],
@@ -1011,6 +1055,27 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
         tool2 = ToolInstanceFingerprintTest.ATool(source_file=['src/a/b.c'], map_file='e.o', object_file='e.mp')
         self.assertNotEqual(tool1.fingerprint, tool2.fingerprint)
 
+    def test_is_equal_for_same_execution_parameters(self):
+        tool1 = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o')
+        tool2 = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o',
+                                                   X_Y=ToolInstanceConstructionTest.BTool.X_Y)
+        self.assertEqual(tool1.fingerprint, tool2.fingerprint)
+
+    def test_is_not_equal_for_different_execution_parameters(self):
+        tool1 = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o')
+        tool2 = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o', U_V_W='!')
+        tool3 = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o', X_Y=3)
+        tool4 = ToolInstanceConstructionTest.BTool(source_file='x.cpp', object_file='x.cpp.o',
+                                                   X_Y=ToolInstanceConstructionTest.BTool.X_Y)
+        self.assertNotEqual(tool1.fingerprint, tool2.fingerprint)
+        self.assertNotEqual(tool1.fingerprint, tool3.fingerprint)
+        self.assertEqual(tool1.fingerprint, tool4.fingerprint)
+
+    def test_is_reproducible(self):
+        tool = ToolInstanceFingerprintTest.ATool(source_file=[], object_file='e.o')
+        fingerprint1 = tool.fingerprint
+        self.assertEqual(fingerprint1, tool.fingerprint)
+
     def test_is_20_byte(self):
         tool = ToolInstanceFingerprintTest.ATool(source_file=[], object_file='e.o')
         self.assertIsInstance(tool.fingerprint, bytes)
@@ -1019,6 +1084,7 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
     def test_is_readonly(self):
         tool = ToolInstanceFingerprintTest.ATool(source_file=[], object_file='e.o')
         with self.assertRaises(AttributeError):
+            # noinspection PyPropertyAccess
             tool.fingerprint = b''
 
 

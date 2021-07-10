@@ -269,7 +269,7 @@ A redo of *t* from above is considered necessary if at least one of the followin
 
 Tool instances are identified by their class (file path and line number of definition) and their fingerprint.
 The fingerprint includes the concrete dependencies of the tool instance which are defined by arguments of the
-constructor matching class attributes.
+constructor matching class attributes, and its execution parameters.
 Consider the following tool instances::
 
    t2 = Replacer(template_file=dlb.fs.Path('src/main.c.tmpl'), output_file='build/out/main.c')
