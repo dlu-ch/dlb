@@ -361,11 +361,10 @@ class _ToolBase:
                     validated_value = getattr(result, action.name)
                     if validated_value is NotImplemented:
                         if action.dependency.required:
-                            msg = (
+                            raise _error.RedoError(
                                 f"non-explicit dependency not assigned during redo: {action.name!r}\n"
                                 f"  | use 'result.{action.name} = ...' in body of redo(self, result, context)"
                             )
-                            raise _error.RedoError(msg)
                         validated_value = None
                         setattr(result, action.name, validated_value)
                     if action.dependency.Value is fs.Path:
@@ -486,14 +485,13 @@ class _ToolMeta(type):
         source_lineno = defining_frame.lineno
         source_path = defining_frame.filename
         if not os.path.isabs(source_path):
-            msg = (
+            raise _error.DefinitionAmbiguityError(
                 f"invalid tool definition: location of definition depends on current working directory\n"
                 f"  | class: {cls!r}\n"
                 f"  | source file: {defining_frame.filename!r}\n"
                 f"  | make sure the matching module search path is an absolute path when the "
                 f"defining module is imported"
             )
-            raise _error.DefinitionAmbiguityError(msg)
 
         try:
             in_archive_path = None
@@ -533,12 +531,11 @@ class _ToolMeta(type):
         location = source_path, in_archive_path, source_lineno
         existing_location = _tool_class_by_definition_location.get(location)
         if existing_location is not None:
-            msg = (
+            raise _error.DefinitionAmbiguityError(
                 f"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
                 f"  | location: {source_path!r}:{source_lineno}\n"
                 f"  | class: {existing_location!r}"
             )
-            raise _error.DefinitionAmbiguityError(msg)
 
         return location
 
@@ -581,11 +578,10 @@ class _ToolMeta(type):
                 else:
                     # noinspection PyUnresolvedReferences
                     if not (isinstance(value, _depend.Dependency) and hasattr(value.__class__, 'Value')):
-                        msg = (
+                        raise TypeError(
                             f"attribute {name!r} must be a method or an instance of a "
                             f"concrete subclass of 'dlb.ex.Dependency'"
                         )
-                        raise TypeError(msg)
                     for base_class in defining_base_classes:
                         value: _depend.Dependency
                         base_value = base_class.__dict__[name]
@@ -593,18 +589,16 @@ class _ToolMeta(type):
                             msg = f"attribute {name!r} must be a method since it is a method in {base_value!r}"
                             raise TypeError(msg)
                         if base_value is not None and not value.compatible_and_no_less_restrictive(base_value):
-                            msg = (
+                            raise TypeError(
                                 f"attribute {name!r} of base class may only be overridden by "
                                 f"a {type(base_value)!r} at least as restrictive"
                             )
-                            raise TypeError(msg)
             elif name not in _ToolMeta.OVERRIDEABLE_ATTRIBUTES:
-                msg = (
+                raise AttributeError(
                     f"invalid class attribute name: {name!r}\n"
                     f"  | every class attribute of a 'dlb.ex.Tool' must be named "
                     f"like 'UPPER_CASE' or 'lower_case' (at least two words)"
                 )
-                raise AttributeError(msg)
 
     def _get_names(cls) -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
         names = dir(cls)  # from this class and its base classes

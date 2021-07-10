@@ -95,11 +95,10 @@ def check_hash(*, files_to_hash: Iterator[dlb.fs.PathLike], hash_line_file: dlb.
         if warnonly_hash is None or hash_line_parts[1] != warnonly_hash:
             hash_line_repr = repr(b''.join(hash_line_parts)).lstrip('b')
             new_hash_line_repr = repr(b''.join(new_hash_line_parts)).lstrip('b')
-            msg = (
+            raise HashMismatch(
                 f'check and update the version information or the hash line:\n'
                 f'  | in {hash_line_file.as_string()!r}\n'
                 f'  | replace the line {hash_line_repr}\n'
                 f'  | by {new_hash_line_repr}'
             )
-            raise HashMismatch(msg)
         warnings.warn('comparison of hash line disabled (do this only temporarily)')

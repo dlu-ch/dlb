@@ -72,11 +72,10 @@ class Dependency(_mult.MultiplicityHolder):
     # final
     def validate(self, value) -> Optional[Union[V, Tuple[V, ...]]]:
         if not hasattr(self, 'Value'):
-            msg = (
+            raise NotImplementedError(
                 f"{self.__class__!r} is an abstract dependency class\n"
                 f"  | use one of its documented subclasses instead"
             )
-            raise NotImplementedError(msg)
 
         m = self.multiplicity
 

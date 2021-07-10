@@ -107,11 +107,10 @@ def _normalize_message_lines(message, *, name: str) -> Tuple[List[str], bool]:
         for c in line:
             if c < ' ':
                 if c not in '\t\b':
-                    msg = (
+                    raise ValueError(
                         f"{name!r} must not contain ASCII control characters except '\\t' and '\\b', "
                         f"unlike {c!r} in line {lineno0 + 1}"
                     )
-                    raise ValueError(msg)
                 has_field_separator = True
 
         if line:
@@ -122,23 +121,21 @@ def _normalize_message_lines(message, *, name: str) -> Tuple[List[str], bool]:
 
                 line = stripped_line
                 if line[0] in _RESERVED_TITLESTART_CHARACTERS:
-                    msg = (
+                    raise ValueError(
                         f"first non-empty line in {name!r} must not start with "
                         f"reserved character {line[0]!r}"
                     )
-                    raise ValueError(msg)
                 if line[-1] in _RESERVED_TITLEEND_CHARACTERS:
                     msg = f"first non-empty line in {name!r} must not end with {line[-1]!r}"
                     raise ValueError(msg)
             else:
                 line = line[len(first_indentation):] if line[:len(first_indentation)] == first_indentation else ''
                 if not line.startswith(_CONTINUATION_INDENTATION):
-                    msg = (
+                    raise ValueError(
                         f"each continuation line in {name!r} must be indented at "
                         f"least {len(_CONTINUATION_LINE_PREFIX)} spaces more than the first non-empty line, "
                         f"unlike line {lineno0 + 1}"
                     )
-                    raise ValueError(msg)
             if line or (normalized_lines and not normalized_lines[-1]):
                 normalized_lines.append(line)
 

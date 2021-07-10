@@ -216,11 +216,10 @@ class Tex(dlb.ex.Tool):
                 _, suffix = os.path.splitext(state_file.components[-1])
                 state_file_with_same_suffix = state_file_by_suffix.get(suffix)
                 if state_file_with_same_suffix is not None:
-                    msg = (
+                    raise ValueError(
                         f"'state_file' contains more than one path with suffix {suffix!r}: "
                         f"{state_file_with_same_suffix.as_string()!r}, {state_file.as_string()!r}"
                     )
-                    raise ValueError(msg)
                 state_file_by_suffix[suffix] = state_file
                 restored_state_file = intermediary_directory / f'{base_filename}{suffix}'
                 restored_state_files.append(restored_state_file)

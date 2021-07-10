@@ -107,11 +107,10 @@ class PkgConfig(dlb.ex.Tool):
                 library_selection_arguments.append(lib)
             else:
                 if not isinstance(contraints, collections.abc.Sequence) or isinstance(contraints, (str, bytes)):
-                    msg = (
+                    raise TypeError(
                         f"version constraint for library {lib!r} is not a sequence "
                         f"other than str and bytes: {contraints!r}"
                     )
-                    raise TypeError(msg)
                 for c in contraints:
                     m = VERSION_CONSTRAINT_REGEX.match(c)
                     if not m:
