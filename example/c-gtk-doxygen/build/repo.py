@@ -39,7 +39,7 @@ class VersionQuery(dlb_contrib.git.GitDescribeWorkingDirectory):
         if result.commit_number_from_tag_to_latest_commit:
             wd_version += f'-dev{result.commit_number_from_tag_to_latest_commit}' \
                           f'+{result.latest_commit_hash[:shortened_commit_hash_length]}'
-        if result.has_changes_in_tracked_files:
+        if result.has_changes_in_tracked_files or result.untracked_files:
             wd_version += '@'
 
         result.wd_version = wd_version
