@@ -788,42 +788,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
         self.assertEqual(A.definition_location[0], os.path.realpath(__file__))
 
-    # noinspection PyUnusedLocal,PyPep8Naming
-    def test_definition_fails_for_two_different_dynamic_definitions(self):
-        def f(s):
-            # noinspection PyAbstractClass
-            class A(dlb.ex.Tool):
-                X = 1 if s else 2
-            return A
-
-        regex = (
-            r"(?m)\A"
-            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
-            r"  \| location: '.+':[0-9]+\n"
-            r"  \| class: <class '.+'>\Z"
-        )
-
-        B = f(False)
-        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
-            C = f(True)
-
-    def test_definition_fails_for_two_equal_dynamic_definitions(self):
-        # noinspection PyUnusedLocal,PyAbstractClass
-        def f(s):
-            class A(dlb.ex.Tool):
-                pass
-            return A
-
-        regex = (
-            r"(?m)\A"
-            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
-            r"  \| location: '.+':[0-9]+\n"
-            r"  \| class: <class '.+'>\Z"
-        )
-        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
-            _, _ = f(False), f(True)
-
-    def test_definition_fails_in_import_with_relative_search_path(self):
+    def test_fails_on_import_with_relative_search_path(self):
         with open(os.path.join('z.py'), 'x') as f:
             f.write(
                 'import dlb.ex\n'
@@ -842,6 +807,81 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
             # noinspection PyUnresolvedReferences
             import z  # needs a name different from the already loaded modules
         del sys.path[0]
+
+    def test_fails_for_equal_dynamic_definitions(self):
+        # noinspection PyAbstractClass
+        def f():
+            class A(dlb.ex.Tool):
+                pass
+            return A
+
+        regex = (
+            r"(?m)\A"
+            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"  \| location: '.+':[0-9]+\n"
+            r"  \| class: <class '.+'>\Z"
+        )
+
+        f()
+        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
+            f()
+
+    # noinspection PyPep8Naming
+    def test_fails_for_dynamic_definitions_with_different_execution_parameters(self):
+        def f(s):
+            # noinspection PyAbstractClass
+            class A(dlb.ex.Tool):
+                X = 1 if s else 2
+            return A
+
+        regex = (
+            r"(?m)\A"
+            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"  \| location: '.+':[0-9]+\n"
+            r"  \| class: <class '.+'>\Z"
+        )
+
+        f(False)
+        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
+            f(True)
+
+    def test_fails_for_dynamic_definitions_with_different_baseclass(self):
+        # noinspection PyAbstractClass
+        class B(dlb.ex.Tool):
+            pass
+
+        # noinspection PyUnusedLocal,PyAbstractClass
+        def f(s):
+            # noinspection PyAbstractClass
+            class A(B if s else dlb.ex.Tool):
+                pass
+            return A
+
+        regex = (
+            r"(?m)\A"
+            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"  \| location: '.+':[0-9]+\n"
+            r"  \| class: <class '.+'>\Z"
+        )
+
+        f(False)
+        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
+            f(True)
+
+    def test_fails_for_dynamic_definitions_on_same_line(self):
+        [
+            type('A', (dlb.ex.Tool,), {}),
+            type('B', (dlb.ex.Tool,), {})  # ok, on next line!
+        ]
+
+        regex = (
+            r"(?m)\A"
+            r"invalid tool definition: another 'Tool' class was defined on the same source file line\n"
+            r"  \| location: '.+':[0-9]+\n"
+            r"  \| class: <class '.+'>\Z"
+        )
+        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
+            [type('A', (dlb.ex.Tool,), {}), type('B', (dlb.ex.Tool,), {})]
 
 
 class ToolInstanceConstructionTest(unittest.TestCase):
