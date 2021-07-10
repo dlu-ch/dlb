@@ -222,11 +222,10 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
                 included_file_paths.append(context.working_tree_path_of(p))
             except dlb.ex.WorkingTreePathError as e:
                 if isinstance(e.oserror, OSError):
-                    msg = (
+                    raise FileNotFoundError(
                         f"reportedly included file not found: {p.as_string()!r}\n"
                         f"  | ambiguity in the ANSI encoding ({encoding!r}) of its path?"
                     )
-                    raise FileNotFoundError(msg)
         included_file_paths.sort()
         return included_file_paths
 

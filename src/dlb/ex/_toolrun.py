@@ -547,18 +547,16 @@ def check_explicit_fs_output_dependencies(tool, dependency_actions: Tuple[_depen
                     raise _error.DependencyError(msg) from None
                 encoded_path = _rundb.encode_path(p)
                 if encoded_path in encoded_paths_of_explicit_input_dependencies:
-                    msg = (
+                    raise _error.DependencyError(
                         f"output dependency {action.name!r} contains a path that is also an explicit "
                         f"input dependency: {p.as_string()!r}"
                     )
-                    raise _error.DependencyError(msg)
                 a = dependency_action_by_encoded_path.get(encoded_path)
                 if a is not None:
-                    msg = (
+                    raise _error.DependencyError(
                         f"output dependencies {action.name!r} and {a.name!r} both contain the same path: "
                         f"{p.as_string()!r}"
                     )
-                    raise _error.DependencyError(msg)
                 dependency_action_by_encoded_path[encoded_path] = action
                 dependency_action_by_path[p] = action
                 memo = None
@@ -589,11 +587,10 @@ def check_envvar_dependencies(tool, dependency_actions: Tuple[_dependaction.Acti
         if d.Value is input.EnvVar.Value:
             a = action_by_envvar_name.get(d.name)
             if a is not None:
-                msg = (
+                raise _error.DependencyError(
                     f"input dependencies {action.name!r} and {a.name!r} both define the same "
                     f"environment variable: {d.name!r}"
                 )
-                raise _error.DependencyError(msg)
             if action.dependency.explicit:
                 for ev in action.dependency.tuple_from_value(getattr(tool, action.name)):
                     envvar_value_by_name[ev.name] = ev.raw  # ev is a _depend.EnvVarInput.Value

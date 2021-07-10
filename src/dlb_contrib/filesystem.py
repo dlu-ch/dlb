@@ -78,11 +78,10 @@ class FileCollector(dlb.ex.Tool):
             file_name = input_file.components[-1]
             if file_name in path_by_file_name:
                 p = path_by_file_name[file_name]
-                msg = (
+                raise ValueError(
                     f"'input_files' contains multiple members with same file name: "
                     f"{p.as_string()!r} and {input_file.as_string()!r}"
                 )
-                raise ValueError(msg)
             path_by_file_name[file_name] = input_file
 
         # create read-only hard link in *output_directory* for each member of *input_files*

@@ -103,11 +103,10 @@ class _BaseEnvVarDict:
     def __getitem__(self, name: str) -> str:
         value = self.get(name)
         if value is None:
-            msg = (
+            raise KeyError(
                 f"not a defined environment variable in the context: {name!r}\n"
                 f"  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
             )
-            raise KeyError(msg)
         return value
 
     def __iter__(self):
@@ -152,11 +151,10 @@ class _EnvVarDict(_BaseEnvVarDict):
 
     def _prepare_for_modification(self):
         if not (_contexts and _contexts[-1] is self._context):
-            msg = (
+            raise _error.ContextModificationError(
                 "'env' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.env' to get 'env' of the active context"
             )
-            raise _error.ContextModificationError(msg)
         self._context.complete_pending_redos()
 
     # dictionary methods
@@ -167,21 +165,19 @@ class _EnvVarDict(_BaseEnvVarDict):
             raise TypeError("'value' must be a str")
 
         if not self.is_imported(name):
-            msg = (
+            raise AttributeError(
                 f"environment variable not imported into context: {name!r}\n"
                 f"  | use 'dlb.ex.Context.active.env.import_from_outer()' first"
             )
-            raise AttributeError(msg)
 
         self._prepare_for_modification()
 
         regex = self._find_violated_validation_pattern(name, value)
         if regex is not None:
-            msg = (
+            raise ValueError(
                 f"'value' is not matched by associated validation pattern: {value!r}\n"
                 f"  | validation pattern in question is {regex.pattern!r}"
             )
-            raise ValueError(msg)
 
         self._value_by_name[name] = value
 
@@ -274,11 +270,10 @@ class _BaseHelperDict:
     def __getitem__(self, helper_path: fs.PathLike) -> fs.Path:
         p = self.get(helper_path)
         if p is None:
-            msg = (
+            raise KeyError(
                 f"not a known dynamic helper in the context: {helper_path!r}\n"
                 f"  | use 'dlb.ex.Context.active.helper[...] = ...'"
             )
-            raise KeyError(msg)
         return p
 
     def __iter__(self):
@@ -298,11 +293,10 @@ class _HelperDict(_BaseHelperDict):
 
     def _prepare_for_modification(self):
         if not (_contexts and _contexts[-1] is self._context):
-            msg = (
+            raise _error.ContextModificationError(
                 "'helper' of an inactive context must not be modified\n"
                 "  | use 'dlb.ex.Context.active.helper' to get 'helper' of the active context"
             )
-            raise _error.ContextModificationError(msg)
         self._context.complete_pending_redos()
 
     def __setitem__(self, helper_path: fs.PathLike, abs_path: fs.PathLike):
@@ -464,11 +458,10 @@ class _RootSpecifics:
             if wt != wt0:  # guarantee G-T2
                 break
             if (time.monotonic_ns() - t0) / 1e9 > 10.0:  # at most 10 s
-                msg = (
+                raise _error.WorkingTreeTimeError(
                     'working tree time did not change for at least 10 s of system time\n'
                     '  | was the system time adjusted in this moment?'
                 )
-                raise _error.WorkingTreeTimeError(msg)
             time.sleep(0.015)  # typical effective working tree time resolution: 10 ms
 
     def _close_and_unlock_if_open(self):  # safe to call multiple times

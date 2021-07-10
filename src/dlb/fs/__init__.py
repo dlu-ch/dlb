@@ -304,11 +304,10 @@ class Path(metaclass=_PathMeta):
                 self._native = None
 
             if not isinstance(path, pathlib.PurePath):
-                msg = (
+                raise TypeError(
                     f"'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
                     f"or a path component sequence, not {type(path)!r}"
                 )
-                raise TypeError(msg)
 
             anchor = path.anchor
 
