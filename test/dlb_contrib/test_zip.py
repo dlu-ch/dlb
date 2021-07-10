@@ -24,7 +24,7 @@ class ZipDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase):
                 content_directory='d/',
                 archive_file='a.bzip').start()
         with zipfile.ZipFile('a.bzip', 'r') as z:
-            self.assertEqual([], z.filelist)
+            self.assertEqual([], z.namelist())
 
     def test_nonempty_directory(self):
         os.mkdir('d')
@@ -32,6 +32,8 @@ class ZipDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase):
         open(os.path.join('d', 'a', 'b'), 'xb').close()
         open(os.path.join('d', 'c'), 'xb').close()
         os.mkdir(os.path.join('d', 'e'))  # this will by ignored since it is empty
+        os.makedirs(os.path.join('d', 'f', 'g'))
+        open(os.path.join('d', 'f', 'g', 'h'), 'xb').close()
 
         with dlb.ex.Context():
             dlb_contrib.zip.ZipDirectory(
@@ -39,7 +41,43 @@ class ZipDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase):
                 archive_file='a.bzip').start()
         with dlb.ex.Context(), dlb.ex.Context.active.temporary(is_dir=True) as t:
             with zipfile.ZipFile('a.bzip', 'r') as z:
-                self.assertEqual(['a/b', 'c'], [fi.filename for fi in z.filelist])
+                self.assertEqual(['a/', 'f/', 'f/g/', 'a/b', 'c', 'f/g/h'], z.namelist())
+                z.extractall(t.native)
+                self.assertTrue((t / 'a/b').native.raw.is_file())
+                self.assertTrue((t / 'c').native.raw.is_file())
+
+
+class ZipDirectoryWithOutPrefixDirectories(dlb_contrib.zip.ZipDirectory):
+    INCLUDE_PREFIX_DIRECTORIES = False
+
+
+class ZipDirectoryWithoutPrefixDirectoriesTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_empty_directory(self):
+        os.mkdir('d')
+        with dlb.ex.Context():
+            ZipDirectoryWithOutPrefixDirectories(
+                content_directory='d/',
+                archive_file='a.bzip').start()
+        with zipfile.ZipFile('a.bzip', 'r') as z:
+            self.assertEqual([], z.namelist())
+
+    def test_nonempty_directory(self):
+        os.mkdir('d')
+        os.mkdir(os.path.join('d', 'a'))
+        open(os.path.join('d', 'a', 'b'), 'xb').close()
+        open(os.path.join('d', 'c'), 'xb').close()
+        os.mkdir(os.path.join('d', 'e'))  # this will by ignored since it is empty
+        os.makedirs(os.path.join('d', 'f', 'g'))
+        open(os.path.join('d', 'f', 'g', 'h'), 'xb').close()
+
+        with dlb.ex.Context():
+            ZipDirectoryWithOutPrefixDirectories(
+                content_directory='d/',
+                archive_file='a.bzip').start()
+        with dlb.ex.Context(), dlb.ex.Context.active.temporary(is_dir=True) as t:
+            with zipfile.ZipFile('a.bzip', 'r') as z:
+                self.assertEqual(['a/b', 'c', 'f/g/h'], z.namelist())
                 z.extractall(t.native)
                 self.assertTrue((t / 'a/b').native.raw.is_file())
                 self.assertTrue((t / 'c').native.raw.is_file())
@@ -57,7 +95,7 @@ class ZipDirectorySpecialTest(testenv.TemporaryWorkingDirectoryTestCase):
                 archive_file='a.bzip').start()
         with dlb.ex.Context(), dlb.ex.Context.active.temporary(is_dir=True) as t:
             with zipfile.ZipFile('a.bzip', 'r') as z:
-                self.assertEqual(['a\\b'], [fi.filename for fi in z.filelist])
+                self.assertEqual(['a\\b'], z.namelist())
                 z.extractall(t.native)
                 self.assertTrue((t / 'a\\b').native.raw.is_file())
 
@@ -77,4 +115,4 @@ class ZipDirectorySpecialTest(testenv.TemporaryWorkingDirectoryTestCase):
                 content_directory='d/',
                 archive_file='a.bzip').start()
         with zipfile.ZipFile('a.bzip', 'r') as z:
-            self.assertEqual(['a'], [fi.filename for fi in z.filelist])
+            self.assertEqual(['a'], z.namelist())

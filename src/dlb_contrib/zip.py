@@ -32,6 +32,9 @@ class ZipDirectory(dlb.ex.Tool):
     COMPRESSION = zipfile.ZIP_BZIP2
     COMPRESS_LEVEL = 9
 
+    # Include a directory entry for each path that is a prefix of the path of a contained file?
+    INCLUDE_PREFIX_DIRECTORIES = True
+
     # The regular files in this directory (with all its subdirectories) build the content of the archive.
     # Symbolic links are not followed.
     # Filesystem that are no directories or regular files are ignored.
@@ -47,11 +50,28 @@ class ZipDirectory(dlb.ex.Tool):
 
             with zipfile.ZipFile(archive_file.native, 'w', compression=self.COMPRESSION,
                                  compresslevel=self.COMPRESS_LEVEL) as z:
-                files = content_directory.list_r(recurse_name_filter='', follow_symlinks=False)
-                for f in files:
-                    native_path = str((content_directory / f).native)
-                    if os.path.isfile(native_path):
-                        z.write(native_path, arcname=f.as_string())
+                regular_files = [
+                    p for p in content_directory.list_r(recurse_name_filter='', follow_symlinks=False)
+                    if os.path.isfile(str((content_directory / p).native))
+                ]
+
+                containing_directories = set()
+
+                if self.INCLUDE_PREFIX_DIRECTORIES:
+
+                    for p in regular_files:
+                        while True:
+                            p = p[:-1]
+                            if not p.parts:
+                                break
+                            if p in containing_directories:
+                                break
+                            containing_directories.add(p)
+
+                for p in sorted(containing_directories) + regular_files:
+                    z.write((content_directory / p).native, arcname=p.as_string())
+
+            # For zipimport on MSYS2, adding directories to the archive seems to be necessary
 
             # https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT:
             #
