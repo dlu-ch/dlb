@@ -48,6 +48,17 @@ def _classify_potential_method(value):
         return 's', value.__func__  # as created by @staticmethod
 
 
+def _check_execution_parameter(name, value, defining_classes):
+    # if overridden: must be instance of type of overridden attribute
+    for base_class in defining_classes:
+        base_value = base_class.__dict__[name]
+        if not isinstance(value, type(base_value)):
+            raise TypeError(
+                f"attribute {name!r} of base class may only be overridden with a value "
+                f"which is a {type(base_value)!r}"
+            )
+
+
 # noinspection PyProtectedMember,PyUnresolvedReferences
 class _ToolBase:
     def __init__(self, **kwargs):
@@ -61,37 +72,42 @@ class _ToolBase:
 
         names_of_assigned = set()
         for name, value in kwargs.items():
-            if name not in dependency_names_set:
-                names = ', '.join(repr(n) for n in dependency_names)
-                msg = (
-                    # TODO include module?
-                    f"keyword argument does not name a dependency role of {self.__class__.__qualname__!r}: {name!r}\n"
-                    f"  | dependency roles: {names}"
-                )
-                raise _error.DependencyError(msg)
-
-            role = getattr(self.__class__, name)
-            if not role.explicit:
-                msg = (
-                    f"keyword argument does name a non-explicit dependency role: {name!r}\n"
-                    f"  | non-explicit dependency must not be assigned at construction"
-                )
-                raise _error.DependencyError(msg)
-
-            if value is None:
-                validated_value = None
-                if role.required:
-                    msg = f"keyword argument for required dependency role must not be None: {name!r}"
-                    raise _error.DependencyError(msg)
-            else:
-                try:
-                    validated_value = role.validate(value)
-                except (TypeError, ValueError) as e:
-                    msg = (
-                        f"keyword argument for dependency role {name!r} is invalid: {value!r}\n"
-                        f"  | reason: {ut.exception_to_line(e)}"
+            if name in dependency_names_set:
+                role = getattr(self.__class__, name)
+                if not role.explicit:
+                    raise _error.DependencyError(
+                        f"keyword argument does name a non-explicit dependency role: {name!r}\n"
+                        f"  | non-explicit dependency must not be assigned at construction"
                     )
-                    raise _error.DependencyError(msg)
+                if value is None:
+                    validated_value = None
+                    if role.required:
+                        raise _error.DependencyError(
+                            f"keyword argument for required dependency role must not be None: {name!r}")
+                else:
+                    try:
+                        validated_value = role.validate(value)
+                    except (TypeError, ValueError) as e:
+                        raise _error.DependencyError(
+                            f"keyword argument for dependency role {name!r} is invalid: {value!r}\n"
+                            f"  | reason: {ut.exception_to_line(e)}"
+                        )
+            elif name in self.__class__._execution_parameter_names:
+                defining_classes = tuple(
+                    c for c in (self.__class__,) + self.__class__.__bases__
+                    if name in c.__dict__
+                )
+                _check_execution_parameter(name, value, defining_classes)
+                validated_value = value
+            else:
+                dependency_name_list = ', '.join(repr(n) for n in dependency_names) or '-'
+                execution_parameter_name_list = ', '.join(repr(n) for n in self.__class__._execution_parameter_names) or '-'
+                raise _error.DependencyError(
+                    f"keyword argument does not name a dependency role or execution parameter "
+                    f"of {self.__class__.__qualname__!r}: {name!r}\n"
+                    f"  | dependency roles: {dependency_name_list}\n"
+                    f"  | execution parameters: {execution_parameter_name_list}"
+                )
 
             object.__setattr__(self, name, validated_value)
             names_of_assigned.add(name)
@@ -102,10 +118,10 @@ class _ToolBase:
         # SHA1 is always present and fasted according to this:
         # http://atodorov.org/blog/2013/02/05/performance-test-md5-sha1-sha256-sha512/
 
-        names_of_notassigned = dependency_names_set - names_of_assigned
+        names_of_notassigned_dependency_names = dependency_names_set - names_of_assigned
         for name in dependency_names:  # order is important
             role = getattr(self.__class__, name)
-            if name in names_of_notassigned:
+            if name in names_of_notassigned_dependency_names:
                 if role.explicit:
                     if role.required:
                         msg = f"missing keyword argument for required and explicit dependency role: {name!r}"
@@ -130,8 +146,32 @@ class _ToolBase:
                     raise _error.DependencyError(msg)
 
         # permanent local tool instance fingerprint for this instance (do not compare fingerprint between
-        # different self.__class__!)
-        object.__setattr__(self, 'fingerprint', hashalg.digest())  # always 20 byte
+        # different self.__class__!) without execution parameters
+        object.__setattr__(self, '_partial_hash', hashalg)
+
+    @property
+    def fingerprint(self) -> bytes:  # always exactly 20 byte
+        # Permanent local tool instance fingerprint for this instance (do not compare fingerprint between
+        # different self.__class__!).
+        hashalg = self._partial_hash.copy()
+        hashalg.update(self._get_execution_parameter_id())
+        return hashalg.digest()
+
+    def _get_execution_parameter_id(self) -> bytes:
+        execution_parameter_id = b''
+        for name in self.__class__._execution_parameter_names:
+            value = getattr(self, name)
+            try:
+                execution_parameter_id += ut.to_permanent_local_bytes(value)
+            except TypeError:
+                fundamentals = ', '.join(repr(c.__name__) for c in ut.non_container_fundamental_types)
+                msg = (
+                    f"value of execution parameter {name!r} is not fundamental: {value!r}\n"
+                    f"  | an object is fundamental if it is None, or of type {fundamentals}, "
+                    f"or a mapping or iterable of only such objects"
+                )
+                raise _error.ExecutionParameterError(msg) from None
+        return execution_parameter_id
 
     # final
     def start(self, *, force_redo: bool = False):
@@ -144,19 +184,7 @@ class _ToolBase:
                 for n in self.__class__._dependency_names
             )
 
-            execution_parameter_digest = b''
-            for name in self.__class__._execution_parameter_names:
-                value = getattr(self.__class__, name)
-                try:
-                    execution_parameter_digest += ut.to_permanent_local_bytes(value)
-                except TypeError:
-                    fundamentals = ', '.join(repr(c.__name__) for c in ut.non_container_fundamental_types)
-                    msg = (
-                        f"value of execution parameter {name!r} is not fundamental: {value!r}\n"
-                        f"  | an object is fundamental if it is None, or of type {fundamentals}, "
-                        f"or a mapping or iterable of only such objects"
-                    )
-                    raise _error.ExecutionParameterError(msg) from None
+            execution_parameter_digest = self._get_execution_parameter_id()
             if len(execution_parameter_digest) >= 20:
                 execution_parameter_digest = hashlib.sha1(execution_parameter_digest).digest()
 
@@ -518,15 +546,7 @@ class _ToolMeta(type):
         for name, value in cls.__dict__.items():
             defining_base_classes = tuple(c for c in cls.__bases__ if name in c.__dict__)
             if UPPERCASE_NAME_REGEX.match(name):
-                # if overridden: must be instance of type of overridden attribute
-                for base_class in defining_base_classes:
-                    base_value = base_class.__dict__[name]
-                    if not isinstance(value, type(base_value)):
-                        msg = (
-                            f"attribute {name!r} of base class may only be overridden with a value "
-                            f"which is a {type(base_value)!r}"
-                        )
-                        raise TypeError(msg)
+                _check_execution_parameter(name, value, defining_base_classes)
             elif LOWERCASE_MULTIWORD_NAME_REGEX.match(name):
                 method_kind = _classify_potential_method(value)
                 if method_kind is not None:

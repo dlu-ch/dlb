@@ -266,6 +266,17 @@ class FailsWithInvalidExecutionParameterTest(testenv.TemporaryWorkingDirectoryTe
             )
             self.assertEqual(msg, str(cm.exception))
 
+    def test_fails_if_execution_parameter_from_constructor_not_fundamental(self):
+        # noinspection PyAbstractClass
+        class BTool(dlb.ex.Tool):
+            XY = [1, '?']
+
+        with dlb.ex.Context():
+            with self.assertRaises(TypeError) as cm:
+                BTool(XY=dlb.fs.Path('.'))
+            msg = "attribute 'XY' of base class may only be overridden with a value which is a <class 'list'>"
+            self.assertEqual(msg, str(cm.exception))
+
 
 class NoRedoIfInputNotModifiedTest(testenv.TemporaryWorkingDirectoryTestCase):
 

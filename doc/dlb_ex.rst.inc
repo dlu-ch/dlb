@@ -454,7 +454,7 @@ Tool objects
 Every :term:`tool` is represented by a subclass of :class:`Tool` that describes its abstract behaviour and the way it
 is run (e.g. meaning of command line and output, interaction with file system and environment variables).
 
-Tools are usually parametrized by dependency roles (e.g. input files) and execution parameters.
+Tools are parametrized by optional dependency roles (e.g. input files) and execution parameters.
 
 Each :term:`tool instance` represents a concrete behaviour and can be run in an active context.
 Running a tool results in an :term:`python:awaitable` result object.
@@ -471,11 +471,10 @@ Tools are customized by inheritance and defining class attributes.
    The name of an execution parameters must consist of lower-case words separated by ``_`` (e.g. ``WARNINGS``,
    ``VERSION_PARAMETERS``).
 
-   Every tool instance assigns *concrete dependencies* for the tool's dependency roles
-   (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file``),
-   while the execution parameters are the same for all instances of the some tool.
-
    Dependency roles are instances of subclasses of :class:`Dependency`.
+
+   Every tool instance assigns *concrete dependencies* for the tool's dependency roles
+   (e.g. a filesystem path ``'./out/hello.map'`` for a dependency role ``map_file``).
 
    A tool also can define methods. The name of a method must consist of at least two lower-case
    words separated by ``_``.
@@ -497,16 +496,31 @@ Tools are customized by inheritance and defining class attributes.
           WARNINGS = ('all',)
           source_file = dlb.ex.input.RegularFile()
           object_file = dlb.ex.output.RegularFile()
+          async def redo(self, result, context): ...
 
       class Linker(dlb.ex.Tool):
+          BE_VERBOSE = False
           object_files = dlb.ex.input.RegularFile[1:]()
           linked_file = dlb.ex.output.RegularFile()
           map_file = dlb.ex.output.RegularFile(required=False)
+          async def redo(self, result, context): ...
 
       compiler = Compiler(source_file='main.cpp', object_file='main.cpp.o')
-      linker = Linker(object_files=[compiler.object_file], linked_file='main')
+      linker = Linker(object_files=[compiler.object_file], linked_file='main', BE_VERBOSE=True)
 
-   At construction of a tool, the dependencies given as keyword arguments to the constructor are validated by the
+   When a tool instance is constructed, the keyword arguments passed to its constructor define its concrete dependencies
+   and the values of its execution parameters.
+   Each keyword argument names a dependency role or an execution parameter.
+
+   - When a keyword argument names a *dependency role*, its value defines the concrete dependencies of the
+     dependency role. It depends on the dependency role, whether such a definition is *permitted* or even *required*.
+     For an *explicit* dependency role, it is required.
+
+   - When a keyword argument names an *execution parameter*, its value defines the value of the execution parameter
+     (it overrides the default value defines at declaration of the execution parameter as a class attribute).
+     The same restrictions apply as for overriding the execution parameter by subclassing.
+
+   The concrete dependencies passed as keyword arguments to the constructor are validated by the
    tool's dependency roles and made accessible (for reading only) as an attribute with the name of the corresponding
    dependency role and a type determined by the dependency role
    (e.g. :class:`dlb.fs.Path` for :class:`input.RegularFile`)::
@@ -516,6 +530,17 @@ Tools are customized by inheritance and defining class attributes.
 
       >>> Compiler(...).object_file  # concrete dependency
       Path('main.cpp.o')
+
+   The execution parameters passes as keyword arguments to the constructor are made accessible (for reading only)
+   as an attribute:
+
+       >>> Linker.BE_VERBOSE
+       False  # default value defined in tool class
+       >>> Linker(...).BE_VERBOSE  # ... no keyword argument BE_VERBOSE=
+       False  # default value defined in tool class
+
+       >>> Linker(BE_VERBOSE=True).BE_VERBOSE
+       True   # value from keyword argument in constructor
 
    .. method:: start(force_redo=False)
 
@@ -552,6 +577,9 @@ Tools are customized by inheritance and defining class attributes.
       :return: result (proxy) object
 
    .. method:: redo(result, context)
+
+      Performs the actual work for this tool instance and creates all its output dependencies
+      (output files from input files, for example).
 
       Overwrite this awaitable method to implement a new :class:`Tool` (do not forget ``async``!).
 
@@ -626,15 +654,16 @@ Tools are customized by inheritance and defining class attributes.
       The *permanent local tool instance fingerprint* of this instance.
 
       This is a :class:`python:bytes` object of fixed size, calculated from all its concrete dependencies *d* with
-      ``d.explicit == True``.
+      ``d.explicit == True`` and all its execution parameters.
 
-      If two instances of the same subclass of :class:`Tool` have "similar" explicit dependencies, their
-      fingerprints are equal.
-      If two instances of the same subclass of :class:`Tool` have explicit dependencies that are not "similar",
-      their fingerprints are different with very high probability.
+      If two instances of the same subclass of :class:`Tool` have equivalent explicit dependencies and equivalent
+      execution parameters, their fingerprints are equal.
+      Otherwise, their fingerprints are different with very high probability.
 
-      The explicit dependencies of two instances are considered "similar", if they are equal or differ in a way that
-      does *not affect the meaning* of the dependencies while the :term:`tool instance` is running.
+      The explicit dependencies of two instances are equivalent, if they are equal or differ only in a way that does
+      *not affect the meaning* of the dependencies while the :term:`tool instance` is running.
+      Execution parameters are equivalent if they are equal after replacing all mappings by dicts and all
+      iterables that are no string, bytes, or sets by tuples.
 
 
 Redo context
