@@ -57,8 +57,11 @@ def zip_modified_src_tree(*, src_path, zip_path):
         zip_path.native.raw.unlink()
     except FileNotFoundError:
         pass
-    with zipfile.ZipFile(zip_path.native, 'w') as zip:
-        for p in src_path.list(name_filter=r'.+\.py', recurse_name_filter=r''):
+
+    with zipfile.ZipFile(zip_path.native, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
+        # for zipimport on MSYS2, adding directories to the archive seems to be necessary
+        files = src_path.list(name_filter=r'.+\.py', recurse_name_filter=r'')
+        for p in sorted(set(p[:-1] for p in files)) + files:
             zip.write(p.native, arcname=p.relative_to(src_path).as_string())
 
 
