@@ -38,6 +38,7 @@ Please see there for details.
 .. dlbcontrib:module:: exctrace
 .. dlbcontrib:module:: partition
 .. dlbcontrib:module:: exportenv
+.. dlbcontrib:module:: python
 .. dlbcontrib:module:: generic
 .. dlbcontrib:module:: filesystem
 .. dlbcontrib:module:: url
