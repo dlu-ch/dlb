@@ -319,7 +319,7 @@ class RedoContext(_context.ReadOnlyContext):
                 f"{source.as_string()!r}\n"
                 f"  | reason: {ut.exception_to_line(e)}"
             )
-            raise ValueError(msg)
+            raise ValueError(msg) from None
 
         if path == source:
             raise ValueError(f"cannot replace a path by itself: {path.as_string()!r}")
