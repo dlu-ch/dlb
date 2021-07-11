@@ -33,9 +33,7 @@ def generate_from_source(*, version_result, source_directory: dlb.fs.Path,
         GenerateVersionFile(output_file=generated_source_directory / 'Generated/Version.h').start()
 
     with dlb.di.Cluster('find libraries'), dlb.ex.Context():
-        class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
-            LIBRARY_NAMES = ('gtk+-3.0',)
-        pkgconfig_result = PkgConfig().start()
+        pkgconfig_result = dlb_contrib.pkgconfig.PkgConfig(LIBRARY_NAMES=('gtk+-3.0',)).start()
 
     class CCompiler(dlb_contrib.gcc.CCompilerGcc):
         DIALECT = 'c11'
