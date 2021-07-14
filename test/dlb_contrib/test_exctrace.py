@@ -28,9 +28,69 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
         dlb_contrib.exctrace.enable_compact_with_cwd()
         output = io.StringIO()
         dlb.di.set_output_file(output)
+
         # noinspection PyTypeChecker
         sys.excepthook(Exception, Exception('[?]'), None)
-        self.assertEqual("C aborted by exception: \n  | 'Exception: [?]'\n", output.getvalue())
+        self.assertEqual(
+            'C aborted by exception: \n'
+            '  | Exception: [?] \n'
+            '  | caused by:\n',
+            output.getvalue())
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        try:
+            raise Exception('[?]')
+        except Exception as e:
+            sys.excepthook(e.__class__, e, e.__traceback__)
+        self.assertEqual(
+            'C aborted by exception: \n'
+            '  | Exception: [?] \n'
+            '  | caused by: raise ...\n',
+            output.getvalue())
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        try:
+            try:
+                raise Exception('[?]')
+            except Exception:
+                raise Exception('\ncaused by: this is not ambiguous')
+        except Exception as e:
+            sys.excepthook(e.__class__, e, e.__traceback__)
+        self.assertEqual(
+            'C aborted by exception: \n'
+            '  | Exception: \n'
+            '  | caused by: this is not ambiguous \n'
+            '  | caused by: raise ...\n',
+            output.getvalue())
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        try:
+            assert False  # has to fail
+        except Exception as e:
+            sys.excepthook(e.__class__, e, e.__traceback__)
+        self.assertEqual(
+            'C aborted by exception: \n'
+            '  | AssertionError \n'
+            '  | caused by: assert False  # has to fail\n',
+            output.getvalue())
+
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+        try:
+            exec('1 + ')
+        except Exception as e:
+            sys.excepthook(e.__class__, e, e.__traceback__)
+        self.assertEqual(
+            'C aborted by exception: \n'
+            '  |   File "<string>", line 1 \n' 
+            '  |     1 + \n'
+            '  |        ^ \n' 
+            '  | SyntaxError: invalid syntax \n'
+            "  | caused by: exec('1 + ')\n",
+            output.getvalue())
 
     def test_write_traceback_to_file(self):
         # noinspection PyBroadException
@@ -46,7 +106,13 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
         sys.excepthook(etype, value, tb)
 
         p = os.path.realpath('traceback.log')
-        self.assertEqual(f"C aborted by exception: \n  | 'Exception: [?]' \n  | traceback: {p!r}\n", output.getvalue())
+        self.assertEqual(
+            f"C aborted by exception: \n"
+            f"  | Exception: [?] \n"
+            f"  | caused by: \n"
+            f"  | traceback: {p!r}\n",
+            output.getvalue()
+        )
         with open('traceback.log', 'r') as f:
             content = f.read()
         self.assertTrue(content.startswith('Traceback (most recent call last):'))
@@ -61,7 +127,6 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
                 '  g(False)\n'
                 'f()\n'
             )
-            f.write('assert False\n')
 
         spec = importlib.util.spec_from_file_location('failing_script', os.path.realpath('failing_script.py'))
         module = importlib.util.module_from_spec(spec)
@@ -81,12 +146,13 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
         # noinspection PyUnboundLocalVariable
         sys.excepthook(etype, value, tb)
         msg = (
-            "C aborted by exception: \n"
-            "  | 'Exception: [?]'\n"
+            f"C aborted by exception: \n"
+            f"  | Exception: [?] \n"
+            f"  | caused by: raise ...\n"
             f"  I involved lines from files in {cwd!r}: \n"
-            "    | 'failing_script.py':5 \n"
-            "    | 'failing_script.py':4 \n"
-            "    | 'failing_script.py':2 (nearest to cause)\n"
+            f"    | 'failing_script.py':5 \n"
+            f"    | 'failing_script.py':4 \n"
+            f"    | 'failing_script.py':2 (nearest to cause)\n"
         )
         self.assertEqual(msg, output.getvalue())
 
@@ -96,12 +162,13 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         sys.excepthook(etype, value, tb)
         msg = (
-            "C aborted by exception: \n"
-            "  | 'Exception: [?]'\n"
+            f"C aborted by exception: \n"
+            f"  | Exception: [?] \n"
+            f"  | caused by: raise ...\n"            
             f"  I involved lines from files in {cwd!r}: \n"
-            "    | 'failing_script.py':5 \n"
-            "    | 'failing_script.py':4 (nearest to cause) \n"
-            "    | ...\n"
+            f"    | 'failing_script.py':5 \n"
+            f"    | 'failing_script.py':4 (nearest to cause) \n"
+            f"    | ...\n"
         )
         self.assertEqual(msg, output.getvalue())
 
@@ -111,11 +178,12 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         sys.excepthook(etype, value, tb)
         msg = (
-            "C aborted by exception: \n"
-            "  | 'Exception: [?]'\n"
+            f"C aborted by exception: \n"
+            f"  | Exception: [?] \n"
+            f"  | caused by: raise ...\n"            
             f"  I involved lines from files in {cwd!r}: \n"
-            "    | 'failing_script.py':5 (nearest to cause) \n"
-            "    | ...\n"
+            f"    | 'failing_script.py':5 (nearest to cause) \n"
+            f"    | ...\n"
         )
         self.assertEqual(msg, output.getvalue())
 
@@ -125,8 +193,9 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         sys.excepthook(etype, value, tb)
         msg = (
-            "C aborted by exception: \n"
-            "  | 'Exception: [?]'\n"
+            f"C aborted by exception: \n"
+            f"  | Exception: [?] \n"
+            f"  | caused by:\n"
         )
         self.assertEqual(msg, output.getvalue())
 

@@ -35,6 +35,7 @@ def _output_compact_tb(etype, value, tb,
             traceback.print_exception(etype, value, tb, file=f)
 
     involved_lines = []
+    line = ''
     if involved_line_limit > 0 and current_directory_path_abs is not None:
         for frame_summary in traceback.extract_tb(tb):
             p = frame_summary.filename
@@ -43,9 +44,20 @@ def _output_compact_tb(etype, value, tb,
                 if os.path.isfile(p) and p.startswith(current_directory_path_abs):
                     p = p[len(current_directory_path_abs):]
                     involved_lines.append((p, frame_summary.lineno))
+            line = frame_summary.line
 
-    formatted_exceptions = [repr(e.strip()) for e in traceback.format_exception_only(etype, value)]
-    msg = 'aborted by exception:' + '\n    '.join([''] + formatted_exceptions)
+    formatted_exception_lines = []
+    for e in traceback.format_exception_only(etype, value):
+        formatted_exception_lines.extend(e.splitlines())
+
+    msg = 'aborted by exception:'
+    msg += '\n    '.join([''] + formatted_exception_lines)
+
+    line = (line.strip() or '\n').splitlines()[0]
+    if line.startswith('raise '):
+        line = 'raise ...'
+    msg += f'\n    caused by: {line}'
+
     if traceback_file_path_abs is not None:
         msg += f'\n    traceback: {traceback_file_path_abs!r}'
 
@@ -82,10 +94,19 @@ def enable_compact_with_cwd(*, traceback_file: Optional[dlb.fs.PathLike] = None,
     # The complete traceback is written to *traceback_file*. All parent directory are created if the do not exist.
     # The file ist overwritten if it exits.
     #
-    # Example output after enable_compact_with_cwd(traceback_file='build/out/traceback.log'', involved_line_limit=3)
+    # Example output after enable_compact_with_cwd():
     #
     #   C aborted by exception:
-    #     | "dlb.ex.HelperExecutionError: execution of 'gcc' returned unexpected exit code 1"
+    #     | AssertionError
+    #     | caused by: assert sys.platform in ['linux', 'cygwin']
+    #     I involved lines from files in '.../':
+    #       | 'build.py':23 (nearest to cause)
+    #
+    # Example output after enable_compact_with_cwd(traceback_file='build/out/traceback.log'', involved_line_limit=3):
+    #
+    #   C aborted by exception:
+    #     | dlb.ex.HelperExecutionError: execution of 'gcc' returned unexpected exit code 1
+    #     | caused by: raise ...
     #     | traceback: '../build/out/traceback.log'
     #     I involved lines from files in '.../':
     #       | 'build.py':112
