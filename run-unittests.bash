@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+shopt -s nullglob
 
 PYTHON3=python3
 COVERAGE3=coverage3  # pip3
@@ -20,6 +21,10 @@ fi
 for package_under_test in "${packages_under_test[@]}"; do
 (
     cd "./${test_dir:?}/${package_under_test:?}"  # as PyCharm does it
+
+    for f in test_*.bash; do
+        "./${f:?}"
+    done
 
     if [ -n "$(which "${COVERAGE3:?}")" ]; then
         coverage="${COVERAGE3:?}"
