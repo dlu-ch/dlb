@@ -108,6 +108,10 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# If true, Sphinx will warn about all references where the target cannot be found.
+# Use command-line argument '-n' to act as if True.
+nitpicky = True
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
