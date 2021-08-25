@@ -27,8 +27,8 @@ Reference
 .. [#mmap1]
    The update of :term:`mtime` for an ``mmap``'d file
    `conforming to ISO 1003.1-2008 <https://pubs.opengroup.org/onlinepubs/9699919799/functions/mmap.html>`_
-   after a write to the mapped memory is only guaranteed via :c:func:`msync()`.
-   Therefore such a write operation is not considered complete before the next call of :c:func:`msync()`
+   after a write to the mapped memory is only guaranteed via :c:func:`!msync()`.
+   Therefore such a write operation is not considered complete before the next call of :c:func:`!msync()`
    (which may never happen).
    Actual behaviour of ``mmap`` on different operating systems (2018): https://apenwarr.ca/log/20181113.
 
@@ -49,7 +49,7 @@ Reference
    Example: Ext4 with mount option `lazytime <https://lwn.net/Articles/620086/>`_.
 
 .. [#adjtime1]
-   :c:func:`adjtime()` is not covered by `ISO 1003.1-2008`_.
+   :c:func:`!adjtime()` is not covered by `ISO 1003.1-2008`_.
    It originated in 4.3BSD and System V.
    For many operating systems it states "the clock is always monotonically increasing"
    (`Linux <https://man7.org/linux/man-pages/man3/adjtime.3.html>`_,

@@ -272,6 +272,7 @@ The fingerprint includes the concrete dependencies of the tool instance which ar
 constructor matching class attributes, and its execution parameters.
 Consider the following tool instances::
 
+   t = Replacer(template_file='src/main.c.tmpl', output_file='build/out/main.c')  # from above
    t2 = Replacer(template_file=dlb.fs.Path('src/main.c.tmpl'), output_file='build/out/main.c')
    t3 = Replacer(template_file='src/MAIN.C.TMPL', output_file='build/out/main.c')
 
@@ -397,8 +398,7 @@ Possible applications (on a typical GNU/Linux system)::
    $ tilix -e cat dlb.fifo && dlb 3>dlb.fifo  # show in new terminal emulator window
 
 If you mostly work with a terminal emulator that is (at least partially) compliant with ISO/IEC 6429, colored output
-might be useful which can easily be achieved with :class:`MessageColorator <dlb_contrib.iso6429.MessageColorator>`
-from :mod:`dlb_contrib.iso6429`.
+might be useful which can easily be achieved with :class:`!MessageColorator` from :mod:`dlb_contrib.iso6429`.
 
 
 PyCharm integration

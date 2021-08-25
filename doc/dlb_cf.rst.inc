@@ -15,7 +15,7 @@ To change the behaviour of dlb, change the values of the following variables.
 
 .. data:: max_dependency_age
 
-   The maximum age of dependency information in the :term:`run-database` as a :class:`python:datatime.timedelta` object.
+   The maximum age of dependency information in the :term:`run-database` as a :class:`python:datetime.timedelta` object.
 
    Run and dependency information older than *max_dependency_age* is removed when a root context is entered.
 

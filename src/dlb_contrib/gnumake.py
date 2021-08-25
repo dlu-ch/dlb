@@ -58,7 +58,7 @@ def sources_from_rules(lines: Iterable[str]) -> List[List[str]]:
     # Limitations of possible paths by GNU Make:
     #
     #   - path must not contain a line separators
-    #   - path nost not contain '\\' followed by a escapable character
+    #   - path nost not contain '\\' followed by an escapable character
     #
     # All lines in *lines* must be of one of the following types:
     #

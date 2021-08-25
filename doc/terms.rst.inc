@@ -54,7 +54,7 @@ Terms
       A dynamic helper is identified by a relative path (non-directory or directory).
 
       Typical example: globally installed executable (e.g. compiler) with an absolute path determined by a search for
-      the first match in the environment variable :envvar:`PATH`.
+      the first match in the environment variable :envvar:`!PATH`.
 
    redo
       The phase of the execution of a :term:`tool instance` *t* that generates all its output dependencies.

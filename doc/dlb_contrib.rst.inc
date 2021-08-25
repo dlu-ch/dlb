@@ -51,9 +51,11 @@ Please see there for details.
 .. dlbcontrib:module:: clike
 .. dlbcontrib:module:: gcc
 .. dlbcontrib:module:: msbatch
+.. dlbcontrib:module:: mscrt
 .. dlbcontrib:module:: msvc
 .. dlbcontrib:module:: pkgconfig
 .. dlbcontrib:module:: doxygen
+.. dlbcontrib:module:: doxypress
 .. dlbcontrib:module:: sh
 .. dlbcontrib:module:: strace
 .. dlbcontrib:module:: tex

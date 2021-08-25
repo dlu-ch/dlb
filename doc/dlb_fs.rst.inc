@@ -499,8 +499,8 @@ Restricting paths
 Trying to construct a :class:`dlb.fs.Path` from an invalid value raises an :exc:`ValueError` exception.
 Additional restrictions to the set of valid values can be imposed on instances of :class:`dlb.fs.Path` by subclassing.
 
-A subclass of :class:`dlb.fs.Path` should only implement :meth:`check_restriction_to_base`.
-:meth:`p.check_restriction_to_base()` should raise :exc:`ValueError` if it considers
+A subclass of :class:`dlb.fs.Path` should only implement :meth:`!check_restriction_to_base`.
+``p.check_restriction_to_base()`` should raise :exc:`ValueError` if it considers
 :attr:`p.components <dlb.fs.Path.components>` or :attr:`p.is_dir <dlb.fs.Path.is_dir>` as invalid::
 
    class NoBullshitPath(Path):

@@ -464,7 +464,7 @@ def check_and_memorize_explicit_fs_input_dependencies(tool, dependency_actions: 
     memo_by_encoded_path: Dict[str, _rundb.FilesystemObjectMemo] = {}
 
     for action in dependency_actions:
-        # read memo of each filesystem object of a explicit input dependency in a repeatable order
+        # read memo of each filesystem object of an explicit input dependency in a repeatable order
         if action.dependency.explicit and isinstance(action.dependency, _depend.InputDependency) \
                 and action.dependency.Value is fs.Path:
             validated_value_tuple = action.dependency.tuple_from_value(getattr(tool, action.name))
@@ -530,7 +530,7 @@ def check_explicit_fs_output_dependencies(tool, dependency_actions: Tuple[_depen
 
     for action in dependency_actions:
 
-        # read memo of each filesystem object of a explicit input dependency in a repeatable order
+        # read memo of each filesystem object of an explicit input dependency in a repeatable order
         if action.dependency.explicit and isinstance(action.dependency, _depend.OutputDependency) and \
                 action.dependency.Value is fs.Path:
 

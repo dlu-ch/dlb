@@ -214,24 +214,28 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
    .. method:: temporary(*, suffix='', is_dir=False)
 
-      Return a :class:`dlb.ex.Temporary` object, representing a temporary regular file (for *is_dir* = ``False``) or a
+      Return a context manager, representing a temporary regular file (for *is_dir* = ``False``) or a
       temporary directory (for *is_dir* = ``True``) in the :term:`management tree` with a unique path.
 
       Usage example::
 
          with context.temporary(suffix='.o') as p:
-             ...  # an empty file with absolute path *p* exists
+             ...  # an empty file with absolute path *p* (as a dlb.fs.Path) exists
 
          ... = context.temporary().path  # just get the absolute path, do not create the file
 
-      The *path* attribute of the returned object is an absolute path in the same directory for all calls in the
-      :term:`root context`, as a :class:`dlb.fs.Path` object. Its last component is unique among all calls
-      in the :term:`root context`. ``path.is_dir()`` is *is_dir*.
+      The *path* attribute of the context manager is an absolute path in the same directory for all calls in the
+      :term:`root context` as a :class:`dlb.fs.Path` object.
+      The :meth:`__enter__ <object.__enter__>` method of the context manager returns *path*.
+
+      The last component of *path* is unique among all calls in the :term:`root context` (and is therefore called
+      its *unique path component*).
+      ``path.is_dir()`` is *is_dir*.
       The path of the :term:`working tree's root <working tree>` is ``path[:-3]``.
 
       The unique path component starts with a lower-case letter and ends with *suffix*.
       It contains only lower-case letters and decimal digits between its first characters and the suffix.
-      If *suffix* is not empty, is must start with a character from :data:`strings.punctuation` and must not
+      If *suffix* is not empty, is must start with a character from :data:`python:string.punctuation` and must not
       contain ``'/'``.
       The unique path component without the *suffix* is at most 12 characters long for the first 2**61 calls.
 
@@ -419,7 +423,7 @@ Environment variable dictionary object support the following methods and attribu
 
 .. describe:: name in env
 
-   Returns `True` if there is a environment variable named *name* defined in *env*, else `False`.
+   Returns `True` if there is an environment variable named *name* defined in *env*, else `False`.
 
 .. describe:: name not in env
 
@@ -601,7 +605,7 @@ Tools are customized by inheritance and defining class attributes.
       This guarantees that no incomplete output dependency is left behind (like an only half-written object file)
       when the :term:`redo` is aborted.
       A filesystem object that is an output dependency is treated as modified by the redo if it is a non-explicit
-      dependency or if it is a explicit dependency that was replaced with ``context.replace_output()``.
+      dependency or if it is an explicit dependency that was replaced with ``context.replace_output()``.
 
       Raises :exc:`python:RuntimeError` on the attempt to enter a new :class:`dlb.ex.Context` as a context manager or
       to modify the :term:`active context`.
@@ -695,7 +699,7 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
 
       .. note::
          On Windows, in order to run a side-by-side assembly the specified *env* must include a valid
-         :envvar:`SYSTEMROOT`.
+         :envvar:`!SYSTEMROOT`.
 
       The file descriptors 1 (stdout) and 2 (stderr) are open in the subprocess. Their meaning is specified by
       *stdout_output* and *stderr_output*. No other file descriptor from the Python process is open in the subprocess.
@@ -832,9 +836,8 @@ methods related to :term:`dynamic helpers <dynamic helper>` and dependencies.
       If the parent directory of *path* does not exist, it is created (with all its parent directories).
 
       The actual operation depends on the corresponding dependency role.
-      If it is a :class:`dlb.ex.output.RegularFile` with
-      :attr:`replace_by_same_content <dlb.ex.output.RegularFile.replace_by_same_content>` = ``False`` and *path*
-      and *source* both exist with the same content, *path* is not replaced and treated as unchanged.
+      If it is :class:`dlb.ex.output.RegularFile(replace_by_same_content=False, ...) <dlb.ex.output.RegularFile>`
+      and *path* and *source* both exist with the same content, *path* is not replaced and treated as unchanged.
 
       If *path* is replaced, this is always done by an atomic operation. If it fails, *path* is either *source*
       afterwards or it does not exist.
@@ -966,7 +969,8 @@ Dependency classes support the following methods and attributes:
 
       The multiplicity of the dependency role.
 
-      Is ``None`` or a :class:`dlb.ex.mult.MultiplicityRange`.
+      Is ``None`` or an multiplicity object that supports test for (in)equality and membership  of integers
+      (:meth:`__eq__ <object.__eq__>` and :meth:`__contains__ <object.__contains__>`, respectively).
 
    .. method:: tuple_from_value(value)
 
@@ -1159,14 +1163,14 @@ keyword arguments of the constructor of :class:`Dependency`.
 
 .. class:: input.EnvVar(name, pattern, example, required=True, explicit=True)
 
-   A dependency role for a environment variable named *name*.
+   A dependency role for an environment variable named *name*.
    It must not have a multiplicity (other than ``None``).
 
    If *explicit* is ``True``, the value assigned in the constructor of the :term:`tool instance` is used for all
    future runs of the tool instance.
    Otherwise, the current value of the :term:`active context` is used each time :meth:`Tool.start()` is called.
 
-   The value of the environment variable is valid if it is a string that the regular expression *pattern* matches
+   The value of the environment variable is valid if it is a string that matches the regular expression *pattern*
    or if it is ``None`` and *required* is ``False``.
 
    The :meth:`validated value <Dependency.validate()>` of a concrete dependency is a :class:`Value` instance
@@ -1192,12 +1196,12 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    :param pattern: validation pattern for value as a regular expression
    :type pattern: str | :class:`python:typing.Pattern`
-   :param example: typical value of a environment variable, *pattern* must match this
+   :param example: typical value of an environment variable, *pattern* must match this
    :type example: str
 
    .. class:: Value
 
-      A :class:`dataclasses.dataclass` object with the following attributes:
+      A class decorated with :func:`python:dataclasses.dataclass` and the following fields:
 
       .. attribute:: name
 
@@ -1334,7 +1338,7 @@ keyword arguments of the constructor of :class:`Dependency`.
 
    .. class:: Value
 
-      Is :class:`python:typing.Any`.
+      Is :data:`python:typing.Any`.
 
 
 Exceptions
@@ -1355,8 +1359,8 @@ Exceptions
 .. exception:: ContextNestingError
 
    Raised, when some contexts were not properly nested.
-   I.e. the calls of :meth:`__exit__` did not occur in the opposite order of the corresponding calls of
-   :meth:`__enter__`.
+   I.e. the calls of :meth:`__exit__ <object.__exit__>` did not occur in the opposite order of the corresponding calls
+   of :meth:`__enter__ <object.__enter__>`.
 
 .. exception:: WorkingTreeTimeError
 
