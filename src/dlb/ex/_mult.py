@@ -78,9 +78,6 @@ class MultiplicityRange:
     def __eq__(self, other):
         return self.as_slice == other.as_slice
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def __str__(self):
         s = self._slice
 
