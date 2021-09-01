@@ -35,7 +35,7 @@ See here for more: https://dlb.readthedocs.io/.
 
 .. |batch-unittest| image:: https://travis-ci.com/dlu-ch/dlb.svg?branch=master
    :alt: Build status (unittests)
-   :target: https://travis-ci.com/dlu-ch/dlb
+   :target: https://travis-ci.com/github/dlu-ch/dlb
 
 .. |batch-doc| image:: https://readthedocs.org/projects/dlb/badge/?version=latest
    :alt: Documentation status (Sphinx)
