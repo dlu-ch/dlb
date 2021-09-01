@@ -311,7 +311,7 @@ class RedoIfNoKnownRedoBefore(testenv.TemporaryWorkingDirectoryTestCase):
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertTrue(t.start())
-            self.assertRegex(output.getvalue(), r'\b()I redo necessary because not run before\b')
+            self.assertRegex(output.getvalue(), r'\b()I redo necessary because not run before\n')
             self.assertFalse(t.start())
 
 
@@ -483,7 +483,7 @@ class RedoIfOutputNotAsExpected(testenv.TemporaryWorkingDirectoryTestCase):
         regex = (
             r"(?m)\n"
             r"( *)D explicit output dependencies\.\.\. \[[+.0-9]+s\]\n" 
-            r"\1  I redo necessary because of filesystem object: 'a\.o'"
+            r"\1  I redo necessary because of filesystem object: 'a\.o' \n"
         )
         self.assertRegex(output.getvalue(), regex)
 
@@ -537,7 +537,7 @@ class RedoIfInputSwitchesTest(testenv.TemporaryWorkingDirectoryTestCase):
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertTrue(t.start())
-            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before")
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before\n")
             self.assertFalse(t.start())
 
 
@@ -567,7 +567,7 @@ class RedoIfInputIsRemovedTest(testenv.TemporaryWorkingDirectoryTestCase):
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertTrue(t.start())
-            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before")
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before\n")
             self.assertFalse(t.start())
 
 
@@ -597,28 +597,22 @@ class RedoIfInputOrderIsChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertTrue(t.start())
-            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before")
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before\n")
             self.assertFalse(t.start())
 
 
 class RedoIfExecutionParameterModifiedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
-    def test_redo(self):
+    def test_redo_if_change_on_instance_without_change_of_class(self):
         a_list = ['a', 2] * 10
 
         class BTool(dlb.ex.Tool):
             XYZ = a_list
 
-            object_file = dlb.ex.output.RegularFile()
-
             async def redo(self, result, context):
-                dlb.di.inform("redoing right now")
-                open((context.root_path / self.object_file).native, 'wb').close()
+                pass
 
-        os.mkdir('src')
-        open(os.path.join('src', 'a.cpp'), 'xb').close()
-
-        t = BTool(object_file='a.o')
+        t = BTool()
 
         with dlb.ex.Context():
             self.assertTrue(t.start())
@@ -628,7 +622,37 @@ class RedoIfExecutionParameterModifiedTest(testenv.TemporaryWorkingDirectoryTest
         a_list.append(None)
 
         with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.start())  # note: different tool instance
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before\n")
+
+            self.assertFalse(t.start())
+
+    def test_redo_if_change_by_argument(self):
+
+        class BTool(dlb.ex.Tool):
+            XYZ = []
+
+            async def redo(self, result, context):
+                pass
+
+        t = BTool()
+        with dlb.ex.Context():
             self.assertTrue(t.start())
+            self.assertFalse(t.start())
+
+        t = BTool(XYZ=[])
+        with dlb.ex.Context():
+            self.assertFalse(t.start())
+
+        t = BTool(XYZ=[1])
+        with dlb.ex.Context():
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.start())  # note: different tool instance
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before\n")
+
             self.assertFalse(t.start())
 
 
@@ -644,15 +668,14 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
         t = BTool(language_code='fr_FR')
         with dlb.ex.Context():
             self.assertTrue(t.start())
-            self.assertFalse(t.start())
-
-        t = BTool(language_code='fr_FR')
-        with dlb.ex.Context():
-            self.assertFalse(t.start())
 
         t = BTool(language_code='it_IT')
         with dlb.ex.Context():
-            self.assertTrue(t.start())
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+            self.assertTrue(t.start())  # note: different tool instance
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because not run before\n")
+
             self.assertFalse(t.start())
 
     def test_redo_for_nonexplicit(self):
@@ -677,11 +700,16 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
             dlb.ex.Context.active.env['LANG'] = 'fr_FR'
             self.assertFalse(t.start())
 
-        t = BTool()
+        t = BTool()  # note: same tool instance
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
             dlb.ex.Context.active.env['LANG'] = 'it_IT'
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
             r = t.start()
+            self.assertRegex(output.getvalue(), r"\b()I redo necessary because of changed environment variable\n")
+
             self.assertIsNotNone(r)
             self.assertEqual('it_IT', r.language_code.raw)
             self.assertFalse(t.start())

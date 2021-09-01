@@ -278,6 +278,7 @@ class _ToolBase:
                         di.inform("redo requested by last successful redo", level=cf.level.redo_reason)
                         needs_redo = True
                     elif execution_parameter_digest != execution_parameter_digest_in_db:
+                        # TODO remove or do not include in tool instance fingerprint
                         di.inform("redo necessary because of changed execution parameter", level=cf.level.redo_reason)
                         needs_redo = True
                     elif envvar_digest != envvar_digest_in_db:
