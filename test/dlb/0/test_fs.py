@@ -202,6 +202,20 @@ class ConversionFromAndToPurePathTest(unittest.TestCase):
         pw = pathlib.PureWindowsPath('\\\\name\\r')
         self.assertEqual(dlb.fs.Path(pw).pure_windows, pw)
 
+    def test_fails_for_unsupported_purepath(self):
+        class PureCustomPath(pathlib.PurePosixPath):
+            pass
+
+        pp = PureCustomPath('/a/b/../c/')
+        pp.__class__.__bases__ = (pathlib.PurePath,)
+
+        self.assertIsInstance(pp, pathlib.PurePath)
+        self.assertNotIsInstance(pp, pathlib.PurePosixPath)
+
+        with self.assertRaises(TypeError) as cm:
+            dlb.fs.Path(pp)
+        self.assertEqual("unknown subclass of 'pathlib.PurePath'", str(cm.exception))
+
     def test_fails_for_incomplete_windowspath(self):
         self.assertEqual(pathlib.PureWindowsPath(r'C:\\'), dlb.fs.Path('/c:').pure_windows)  # add root
 

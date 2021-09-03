@@ -740,9 +740,11 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                     z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u1/v.py')
 
             sys.path.insert(0, zip_file_path)
-            # noinspection PyUnresolvedReferences
-            import u1.v
-            del sys.path[0]
+            try:
+                # noinspection PyUnresolvedReferences
+                import u1.v
+            finally:
+                del sys.path[0]
 
         self.assertEqual(u1.v.A.definition_location, (os.path.realpath(zip_file_path), os.path.join('u1', 'v.py'), 2))
 
@@ -762,10 +764,12 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                     z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u2/v.py')
 
             sys.path.insert(0, zip_file_path)
-            # noinspection PyUnresolvedReferences
-            with self.assertRaises(dlb.ex.DefinitionAmbiguityError) as cm:
-                import u2.v
-            del sys.path[0]
+            try:
+                # noinspection PyUnresolvedReferences
+                with self.assertRaises(dlb.ex.DefinitionAmbiguityError) as cm:
+                    import u2.v
+            finally:
+                del sys.path[0]
 
         msg = (
             "invalid tool definition: location of definition is unknown\n"
@@ -790,9 +794,11 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                     z.write(os.path.join(content_tmp_dir_path, 'u3.py'), arcname='u3.py')
 
             sys.path.insert(0, zip_file_path)
-            # noinspection PyUnresolvedReferences
-            import u3
-            del sys.path[0]
+            try:
+                # noinspection PyUnresolvedReferences
+                import u3
+            finally:
+                del sys.path[0]
 
         self.assertEqual(u3.A.definition_location, (os.path.realpath(zip_file_path), 'u3.py', 2))
 
@@ -816,17 +822,19 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
             )
 
         sys.path.insert(0, '.')  # !
-        regex = (
-            r"(?m)\A"
-            r"invalid tool definition: location of definition depends on current working directory\n"
-            r"  \| class: <class '.+'>\n"
-            r"  \| source file: '.+'\n"
-            r"  \| make sure the matching module search path is an absolute path when the defining module is imported\Z"
-        )
-        with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
-            # noinspection PyUnresolvedReferences
-            import z  # needs a name different from the already loaded modules
-        del sys.path[0]
+        try:
+            regex = (
+                r"(?m)\A"
+                r"invalid tool definition: location of definition depends on current working directory\n"
+                r"  \| class: <class '.+'>\n"
+                r"  \| source file: '.+'\n"
+                r"  \| make sure the matching module search path is an absolute path when the defining module is imported\Z"
+            )
+            with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
+                # noinspection PyUnresolvedReferences
+                import z  # needs a name different from the already loaded modules
+        finally:
+            del sys.path[0]
 
     def test_fails_for_equal_dynamic_definitions(self):
         # noinspection PyAbstractClass
@@ -1137,9 +1145,11 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
             )
 
         sys.path.insert(0, os.getcwd())
-        # noinspection PyUnresolvedReferences
-        import w  # needs a name different from the already loaded modules
-        del sys.path[0]
+        try:
+            # noinspection PyUnresolvedReferences
+            import w  # needs a name different from the already loaded modules
+        finally:
+            del sys.path[0]
 
         with dlb.ex.Context():
             t = time.monotonic_ns()
@@ -1170,9 +1180,11 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
             )
 
         sys.path.insert(0, '.')  # !
-        with self.assertRaises(dlb.ex.DefinitionAmbiguityError):
-            import z  # needs a name different from the already loaded modules
-        del sys.path[0]
+        try:
+            with self.assertRaises(dlb.ex.DefinitionAmbiguityError):
+                import z  # needs a name different from the already loaded modules
+        finally:
+            del sys.path[0]
 
 
 class DependencyActionRegistrationTest(unittest.TestCase):

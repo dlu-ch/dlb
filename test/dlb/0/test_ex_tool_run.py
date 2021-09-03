@@ -957,9 +957,11 @@ class RedoIfDefinitionChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
                 z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u4/v.py')
 
         sys.path.insert(0, zip_file_path)
-        # noinspection PyUnresolvedReferences
-        import u4.v
-        del sys.path[0]
+        try:
+            # noinspection PyUnresolvedReferences
+            import u4.v
+        finally:
+            del sys.path[0]
 
         t = u4.v.A()
 

@@ -248,8 +248,8 @@ class ObjectOutputAction(Action):
 def register_action(dependency_id: int, dependency: Type[_depend.Dependency], action: Type[Action]):
     # Registers the concrete dependency class 'dependency' and assigns it an action 'action' as well as the
     # dependency id 'dependency_id'.
-    # 'dependency_id' must be an integer unique among all registered dependency class and must not change between
-    # different dlb run.
+    # 'dependency_id' must be an integer unique among all registered dependency classes and must not change between
+    # different dlb runs.
 
     if not (issubclass(dependency, _depend.Dependency) and hasattr(dependency, 'Value')):
         raise TypeError

@@ -32,11 +32,26 @@ for package_under_test in "${packages_under_test[@]}"; do
         coverage="${PYTHON3COVERAGE:?}"
     fi
 
+    # tests in different test contexts are run in different Python interpreter processes
+    for context_dir in *; do
+        if ! [[ "${context_dir:?}" =~ ^0|[1-9][0-9]*$ ]]; then
+            continue
+        fi
+
+        # run all test files with same test context index in same Python process, each with a different data file
+        command=("${PYTHON3:?}")
+        if [ -n "${coverage}" ]; then
+            command=("${coverage:?}" run -p --source "../../src/${package_under_test:?}")
+        fi
+        "${command[@]}" -m unittest discover --start-directory "${context_dir:?}"
+    done
+
     if [ -n "${coverage}" ]; then
-        "${coverage:?}" run --source "../../src/${package_under_test:?}" -m unittest \
-            && "${coverage:?}" report --show-missing
-    else
-        "${PYTHON3:?}" -m unittest
+        "${coverage:?}" erase  # removes '.coverage' but not '.coverage.*'
+        "${coverage:?}" combine  # creates/overwrite/appends '.coverage', removes '.coverage.*'
+        # before coverage 4.2: appends
+
+        "${coverage:?}" report --show-missing
     fi
 )
 done
