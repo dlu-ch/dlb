@@ -101,7 +101,7 @@ if isinstance(pathlib.Path(), pathlib.PosixPath):
 elif isinstance(pathlib.Path(), pathlib.WindowsPath):
     _native_components = _native_components_for_windows
 else:
-    raise TypeError("unknown 'Native' class")
+    raise TypeError("unsupported 'pathlib.Path' class")
 
 
 def _parts_from_components(components: Tuple[str, ...]) -> Tuple[str, ...]:
