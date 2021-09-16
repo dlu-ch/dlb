@@ -16,7 +16,6 @@ class ExecutableSearchPathTest(testenv.TemporaryDirectoryTestCase):
 
     def test_invalid_paths_are_ignored(self):
         self.assertNotIn('dlb', sys.modules)
-
         import dlb.fs
 
         class NoXxxPath(dlb.fs.Path):

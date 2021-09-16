@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 import testenv  # also sets up module search paths
-import dlb.di
 import dlb.fs
 import dlb.ex
 import dlb.ex._toolrun

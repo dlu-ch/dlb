@@ -17,7 +17,7 @@ class ThisIsAUnitTest(unittest.TestCase):
     pass
 
 
-class WorkingTreeCaseSensitivityTest(testenv.TemporaryDirectoryTestCase):  # TODO combine with other test suites?
+class WorkingTreeCaseSensitivityTest(testenv.TemporaryDirectoryTestCase):
 
     def test_fails_if_not_running(self):
         c = dlb.ex.Context()

@@ -3,9 +3,11 @@
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
 import testenv  # also sets up module search paths
-import dlb.ex._worktree
+import sys
 import os.path
 import unittest
+
+import dlb.ex._worktree
 
 
 class ThisIsAUnitTest(unittest.TestCase):

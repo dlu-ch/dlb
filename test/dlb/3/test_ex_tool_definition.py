@@ -10,12 +10,54 @@ import zipfile
 import inspect
 import unittest
 
+import dlb.ex
+
 
 class ThisIsAUnitTest(unittest.TestCase):
     pass
 
 
 class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
+
+    def test_fails_for_non_existing_source_file(self):
+        with tempfile.TemporaryDirectory() as tmp_dir_path:
+            with tempfile.TemporaryDirectory() as content_tmp_dir_path:
+                open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
+                with open(os.path.join(content_tmp_dir_path, 'v.py'), 'w') as f:
+                    f.write(
+                        'import dlb.ex\n'
+                        'class A(dlb.ex.Tool): pass'
+                    )
+
+                zip_file_path = os.path.join(tmp_dir_path, 'abc.zip')
+                with zipfile.ZipFile(zip_file_path, 'w') as z:
+                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u2/__init__.py')
+                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u2/v.py')
+
+            sys.path.insert(0, zip_file_path)
+            orig_isfile = os.path.isfile
+
+            def isfile_except_zip_file_path(path):
+                return False if path == zip_file_path else orig_isfile(path)
+
+            os.path.isfile = isfile_except_zip_file_path
+
+            try:
+                # noinspection PyUnresolvedReferences
+                with self.assertRaises(dlb.ex.DefinitionAmbiguityError) as cm:
+                    import u2.v
+            finally:
+                os.path.isfile = orig_isfile
+                del sys.path[0]
+
+        msg = (
+            "invalid tool definition: location of definition is unknown\n"
+            "  | class: <class 'u2.v.A'>\n"
+            "  | define the class in a regular file or in a zip archive ending in '.zip'\n"
+            "  | note also the significance of upper and lower case of module search paths "
+            "on case-insensitive filesystems"
+        )
+        self.assertEqual(msg, str(cm.exception))
 
     def test_location_in_zip_archive_package_is_normalized(self):  # os.path.altsep is replaced by os.path.sep
         with tempfile.TemporaryDirectory() as tmp_dir_path:
@@ -50,9 +92,6 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
             os.path.altsep = fake_altsep
             inspect.getframeinfo = getframeinfo_except_zip_file_path
-
-            self.assertNotIn('dlb', sys.modules)
-            import dlb.ex
 
             sys.path.insert(0, zip_file_path)
             try:
