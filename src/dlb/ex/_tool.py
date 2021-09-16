@@ -184,12 +184,7 @@ class _ToolBase:
                 for n in self.__class__._dependency_names
             )
 
-            execution_parameter_digest = self._get_execution_parameter_id()
-            if len(execution_parameter_digest) >= 20:
-                execution_parameter_digest = hashlib.sha1(execution_parameter_digest).digest()
-
             db = _context._get_rundb()
-
             tool_instance_dbid = db.get_and_register_tool_instance_dbid(
                 get_and_register_tool_info(self.__class__).permanent_local_tool_id,
                 self.fingerprint)
@@ -271,15 +266,9 @@ class _ToolBase:
                     needs_redo = True
                 else:
                     redo_request_in_db = bool(redo_request_in_db)
-                    execution_parameter_digest_in_db = redo_state_in_db.get(
-                        _rundb.Aspect.EXECUTION_PARAMETERS.value, b'')
                     envvar_digest_in_db = redo_state_in_db.get(_rundb.Aspect.ENVIRONMENT_VARIABLES.value, b'')
                     if redo_request_in_db is True:
                         di.inform("redo requested by last successful redo", level=cf.level.redo_reason)
-                        needs_redo = True
-                    elif execution_parameter_digest != execution_parameter_digest_in_db:
-                        # TODO remove or do not include in tool instance fingerprint
-                        di.inform("redo necessary because of changed execution parameter", level=cf.level.redo_reason)
                         needs_redo = True
                     elif envvar_digest != envvar_digest_in_db:
                         di.inform("redo necessary because of changed environment variable", level=cf.level.redo_reason)
@@ -337,16 +326,14 @@ class _ToolBase:
             result=result, context=_toolrun.RedoContext(context, dependency_action_by_path),
             dependency_actions=dependency_actions, memo_by_encoded_path=memo_by_encoded_path,
             encoded_paths_of_explicit_input_dependencies=encoded_paths_of_explicit_input_dependencies,
-            execution_parameter_digest=execution_parameter_digest, envvar_digest=envvar_digest,
-            db=db, tool_instance_dbid=tool_instance_dbid)
+            envvar_digest=envvar_digest, db=db, tool_instance_dbid=tool_instance_dbid)
 
         return redo_sequencer.create_result_proxy(tid, uid=tool_instance_dbid, expected_class=_toolrun.RunResult)
 
     async def _redo_with_aftermath(self, result, context,
                                    dependency_actions, memo_by_encoded_path,
                                    encoded_paths_of_explicit_input_dependencies,
-                                   execution_parameter_digest, envvar_digest,
-                                   db, tool_instance_dbid):
+                                   envvar_digest, db, tool_instance_dbid):
         # note: no db.commit() necessary as long as root context does commit on exception
         di.inform(f"start redo for tool instance {tool_instance_dbid!r}", level=cf.level.redo_start, with_time=True)
         redo_request = bool(await self.redo(result, context))
@@ -423,8 +410,6 @@ class _ToolBase:
                     memo_digest_by_aspect={
                         _rundb.Aspect.RESULT.value:
                             b'\x01' if redo_request else b'',
-                        _rundb.Aspect.EXECUTION_PARAMETERS.value:
-                            execution_parameter_digest if execution_parameter_digest else None,
                         _rundb.Aspect.ENVIRONMENT_VARIABLES.value:
                             envvar_digest if envvar_digest else None
                     },

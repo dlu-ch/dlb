@@ -68,7 +68,7 @@ class FilesystemObjectMemo:
 
 
 # unique identification of run-database schema among all versions (with a Git tag) of dlb declared as stable
-SCHEMA_VERSION = (0, 4)
+SCHEMA_VERSION = (0, 5)
 
 
 # note: without trailing 'Z'
@@ -248,8 +248,7 @@ class _CursorWithExceptionMapping:
 @enum.unique
 class Aspect(enum.Enum):
     RESULT = 0  # redo request of last successful redo (b'\x01' or b'') (not present if no known redo)
-    EXECUTION_PARAMETERS = 1   # memo digest of execution parameters
-    ENVIRONMENT_VARIABLES = 2  # memo digest of environment variables
+    ENVIRONMENT_VARIABLES = 1  # memo digest of environment variables
 
 
 class Database:
