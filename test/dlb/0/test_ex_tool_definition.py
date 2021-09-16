@@ -558,14 +558,15 @@ class ExecutionParameterOverrideTest(unittest.TestCase):
             str(cm.exception),
             "attribute 'X' of base class may only be overridden with a value which is a <class 'int'>")
 
+        # noinspection PyAbstractClass
         class BTool(ATool):
             pass
+
         with self.assertRaises(TypeError) as cm:
             BTool(X='')
         self.assertEqual(
             str(cm.exception),
             "attribute 'X' of base class may only be overridden with a value which is a <class 'int'>")
-
 
 
 class DependencyRoleOverrideTest(unittest.TestCase):
@@ -709,7 +710,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 712  # of this line
+        lineno = 713  # of this line
 
         class A(dlb.ex.Tool):
             pass
@@ -828,7 +829,8 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                 r"invalid tool definition: location of definition depends on current working directory\n"
                 r"  \| class: <class '.+'>\n"
                 r"  \| source file: '.+'\n"
-                r"  \| make sure the matching module search path is an absolute path when the defining module is imported\Z"
+                r"  \| make sure the matching module search path is an absolute path "
+                r"when the defining module is imported\Z"
             )
             with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
                 # noinspection PyUnresolvedReferences

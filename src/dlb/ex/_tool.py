@@ -101,7 +101,8 @@ class _ToolBase:
                 validated_value = value
             else:
                 dependency_name_list = ', '.join(repr(n) for n in dependency_names) or '-'
-                execution_parameter_name_list = ', '.join(repr(n) for n in self.__class__._execution_parameter_names) or '-'
+                execution_parameter_name_list = \
+                    ', '.join(repr(n) for n in self.__class__._execution_parameter_names) or '-'
                 raise _error.DependencyError(
                     f"keyword argument does not name a dependency role or execution parameter "
                     f"of {self.__class__.__qualname__!r}: {name!r}\n"
