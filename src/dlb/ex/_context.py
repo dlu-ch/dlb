@@ -529,10 +529,6 @@ class _BaseContext(metaclass=_BaseContextMeta):
         self._find_helpers = None if find_helpers is None else bool(find_helpers)
 
     @property
-    def _active_root_specifics(self):  # TODO remove?
-        return _get_root_specifics()
-
-    @property
     def path_cls(self) -> Type[fs.Path]:
         return self._path_cls
 
@@ -566,7 +562,7 @@ class _BaseContext(metaclass=_BaseContextMeta):
     def find_path_in(self, path: fs.PathLike,
                      search_prefixes: Optional[Iterable[fs.PathLike]] = None) -> Optional[fs.Path]:
         # noinspection PyMethodFirstArgAssignment
-        self = self._active_root_specifics
+        self = _get_root_specifics()
 
         if not isinstance(path, fs.Path):
             path = fs.Path(path)
@@ -603,7 +599,7 @@ class _BaseContext(metaclass=_BaseContextMeta):
         # this must be very fast for relative dlb.fs.Path with existing = True
 
         # noinspection PyMethodFirstArgAssignment
-        self = self._active_root_specifics
+        self = _get_root_specifics()
 
         if not isinstance(path, fs.Path) or is_dir is not None and is_dir != path.is_dir():
             path = fs.Path(path, is_dir=is_dir)
@@ -657,7 +653,7 @@ class _BaseContext(metaclass=_BaseContextMeta):
 
     def temporary(self, *, suffix: str = '', is_dir: bool = False) -> _worktree.Temporary:
         # noinspection PyMethodFirstArgAssignment
-        self = self._active_root_specifics
+        self = _get_root_specifics()
         return _worktree.Temporary(path_provider=self._temp_path_provider, suffix=suffix, is_dir=is_dir)
 
     def __setattr__(self, key, value):
@@ -702,13 +698,13 @@ class Context(_BaseContext, metaclass=_ContextMeta):
     @property
     def env(self) -> _EnvVarDict:
         # noinspection PyStatementEffect
-        self._active_root_specifics
+        _get_root_specifics()
         return self._env
 
     @property
     def helper(self) -> _HelperDict:
         # noinspection PyStatementEffect
-        self._active_root_specifics
+        _get_root_specifics()
         return self._helper
 
     def complete_pending_redos(self):
@@ -730,7 +726,7 @@ class Context(_BaseContext, metaclass=_ContextMeta):
 
     def summary_of_latest_runs(self, *, max_count: int = 1):
         # noinspection PyMethodFirstArgAssignment
-        self = self._active_root_specifics
+        self = _get_root_specifics()
         return self._rundb.get_latest_successful_run_summaries(max_count)
 
     def __enter__(self):
