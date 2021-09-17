@@ -212,42 +212,10 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
-   .. method:: temporary(*, suffix='', is_dir=False)
+   .. attribute:: is_working_tree_case_sensitive
 
-      Return a context manager, representing a temporary regular file (for *is_dir* = ``False``) or a
-      temporary directory (for *is_dir* = ``True``) in the :term:`management tree` with a unique path.
+      Return ``True`` if the filesystem that contains the working tree is case-sensitive, and ``False`` otherwise.
 
-      Usage example::
-
-         with context.temporary(suffix='.o') as p:
-             ...  # an empty file with absolute path *p* (as a dlb.fs.Path) exists
-
-         ... = context.temporary().path  # just get the absolute path, do not create the file
-
-      The *path* attribute of the context manager is an absolute path in the same directory for all calls in the
-      :term:`root context` as a :class:`dlb.fs.Path` object.
-      The :meth:`__enter__ <object.__enter__>` method of the context manager returns *path*.
-
-      The last component of *path* is unique among all calls in the :term:`root context` (and is therefore called
-      its *unique path component*).
-      ``path.is_dir()`` is *is_dir*.
-      The path of the :term:`working tree's root <working tree>` is ``path[:-3]``.
-
-      The unique path component starts with a lower-case letter and ends with *suffix*.
-      It contains only lower-case letters and decimal digits between its first characters and the suffix.
-      If *suffix* is not empty, is must start with a character from :data:`python:string.punctuation` and must not
-      contain ``'/'``.
-      The unique path component without the *suffix* is at most 12 characters long for the first 2**61 calls.
-
-      When used as a context manager, an empty regular file or directory with *path* is created when entered and removed
-      (with its content) on exit. Raises :exc:`FileExistsError` if the regular file or directory exists.
-
-      :param suffix: suffix of the unique path component
-      :type suffix: str
-      :type is_dir: bool
-
-      :raises ValueError: if *suffix* is invalid
-      :raises FileExistsError: if the regular file or directory exists (when used as content manager)
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: working_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False, \
@@ -295,6 +263,44 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
           if *path* does not exist in the parts of the :term:`working tree` that are described by
           *allow_nontemporary_management* and *allow_temporary*
       :raises ValueError: if the resulting path is not representable
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+
+   .. method:: temporary(*, suffix='', is_dir=False)
+
+      Return a context manager, representing a temporary regular file (for *is_dir* = ``False``) or a
+      temporary directory (for *is_dir* = ``True``) in the :term:`management tree` with a unique path.
+
+      Usage example::
+
+         with context.temporary(suffix='.o') as p:
+             ...  # an empty file with absolute path *p* (as a dlb.fs.Path) exists
+
+         ... = context.temporary().path  # just get the absolute path, do not create the file
+
+      The *path* attribute of the context manager is an absolute path in the same directory for all calls in the
+      :term:`root context` as a :class:`dlb.fs.Path` object.
+      The :meth:`__enter__ <object.__enter__>` method of the context manager returns *path*.
+
+      The last component of *path* is unique among all calls in the :term:`root context` (and is therefore called
+      its *unique path component*).
+      ``path.is_dir()`` is *is_dir*.
+      The path of the :term:`working tree's root <working tree>` is ``path[:-3]``.
+
+      The unique path component starts with a lower-case letter and ends with *suffix*.
+      It contains only lower-case letters and decimal digits between its first characters and the suffix.
+      If *suffix* is not empty, is must start with a character from :data:`python:string.punctuation` and must not
+      contain ``'/'``.
+      The unique path component without the *suffix* is at most 12 characters long for the first 2**61 calls.
+
+      When used as a context manager, an empty regular file or directory with *path* is created when entered and removed
+      (with its content) on exit. Raises :exc:`FileExistsError` if the regular file or directory exists.
+
+      :param suffix: suffix of the unique path component
+      :type suffix: str
+      :type is_dir: bool
+
+      :raises ValueError: if *suffix* is invalid
+      :raises FileExistsError: if the regular file or directory exists (when used as content manager)
       :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
 
    .. method:: summary_of_latest_runs(*, max_count=1)

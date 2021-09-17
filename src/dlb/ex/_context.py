@@ -529,7 +529,7 @@ class _BaseContext(metaclass=_BaseContextMeta):
         self._find_helpers = None if find_helpers is None else bool(find_helpers)
 
     @property
-    def _active_root_specifics(self):
+    def _active_root_specifics(self):  # TODO remove?
         return _get_root_specifics()
 
     @property
@@ -557,6 +557,11 @@ class _BaseContext(metaclass=_BaseContextMeta):
     @property
     def working_tree_time_ns(self) -> int:
         return _get_root_specifics().working_tree_time_ns
+
+    @property
+    def is_working_tree_case_sensitive(self) -> bool:  # relies on A-F1, A-A2
+        # noinspection PyProtectedMember
+        return _get_root_specifics()._is_working_tree_case_sensitive
 
     def find_path_in(self, path: fs.PathLike,
                      search_prefixes: Optional[Iterable[fs.PathLike]] = None) -> Optional[fs.Path]:
