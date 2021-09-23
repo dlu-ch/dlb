@@ -48,21 +48,12 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
             with self.assertRaisesRegex(ValueError, regex):
                 c.env.import_from_outer('A_B_C', pattern=re.compile(r'X.*Z'), example='')
 
-    def test_after_import_envvar_is_imported(self):
-        os.environ['A_B_C'] = 'XYZ'
-        try:
-            del os.environ['UV']
-        except KeyError:
-            pass
-        try:
-            del os.environ['W']
-        except KeyError:
-            pass
-
+    def test_is_imported_after_import(self):
         with dlb.ex.Context():
             self.assertFalse(dlb.ex.Context.active.env.is_imported('W'))
             dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern='.*', example='')
             self.assertTrue(dlb.ex.Context.active.env.is_imported('A_B_C'))
+            self.assertFalse('A_B_C' in dlb.ex.Context.active.env)
 
             with dlb.ex.Context():
                 self.assertFalse(dlb.ex.Context.active.env.is_imported('W'))
@@ -80,23 +71,25 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
                         self.assertTrue(dlb.ex.Context.active.env.is_imported('UV'))
 
     def test_validation_pattern_of_outer_applies_when_imported(self):
-        os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
-            regex = r"imported value is not matched by 'pattern': 'XYZ'"
-            with self.assertRaisesRegex(ValueError, regex):
-                dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'.y.', example='XyZ')
-
-            dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
+            dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'.*', example='')
+            dlb.ex.Context.active.env['A_B_C'] = 'XYZ'
 
             with dlb.ex.Context():
+                regex = r"current value is not matched by 'pattern': 'XYZ'"
+                with self.assertRaisesRegex(ValueError, regex):
+                    dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'.y.', example='XyZ')
+
+                dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
+
                 with dlb.ex.Context():
-                    regex = r"current value is not matched by 'pattern': 'XYZ'"
-                    with self.assertRaisesRegex(ValueError, regex):
-                        dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'.y.', example='XyZ')
-                    dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'.Y.', example='aYc')
+                    with dlb.ex.Context():
+                        regex = r"current value is not matched by 'pattern': 'XYZ'"
+                        with self.assertRaisesRegex(ValueError, regex):
+                            dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'.y.', example='XyZ')
+                        dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'.Y.', example='aYc')
 
     def test_validation_pattern_of_outer_applies_when_assigned(self):
-        os.environ.pop('A_B_C')
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
             with dlb.ex.Context():
@@ -112,10 +105,42 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
                     )
                     self.assertEqual(str(cm.exception), msg)
 
-    def test_imported_can_be_assigned_and_deleted(self):
-        os.environ['A_B_C'] = 'XYZ'
+    def test_root_context_does_not_import_from_os_environ(self):
+        orig_a_b_c = os.environ.get('A_B_C')
+        try:
+            os.environ['A_B_C'] = 'XYZ'
+            with dlb.ex.Context():
+                self.assertFalse('A_B_C' in dlb.ex.Context.active.env)
+                dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
+                self.assertFalse('A_B_C' in dlb.ex.Context.active.env)
+                with self.assertRaises(KeyError) as cm:
+                    dlb.ex.Context.active.env['A_B_C']
+        finally:
+            os.environ.pop('A_B_C', None)
+            if orig_a_b_c is not None:
+                os.environ['A_B_C'] = orig_a_b_c
+        msg = (
+            "not a defined environment variable in the context: 'A_B_C'\n"
+            "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
+        )
+        self.assertEqual(str(cm.exception), repr(msg))
+
+    def test_imported_is_initially_undefined(self):
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
+            self.assertIsNone(dlb.ex.Context.active.env.get('A_B_C'))
+            self.assertFalse('A_B_C' in dlb.ex.Context.active.env)
+            self.assertTrue('A_B_C' not in dlb.ex.Context.active.env)
+            self.assertEqual(0, len(dlb.ex.Context.active.env))
+            self.assertEqual(0, len([e for e in dlb.ex.Context.active.env]))
+            self.assertEqual(0, len(dlb.ex.Context.active.env.items()))
+
+    def test_imported_can_be_assigned_and_deleted(self):
+        with dlb.ex.Context():
+            dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
+            self.assertFalse('A_B_C' in dlb.ex.Context.active.env)
+
+            dlb.ex.Context.active.env['A_B_C'] = 'XYZ'
             self.assertEqual(dlb.ex.Context.active.env['A_B_C'], 'XYZ')
             
             with dlb.ex.Context():
@@ -140,13 +165,20 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
             del dlb.ex.Context.active.env['A_B_C']
 
     def test_assigned_of_nonstr_to_imported_fails(self):
-        os.environ['ABC'] = 'XYZ'
+        msg = "'value' must be a str"
+
         with dlb.ex.Context():
             dlb.ex.Context.active.env.import_from_outer('ABC', pattern=r'.*', example='')
+
             with self.assertRaises(TypeError) as cm:
                 # noinspection PyTypeChecker
                 dlb.ex.Context.active.env['ABC'] = 1
-            self.assertEqual("'value' must be a str", str(cm.exception))
+            self.assertEqual(msg, str(cm.exception))
+
+            with self.assertRaises(TypeError) as cm:
+                # noinspection PyTypeChecker
+                dlb.ex.Context.active.env['ABC'] = None
+            self.assertEqual(msg, str(cm.exception))
 
     def test_import_fails_on_inactive_context(self):
         with dlb.ex.Context() as c0:
@@ -198,7 +230,6 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
             c0.env
 
     def test_deletion_fails_if_undefined(self):
-        os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
             with self.assertRaises(KeyError) as cm:
                 del dlb.ex.Context.active.env['A_B_C']
@@ -206,7 +237,6 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(str(cm.exception), repr(msg))
 
     def test_assignment_fail_if_not_imported(self):
-        os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context():
             regex = (
                 r"(?m)\A"
@@ -221,7 +251,6 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
                         dlb.ex.Context.active.env['A_B_C'] = 'XyZ'
 
     def test_assignment_fails_on_inactive_context(self):
-        os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context() as c0:
             env0 = c0.env
             dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
@@ -239,7 +268,6 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
                         env1['A_B_C'] = 'XYYZ'
 
     def test_deletion_fails_on_inactive_context(self):
-        os.environ['A_B_C'] = 'XYZ'
         with dlb.ex.Context() as c0:
             env0 = c0.env
             dlb.ex.Context.active.env.import_from_outer('A_B_C', pattern=r'X.*Z', example='XZ')
@@ -260,39 +288,44 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
 class UsageTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
+        orig_lang = os.environ.get('LANG')
+
         try:
-            del os.environ['LANG']
-        except KeyError:
-            pass
-
-        with dlb.ex.Context():  # takes a snapshot of os.environ
-
-            # import the environment variable 'LANG' into the context
-            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
-
-            # now the environment variable is either undefined or matches the regular expression given
-            # (in this context and all future inner contexts)
-
-            with self.assertRaises(KeyError):
-                dlb.ex.Context.active.env['LANG']  # value in snapshot of os.environ matching the validator or KeyError
-
-            dlb.ex.Context.active.env['LANG'] = 'de_AT'
+            os.environ['LANG'] = 'en_UK'
 
             with dlb.ex.Context():
-                # further restrict the value and make sure it is defined
-                dlb.ex.Context.active.env.import_from_outer('LANG', pattern='(?P<language>de).*', example='de_CH')
+
+                # "import" the environment variable 'LANG' into the context
+                dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
+                dlb.ex.Context.active.env['LANG'] = os.environ['LANG']
+
+                # now the environment variable is either undefined or matches the regular expression given
+                # (in this context and all future inner contexts)
+
+                _ = dlb.ex.Context.active.env['LANG']  # value satisfies the validation pattern(s) or KeyError is raised
+
+                dlb.ex.Context.active.env['LANG'] = 'de_AT'
+
+                with dlb.ex.Context():
+                    # further restrict the value and make sure it is defined
+                    dlb.ex.Context.active.env.import_from_outer('LANG', pattern='(?P<language>de).*', example='de_CH')
+
+                    self.assertEqual(dlb.ex.Context.active.env['LANG'], 'de_AT')
+                    del dlb.ex.Context.active.env['LANG']
+
+                    dlb.ex.Context.active.env['LANG'] = 'de_CH'
+                    with self.assertRaises(ValueError):
+                        dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # would raise ValueError
 
                 self.assertEqual(dlb.ex.Context.active.env['LANG'], 'de_AT')
-                del dlb.ex.Context.active.env['LANG']
+                del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
+                self.assertNotIn('LANG', dlb.ex.Context.active.env)
+                dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
 
-                dlb.ex.Context.active.env['LANG'] = 'de_CH'
-                with self.assertRaises(ValueError):
-                    dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # would raise ValueError
-
-            self.assertEqual(dlb.ex.Context.active.env['LANG'], 'de_AT')
-            del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
-            self.assertNotIn('LANG', dlb.ex.Context.active.env)
-            dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
+        finally:
+            os.environ.pop('LANG', None)
+            if orig_lang is not None:
+                os.environ['LANG'] = orig_lang
 
     def test_has_repr(self):
         with dlb.ex.Context():

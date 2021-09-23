@@ -15,7 +15,7 @@ E.g:
 - number of asynchronously running :term:`tool instances <tool instance>`
 - synchronization of :term:`redos <redo>`
 - search paths for :term:`dynamic helper` files
-- environment variables to be imported from :data:`python:os.environ` for use in :term:`tool instances <tool instance>`
+- set of environment variables for :term:`tool instances <tool instance>`
 
 It also helps with filesystem abstraction (e.g. :term:`working tree time` or
 :term:`working tree paths <working tree path>`).
@@ -337,24 +337,24 @@ is a dictionary-like object of all environment variables defined in *c*.
 *c* is called the associated :term:`context` of *env*.
 
 In addition, the environment variable dictionary object manages the import of environment variables from
-environment variables of the outer :term:`context` (or :data:`python:os.environ` for the root context) and validation
+environment variables of the outer :term:`context` (if any) and validation
 of imported or assigned values in the form of regular expressions.
 
 Example::
 
    # os.environ usually contains the environment variables in the shell that called the Python interpreter
 
-   with dlb.ex.Context():  # takes a snapshot of os.environ
+   with dlb.ex.Context():
 
-       # import the environment variable 'LANG' into the context
+       # "import" the environment variable 'LANG' into the context
        dlb.ex.Context.active.env.import_from_outer(
            'LANG', pattern=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
+       dlb.ex.Context.active.env['LANG'] = os.environ['LANG']
 
        # now the environment variable is either undefined or matches the regular expression given
        # (in this context and all future inner contexts)
 
-       ... = dlb.ex.Context.active.env['LANG']
-           # value in snapshot of os.environ complying to the validation pattern(s) or KeyError
+       ... = dlb.ex.Context.active.env['LANG']  # value satisfies the validation pattern(s) or KeyError is raised
 
        dlb.ex.Context.active.env['LANG'] = 'de_AT'
 
@@ -379,9 +379,7 @@ Environment variable dictionary object support the following methods and attribu
 .. method:: EnvVarDict.import_from_outer(name, *, pattern, value_if_undefined=None, example=None)
 
    Set the value of the environment variable named *name* from the innermost outer :term:`context` that
-   defines it or :data:`python:os.environ` (value at the time the root context was entered) if there is no such context.
-   If neither an outer :term:`context` nor :data:`python:os.environ` defines it, the environment variable remains
-   undefined.
+   defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
 
    Also associates a validation pattern for the value with the environment variable; when it is or later becomes
    defined, the regular expression *validation* must match its value.

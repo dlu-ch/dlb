@@ -306,6 +306,7 @@ class IdToUrlMapInContectTest(testenv.TemporaryWorkingDirectoryTestCase):
                 'URL_PATTERN_EX_1_COMP',
                 pattern='https://.+',
                 example='https://gitlab.dev.example.org/ex-1-comp-{compid:utf8}.git')
+            dlb.ex.Context.active.env['URL_PATTERN_EX_1_COMP'] = os.environ['URL_PATTERN_EX_1_COMP']
 
             url_map = dlb_contrib.url.IdToUrlMap({
                 # id pattern:         URL pattern

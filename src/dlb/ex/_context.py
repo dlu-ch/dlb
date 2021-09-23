@@ -13,7 +13,7 @@ import os.path
 import stat
 import time
 import datetime
-from typing import Collection, Dict, Hashable, Iterable, List, Mapping, Optional, Pattern, Tuple, Type, Union
+from typing import Collection, Dict, Hashable, Iterable, List, Optional, Pattern, Tuple, Type, Union
 
 from .. import ut
 from .. import di
@@ -52,13 +52,16 @@ def _register_successful_run(with_redo: bool):
 
 class _BaseEnvVarDict:
 
-    def __init__(self, context: 'Context', top_value_by_name: Mapping[str, str]):
+    def __init__(self, context: 'Context'):
         # these objects must not be replaced once constructed (only modified)
         # reason: read-only view
 
         self._context = context
-        self._top_value_by_name = {str(k): str(v) for k, v, in top_value_by_name.items()}
+
+        # all environment variables defined in this context or one of its outer contexts
         self._value_by_name = {} if context.parent is None else dict(context.parent.env._value_by_name)
+
+        # all environment variables declared in this context:
         self._pattern_by_name: Dict[str, Pattern] = {}
 
     def is_imported(self, name):
@@ -136,14 +139,11 @@ class _EnvVarDict(_BaseEnvVarDict):
         value = self._value_by_name.get(name)
         if value is None:
             # import from innermost outer context that has the environment variable defined
-            d = self._context.parent.env._value_by_name if self._context.parent else self._top_value_by_name
-            value = d.get(name)
-            value_name = 'imported'
-        else:
-            value_name = 'current'
+            if self._context.parent is not None:
+                value = self._context.parent.env._value_by_name.get(name)
 
         if value is not None and not pattern.fullmatch(value):
-            raise ValueError(f"{value_name} value is not matched by 'pattern': {value!r}")
+            raise ValueError(f"current value is not matched by 'pattern': {value!r}")
 
         self._pattern_by_name[name] = pattern  # cannot be removed, once defined!
         if value is not None:
@@ -200,7 +200,6 @@ class _ReadOnlyEnvVarDictView(_BaseEnvVarDict):
     # noinspection PyMissingConstructor
     def __init__(self, env_var_dict: _EnvVarDict):
         self._context = env_var_dict._context
-        self._top_value_by_name = env_var_dict._top_value_by_name
         self._value_by_name = env_var_dict._value_by_name
         self._pattern_by_name = env_var_dict._pattern_by_name
 
@@ -748,10 +747,10 @@ class Context(_BaseContext, metaclass=_ContextMeta):
                 )
                 raise ValueError(msg) from None
             self._parent = _contexts[-1]
-            self._env = _EnvVarDict(self, {})
         else:
             self._root_specifics = _RootSpecifics(self._path_cls)
-            self._env = _EnvVarDict(self, os.environ)
+
+        self._env = _EnvVarDict(self)
         if find_helpers is None:
             find_helpers = True
 

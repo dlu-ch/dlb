@@ -18,6 +18,7 @@
 #   import dlb.ex
 #   import dlb_contrib.msvc
 #
+#   TODO fix this import code
 #   def setup_paths_for_msvc(context):
 #       # VCINSTALLDIR must be defined, the other environment variables are set by build/setup.bat with the help of
 #       # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
