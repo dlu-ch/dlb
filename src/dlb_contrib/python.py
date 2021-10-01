@@ -21,7 +21,7 @@ import os.path
 
 import dlb.fs
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 def prepend_to_module_search_path(*paths: dlb.fs.PathLike):

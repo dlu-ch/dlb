@@ -65,7 +65,7 @@ import dlb.cf
 import dlb.di
 import dlb.ex
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 # Identifier of unrestricted length without universal characters.
 #

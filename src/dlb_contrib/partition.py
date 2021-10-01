@@ -25,7 +25,7 @@ from typing import Any, Iterable, List, Sequence
 import dlb.fs
 import dlb.ex
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 def by_working_tree_path(paths: Sequence[dlb.fs.PathLike], *, number_of_groups: int, collapsable=False) \

@@ -90,7 +90,7 @@ from typing import Dict, Optional, Tuple
 
 import dlb.ex
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 # e.g. 'v1.2.3-alpha4'
 VERSION_WORD_REGEX = re.compile(br'(?:^|\s)(?P<version>[0-9a-zA-Z._@+-]*[0-9]\.[0-9][0-9a-zA-Z._@+-]*)(?:\s|$)')

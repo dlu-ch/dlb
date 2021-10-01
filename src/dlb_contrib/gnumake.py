@@ -27,7 +27,7 @@ import sys
 import string
 from typing import Iterable, List
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 _WHITESPACE_EXCEPT_HT = string.whitespace.replace('\t', '')

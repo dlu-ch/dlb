@@ -22,7 +22,7 @@ import os
 import json
 from typing import Dict
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 FILE_NAME = 'env.json'
 

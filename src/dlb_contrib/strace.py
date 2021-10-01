@@ -33,7 +33,7 @@ import dlb.fs
 import dlb.ex
 import dlb_contrib.backslashescape
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 SYSCALL_NAME_REGEX = re.compile(rb'^(?P<name>[a-z][a-zA-Z0-9_#]*)')
 

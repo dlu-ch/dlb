@@ -1,6 +1,8 @@
 /build/out/
 /dist/
+
 /.idea/
 __pycache__/
+*.pyc
 .coverage
 .DS_Store

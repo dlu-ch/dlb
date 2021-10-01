@@ -31,7 +31,7 @@ from typing import Optional, Union
 
 import dlb.ex
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 def hardlink_or_copy(src: Union[str, os.PathLike], dst: Union[str, os.PathLike],

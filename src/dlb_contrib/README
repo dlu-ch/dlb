@@ -17,7 +17,7 @@ Each module in this package must contain the following:
 
   - A Python version check based on sys.version_info.
     Example:
-       assert sys.version_info >= (3, 7)
+       assert f'string' and sys.version_info >= (3, 7)
 
 A comment block consists of consecutive lines starting with '#'.
 

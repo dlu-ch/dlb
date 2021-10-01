@@ -17,7 +17,7 @@ import sys
 import string
 from typing import AnyStr, Dict, Optional
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 PYTHON_ESCAPES = {

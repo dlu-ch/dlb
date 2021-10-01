@@ -17,7 +17,7 @@ __all__ = ['list2cmdline']
 import sys
 import os
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 # Unmodified copy of subprocess.list2cmdline of Python 3.8.0

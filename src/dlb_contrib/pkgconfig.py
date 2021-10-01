@@ -30,7 +30,7 @@ import collections.abc
 import dlb.fs
 import dlb.ex
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 LIBRARY_NAME_REGEX = re.compile(r'^[A-Za-z_][^ \t\n\r]*$')
 VERSION_CONSTRAINT_REGEX = re.compile('^(?P<comp>=|<|>|<=|>=) (?P<version>[A-za-z0-9_][^ \t\n\r]*)$')

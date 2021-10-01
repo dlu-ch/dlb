@@ -8,7 +8,7 @@ import sys
 from .version import __version__, version_info
 del version
 
-assert sys.version_info >= (3, 7)
+assert sys.version_info >= (3, 7), 'requires Python 3.7 or higher'
 del sys
 
 # inter-dependencies of modules of this package

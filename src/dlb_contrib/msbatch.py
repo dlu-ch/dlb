@@ -43,7 +43,7 @@ import dlb.fs
 import dlb.ex
 import dlb_contrib.exportenv
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 class BatchFilePath(dlb.fs.WindowsPath):

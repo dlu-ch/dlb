@@ -51,7 +51,7 @@ import dlb.fs
 import dlb.ex
 import dlb_contrib.backslashescape
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 GIT_DESCRIPTION_REGEX = re.compile(

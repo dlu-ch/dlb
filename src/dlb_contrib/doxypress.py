@@ -52,7 +52,7 @@ from typing import Any, Dict
 import dlb.fs
 import dlb.ex
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 PLACEHOLDER_NAME_REGEX = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*$')
 

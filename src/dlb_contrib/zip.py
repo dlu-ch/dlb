@@ -25,7 +25,7 @@ import zipfile
 
 import dlb.ex
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 class ZipDirectory(dlb.ex.Tool):

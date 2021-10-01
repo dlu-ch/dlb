@@ -70,7 +70,7 @@ import dlb.ex
 import dlb_contrib.clike
 import dlb_contrib.mscrt
 
-assert sys.version_info >= (3, 7)
+assert f'string' and sys.version_info >= (3, 7)
 
 
 INCLUDE_LINE_REGEX = re.compile(rb'^[^ \t][^:]*: [^ \t][^:]*: +')
