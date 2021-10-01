@@ -213,8 +213,8 @@ def get_mounted_filesystems(contained_paths: Optional[Iterable[dlb.fs.PathLike]]
                             proc_root_directory: dlb.fs.PathLike = PROC_ROOT_DIRECTORY) -> Dict[dlb.fs.Path, str]:
     # Return mountpoint (absolute path) and name of filesystem type (e.g. 'xfs') for all mounted filesystems according
     # to *source_path*.
-    # If *contained_paths* is not empty, all filesystems whose mountpoint is not a prefix of a os.path.realpath(p)
-    # for any member of *contained_paths*.
+    # If *contained_paths* is not None, only filesystems whose mountpoint is a prefix of os.path.realpath(p)
+    # for any member *p* of *contained_paths* are returned.
 
     # /proc/mounts, /proc/self/mounts:
     #   https://man7.org/linux/man-pages/man5/proc.5.html:
@@ -263,7 +263,7 @@ def get_mounted_filesystems(contained_paths: Optional[Iterable[dlb.fs.PathLike]]
     proc_root_directory = dlb.fs.Path(proc_root_directory)
     vfstype_name_by_mountpoint = {}
 
-    if contained_paths:
+    if contained_paths is not None:
         contained_paths = [os.path.realpath(dlb.fs.Path(p).native) for p in contained_paths]
 
     mounts_file = proc_root_directory / 'self/mounts'
@@ -280,7 +280,7 @@ def get_mounted_filesystems(contained_paths: Optional[Iterable[dlb.fs.PathLike]]
                 vfstype_name = vfstype_name.decode('ascii')
 
                 ignore = False
-                if contained_paths:
+                if contained_paths is not None:
                     if not os.path.isdir(mountpoint) or os.path.realpath(mountpoint) != mountpoint:
                         raise RuntimeError(f'not a real path: {mountpoint!r}')
                     if not any(os.path.commonpath([os.path.realpath(p), mountpoint]) == mountpoint

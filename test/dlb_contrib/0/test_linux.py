@@ -168,9 +168,8 @@ class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertTrue(all(p.is_absolute() for p in vfstype_name_by_mountpoint))
         self.assertTrue(all(p.is_dir() for p in vfstype_name_by_mountpoint))
 
-    def test_filter_does_work(self):
+    def test_filter_does_work(self):  # mount points must exist
         vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems()
-
         nonroot_mountpoints = sorted(p for p in vfstype_name_by_mountpoint if len(p.parts) > 1)
         self.assertGreater(len(nonroot_mountpoints), 1)
         nonroot_mountpoint = nonroot_mountpoints[0]
@@ -182,13 +181,16 @@ class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         filtered_vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(['.'])
         self.assertLess(len(filtered_vfstype_name_by_mountpoint), len(vfstype_name_by_mountpoint))
-        longest_mountpoint = sorted(filtered_vfstype_name_by_mountpoint)[-1]
-        self.assertNotEqual(dlb.fs.Path('/'), longest_mountpoint)
+        if len(filtered_vfstype_name_by_mountpoint) > 1:
+            longest_mountpoint = sorted(filtered_vfstype_name_by_mountpoint)[-1]
+            self.assertNotEqual(dlb.fs.Path('/'), longest_mountpoint)
 
-        self.assertFalse((longest_mountpoint / 'tmp/this/does/not/exist').native.raw.exists())
-        filtered_vfstype_name_by_mountpoint2 = \
-            dlb_contrib.linux.get_mounted_filesystems([longest_mountpoint / 'tmp/this/does/not/exist'])
-        self.assertEqual(filtered_vfstype_name_by_mountpoint, filtered_vfstype_name_by_mountpoint2)
+            self.assertFalse((longest_mountpoint / 'tmp/this/does/not/exist').native.raw.exists())
+            filtered_vfstype_name_by_mountpoint2 = \
+                dlb_contrib.linux.get_mounted_filesystems([longest_mountpoint / 'tmp/this/does/not/exist'])
+            self.assertEqual(filtered_vfstype_name_by_mountpoint, filtered_vfstype_name_by_mountpoint2)
+
+        self.assertEqual({}, dlb_contrib.linux.get_mounted_filesystems([]))
 
 
 class CpuInfoTest(testenv.TemporaryWorkingDirectoryTestCase):
