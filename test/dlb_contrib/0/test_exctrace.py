@@ -83,14 +83,15 @@ class EnableCompactWithCwdTest(testenv.TemporaryWorkingDirectoryTestCase):
             exec('1 + ')
         except Exception as e:
             sys.excepthook(e.__class__, e, e.__traceback__)
-        self.assertEqual(
-            'C aborted by exception: \n'
-            '  |   File "<string>", line 1 \n' 
-            '  |     1 + \n'
-            '  |        ^ \n' 
-            '  | SyntaxError: invalid syntax \n'
-            "  | caused by: exec('1 + ')\n",
-            output.getvalue())
+        regex = (
+            r"(?m)"
+            r'  \|   File "<string>", line 1 \n'
+            r'  \|     1 \+ \n'
+            r'  \|        +\^ \n'  # Python 3.9, 3.10: additional space character
+            r'  \| SyntaxError: invalid syntax \n'
+            r"  \| caused by: exec\('1 \+ '\)\n"
+        )
+        self.assertRegex(output.getvalue(), regex)
 
     def test_write_traceback_to_file(self):
         # noinspection PyBroadException
