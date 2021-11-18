@@ -109,7 +109,7 @@ class Doxygen(dlb.ex.Tool):
     # configuration template file *configuration_template_file* by replacing (unescaped) placeholders according to
     # *TEXTUAL_REPLACEMENTS*.
     #
-    # The *configuration_template_file* should a least contain the following lines:
+    # The *configuration_template_file* should at least contain the following lines:
     #
     #     INPUT = ${{source_directories}}
     #     OUTPUT_DIRECTORY = ${{output_directory}}

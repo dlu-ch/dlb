@@ -196,7 +196,7 @@ class _CompilerMsvc(dlb_contrib.clike.ClikeCompiler):
             # *macro* is a string that does not start with '/' and does not contain '=' or '#'
             if replacement is None:
                 # https://docs.microsoft.com/en-us/cpp/build/reference/u-u-undefine-symbols?view=vs-2019:
-                # Neither the /U or /u option can undefine a symbol created by using the #define directive.
+                # Neither the /U nor the /u option can undefine a symbol created by using the #define directive.
                 # The /U option can undefine a symbol that was previously defined by using the /D option.
                 compile_arguments += ['/U', macro]
             else:
@@ -282,7 +282,7 @@ class CplusplusCompilerMsvc(_CompilerMsvc):
 
 
 class LinkerMsvc(dlb.ex.Tool):
-    # Link with with MSVC.
+    # Link with MSVC.
 
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'link.exe'

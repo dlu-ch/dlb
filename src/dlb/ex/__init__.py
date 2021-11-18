@@ -11,7 +11,7 @@ from . import input
 from . import output
 
 # inter-dependencies and import order of modules of this package
-# (later line may depend on earlier lines, import import in the following order):
+# (later line may depend on earlier lines, import in the following order):
 #
 #                 depends on
 #

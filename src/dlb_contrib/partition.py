@@ -35,7 +35,7 @@ def by_working_tree_path(paths: Sequence[dlb.fs.PathLike], *, number_of_groups: 
     # (the result is the same for the same paths on all supported platforms, Python versions and dlb runs).
     #
     # If *paths* contains multiple paths with the same working tree path, all of them are placed in the same group.
-    # Otherwise, the length of the groups is "similar*.
+    # Otherwise, the length of the groups is "similar".
     # More precisely:
     # For *m* > 0 elements in *paths* and *number_of_groups* >= 1, all with different and uniformely distributed hashes
     # of their working tree paths, the expected value of the length of each group is *m* / *number_of_groups*.

@@ -105,6 +105,6 @@ class RunEnvBatch(dlb.ex.Tool):
 #   cmd.exe /e:on /u /c set v^&set v=^&set v>t
 #
 # If an environment variable 'v' exists and does not contain a line separator, this sets %errorlevel% to 0 and creates
-# an UTF-16LE encoded textfile that starts with 'v=', followed by an even number of lines where the first half and the
+# a UTF-16LE encoded textfile that starts with 'v=', followed by an even number of lines where the first half and the
 # second half are equal.
 # If no environment variable 'v' exists, it sets %errorlevel% to 1.

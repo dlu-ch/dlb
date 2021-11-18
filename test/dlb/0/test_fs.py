@@ -309,7 +309,7 @@ class AppendTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             '/u/v/' / dlb.fs.Path('.')
         # dlb.fs.Path has no __rtruediv__ on purpuse.
-        # reason: less surprises if type of right side is a subclass of type of left side
+        # reason: fewer surprises if type of right side is a subclass of type of left side
 
     def test_fails_for_nondir(self):
         with self.assertRaises(ValueError) as cm:

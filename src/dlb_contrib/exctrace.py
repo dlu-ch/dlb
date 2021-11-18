@@ -91,7 +91,7 @@ def enable_compact_with_cwd(*, traceback_file: Optional[dlb.fs.PathLike] = None,
     # followed by '...'.
     #
     # If *traceback_file* is not None:
-    # The complete traceback is written to *traceback_file*. All parent directory are created if the do not exist.
+    # The complete traceback is written to *traceback_file*. All parent directories are created if they do not exist.
     # The file ist overwritten if it exits.
     #
     # Example output after enable_compact_with_cwd():

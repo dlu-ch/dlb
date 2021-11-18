@@ -31,7 +31,7 @@ class ZipDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase):
         os.mkdir(os.path.join('d', 'a'))
         open(os.path.join('d', 'a', 'b'), 'xb').close()
         open(os.path.join('d', 'c'), 'xb').close()
-        os.mkdir(os.path.join('d', 'e'))  # this will by ignored since it is empty
+        os.mkdir(os.path.join('d', 'e'))  # this will be ignored since it is empty
         os.makedirs(os.path.join('d', 'f', 'g'))
         open(os.path.join('d', 'f', 'g', 'h'), 'xb').close()
 
@@ -67,7 +67,7 @@ class ZipDirectoryWithoutPrefixDirectoriesTest(testenv.TemporaryWorkingDirectory
         os.mkdir(os.path.join('d', 'a'))
         open(os.path.join('d', 'a', 'b'), 'xb').close()
         open(os.path.join('d', 'c'), 'xb').close()
-        os.mkdir(os.path.join('d', 'e'))  # this will by ignored since it is empty
+        os.mkdir(os.path.join('d', 'e'))  # this will be ignored since it is empty
         os.makedirs(os.path.join('d', 'f', 'g'))
         open(os.path.join('d', 'f', 'g', 'h'), 'xb').close()
 

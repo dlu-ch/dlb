@@ -41,7 +41,7 @@ class Action:
     def name(self):
         return self._name
 
-    # overwrite in subclasses
+    # override in subclasses
     def get_permanent_local_value_id(self, validated_values: Optional[Sequence[Hashable]]) -> bytes:
         # Returns a short non-empty byte string as a permanent local id for this validated values of a given instance.
         #
@@ -55,7 +55,7 @@ class Action:
         # for a running tool instance depends on the difference.
         return ut.to_permanent_local_bytes(validated_values)
 
-    # overwrite and prepend super().get_permanent_local_instance_id() to return value
+    # override and prepend super().get_permanent_local_instance_id() to return value
     def get_permanent_local_instance_id(self) -> bytes:
         # Returns a short non-empty byte string as a permanent local id for this instance.
         #
@@ -71,7 +71,7 @@ class Action:
         # Raises KeyError if this class is not registered for 'self.dependency'.
         dependency_id, _ = _action_by_dependency[self._dependency.__class__]
         d = self.dependency
-        # note: *required* does _not_ affect the meaning or treatment of a the _validated_ value.
+        # note: *required* does _not_ affect the meaning or treatment of the _validated_ value.
         return ut.to_permanent_local_bytes((dependency_id, d.explicit))
 
 
@@ -80,7 +80,7 @@ class _FilesystemObjectMixin(Action):
     def get_permanent_local_value_id(self, validated_values: Optional[Sequence[fs.Path]]) -> bytes:
         if validated_values is not None:
             validated_values = tuple(v.as_string().encode() for v in validated_values)  # avoid strings
-        # note: cls does _not_ affect the meaning or treatment of a the _validated_ value.
+        # note: cls does _not_ affect the meaning or treatment of the _validated_ value.
         return ut.to_permanent_local_bytes(validated_values)
 
     def check_filesystem_object_memo(self, memo: _rundb.FilesystemObjectMemo):
@@ -91,12 +91,12 @@ class _FilesystemObjectMixin(Action):
 # action.dependency.Value is dlb.fs.Path.
 class _ReplaceableFilesystemObjectMixin(Action):
 
-    # overwrite in subclass
+    # override in subclass
     def treat_as_modified_after_redo(self):
         # True if a file system object is considered modified once a redo is started.
         return True
 
-    # overwrite in subclass
+    # override in subclass
     def replace_filesystem_object(self, source: fs.Path, destination: fs.Path, context) -> bool:
         # *source* and *destination* (relative path) are different managed tree paths to existing filesystem object
         # with same *is_dir()*.

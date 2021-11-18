@@ -73,7 +73,7 @@ class EnvVar(_depend.InputDependency):
         return self.name == other.name and self.pattern == other.pattern  # ignore example
 
     def validate_single(self, value) -> 'EnvVar.Value':
-        # value is used to defined the content of a (future) environment variable
+        # value is used to define the content of a (future) environment variable
         value = super().validate_single(value)
 
         if not isinstance(value, str):

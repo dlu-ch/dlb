@@ -2,7 +2,7 @@
 # dlb - a Pythonic build tool
 # Copyright (C) 2020 Daniel Lutz <dlu-ch@users.noreply.github.com>
 
-"""Export environment variables to an UTF-8 encoded JSON file in the current directory.
+"""Export environment variables to a UTF-8 encoded JSON file in the current directory.
 To be used by batch files and shell scripts (see dlb_contrib.msbatch)."""
 
 # JSON: <https://tools.ietf.org/html/rfc8259>

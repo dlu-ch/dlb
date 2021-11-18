@@ -81,7 +81,7 @@ assert f'string' and sys.version_info >= (3, 7)
 SIMPLE_IDENTIFIER_REGEX = re.compile(r'^[_A-Za-z][_A-Za-z0-9]*$')
 
 # Identifier of unrestricted length without universal characters.
-# Note: not each string matching this regular expression is a valid identifier (could by keyword or invalid
+# Note: not each string matching this regular expression is a valid identifier (could be keyword or invalid
 # universal characters),
 IDENTIFIER_REGEX = re.compile(r'^[_A-Za-z]([_A-Za-z0-9]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8})*$')
 

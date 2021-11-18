@@ -261,7 +261,7 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
     # Does not access the filesystem unless *components* contains a :file:`..` componen and *ref_dir_path* is
     # not ``None``.
     #
-    # Does not raise :exc:`OSError`. If an filesystem access fails, a :exc:`PathNormalizationError` is raised with
+    # Does not raise :exc:`OSError`. If a filesystem access fails, a :exc:`PathNormalizationError` is raised with
     # the attribute `oserror` set to a :exc:`OSError` instance.
     #
     # :raise PathNormalizationError: if *path* is an upwards path or not collapsable or a filesystem access failed

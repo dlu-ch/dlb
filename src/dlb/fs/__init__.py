@@ -565,7 +565,7 @@ class Path(metaclass=_PathMeta):
 
     @property
     def pure_windows(self) -> pathlib.PureWindowsPath:
-        # construction from one string is much faster than several components (its also safer)
+        # construction from one string is much faster than several components (it's also safer)
         p = pathlib.PureWindowsPath(str(_native_components_for_windows(self.components)))
         if p.is_reserved():
             # not actually reserved for directory path but information whether directory is lost after conversion
@@ -607,7 +607,7 @@ class Path(metaclass=_PathMeta):
     # note: there is no __rtruediv__ on purpuse
 
     def __eq__(self, other: PathLike) -> bool:
-        # on all platform, comparison is case sensitive
+        # on all platform, comparison is case-sensitive
         other = self._cast(other)
         return (self._components, self._is_dir) == (other._components, other._is_dir)
 
@@ -729,7 +729,7 @@ class WindowsPath(Path):
     )
 
     def check_restriction_to_base(self, components_checked: bool):
-        # unfortunately, there is not official way to access flaviour specifics without contructing a path object
+        # unfortunately, there is no official way to access flaviour specifics without contructing a path object
 
         parts = _native_components_for_windows(self.components).components
         if not parts[0]:

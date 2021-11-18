@@ -14,8 +14,10 @@ from typing import Optional, Union
 class MultiplicityRange:
     # Describes a set of multiplicity by an integer or a slice of integers.
     #
-    # If MultiplicityRange(m) is valid:
-    # An integer ``n`` is considered a multiplicity in the range iff ``n in [i for i in range(n + 1)[m]``.
+    # If *m* is a slice with a non-negative start and a positive step size, MultiplicityRange(m) describes
+    # this set of multiplicities: ``set(i for i in range(m))``.
+    #
+    # If *m* is an integer, MultiplicityRange(m) describes multiplicity *m*.
 
     def __init__(self, multiplicity: Union[int, slice]):
         if isinstance(multiplicity, int):

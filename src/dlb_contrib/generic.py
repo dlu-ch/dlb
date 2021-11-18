@@ -50,7 +50,7 @@
 #       mtime = dlb.fs.propagate_mtime(library_source_directory)
 #       assert mtime is None or mtime <= dlb.ex.Context.active.working_tree_time_ns
 #
-#       # 1. check fast but course whether a update may be necessary
+#       # 1. check fast but course whether an update might be necessary
 #       needs_update = dlb_contrib.generic.Check(
 #           input_directories=[library_source_directory],
 #           output_files=[archive_file]
@@ -125,7 +125,7 @@ class Check(dlb.ex.Tool):
 
 class VersionQuery(dlb.ex.Tool):
     # Execute dynamic helpers to query their version.
-    # Overwrite *VERSION_PARAMETERS_BY_EXECUTABLE* in a subclass *C* and then use 'C().start().version_by_path'.
+    # Override *VERSION_PARAMETERS_BY_EXECUTABLE* in a subclass *C* and then use 'C().start().version_by_path'.
 
     # Dictionary of commandline parameters by executable.
     # Example: {dlb_contrib.tex.Latex.EXECUTABLE: dlb_contrib.tex.Latex.VERSION_PARAMETERS}.

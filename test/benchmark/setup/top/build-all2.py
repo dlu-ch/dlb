@@ -21,7 +21,7 @@ with dlb.ex.Context():
     for library_source_directory in source_directory.list(name_filter=r'lib_.*'):
 
         with dlb.di.Cluster(f'library in {library_source_directory.as_string()!r}'):
-            # group multiple source files for the same compiler tool instance the reduce time
+            # group multiple source files for the same compiler tool instance to reduce time
             # and space for dependency checking
 
             source_files = library_source_directory.list(name_filter=r'.+\.cpp', is_dir=False)

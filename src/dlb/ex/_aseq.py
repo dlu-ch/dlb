@@ -118,9 +118,9 @@ class LimitingCoroutineSequencer:
             for task in done_tasks:  # "consume" all futures that are done
                 tid = self._tid_by_pending_task.get(task)
 
-                # tid is None: only seen when tasks were cancelled after KeyboardInterrupt (Python 3.7.3) under this
+                # tid is None: only seen when tasks were cancelled after KeyboardInterrupt (Python 3.7.3) under these
                 # circumstances or RuntimeError('This event loop is already running').
-                # pending is empty in this cases.
+                # pending is empty in these cases.
 
                 if tid is not None:
                     del self._tid_by_pending_task[task]

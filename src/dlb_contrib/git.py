@@ -295,7 +295,7 @@ class GitCheckTags(dlb.ex.Tool):
     # Regular expression that every lightweight tag name must match.
     LIGHTWEIGHT_TAG_NAME_REGEX = r'(?!v[0-9]).+'  # exclude names that would match `git describe --match "v[0-9]*"'
 
-    # Optional remote whos tags must match the local tags in name and tagged commit.
+    # Optional remote whose tags must match the local tags in name and tagged commit.
     # Must be None (for local tags) or a valid refname that names a remote.
     # If empty, no remote repository is accessed.
     REMOTE_NAME_TO_SYNC_CHECK = 'origin'

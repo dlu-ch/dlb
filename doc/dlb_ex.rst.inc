@@ -589,7 +589,7 @@ Tools are customized by inheritance and defining class attributes.
       Performs the actual work for this tool instance and creates all its output dependencies
       (output files from input files, for example).
 
-      Overwrite this awaitable method to implement a new :class:`Tool` (do not forget ``async``!).
+      Override this awaitable method in a subclass to implement a new :class:`Tool` (do not forget ``async``!).
 
       Assign to attributes of *result* to define a non-explicit concrete dependency for the dependency role with the
       same name.

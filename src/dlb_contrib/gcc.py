@@ -187,7 +187,7 @@ class CplusplusCompilerGcc(_CompilerGcc):
 
 
 class _LinkerGcc(dlb.ex.Tool):
-    # Link with with gcc, gcc subprograms and the GNU linker.
+    # Link with gcc, gcc subprograms and the GNU linker.
 
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = ''  # define in subclass

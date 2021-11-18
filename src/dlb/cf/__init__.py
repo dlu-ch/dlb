@@ -19,5 +19,5 @@ max_dependency_age: datetime.timedelta = datetime.timedelta(days=30)
 # True means: Output file is inherited from the Python process by default.
 execute_helper_inherits_files_by_default: bool = True
 
-# Remove everyhing that is not an configuration parameter:
+# Remove everything that is not a configuration parameter:
 del datetime

@@ -63,7 +63,7 @@ class Dependency(_mult.MultiplicityHolder):
 
         return True
 
-    # overwrite in base classes
+    # override in base classes
     def validate_single(self, value: Optional[Hashable]) -> Hashable:
         if value is None:
             raise TypeError("'value' must not be None")

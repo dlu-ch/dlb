@@ -624,7 +624,7 @@ def get_and_register_tool_info(tool: Type) -> ToolInfo:
     # The permanent local id is the same on every Python run as long as dlb.ex._platform.PERMANENT_PLATFORM_ID
     # remains the same (at least that's the idea).
     # Note however, that the behaviour of tools not only depends on their own code but also on all imported
-    # objects. So, its up to the programmer of the tool, how much variability a tool with a unchanged
+    # objects. So, it's up to the programmer of the tool how much variability a tool with an unchanged
     # permanent local id can show.
 
     if not issubclass(tool, Tool):

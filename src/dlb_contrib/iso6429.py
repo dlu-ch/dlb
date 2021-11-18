@@ -78,8 +78,7 @@ def sgr_background_color(color: Color) -> str:
 
 def sgr_control_sequence(display_color: Optional[Color] = None, background_color: Optional[Color] = None,
                          styles: Iterable[Style] = ()) -> str:
-    # Return Select Graphic Rendition (SGR) is Control Sequence CSI ... 'm',
-    # 'm' beeing the Final Byte.
+    # Return Select Graphic Rendition (SGR) Control Sequence CSI ... 'm', 'm' beeing the Final Byte.
 
     parameters = []
 
@@ -100,11 +99,11 @@ class MessageColorator:
     # expected to finally write *formatted_message* to a terminal (emulator) compliant with ISO/IEC 6429.
     #
     # *formatted_message* is colored line-by-line based on the first level indicator in *message* by inserting
-    # ISO/IEC 6429 Control Sequences. If a line in *message* ends with ' ' the corresponding line in *formatted_message*
-    # also ends in ' '. The last line remains unchanged if it does not end with a line separator.
+    # ISO/IEC 6429 Control Sequences. If a line in *message* ends with ' ', the corresponding line in
+    # *formatted_message* also ends in ' '. The last line remains unchanged if it does not end with a line separator.
     # Each line separator is replaced by '\n'.
     #
-    # Overwrite *SGR_BY_LEVEL_INDICATOR* in a subclass to change the colors.
+    # Override *SGR_BY_LEVEL_INDICATOR* in a subclass to change the colors.
 
     LEVEL_REGEX = re.compile('^ *([A-Z]) ')
 

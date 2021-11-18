@@ -401,11 +401,11 @@ class IdToUrlMap:
 
     def map(self, value: str, reverse: bool = False) -> str:
         # Map an id (string) to its URLs if *reverse* is False,
-        # or an URL to its id (string) otherwise.
+        # or a URL to its id (string) otherwise.
         #
         # Raises ValueError if *value* or its mapped value does not match exactly one pattern.
         # Raises ValueError if no prefix of the URL (*value* or its mapped value) matches SCHEME_WITH_SEPARATOR
-        # (i.e. it does not start like an URL).
+        # (i.e. it does not start like a URL).
         # Raises TypeError if *value* is not a str.
 
         if not isinstance(value, str):

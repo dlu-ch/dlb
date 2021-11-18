@@ -39,17 +39,17 @@ class ShScriptlet(dlb.ex.Tool):
     # Run a small sh script, wait for its completion and return its output to stdout as a string.
     # Do not use this for "big" scripts with a lot of output.
     #
-    # Overwrite *SCRIPTLET* in subclass.
+    # Override *SCRIPTLET* in a subclass.
 
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'sh'
 
     NAME = 'scriptlet'
-    SCRIPTLET = ''  # this will be executed by sh - overwrite in subclass
+    SCRIPTLET = ''  # this will be executed by sh - override in subclass
 
     processed_output = dlb.ex.output.Object(explicit=False)
 
-    # Overwrite this to chunk processor if you want to process the output incrementally.
+    # Override this in a subclass to chunk processor if you want to process the output incrementally.
     # See dlb.ex.RedoContext.execute_helper_with_output() for details.
     def get_chunk_processor(self) -> Optional[dlb.ex.ChunkProcessor]:
         return None

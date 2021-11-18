@@ -105,7 +105,7 @@ class DoxyPress(dlb.ex.Tool):
     # project template file *project_template_file* by replacing (unescaped) placeholders according to
     # *TEXTUAL_REPLACEMENTS*.
     #
-    # The *project_template_file* should a least contain the following lines:
+    # The *project_template_file* should at least contain the following lines:
     #
     #     "input-source": ${{source_directories}},
     #     "output-dir": ${{output_directory}},
