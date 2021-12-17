@@ -8,8 +8,9 @@
 
 set -e
 
+PYTHON="${PYTHON3:-python3}"
+
 RM=rm
-PYTHON=python3
 
 script_dir="/${0:?}"
 script_dir="${script_dir%/*}"

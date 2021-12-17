@@ -6,8 +6,9 @@
 
 set -e
 
-PYTHON3=python3
-DOT=dot  # required by sphinx.ext.graphviz, sphinx.ext.inheritance_diagram
+PYTHON3="${PYTHON3:-python3}"
+DOT="${DOT:-dot}"  # required by sphinx.ext.graphviz, sphinx.ext.inheritance_diagram
+
 RM=rm
 CP=cp
 MV=mv
@@ -42,15 +43,15 @@ fi
 
 sphinxbuild_file="$(command -v sphinx-build || echo)"
 sphinxvenv_abs_dir="${PWD:?}/${sphinxvenv_dir:?}"
-if ! [ -n "${sphinxbuild_file}" -a -f "${sphinxbuild_file}" -a \
-    "${sphinxbuild_file:0:${#sphinxvenv_abs_dir}+1}" == "${sphinxvenv_abs_dir:?}/" ];
+if [ -z "${sphinxbuild_file}" ] || ! [ -f "${sphinxbuild_file}" ] \
+    || [ "${sphinxbuild_file:0:${#sphinxvenv_abs_dir}+1}" != "${sphinxvenv_abs_dir:?}/" ];
 then
     printf "error: 'sphinx-build' not found in virtual environment: %q\n" "${sphinxvenv_dir:?}" >&2
     exit 1
 fi
 
 dot_file="$(command -v dot || echo)"
-if ! [ -n "${dot_file}" -a -f "${dot_file}" ]; then
+if [ -z "${dot_file}" ] || ! [ -f "${dot_file}" ]; then
     printf "error: 'dot' not found\n" >&2
     exit 1
 fi
