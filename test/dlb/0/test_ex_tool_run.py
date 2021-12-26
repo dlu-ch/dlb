@@ -7,11 +7,13 @@ import dlb.di
 import dlb.fs
 import dlb.ex
 import sys
+import re
 import os.path
 import marshal
 import tempfile
 import zipfile
 import io
+import importlib
 import unittest
 
 
@@ -940,6 +942,10 @@ class RedoIfExplicitInputDependencyChangedChmodTest(testenv.TemporaryDirectoryWi
 class RedoIfDefinitionChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_redo_if_source_has_changed(self):
+        module_name = 'single_use_module6'
+        self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
+
+        zip_file_name = 'abc.zip'
 
         with tempfile.TemporaryDirectory() as content_tmp_dir_path:
             open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
@@ -953,17 +959,18 @@ class RedoIfDefinitionChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
             zip_file_path = os.path.abspath('abc.zip')
             with zipfile.ZipFile(zip_file_path, 'w') as z:
-                z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u4/__init__.py')
-                z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u4/v.py')
+                z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname=f'{module_name}/__init__.py')
+                z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname=f'{module_name}/v.py')
 
+        importlib.invalidate_caches()
         sys.path.insert(0, zip_file_path)
         try:
             # noinspection PyUnresolvedReferences
-            import u4.v
+            import single_use_module6.v
         finally:
             del sys.path[0]
 
-        t = u4.v.A()
+        t = single_use_module6.v.A()
 
         with dlb.ex.Context():
             output = io.StringIO()
@@ -981,7 +988,11 @@ class RedoIfDefinitionChangedTest(testenv.TemporaryWorkingDirectoryTestCase):
             output = io.StringIO()
             dlb.di.set_output_file(output)
             self.assertTrue(t.start())
-            regex = r"\b()redo necessary because of filesystem object: 'abc.zip' \n"
+            regex = (
+                r'\b()redo necessary because of filesystem object: '
+                f'{re.escape(repr(zip_file_name))} '
+                r'\n'
+            )
             self.assertRegex(output.getvalue(), regex)
 
 

@@ -11,6 +11,7 @@ import pathlib
 import time
 import tempfile
 import zipfile
+import importlib.util
 import unittest
 
 
@@ -710,7 +711,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 713  # of this line
+        lineno = 714  # of this line
 
         class A(dlb.ex.Tool):
             pass
@@ -726,6 +727,9 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
         self.assertEqual(C.definition_location, (os.path.realpath(__file__), None, lineno + 2 + 3 + 3))
 
     def test_location_in_zip_archive_package_is_correct(self):
+        module_name = 'single_use_module1'
+        self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
+
         with tempfile.TemporaryDirectory() as tmp_dir_path:
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
                 open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
@@ -737,19 +741,24 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
                 zip_file_path = os.path.join(tmp_dir_path, 'abc.zip')
                 with zipfile.ZipFile(zip_file_path, 'w') as z:
-                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u1/__init__.py')
-                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u1/v.py')
+                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname=f'{module_name}/__init__.py')
+                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname=f'{module_name}/v.py')
 
+            importlib.invalidate_caches()
             sys.path.insert(0, zip_file_path)
             try:
                 # noinspection PyUnresolvedReferences
-                import u1.v
+                import single_use_module1.v
             finally:
                 del sys.path[0]
 
-        self.assertEqual(u1.v.A.definition_location, (os.path.realpath(zip_file_path), os.path.join('u1', 'v.py'), 2))
+        self.assertEqual((os.path.realpath(zip_file_path), os.path.join(module_name, 'v.py'), 2),
+                         single_use_module1.v.A.definition_location)
 
     def test_fails_for_zip_without_zip_suffix(self):
+        module_name = 'single_use_module2'
+        self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
+
         with tempfile.TemporaryDirectory() as tmp_dir_path:
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
                 open(os.path.join(content_tmp_dir_path, '__init__.py'), 'w').close()
@@ -761,30 +770,34 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
                 zip_file_path = os.path.join(tmp_dir_path, 'abc.zi')
                 with zipfile.ZipFile(zip_file_path, 'w') as z:
-                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname='u2/__init__.py')
-                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname='u2/v.py')
+                    z.write(os.path.join(content_tmp_dir_path, '__init__.py'), arcname=f'{module_name}/__init__.py')
+                    z.write(os.path.join(content_tmp_dir_path, 'v.py'), arcname=f'{module_name}/v.py')
 
+            importlib.invalidate_caches()
             sys.path.insert(0, zip_file_path)
             try:
                 # noinspection PyUnresolvedReferences
                 with self.assertRaises(dlb.ex.DefinitionAmbiguityError) as cm:
-                    import u2.v
+                    import single_use_module2.v
             finally:
                 del sys.path[0]
 
         msg = (
-            "invalid tool definition: location of definition is unknown\n"
-            "  | class: <class 'u2.v.A'>\n"
-            "  | define the class in a regular file or in a zip archive ending in '.zip'\n"
-            "  | note also the significance of upper and lower case of module search paths "
-            "on case-insensitive filesystems"
+            f"invalid tool definition: location of definition is unknown\n"
+            f"  | class: <class '{module_name}.v.A'>\n"
+            f"  | define the class in a regular file or in a zip archive ending in '.zip'\n"
+            f"  | note also the significance of upper and lower case of module search paths "
+            f"on case-insensitive filesystems"
         )
         self.assertEqual(msg, str(cm.exception))
 
     def test_location_in_zip_archive_module_is_correct(self):
+        module_name = 'single_use_module3'
+        self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
+
         with tempfile.TemporaryDirectory() as tmp_dir_path:
             with tempfile.TemporaryDirectory() as content_tmp_dir_path:
-                with open(os.path.join(content_tmp_dir_path, 'u3.py'), 'w') as f:
+                with open(os.path.join(content_tmp_dir_path, f'{module_name}.py'), 'w') as f:
                     f.write(
                         'import dlb.ex\n'
                         'class A(dlb.ex.Tool): pass'
@@ -792,16 +805,18 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
                 zip_file_path = os.path.join(tmp_dir_path, 'abc.zip')
                 with zipfile.ZipFile(zip_file_path, 'w') as z:
-                    z.write(os.path.join(content_tmp_dir_path, 'u3.py'), arcname='u3.py')
+                    z.write(os.path.join(content_tmp_dir_path, f'{module_name}.py'), arcname=f'{module_name}.py')
 
+            importlib.invalidate_caches()
             sys.path.insert(0, zip_file_path)
             try:
                 # noinspection PyUnresolvedReferences
-                import u3
+                import single_use_module3
             finally:
                 del sys.path[0]
 
-        self.assertEqual(u3.A.definition_location, (os.path.realpath(zip_file_path), 'u3.py', 2))
+        self.assertEqual((os.path.realpath(zip_file_path), f'{module_name}.py', 2),
+                         single_use_module3.A.definition_location)
 
     # noinspection PyAbstractClass
     def test_definition_location_is_readonly(self):
@@ -816,13 +831,19 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
         self.assertEqual(A.definition_location[0], os.path.realpath(__file__))
 
     def test_fails_on_import_with_relative_search_path(self):
-        with open(os.path.join('z.py'), 'x') as f:
+        module_name = 'single_use_module4'
+        self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
+
+        module_file_name = f'{module_name}.py'
+
+        with open(os.path.join(module_file_name), 'x') as f:
             f.write(
                 'import dlb.ex\n'
                 'class A(dlb.ex.Tool): pass\n'
             )
 
         sys.path.insert(0, '.')  # !
+        importlib.invalidate_caches()
         try:
             regex = (
                 r"(?m)\A"
@@ -833,8 +854,9 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                 r"when the defining module is imported\Z"
             )
             with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
-                # noinspection PyUnresolvedReferences
-                import z  # needs a name different from the already loaded modules
+                spec = importlib.util.spec_from_file_location(module_name, module_file_name)
+                spec.loader.exec_module(importlib.util.module_from_spec(spec))
+                # for some reason 'import ...' works differently on Travis CI than local, so avoid it
         finally:
             del sys.path[0]
 
@@ -1124,6 +1146,9 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertTrue(p in info.definition_paths, [p, info.definition_paths])
 
     def test_path_of_tools_defined_in_managed_tree_are_correct(self):
+        module_name = 'single_use_module5'
+        self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
+
         os.mkdir('a')
         open(os.path.join('a/__init__.py'), 'x').close()
         with open(os.path.join('a/u.py'), 'x') as f:
@@ -1139,27 +1164,28 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
                 'class D: pass\n'
             )
 
-        with open(os.path.join('w.py'), 'x') as f:
+        with open(os.path.join(f'{module_name}.py'), 'x') as f:
             f.write(
                 'import a.u\n'
                 'import v\n'
                 'class E(a.u.C, v.D): pass\n'
             )
 
+        importlib.invalidate_caches()
         sys.path.insert(0, os.getcwd())
         try:
             # noinspection PyUnresolvedReferences
-            import w  # needs a name different from the already loaded modules
+            import single_use_module5
         finally:
             del sys.path[0]
 
         with dlb.ex.Context():
             t = time.monotonic_ns()
-            info1 = dlb.ex._tool.get_and_register_tool_info(w.E)
+            info1 = dlb.ex._tool.get_and_register_tool_info(single_use_module5.E)
             dt1 = time.monotonic_ns() - t
 
             t = time.monotonic_ns()
-            info2 = dlb.ex._tool.get_and_register_tool_info(w.E)
+            info2 = dlb.ex._tool.get_and_register_tool_info(single_use_module5.E)
             dt2 = time.monotonic_ns() - t
 
         print(f'get_and_register_tool_info(): {dt1/1e3:.0f} us (first call), {dt2/1e3:.0f} us (second call)')
@@ -1168,25 +1194,11 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertGreater(len(info1.permanent_local_tool_id), 1)
 
         p1 = os.path.realpath(os.path.join(os.getcwd(), 'a', 'u.py'))
-        p2 = os.path.realpath(os.path.join(os.getcwd(), 'w.py'))
+        p2 = os.path.realpath(os.path.join(os.getcwd(), f'{module_name}.py'))
         self.assertEqual(3, len(info1.definition_paths), info1.definition_paths)  # incl. _tool.py
         self.assertTrue(p1 in info1.definition_paths)
         self.assertTrue(p2 in info1.definition_paths)
         self.assertEqual(info1, info2)
-
-    def test_definition_fails_in_import_with_relative_search_path(self):
-        with open(os.path.join('z.py'), 'x') as f:
-            f.write(
-                'import dlb.ex\n'
-                'class A(dlb.ex.Tool): pass\n'
-            )
-
-        sys.path.insert(0, '.')  # !
-        try:
-            with self.assertRaises(dlb.ex.DefinitionAmbiguityError):
-                import z  # needs a name different from the already loaded modules
-        finally:
-            del sys.path[0]
 
 
 class DependencyActionRegistrationTest(unittest.TestCase):
