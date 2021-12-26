@@ -33,6 +33,7 @@ def complete_module_search_path(dlbroot_path, script_abs_path):
         pass
     sys.path = [os.path.abspath(p) for p in sys.path]
     if zip_files:
+        zip_files.sort()
         print(f'adding {len(zip_files)} zip file(s) to module search path', file=sys.stderr)
         sys.path = zip_files + sys.path
     sys.path.insert(0, os.path.dirname(script_abs_path))
@@ -91,7 +92,7 @@ def find_script(script_name):
 
 
 def get_help():
-    # 80 characters xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    # 80 characters xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     help_msg = \
         """
         Run a dlb script in the root of the working tree that contains the current
@@ -109,8 +110,8 @@ def get_help():
         this script with the same 'os.name' are used.
     
         Each regular file or symbolic link to a regular file in the directory
-        '.dlbroot/u/' of the working tree whose name ends in '.zip' is added to the list
-        of module search paths of the Python interpreter.
+        '.dlbroot/u/' of the working tree whose name ends in '.zip' is prepended to 
+        the list of module search paths of the Python interpreter (in alphabetic order).
     
         Exit status:
     
