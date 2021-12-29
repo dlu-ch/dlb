@@ -54,10 +54,8 @@ class NonWindowsTest(testenv.TemporaryWorkingDirectoryTestCase):
         open('a.o', 'x').close()
 
         with self.assertRaises(RuntimeError), dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-            dlb.ex.Context.active.env['SYSTEMROOT'] = 'a'
-            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-            dlb.ex.Context.active.env['INCLUDE'] = 'a'
+            dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set('a')
+            dlb.ex.Context.active.env.declare('INCLUDE', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y').set('a')
             CCompiler(source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/']).start()
 
 
@@ -104,10 +102,16 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CCompiler(source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/'])
         with dlb.ex.Context():
             # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
-            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-            dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.env.declare(
+                'SYSTEMROOT',
+                pattern=r'.+',
+                example='C:\\WINDOWS'
+            ).set_from_os()
+            dlb.ex.Context.active.env.declare(
+                'INCLUDE',
+                pattern=r'[^;]+(;[^;]+)*',
+                example='C:\\X;D:\\Y'
+            ).set(os.getcwd())
             dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
 
             with dlb.ex.Context():
@@ -122,10 +126,8 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertFalse(t.start())
 
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-            dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-            dlb.ex.Context.active.env.import_from_outer('LIB', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-            dlb.ex.Context.active.env['LIB'] = os.getcwd()
+            dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+            dlb.ex.Context.active.env.declare('LIB', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y').set(os.getcwd())
             dlb.ex.Context.active.helper['link.exe'] = binary_path / 'link.exe'
             DllLinker(linkable_files=['a.o'], linked_file='a').start()
 
@@ -154,10 +156,12 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                                            DEFINITIONS={'_MSC_VER': None})  # predefined
         with dlb.ex.Context():
             # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
-            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-            dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+            dlb.ex.Context.active.env.declare(
+                'INCLUDE',
+                pattern=r'[^;]+(;[^;]+)*',
+                example='C:\\X;D:\\Y'
+            ).set(os.getcwd())
             dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
 
             result = t.start()
@@ -184,11 +188,12 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
             t = CCompiler(source_files=['a.c'], object_files=['a.o'])
             with dlb.ex.Context():
                 # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
-                dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-                dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-                dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
-                                                            example='C:\\X;D:\\Y')
-                dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+                dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+                dlb.ex.Context.active.env.declare(
+                    'INCLUDE',
+                    pattern=r'[^;]+(;[^;]+)*',
+                    example='C:\\X;D:\\Y'
+                ).set(os.getcwd())
                 dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
                 result = t.start()
                 self.assertEqual((dlb.fs.Path('a.h'),), result.included_files)
@@ -210,13 +215,15 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         with self.assertRaises(FileNotFoundError) as cm:
             with dlb.ex.Context():
                 # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
-                dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-                dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-                dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
-                                                            example='C:\\X;D:\\Y')
-                dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+                dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+                dlb.ex.Context.active.env.declare(
+                    'INCLUDE',
+                    pattern=r'[^;]+(;[^;]+)*',
+                    example='C:\\X;D:\\Y'
+                ).set(os.getcwd())
                 dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
                 t.start()
+
         regex = (
             r"(?m)\A"
             r"reportedly included file not found: '\?\?\?/a\.h'\n"
@@ -231,12 +238,14 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = CCompiler(source_files=['a.c'], object_files=['a.o', 'b.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
-                dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-                dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-                dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
-                                                            example='C:\\X;D:\\Y')
-                dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+                dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+                dlb.ex.Context.active.env.declare(
+                    'INCLUDE',
+                    pattern=r'[^;]+(;[^;]+)*',
+                    example='C:\\X;D:\\Y'
+                ).set(os.getcwd())
                 t.start()
+
         msg = "'object_files' must be of at most the same length as 'source_files'"
         self.assertEqual(msg, str(cm.exception))
 
@@ -247,11 +256,12 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = CCompiler(source_files=['a.c'], object_files=[])
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-            dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
-                                                        example='C:\\X;D:\\Y')
-            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+            dlb.ex.Context.active.env.declare(
+                'INCLUDE',
+                pattern=r'[^;]+(;[^;]+)*',
+                example='C:\\X;D:\\Y'
+            ).set(os.getcwd())
             dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
             t.start()
 
@@ -264,12 +274,14 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         t = C(source_files=['a.c'], object_files=['a.o'])
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
-                dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-                dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-                dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
-                                                            example='C:\\X;D:\\Y')
-                dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+                dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+                dlb.ex.Context.active.env.declare(
+                    'INCLUDE',
+                    pattern=r'[^;]+(;[^;]+)*',
+                    example='C:\\X;D:\\Y'
+                ).set(os.getcwd())
                 t.start()
+
         self.assertEqual("not an object-like macro: 'min(a, b)'", str(cm.exception))
 
     def test_fails_for_argument_with_at(self):
@@ -280,11 +292,14 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         with self.assertRaises(ValueError) as cm:
             with dlb.ex.Context():
                 open('a.o', 'xb').close()
-                dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-                dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-                dlb.ex.Context.active.env.import_from_outer('LIB', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
-                dlb.ex.Context.active.env['LIB'] = os.getcwd()
+                dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+                dlb.ex.Context.active.env.declare(
+                    'LIB',
+                    pattern=r'[^;]+(;[^;]+)*',
+                    example='C:\\X;D:\\Y'
+                ).set(os.getcwd())
                 Linker(linkable_files=['a.o'], linked_file='a').start()
+
         self.assertEqual("argument must not start with '@': '@x'", str(cm.exception))
 
     def test_ignores_extension(self):
@@ -299,11 +314,12 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = dlb_contrib.msvc.CCompilerMsvc(source_files=['a.cpp'], object_files=['a.o'])
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-            dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
-                                                        example='C:\\X;D:\\Y')
-            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+            dlb.ex.Context.active.env.declare(
+                'INCLUDE',
+                pattern=r'[^;]+(;[^;]+)*',
+                example='C:\\X;D:\\Y'
+            ).set(os.getcwd())
             dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
             t.start()
 
@@ -323,10 +339,11 @@ class CppTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         t = dlb_contrib.msvc.CplusplusCompilerMsvc(source_files=['a.c'], object_files=['a.o'])
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
-            dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
-            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*',
-                                                        example='C:\\X;D:\\Y')
-            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.env.declare('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS').set_from_os()
+            dlb.ex.Context.active.env.declare(
+                'INCLUDE',
+                pattern=r'[^;]+(;[^;]+)*',
+                example='C:\\X;D:\\Y'
+            ).set(os.getcwd())
             dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
             t.start()

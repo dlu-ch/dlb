@@ -328,40 +328,60 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
 
 .. _dlb-ex-environment-variable-dictionary-objects:
+.. _dlb-ex-environment-variable-accessors:
 
-Environment variable dictionary objects
----------------------------------------
+Environment variables
+---------------------
 
 The environment variable dictionary object *env* returned by :attr:`c.env <Context.env>` for a :term:`context` *c*
 is a dictionary-like object of all environment variables defined in *c*.
 *c* is called the associated :term:`context` of *env*.
 
-In addition, the environment variable dictionary object manages the import of environment variables from
-environment variables of the outer :term:`context` (if any) and validation
-of imported or assigned values in the form of regular expressions.
+In addition, the environment variable dictionary object manages the declaration, validation, and assignment of
+environment variables that are effective for all :term:`tool instances <tool instance>`.
+
+Environment variables behave like optional variables in a statically typed language:
+They need to be *declared* before a value can be assigned.
+A declared environment variable with an assigned value is called *defined*.
+
+Environment variables can be declared and defined only in the currently *active* context.
+When an inner context is entered, it *inherits* the current declaration and, if available, the current value of each
+environment variable from its direct outer context.
+An inherited environment variable can be redeclared, redefined, or undefined in the inner context without effecting
+the environment variable in any outer contexts.
+
+There is no implicit connection between environment variables in a context and environment variables of the
+process running dlb (:data:`os.environ`).
 
 Example::
 
-   # os.environ usually contains the environment variables in the shell that called the Python interpreter
-
    with dlb.ex.Context():
 
-       # "import" the environment variable 'LANG' into the context
-       dlb.ex.Context.active.env.import_from_outer(
-           'LANG', pattern=r'[a-z]{2}_[A-Z]{2}', example='sv_SE')
-       dlb.ex.Context.active.env['LANG'] = os.environ['LANG']
+       # declare the environment variable 'LANG' in the context (and all its future inner contexts) and
+       # assign value of OS (process) environment variable 'LANG' if defined:
+       dlb.ex.Context.active.env.declare(
+           'LANG',
+           pattern=r'[a-z]{2}_[A-Z]{2}',  # if defined, value must satisfy this regular expression
+           example='sv_SE'
+       ).set_from_os(
+           required=False,
+           expected="expected language (ISO 639-1) and "  # optional description of expected value
+                    "territory (ISO 3166-1 alpha-2)"      # for exception message if value invalid
+       )
 
        # now the environment variable is either undefined or matches the regular expression given
        # (in this context and all future inner contexts)
 
-       ... = dlb.ex.Context.active.env['LANG']  # value satisfies the validation pattern(s) or KeyError is raised
+       # value satisfies the validation pattern or KeyError is raised:
+       ... = dlb.ex.Context.active.env['LANG']
 
        dlb.ex.Context.active.env['LANG'] = 'de_AT'
 
        with dlb.ex.Context():
 
-           # further restrict accepted values
-           dlb.ex.Context.active.env.import_from_outer('LANG', pattern='(?P<language>de).*', example='de_CH')
+           # redeclare with different regular expression in this context
+           # (without affecting the declaration and the value in the outer context)
+           dlb.ex.Context.active.env.declare('LANG', pattern='(?P<language>de).*', example='de_CH').set_from_outer()
 
            ... = dlb.ex.Context.active.env['LANG']  # 'de_AT'
            del dlb.ex.Context.active.env['LANG']
@@ -376,16 +396,14 @@ Example::
 
 Environment variable dictionary objects support the following methods and attributes:
 
-.. method:: EnvVarDict.import_from_outer(name, *, pattern, value_if_undefined=None, example=None)
+.. method:: EnvVarDict.declare(name, *, pattern, example=None)
 
-   Set the value of the environment variable named *name* from the innermost outer :term:`context` that
-   defines it. If no outer :term:`context` defines it, the environment variable remains undefined.
+   Declare an environment variable of name *name* and restrict its accepted value to values that
+   match the given validation pattern.
 
-   Also associates a validation pattern for the value with the environment variable; when it is or later becomes
-   defined, the regular expression *validation* must match its value.
-   Use ``r'.*'`` if any value of the environment variable is valid.
-
-   The possible imported value and the validation pattern apply to the context and all its future inner contexts.
+   After declaration, the environment variable is undefined, i.e. it has no value.
+   It can be set to any value that matches the regular expression *pattern*, for example with one of the `set` methods
+   of the returned environment variable accessor.
 
    :param name: (non-empty) name of the environment variable
    :type name: str
@@ -393,22 +411,11 @@ Environment variable dictionary objects support the following methods and attrib
    :type pattern: str | :class:`python:typing.Pattern`
    :param example: typical value of an environment variable, *pattern* must match this
    :type example: str
+   :return: accessor for the declared environment variable
+   :rtype: EnvVarAccessor
 
-   :raises ValueError:
-      if an environment variable named *name* is defined in the associated or an outer :term:`context`
-      and *pattern* does not match its value
+   :raises ValueError: if *example* does not match *pattern*
    :raises ContextModificationError: if the associated context is not an :term:`active context`
-
-.. method:: EnvVarDict.is_imported(name)
-
-   Returns ``True`` if *name* is the name of an environment variable imported in the associated :term:`context`
-   or any of its outer contexts, else `False`.
-
-   :param name: non-empty name of an environment variable
-   :type name: str
-
-   :raises TypeError: if *name* is not a string
-   :raises ValueError: if *name* is an empty string
 
 .. method:: EnvVarDict.get(name, default=None)
 
@@ -427,7 +434,8 @@ Environment variable dictionary objects support the following methods and attrib
 
 .. describe:: name in env
 
-   Return `True` if there is an environment variable named *name* defined in *env*, else `False`.
+   Return `True` if there is an environment variable named *name* defined in *env* or in any of its outer contexts,
+   else `False`.
 
 .. describe:: name not in env
 
@@ -435,25 +443,112 @@ Environment variable dictionary objects support the following methods and attrib
 
 .. describe:: env[name] = value
 
-   Define an imported environment variable named *name* with value *value* in the associated :term:`context` and
-   all its future inner contexts.
+   Define *value* as the value of a declared environment variable named *name* in the associated :term:`context`.
 
-   Raises :exc:`KeyError`, if *name* was not imported in the associated  :term:`context` or one of its outer contexts.
-
-   Raises :exc:`ValueError`, if *name* was imported in the associated :term:`context` or one of its outer contexts
-   but the associated validation pattern in the associated context or in one of its any outer contexts does not
-   match *value*.
-
-   Raises :exc:`ContextModificationError`, if the associated context is not an :term:`active context`.
+   :raises AttributeError: if *name* is not declared in the associated :term:`context`
+   :raises ValueError:
+     if *name* is declared in the associated :term:`context` or one of its outer contexts
+     but the associated validation pattern in the associated context or in one of its any outer contexts does not
+     match *value*
+   :raises ContextModificationError: if the associated context is not an :term:`active context`
 
 .. describe:: del env[name]
 
    Undefine a defined environment variable named *name* in the associated :term:`context` and all its future
    inner contexts.
 
-   Raises :exc:`KeyError`, if *name* is not defined in the :term:`context`.
+   :raises KeyError: if *name* is not defined in the :term:`context`
+   :raises ContextModificationError: if the associated context is not an :term:`active context`
 
-   Raises :exc:`ContextModificationError`, if the associated context is not an :term:`active context`.
+Declared environment variables in the active context can be accessed and manipulated by corresponding
+*environment variable accessors*.
+
+.. class:: EnvVarAccessor
+
+   A :class:`dlb.ex.EnvVarAccessor` represents an accessor for a potential environment variables of a given name
+   in the active :term:`context`.
+
+   Its main purpose is to set values of declared environment variable from different sources
+   (e.g. OS environment variables) without repetition and with expressive exception messages in case of errors.
+
+   Environment variable accessors are created
+
+   - by the declaration of environment variables with
+     :meth:`dlb.ex.Context.active.env.declare() <EnvVarDict.declare>`; or
+   - by direct construction.
+
+   The :class:`dlb.ex.EnvVarAccessor` class supports the following methods and attributes:
+
+   .. method:: EnvVarAccessor(name)
+
+      Construct an environment variable accessor for a potential environment variable with name *name*
+      in the active :term:`context`.
+
+      :raises TypeError: if *name* is not a string
+      :raises ValueError: if *name* is an empty string
+
+   .. attribute:: name
+
+      Name of the potential environment variable to be accessed by this object.
+
+   .. method:: get(*, default=None, require_definition=False)
+
+      Return the value of environment variable :attr:`name` in the active :term:`context`, or *default* if
+      it is not defined.
+
+      :return: defined value as `str` or *default*
+      :raises AttributeError: if not declared and *require_definition* is `True`
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
+
+   .. method:: is_declared()
+
+      Return ``True`` if :attr:`name` is the name of an environment variable declared in the active :term:`context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
+
+   .. method:: is_defined()
+
+      Return ``True`` if :attr:`name` is the name of an environment variable defined in the active :term:`context`.
+
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
+
+   .. method:: set(value, *, required=True)
+
+      If *value* is not `None`, define *value* as the value of a environment variable :attr:`name` in
+      the active :term:`context`.
+      Otherwise (and if *required* is `False`), undefine environment variable :attr:`name` in
+      the active context.
+
+      :raises AttributeError: if :attr:`name` is not declared in the active :term:`context`
+      :raises ValueError: if *value* is `None` and *required* is `True`
+      :raises ValueError:
+        if :attr:`name` is declared in the active :term:`context` but the associated validation pattern
+        does not match *value*
+
+   .. method:: set_from_outer(*, required=True)
+
+      If the environment variable :attr:`name` is defined in the (direct) outer context,
+      (re)define it in the active context with the same value.
+
+      :raises AttributeError: if :attr:`name` is not declared in the active :term:`context`
+      :raises KeyError:
+        if :attr:`name` is not defined in the (direct) outer context :term:`context` and *required* is `True`
+      :raises ValueError:
+        if :attr:`name` is defined in (direct) outer context as *v* but the associated validation pattern
+        does not match *v*
+
+   .. method:: set_from_os(self, name=None, *, required=True, default=None, expected=None)
+
+      If a OS environment variable *name* - or :attr:`name` if *name* is `None` - is defined in :data:`os.environ`,
+      (re)define it in the active context with the same value.
+
+      :raises AttributeError: if :attr:`name` is not declared in the active :term:`context`
+      :raises KeyError:
+        if OS environment variable *name* - or :attr:`name` if *name* is `None` - is not defined
+        and *required* is `True`
+      :raises ValueError:
+        if OS environment variable *name* - or :attr:`name` if *name* is `None` - is defined as *v*
+        but the validation pattern associated with :attr:`name` does not match *v*
 
 
 Tool objects

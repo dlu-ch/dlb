@@ -684,8 +684,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
         t = BTool()
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
-            dlb.ex.Context.active.env['LANG'] = 'fr_FR'
+            dlb.ex.Context.active.env.declare('LANG', pattern=r'.*', example='').set('fr_FR')
             r = t.start()
             self.assertIsNotNone(r)
             self.assertEqual('fr_FR', r.language_code.raw)
@@ -693,14 +692,12 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
         t = BTool()
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
-            dlb.ex.Context.active.env['LANG'] = 'fr_FR'
+            dlb.ex.Context.active.env.declare('LANG', pattern=r'.*', example='').set('fr_FR')
             self.assertFalse(t.start())
 
         t = BTool()  # note: same tool instance
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
-            dlb.ex.Context.active.env['LANG'] = 'it_IT'
+            dlb.ex.Context.active.env.declare('LANG', pattern=r'.*', example='').set('it_IT')
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -720,8 +717,7 @@ class RedoIfEnvironmentVariableModifiedTest(testenv.TemporaryWorkingDirectoryTes
 
         t = BTool()
         with dlb.ex.Context():
-            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
-            dlb.ex.Context.active.env['LANG'] = '_'
+            dlb.ex.Context.active.env.declare('LANG', pattern=r'.*', example='').set('_')
             with self.assertRaises(dlb.ex.RedoError) as cm:
                 t.start()
             msg = (

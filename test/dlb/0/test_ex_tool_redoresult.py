@@ -147,7 +147,7 @@ class MultiplePendingRedosTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertIsNotNone(ra)
             self.assertFalse(ra.iscomplete)
 
-            dlb.ex.Context.active.env.import_from_outer('LANG', pattern=r'.*', example='')
+            dlb.ex.Context.active.env.declare('LANG', pattern=r'.*', example='')
 
             self.assertTrue(ra.iscomplete)
             rb = ATool(source_file='b.cpp', object_file='b.o').start()
@@ -234,7 +234,7 @@ class ContextInRedoTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_env_modification_in_redo(self):
         class CTool(dlb.ex.Tool):
             async def redo(self, result, context):
-                dlb.ex.Context.active.env.import_from_outer('a', pattern=r'.*', example='')
+                dlb.ex.Context.active.env.declare('a', pattern=r'.*', example='')
 
         with self.assertRaises(RuntimeError):
             with dlb.ex.Context():
@@ -442,7 +442,7 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertIs(NotImplemented, t.cflags_string)
 
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
+            c.env.declare('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             c.env['LANG'] = 'de_CH'
             result = t.start()
 
@@ -450,12 +450,12 @@ class RedoResultEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertIsNone(result.cflags_string)
 
         with dlb.ex.Context() as c:
-            c.env.import_from_outer('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
+            c.env.declare('LANG', pattern='[a-z]{2}_[A-Z]{2}', example='sv_SE')
             with self.assertRaises(dlb.ex.RedoError) as cm:
                 t.start()
         msg = (
             "not a defined environment variable in the context: 'LANG'\n"
-            "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
+            "  | use 'dlb.ex.Context.active.env[...] = ...'"
         )
         self.assertEqual(msg, str(cm.exception))
 

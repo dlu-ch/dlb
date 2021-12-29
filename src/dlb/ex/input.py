@@ -25,11 +25,13 @@ class Directory(_depend.DirectoryMixin, _depend.InputDependency):
 class EnvVar(_depend.InputDependency):
     @dataclasses.dataclass(frozen=True, eq=True)
     class Value:
+        # FIXME align with dlb.ex.Context.env.declare(...)
         name: str
         raw: str
         groups: Dict[str, str]
 
     def __init__(self, *, name: str, pattern: Union[str, Pattern], example: str, **kwargs):
+        # FIXME align with dlb.ex.Context.env.declare(...)
         super().__init__(**kwargs)
 
         if not isinstance(name, str):

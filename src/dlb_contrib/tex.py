@@ -249,7 +249,7 @@ class Tex(dlb.ex.Tool):
 
     # Global search paths in environment variable TEXINPUTS are *appended* (unchanged) to the ones
     # in *input_search_directories*.
-    # Must not contain unexpanded variables (because these are not imported).
+    # Must not contain unexpanded variables (because these are not declared).
     global_input_search_paths = dlb.ex.input.EnvVar(name='TEXINPUTS', pattern=r'[^$]*', example='.:~/tex//:',
                                                     required=False, explicit=False)
     # Environment variables:

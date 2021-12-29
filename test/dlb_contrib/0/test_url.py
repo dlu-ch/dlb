@@ -302,7 +302,7 @@ class IdToUrlMapInContectTest(testenv.TemporaryWorkingDirectoryTestCase):
             # Idea: When the URLs change (e.g. due to a build in a different environment) only
             # the environment variables have to be adapted, not the dlb script.
 
-            dlb.ex.Context.active.env.import_from_outer(
+            dlb.ex.Context.active.env.declare(
                 'URL_PATTERN_EX_1_COMP',
                 pattern='https://.+',
                 example='https://gitlab.dev.example.org/ex-1-comp-{compid:utf8}.git')

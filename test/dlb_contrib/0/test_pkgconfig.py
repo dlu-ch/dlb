@@ -167,8 +167,7 @@ class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             dlb.di.set_threshold_level(dlb.di.DEBUG)
-            dlb.ex.Context.active.env.import_from_outer('PKG_CONFIG_PATH', pattern='.+', example='/a/b:/c')
-            dlb.ex.Context.active.env['PKG_CONFIG_PATH'] = '.'
+            dlb.ex.Context.active.env.declare('PKG_CONFIG_PATH', pattern='.+', example='/a/b:/c').set('.')
             result = PkgConfig().start()
 
         self.assertIn('libgdk-3.so', result.library_filenames)

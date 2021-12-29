@@ -5,7 +5,7 @@
 """Execution contexts for tool instances.
 This is an implementation detail - do not import it unless you know what you are doing."""
 
-__all__ = ['Context', 'ReadOnlyContext']
+__all__ = ['Context', 'ReadOnlyContext', 'EnvVarAccessor']
 
 import re
 import os
@@ -50,6 +50,110 @@ def _register_successful_run(with_redo: bool):
         rs._successful_nonredo_run_count += 1
 
 
+def _check_non_empty_str(**kwargs):
+    for k, v in kwargs.items():
+        if not isinstance(v, str):
+            raise TypeError(f"{k!r} must be a str")
+        if not v:
+            raise ValueError(f"{k!r} must not be empty")
+
+
+class EnvVarAccessor:  # for *potential* environment variable (independent of context)
+
+    def __init__(self, name: str):
+        _check_non_empty_str(name=name)
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def get(self, *, default=None, require_definition: bool = False):
+        # noinspection PyProtectedMember
+        return Context.active.env._get(self._name, default=default, require_definition=require_definition)
+
+    def is_declared(self) -> bool:
+        return Context.active.env.get_defined_validator(self._name) is not None
+
+    def is_defined(self) -> bool:
+        return self._name in Context.active.env
+
+    def set(self, value: Optional[str], *, required: bool = True):
+        if value is not None:
+            Context.active.env[self._name] = value
+            return
+
+        if required:
+            raise ValueError("'value' other than None required")
+        try:
+            del Context.active.env[self._name]
+            return
+        except KeyError:
+            pass
+        # noinspection PyProtectedMember
+        Context.active.env._get(self._name, require_definition=True)
+
+    def set_from_outer(self, *, required: bool = True):
+        outer = Context.active.outer
+        if outer is None:
+            raise ValueError('active context has no outer context')
+        value = outer.env.get(self._name)
+        if value is None and required:
+            raise KeyError(f"required environment variable {self._name!r} not defined in outer context")
+        self.set(value, required=False)
+
+    def set_from_os(self, name: Optional[str] = None, *,
+                    required: bool = True, default: Optional[str] = None, expected: Optional[str] = None):
+        os_envvar_name = name
+        if os_envvar_name is None:
+            os_envvar_name = self._name
+        elif not isinstance(os_envvar_name, str):
+            raise TypeError("'name' must be None or a str")
+        elif not os_envvar_name:
+            raise ValueError("'name' must not be empty")
+
+        if default is not None and not isinstance(default, str):
+            raise TypeError("'default' must be None or a str")
+
+        reason = None
+        if expected is not None:
+            if not isinstance(expected, str):
+                raise TypeError("'expected' must be None or a str")
+            lines = []
+            for line in expected.splitlines():
+                if not line:
+                    continue
+                c = min(line)
+                if c < ' ':
+                    raise ValueError(f"'expected' must not contain ASCII control characters "
+                                     f"except line separators, unlike {c!r}")
+                line = line.rstrip()
+                if not line:
+                    continue
+                lines.append(line)
+            reason = '\n  | '.join([''] + lines)
+
+        # noinspection PyProtectedMember
+        Context.active.env._get(self._name, require_definition=True)
+        value = os.environ.get(os_envvar_name, default)
+
+        if value is None:
+            if required:
+                raise KeyError(f'OS environment variable {os_envvar_name!r} not defined')
+            try:
+                del Context.active.env[self._name]
+            except KeyError:
+                pass
+        else:
+            message = f'invalid value of OS environment variable {os_envvar_name!r}: {value!r}'
+            try:
+                # noinspection PyProtectedMember
+                Context.active.env._setitem(self._name, value)
+            except ValueError as e:
+                reason = f'\n  | {e.args[0]}' if reason is None else reason
+                raise ValueError(message + reason) from None
+
+
 class _BaseEnvVarDict:
 
     def __init__(self, context: 'Context'):
@@ -59,32 +163,21 @@ class _BaseEnvVarDict:
         self._context = context
 
         # all environment variables defined in this context or one of its outer contexts
+        # noinspection PyProtectedMember
         self._value_by_name = {} if context.outer is None else dict(context.outer.env._value_by_name)
 
         # all environment variables declared in this context:
         self._pattern_by_name: Dict[str, Pattern] = {}
 
-    def is_imported(self, name):
-        self._check_non_empty_str(name=name)
-        if name in self._pattern_by_name:
-            return True
-        return self._context.outer is not None and self._context.outer.env.is_imported(name)
-
-    def _find_violated_validation_pattern(self, name, value) -> Optional[Pattern]:
+    # TODO: replace by get_declaration(self, name: str) -> Optional[EnvVar]?
+    def get_defined_validator(self, name: str) -> Optional[Pattern]:  # TODO test, document
+        _check_non_empty_str(name=name)
         pattern = self._pattern_by_name.get(name)
-        if pattern is not None and not pattern.fullmatch(value):
+        if pattern is not None:
             return pattern
         if self._context.outer is None:
             return
-        return self._context.outer.env._find_violated_validation_pattern(name, value)
-
-    @staticmethod
-    def _check_non_empty_str(**kwargs):
-        for k, v in kwargs.items():
-            if not isinstance(v, str):
-                raise TypeError(f"{k!r} must be a str")
-            if not v:
-                raise ValueError(f"{k!r} must not be empty")
+        return self._context.outer.env.get_defined_validator(name)
 
     def __repr__(self) -> str:
         items = sorted(self.items())
@@ -93,9 +186,21 @@ class _BaseEnvVarDict:
 
     # dictionary methods
 
+    def _get(self, name: str, *, default=None, require_definition: bool):
+        _check_non_empty_str(name=name)
+        value = self._value_by_name.get(name)
+        if value is not None:
+            return value
+        if require_definition:
+            if self.get_defined_validator(name) is None:
+                raise AttributeError(
+                    f"environment variable not declared in context: {name!r}\n"
+                    f"  | use 'dlb.ex.Context.active.env.declare()' first"
+                )
+        return default
+
     def get(self, name: str, default=None):
-        self._check_non_empty_str(name=name)
-        return self._value_by_name.get(name, default)
+        return self._get(name, default=default, require_definition=False)
 
     def items(self):
         return self._value_by_name.items()
@@ -108,7 +213,7 @@ class _BaseEnvVarDict:
         if value is None:
             raise KeyError(
                 f"not a defined environment variable in the context: {name!r}\n"
-                f"  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
+                f"  | use 'dlb.ex.Context.active.env[...] = ...'"
             )
         return value
 
@@ -121,8 +226,9 @@ class _BaseEnvVarDict:
 
 class _EnvVarDict(_BaseEnvVarDict):
 
-    def import_from_outer(self, name: str, *, pattern: Union[str, Pattern], example: str):
-        self._check_non_empty_str(name=name)
+    # TODO add validator class (e.g. Path), see also argparse and namefilter of Path
+    def declare(self, name: str, *, pattern: Union[str, Pattern], example: str) -> EnvVarAccessor:
+        _check_non_empty_str(name=name)
 
         if isinstance(pattern, str):
             pattern = re.compile(pattern)
@@ -135,19 +241,10 @@ class _EnvVarDict(_BaseEnvVarDict):
             raise ValueError(f"'example' is not matched by 'pattern': {example!r}")
 
         self._prepare_for_modification()
+        self._pattern_by_name[name] = pattern  # declaration; cannot be removed from context, once defined!
+        self._value_by_name.pop(name, None)
 
-        value = self._value_by_name.get(name)
-        if value is None:
-            # import from innermost outer context that has the environment variable defined
-            if self._context.outer is not None:
-                value = self._context.outer.env._value_by_name.get(name)
-
-        if value is not None and not pattern.fullmatch(value):
-            raise ValueError(f"current value is not matched by 'pattern': {value!r}")
-
-        self._pattern_by_name[name] = pattern  # cannot be removed, once defined!
-        if value is not None:
-            self._value_by_name[name] = value
+        return EnvVarAccessor(name)
 
     def _prepare_for_modification(self):
         if not (_contexts and _contexts[-1] is self._context):
@@ -157,32 +254,36 @@ class _EnvVarDict(_BaseEnvVarDict):
             )
         self._context.complete_pending_redos()
 
-    # dictionary methods
+    def _setitem(self, name: str, value: str):
+        # Raises ValueError only if environment variable *value* is declared and *value* is invalid, and
+        # only as ValueError(msg) where msg is a one-line reason.
 
-    def __setitem__(self, name: str, value: str):
-        self._check_non_empty_str(name=name)
         if not isinstance(value, str):
             raise TypeError("'value' must be a str")
 
-        if not self.is_imported(name):
+        pattern = self.get_defined_validator(name)
+        if not pattern:
             raise AttributeError(
-                f"environment variable not imported into context: {name!r}\n"
-                f"  | use 'dlb.ex.Context.active.env.import_from_outer()' first"
+                f"environment variable not declared in context: {name!r}\n"
+                f"  | use 'dlb.ex.Context.active.env.declare()' first"
             )
+        if not pattern.fullmatch(value):
+            raise ValueError(f"not matched by validation pattern {pattern.pattern!r}")
 
         self._prepare_for_modification()
-
-        regex = self._find_violated_validation_pattern(name, value)
-        if regex is not None:
-            raise ValueError(
-                f"'value' is not matched by associated validation pattern: {value!r}\n"
-                f"  | validation pattern in question is {regex.pattern!r}"
-            )
-
         self._value_by_name[name] = value
 
-    def __delitem__(self, name):
-        self._check_non_empty_str(name=name)
+    # dictionary methods for *defined* environment variables (not *declared* environment variables!)
+
+    def __setitem__(self, name: str, value: str):
+        _check_non_empty_str(name=name)
+        try:
+            self._setitem(name, value)
+        except ValueError as e:
+            raise ValueError(f"invalid value: {value!r}\n  | {e.args[0]}") from None
+
+    def __delitem__(self, name):  # removes definition (value) but not declaration
+        _check_non_empty_str(name=name)
         self._prepare_for_modification()
         try:
             del self._value_by_name[name]
@@ -228,6 +329,7 @@ class _BaseHelperDict:
         # reason: read-only view
 
         self._context = context
+        # noinspection PyProtectedMember
         self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = \
             {} if context.outer is None else dict(context.outer.helper._explicit_abs_path_by_helper_path)
 

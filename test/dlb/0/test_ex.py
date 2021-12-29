@@ -31,6 +31,7 @@ class ImportTest(unittest.TestCase):
 
             'Context',
             'ReadOnlyContext',
+            'EnvVarAccessor',
 
             'Dependency',
             'InputDependency',
