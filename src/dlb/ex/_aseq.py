@@ -162,11 +162,14 @@ class _ResultProxy:
         object.__setattr__(self, '_result', None)
         object.__setattr__(self, '_exception', None)
 
-    def __setattr__(self, key, value):
-        raise AttributeError
+    def __getattr__(self, name: str):
+        return getattr(self._get_or_wait_for_result(), name)
 
-    def __getattr__(self, item):
-        return getattr(self._get_or_wait_for_result(), item)
+    def __setattr__(self, name: str, value):
+        raise AttributeError(f'attributes of {self!r} are read-only')
+
+    def __delattr__(self, name: str):
+        raise AttributeError(f'attributes of {self!r} cannot be deleted')
 
     def __repr__(self) -> str:
         if self.iscomplete:

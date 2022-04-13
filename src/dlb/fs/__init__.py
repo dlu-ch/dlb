@@ -201,8 +201,8 @@ class _Native:
     def __repr__(self) -> str:
         return f'Path.Native({str(self)!r})'
 
-    def __getattr__(self, item):
-        return getattr(self.raw, item)
+    def __getattr__(self, name: str):
+        return getattr(self.raw, name)
 
     def __copy__(self):
         return self

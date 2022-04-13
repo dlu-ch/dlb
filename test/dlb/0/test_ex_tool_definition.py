@@ -510,23 +510,37 @@ class ToolClassAttributeDefineTest(unittest.TestCase):
 
         t = dlb.ex.Tool()
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AttributeError) as cm:
             ATool.A = 2
+        self.assertEqual(f"attributes of {ATool!r} are read-only", str(cm.exception))
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AttributeError) as cm:
             ATool.x_y_z = 2
+        self.assertEqual(f"attributes of {ATool!r} are read-only", str(cm.exception))
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AttributeError) as cm:
             t.u = 3
+        self.assertEqual("attributes of <class 'dlb.ex.Tool'> instances are read-only", str(cm.exception))
 
-        with self.assertRaises(AttributeError):
+    # noinspection PyAbstractClass
+    def test_class_attributes_cannot_be_deleted(self):
+        class ATool(dlb.ex.Tool):
+            A = 1
+            x_y_z = dlb.ex.input.RegularFile()
+
+        t = dlb.ex.Tool()
+
+        with self.assertRaises(AttributeError) as cm:
             del ATool.A
+        self.assertEqual(f"attributes of {ATool!r} cannot be deleted", str(cm.exception))
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AttributeError) as cm:
             del ATool.x_y_z
+        self.assertEqual(f"attributes of {ATool!r} cannot be deleted", str(cm.exception))
 
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AttributeError) as cm:
             del t.u
+        self.assertEqual("attributes of <class 'dlb.ex.Tool'> instances cannot be deleted", str(cm.exception))
 
 
 class ExecutionParameterOverrideTest(unittest.TestCase):
@@ -711,7 +725,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
     # noinspection PyAbstractClass
     def test_location_of_tools_are_correct(self):
-        lineno = 714  # of this line
+        lineno = 728  # of this line
 
         class A(dlb.ex.Tool):
             pass
@@ -1113,11 +1127,13 @@ class ToolInstanceFingerprintTest(unittest.TestCase):
         self.assertIsInstance(tool.fingerprint, bytes)
         self.assertEqual(20, len(tool.fingerprint))
 
-    def test_is_readonly(self):
+    def test_is_not_writable(self):
         tool = ToolInstanceFingerprintTest.ATool(source_file=[], object_file='e.o')
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(AttributeError) as cm:
             # noinspection PyPropertyAccess
             tool.fingerprint = b''
+        self.assertEqual(f"attributes of {tool.__class__!r} "
+                         f"instances are read-only", str(cm.exception))
 
 
 class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):

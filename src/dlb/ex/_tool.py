@@ -426,10 +426,10 @@ class _ToolBase:
         raise NotImplementedError
 
     def __setattr__(self, name: str, value):
-        raise AttributeError
+        raise AttributeError(f'attributes of {self.__class__!r} instances are read-only')
 
     def __delattr__(self, name: str):
-        raise AttributeError
+        raise AttributeError(f'attributes of {self.__class__!r} instances cannot be deleted')
 
     def __repr__(self):
         dependency_tokens = [
@@ -603,11 +603,11 @@ class _ToolMeta(type):
 
         return tuple(p[-1] for p in dependency_infos), execution_parameters
 
-    def __setattr__(cls, name, value):
-        raise AttributeError
+    def __setattr__(cls, name: str, value):
+        raise AttributeError(f'attributes of {cls!r} are read-only')
 
-    def __delattr__(cls, name):
-        raise AttributeError
+    def __delattr__(cls, name: str):
+        raise AttributeError(f'attributes of {cls!r} cannot be deleted')
 
 
 # noinspection PyAbstractClass

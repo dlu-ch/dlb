@@ -163,14 +163,20 @@ class LimitingResultSequencerTest(unittest.TestCase):
         await asyncio.sleep(t)
         return LimitingResultSequencerTest.Result(t)
 
-    def test_result_attributes_are_readonly(self):
+    def test_attributes_are_not_writable(self):
 
         sequencer = dlb.ex._aseq.LimitingResultSequencer(asyncio.get_event_loop())
         tid = sequencer.wait_then_start(3, None, LimitingResultSequencerTest.sleep_or_raise, 0.5)
 
         proxy = sequencer.create_result_proxy(tid, uid=1)
-        with self.assertRaises(AttributeError):
+
+        with self.assertRaises(AttributeError) as cm:
             proxy.value = 27
+        self.assertEqual("attributes of <proxy object for future result> are read-only", str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            del proxy.value
+        self.assertEqual("attributes of <proxy object for future result> cannot be deleted", str(cm.exception))
 
         sequencer.cancel_all(timeout=None)
 

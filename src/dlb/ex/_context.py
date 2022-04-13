@@ -331,11 +331,15 @@ ut.set_module_name_to_parent(_HelperDict)
 
 
 class _BaseContextMeta(type):
-    def __setattr__(cls, key, value):
-        if not key.startswith('_'):
+    def __setattr__(cls, name: str, value):
+        if not name.startswith('_'):
             name = f'{cls.__module__}.{cls.__qualname__}'
             raise AttributeError(f'public attributes of {name!r} are read-only')
-        return super().__setattr__(key, value)
+        return super().__setattr__(name, value)
+
+    def __delattr__(cls, name: str):
+        name = f'{cls.__module__}.{cls.__qualname__}'
+        raise AttributeError(f'attributes of {name!r} cannot be deleted')
 
 
 class _ContextMeta(_BaseContextMeta):
@@ -655,10 +659,13 @@ class _BaseContext(metaclass=_BaseContextMeta):
         self = _get_root_specifics()
         return _worktree.Temporary(path_provider=self._temp_path_provider, suffix=suffix, is_dir=is_dir)
 
-    def __setattr__(self, key, value):
-        if not key.startswith('_'):
+    def __setattr__(self, name, value):
+        if not name.startswith('_'):
             raise AttributeError("public attributes of 'dlb.ex.Context' instances are read-only")
-        return super().__setattr__(key, value)
+        return super().__setattr__(name, value)
+
+    def __delattr__(self, name: str):
+        raise AttributeError("attributes of 'dlb.ex.Context' instances cannot be deleted")
 
 
 class Context(_BaseContext, metaclass=_ContextMeta):

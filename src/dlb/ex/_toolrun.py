@@ -355,22 +355,35 @@ class RunResult:
     def iscomplete(self) -> bool:
         return True
 
-    def __setattr__(self, key, value):
-        if not self._redo:
-            raise AttributeError
-
+    def __getattr__(self, name: str):
         try:
-            role = getattr(self._tool.__class__, key)
+            role = getattr(self._tool.__class__, name)
             if not isinstance(role, _depend.Dependency):
                 raise AttributeError
         except AttributeError:
-            raise AttributeError(f"{key!r} is not a dependency")
-
-        if key in self.__dict__:
-            raise AttributeError(f"{key!r} is already assigned")
+            raise AttributeError(f"{name!r} is not a dependency")
 
         if role.explicit:
-            raise AttributeError(f"{key!r} is not a non-explicit dependency")
+            return getattr(self._tool, name)
+
+        return NotImplemented
+
+    def __setattr__(self, name, value):
+        if not self._redo:
+            raise AttributeError(f'attributes of {self.__class__!r} instances are read-only if not for a redo')
+
+        try:
+            role = getattr(self._tool.__class__, name)
+            if not isinstance(role, _depend.Dependency):
+                raise AttributeError
+        except AttributeError:
+            raise AttributeError(f"{name!r} is not a dependency")
+
+        if name in self.__dict__:
+            raise AttributeError(f"{name!r} is already assigned")
+
+        if role.explicit:
+            raise AttributeError(f"{name!r} is not a non-explicit dependency")
 
         if value is not None:
             validated_value = role.validate(value)
@@ -379,20 +392,10 @@ class RunResult:
         else:
             raise ValueError('value for required dependency must not be None')
 
-        super().__setattr__(key, validated_value)
+        super().__setattr__(name, validated_value)
 
-    def __getattr__(self, item):
-        try:
-            role = getattr(self._tool.__class__, item)
-            if not isinstance(role, _depend.Dependency):
-                raise AttributeError
-        except AttributeError:
-            raise AttributeError(f"{item!r} is not a dependency")
-
-        if role.explicit:
-            return getattr(self._tool, item)
-
-        return NotImplemented
+    def __delattr__(self, name: str):
+        raise AttributeError(f'attributes of {self.__class__!r} instances cannot be deleted')
 
     def __bool__(self) -> bool:
         return self._redo

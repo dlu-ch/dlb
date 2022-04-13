@@ -33,8 +33,17 @@ class WithoutRedoBeforeRedoTest(unittest.TestCase):
     def test_assignment_fails(self):
         t = ATool(source_file='a.cpp', object_file='a.o')
         result = dlb.ex._toolrun.RunResult(t, False)
-        with self.assertRaises(AttributeError):
-            result.source_file = 'b.cpp'
+        with self.assertRaises(AttributeError) as cm:
+            result.included_files = ['b.cpp']
+        self.assertEqual(f"attributes of {result.__class__!r} instances are read-only if not for a redo",
+                         str(cm.exception))
+
+    def test_deletion_fails(self):
+        t = ATool(source_file='a.cpp', object_file='a.o')
+        result = dlb.ex._toolrun.RunResult(t, False)
+        with self.assertRaises(AttributeError) as cm:
+            del result.included_files
+        self.assertEqual(f"attributes of {result.__class__!r} instances cannot be deleted", str(cm.exception))
 
 
 class WithRedoBeforeRedoTest(unittest.TestCase):
@@ -60,18 +69,15 @@ class WithRedoBeforeRedoTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError) as cm:
             result._xy
-        msg = "'_xy' is not a dependency"
-        self.assertEqual(msg, str(cm.exception))
+        self.assertEqual("'_xy' is not a dependency", str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
             result.xyz
-        msg = "'xyz' is not a dependency"
-        self.assertEqual(msg, str(cm.exception))
+        self.assertEqual("'xyz' is not a dependency", str(cm.exception))
 
         with self.assertRaises(AttributeError) as cm:
             result.start()
-        msg = "'start' is not a dependency"
-        self.assertEqual(msg, str(cm.exception))
+        self.assertEqual("'start' is not a dependency", str(cm.exception))
 
 
 class AttributeNameTest(testenv.TemporaryWorkingDirectoryTestCase):

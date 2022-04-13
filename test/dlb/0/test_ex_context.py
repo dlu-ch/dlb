@@ -28,20 +28,7 @@ class AttributeNameTest(unittest.TestCase):
 # noinspection PyPropertyAccess
 class AccessTest(unittest.TestCase):
 
-    def test_public_attribute_are_readonly(self):
-        msg = "public attributes of 'dlb.ex.ReadOnlyContext' are read-only"
-
-        with self.assertRaises(AttributeError) as cm:
-            dlb.ex.ReadOnlyContext.active = None
-        self.assertEqual(msg, str(cm.exception))
-
-        with self.assertRaises(AttributeError) as cm:
-            dlb.ex.ReadOnlyContext.non_existent_attribute = None
-        self.assertEqual(msg, str(cm.exception))
-
-        with self.assertRaises(AttributeError):
-            dlb.ex.ReadOnlyContext.root = None
-
+    def test_public_attribute_are_not_writable(self):
         msg = "public attributes of 'dlb.ex.Context' are read-only"
 
         with self.assertRaises(AttributeError) as cm:
@@ -55,6 +42,41 @@ class AccessTest(unittest.TestCase):
         with self.assertRaises(AttributeError) as cm:
             dlb.ex.Context().non_existent_attribute = 1
         self.assertEqual("public attributes of 'dlb.ex.Context' instances are read-only", str(cm.exception))
+
+        msg = "public attributes of 'dlb.ex.ReadOnlyContext' are read-only"
+
+        with self.assertRaises(AttributeError) as cm:
+            dlb.ex.ReadOnlyContext.active = None
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            dlb.ex.ReadOnlyContext.non_existent_attribute = None
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_public_attribute_cannot_be_deleted(self):
+        msg = "attributes of 'dlb.ex.Context' cannot be deleted"
+
+        with self.assertRaises(AttributeError) as cm:
+            del dlb.ex.Context.active
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            del dlb.ex.Context.non_existent_attribute
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            del dlb.ex.Context().active
+        self.assertEqual("attributes of 'dlb.ex.Context' instances cannot be deleted", str(cm.exception))
+
+        msg = "attributes of 'dlb.ex.ReadOnlyContext' cannot be deleted"
+
+        with self.assertRaises(AttributeError) as cm:
+            del dlb.ex.ReadOnlyContext.active
+        self.assertEqual(msg, str(cm.exception))
+
+        with self.assertRaises(AttributeError) as cm:
+            del dlb.ex.ReadOnlyContext.non_existent_attribute
+        self.assertEqual(msg, str(cm.exception))
 
 
 class NestingTestNotRunning(unittest.TestCase):
