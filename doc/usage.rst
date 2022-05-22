@@ -76,6 +76,10 @@ polite one::
 
    $ echo 'print("hello there!")' > build.py
 
+
+Run dlb
+^^^^^^^
+
 Now, we can use :file:`dlb` to run :file:`build.py`::
 
    $ dlb build
@@ -92,11 +96,18 @@ working in a subdirectory of the :term:`working tree` or when you need modules f
    hello there!
    $ cd ..
 
-See ``dlb --help`` for a detailed description.
+See ``dlb --help`` (or :ref:`here <dlbexe>`) for a detailed description of ``dlb``.
+
+The effect of ``dlb`` - with or without parameters - is independent of the current working directory
+(as long as the current working directory is inside the working tree).
+This allows to define convenience shell aliases for projects that use multiple dlb scripts with lengthy script names
+or command line arguments.
+
+Example (Bash): ``alias b='dlb build-description/prepare-env --no-doc'``.
 
 
-Run a custom tool in an execution context
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Execute a custom tool in an execution context
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Replace the content of :file:`build.py` with this::
 

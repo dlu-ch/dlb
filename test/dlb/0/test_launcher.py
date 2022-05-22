@@ -161,31 +161,88 @@ class UsageTest(testenv.CommandlineToolTestCase,
 class ScriptTest(testenv.CommandlineToolTestCase,
                  testenv.TemporaryWorkingDirectoryTestCase):
 
-    def test_fails_for_invalid_scriptname(self):
+    def test_fails_for_empty_scriptname(self):
+        sys.stderr = io.StringIO()
+        script_name = ''
+        sys.argv = [sys.argv[0], script_name]
+        r = dlb_launcher.main()
+        self.assertEqual(1, r)
+        self.assertEqual(f'error: not a valid script name: {script_name!r}\n', sys.stderr.getvalue())
+
+    def test_fails_for_scriptname_that_starts_with_minus(self):
+        for script_name in ['', '-build.py']:
+            sys.stderr = io.StringIO()
+            sys.argv = [sys.argv[0], script_name]
+            r = dlb_launcher.main()
+            self.assertEqual(1, r)
+            self.assertEqual(f'error: not a valid script name: {script_name!r}\n', sys.stderr.getvalue())
+
+    def test_fails_for_absolute_path(self):
+        sys.stderr = io.StringIO()
+        script_name = os.path.abspath('build.py')
+        sys.argv = [sys.argv[0], script_name]
+        r = dlb_launcher.main()
+        self.assertEqual(1, r)
+        self.assertEqual(f'error: not a valid script name (since absolute): {script_name!r}\n', sys.stderr.getvalue())
+
+    def test_fails_for_path_with_dotdot(self):  # except at end
         invalid_script_names = [
-            '',
-            '-build.py',
-            os.path.join('build', '..', 'all', '.', '.py'),
-            os.path.abspath('build.py')
+            os.path.join('..', 'build'),
+            os.path.join('build', '..', '..', 'build')
         ]
         for script_name in invalid_script_names:
             sys.stderr = io.StringIO()
-            sys.argv = [sys.argv[0]] + [script_name]
+            sys.argv = [sys.argv[0], script_name]
             r = dlb_launcher.main()
             self.assertEqual(1, r)
-            self.assertEqual(f'error: not a script name: {script_name!r}\n', sys.stderr.getvalue())
+            self.assertEqual(f"error: not a valid script name (since upwards path): {script_name + '.py'!r}\n",
+                             sys.stderr.getvalue())
 
     def test_fails_for_nonexistent(self):
         script_name = 'build'
-        sys.argv = [sys.argv[0]] + [script_name]
+        sys.argv = [sys.argv[0], script_name]
         r = dlb_launcher.main()
         self.assertEqual(1, r)
         self.assertEqual(f"error: not an existing script: {script_name + '.py'!r}\n", sys.stderr.getvalue())
 
+    def test_normalizes_nonupwards_path(self):
+        script_name = os.path.join('build', '..', 'all', '.', 'build')
+        normalized_script_name = os.path.join('all', 'build.py')
+        os.mkdir('all')
+        open(normalized_script_name, 'w').close()
+        sys.stderr = io.StringIO()
+        sys.argv = [sys.argv[0], script_name]
+        r = dlb_launcher.main()
+        self.assertEqual(0, r)
+
+    def test_add_py_if_not_present(self):
+        sys.stderr = io.StringIO()
+        script_name = 'build'
+        sys.argv = [sys.argv[0], script_name]
+        open('build.py', 'w').close()
+        r = dlb_launcher.main()
+        self.assertEqual(0, r)
+
+    def test_accepts_dot_at_end(self):
+        sys.stderr = io.StringIO()
+        script_name = '.'
+        sys.argv = [sys.argv[0], script_name]
+        open('..py', 'w').close()
+        r = dlb_launcher.main()
+        self.assertEqual(0, r)
+
+    def test_accepts__dotdot_at_end(self):
+        sys.stderr = io.StringIO()
+        script_name = '..'
+        sys.argv = [sys.argv[0], script_name]
+        open('...py', 'w').close()
+        r = dlb_launcher.main()
+        self.assertEqual(0, r)
+
     def test_fails_for_directory(self):
         os.mkdir('build.py')
         script_name = 'build'
-        sys.argv = [sys.argv[0]] + [script_name]
+        sys.argv = [sys.argv[0], script_name]
         r = dlb_launcher.main()
         self.assertEqual(1, r)
         self.assertEqual(f"error: not an existing script: {script_name + '.py'!r}\n", sys.stderr.getvalue())
@@ -256,7 +313,12 @@ class HistoryTest(testenv.CommandlineToolTestCase,
         invalid_history_contents = [
             "1",
             "[]",
-            "['1', 2]"
+            "['1', 2]",
+            "['-']",
+            "['-x']",
+            '[{!r}]'.format(f'{os.getcwd()}{os.path.sep}build.py'),
+            '[{!r}]'.format(f'{os.path.sep}build.py'),
+            '[{!r}]'.format(f'..{os.path.sep}build.py')
         ]
 
         history_file_path = os.path.abspath(os.path.join('.dlbroot', f'last.{os.name}'))

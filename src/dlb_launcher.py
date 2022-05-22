@@ -39,12 +39,28 @@ def complete_module_search_path(dlbroot_path, script_abs_path):
     sys.path.insert(0, os.path.dirname(script_abs_path))
 
 
+def check_and_normalize_script_name(script_name):
+    if not script_name or script_name[0] == '-':
+        raise ValueError(f'not a valid script name: {script_name!r}')
+
+    if os.path.isabs(script_name):
+        raise ValueError(f'not a valid script name (since absolute): {script_name!r}')
+
+    normalized_script_name = os.path.normpath(script_name)  # note: depends on current working directory
+    if f'{os.path.sep}..{os.path.sep}' in f'{os.path.sep}{normalized_script_name}{os.path.sep}':
+        raise ValueError(f'not a valid script name (since upwards path): {script_name!r}')
+        # avoids (uncontrollable) dependency on content outside working tree and security risk when restored
+        # from history file
+
+    return normalized_script_name
+
+
 def complete_command_line(history_file_path, arguments):
     if arguments:
         script_name = arguments[0]
         if script_name and not script_name.endswith('.py'):
             script_name += '.py'
-        return script_name, arguments[1:]
+        return check_and_normalize_script_name(script_name), arguments[1:]
 
     last_arguments = None
     try:
@@ -64,20 +80,18 @@ def complete_command_line(history_file_path, arguments):
         last_arguments = ast.literal_eval(last_arguments.decode())
         if not (isinstance(last_arguments, list) and all(isinstance(a, str) for a in last_arguments)):
             raise TypeError
-        if not last_arguments:
+        script_name = last_arguments[0]
+        if check_and_normalize_script_name(script_name) != script_name:
             raise ValueError
-    except (SyntaxError, TypeError, ValueError, UnicodeDecodeError):
+    except (SyntaxError, TypeError, ValueError, IndexError, UnicodeDecodeError):
         raise Exception(f'invalid dlb history file (remove it manually): {history_file_path!r}')
+
     arguments_str = ', '.join(repr(a) for a in last_arguments)
     print(f'using arguments of last successful run: {arguments_str}', file=sys.stderr)
-    return last_arguments[0], last_arguments[1:]
+    return script_name, last_arguments[1:]
 
 
 def find_script(script_name):
-    if not script_name or script_name[0] == '-' or \
-            os.path.isabs(script_name) or os.path.normpath(script_name) != script_name:
-        raise Exception(f'not a script name: {script_name!r}')
-
     script_abs_path = os.path.abspath(script_name)
     if not os.path.isfile(script_abs_path):
         raise Exception(f'not an existing script: {script_name!r}')
@@ -101,10 +115,10 @@ def get_help():
         When called with '--help' as the first parameter, displays this help and exits.
     
         When called with a least one parameter and the first parameter is not '--help',
-        the first parameter must be a dlb script as a normalized, non-upwards path
-        relative to the root of the working tree that does not start with '-'. '.py' is
-        appended if it does not end with '.py'. All other parameters are forwarded to
-        the dlb script.
+        the first parameter must be a dlb script path relative to the root of the
+        working tree. This path must not start with '-' and must - after normalization -
+        be a non-upwards path. '.py' is appended if it does not end with '.py'.
+        All other parameters are forwarded to the dlb script.
     
         When called without a parameter, the parameters from the last successful call of
         this script with the same 'os.name' are used.
