@@ -912,6 +912,17 @@ class PortablePosixRestrictionsTest(unittest.TestCase):
         self.assertTrue(str(cm.exception).endswith(" (must not contain more than 255 characters)"))
 
 
+class PortablePosixPathSubclassTest(unittest.TestCase):
+
+    def test_redefined_class_attribute_are_ignored(self):
+        # As the representative for the use of class attributes in subclasses of dlb.fs.Path
+
+        class PPath(dlb.fs.PortablePosixPath):
+            MAX_COMPONENT_LENGTH = 2
+
+        PPath('xyz')  # uses still dlb.fs.PortablePosixPath.MAX_COMPONENT_LENGTH
+
+
 class WindowsRestrictionsTest(unittest.TestCase):
 
     def test_fails_for_backslash(self):

@@ -43,9 +43,9 @@ class Path(dlb.fs.PosixPath):
     def check_restriction_to_base(self, components_checked: bool):
         if components_checked:
             return
-        if any(s in c for c in self.parts for s in self.UNSAFE_CHARACTERS):
+        if any(s in c for c in self.parts for s in Path.UNSAFE_CHARACTERS):
             raise ValueError("must not contain these characters: {0}".format(
-                ','.join(repr(c) for c in sorted(self.UNSAFE_CHARACTERS))))
+                ','.join(repr(c) for c in sorted(Path.UNSAFE_CHARACTERS))))
         if any('\\"' in c for c in self.parts):
             raise ValueError("must not contain '\\\"'")
 

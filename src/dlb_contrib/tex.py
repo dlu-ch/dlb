@@ -61,7 +61,7 @@ class KpathseaPath(dlb.fs.RelativePath):
     def check_restriction_to_base(self, components_checked: bool):
         if not components_checked:
             for c in self.parts:
-                invalid_characters = set(c) & self.RESERVED_CHARACTERS
+                invalid_characters = set(c) & KpathseaPath.RESERVED_CHARACTERS
                 if invalid_characters:
                     raise ValueError("must not contain reserved characters: {0}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
@@ -78,7 +78,7 @@ class TexPath(dlb.fs.Path):
 
         if not components_checked:
             for c in self.parts:
-                invalid_characters = set(c) & self.RESERVED_CHARACTERS
+                invalid_characters = set(c) & TexPath.RESERVED_CHARACTERS
                 if invalid_characters:
                     raise ValueError("must not contain reserved characters: {0}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))

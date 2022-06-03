@@ -699,15 +699,16 @@ class PortablePosixPath(PosixPath):
 
         if not components_checked:
             for c in components[1:]:
-                if len(c) > self.MAX_COMPONENT_LENGTH:
-                    raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
+                if len(c) > PortablePosixPath.MAX_COMPONENT_LENGTH:
+                    raise ValueError(
+                        f'component must not contain more than {PortablePosixPath.MAX_COMPONENT_LENGTH} characters')
 
                 # IEEE Std 1003.1-2008, section 4.7 Filename Portability
                 if c.startswith('-'):
                     raise ValueError("component must not start with '-'")
 
                 # IEEE Std 1003.1-2008, section 3.278 Portable Filename Character Set
-                invalid_characters = set(c) - self.CHARACTERS
+                invalid_characters = set(c) - PortablePosixPath.CHARACTERS
                 if invalid_characters:
                     raise ValueError("must not contain these characters: {0}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
@@ -715,8 +716,8 @@ class PortablePosixPath(PosixPath):
         n = sum(len(c) for c in components) + max(0, len(components) - 2)
         if self._is_dir and (len(components) > 1 or components[0]):
             n += 1
-        if n > self.MAX_PATH_LENGTH:
-            raise ValueError(f'must not contain more than {self.MAX_PATH_LENGTH} characters')
+        if n > PortablePosixPath.MAX_PATH_LENGTH:
+            raise ValueError(f'must not contain more than {PortablePosixPath.MAX_PATH_LENGTH} characters')
 
 
 class WindowsPath(Path):
@@ -734,13 +735,13 @@ class WindowsPath(Path):
         parts = _native_components_for_windows(self.components).components
         if not parts[0]:
             parts = parts[1:]
-        if parts and parts[-1].upper() in self.RESERVED_AS_LAST_COMPONENT:
+        if parts and parts[-1].upper() in WindowsPath.RESERVED_AS_LAST_COMPONENT:
             # not actually reserved for directory path but information whether directory is lost after conversion
             raise ValueError(f'path is reserved')
 
         if not components_checked:
             # without already checked in _native_components_for_windows()
-            reserved = self.RESERVED_CHARACTERS - frozenset('\\:')
+            reserved = WindowsPath.RESERVED_CHARACTERS - frozenset('\\:')
 
             for c in parts:
                 invalid_characters = set(c) & reserved
@@ -770,8 +771,9 @@ class PortableWindowsPath(WindowsPath):
 
         if not components_checked:
             for c in components[1:]:
-                if len(c) > self.MAX_COMPONENT_LENGTH:
-                    raise ValueError(f'component must not contain more than {self.MAX_COMPONENT_LENGTH} characters')
+                if len(c) > PortableWindowsPath.MAX_COMPONENT_LENGTH:
+                    raise ValueError(
+                        f'component must not contain more than {PortableWindowsPath.MAX_COMPONENT_LENGTH} characters')
                 if c != '..' and c[-1] in ' .':
                     # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions
                     raise ValueError("component must not end with ' ' or '.'")
@@ -780,8 +782,8 @@ class PortableWindowsPath(WindowsPath):
         if self._is_dir and (len(components) > 1 or components[0]):
             n += 1
 
-        if n > self.MAX_PATH_LENGTH:
-            raise ValueError(f'must not contain more than {self.MAX_PATH_LENGTH} characters')
+        if n > PortableWindowsPath.MAX_PATH_LENGTH:
+            raise ValueError(f'must not contain more than {PortableWindowsPath.MAX_PATH_LENGTH} characters')
 
 
 class PortablePath(PortablePosixPath, PortableWindowsPath, RelativePath):
