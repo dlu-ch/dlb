@@ -8,6 +8,7 @@ import dlb.fs
 import dlb.ex
 import dlb_contrib.generic
 import dlb_contrib.tex
+import string
 import sys
 import os.path
 import io
@@ -24,15 +25,38 @@ class KpathseaPathTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             dlb_contrib.tex.KpathseaPath('a\\b')
 
-    def test_fails_for_separators(self):
+    def test_suceeds_for_separators(self):
         for c in ' ,;:':
-            with self.assertRaises(ValueError):
-                dlb_contrib.tex.KpathseaPath(f'a{c}b')
+            dlb_contrib.tex.KpathseaPath(f'a{c}b')
 
     def test_fails_for_variable(self):
         for c in '${}':
             with self.assertRaises(ValueError):
                 dlb_contrib.tex.KpathseaPath(f'a{c}b')
+
+
+class KpathseaSearchPathTest(unittest.TestCase):
+    def test_fails_for_separators(self):
+        for c in ' ,;:':
+            with self.assertRaises(ValueError):
+                dlb_contrib.tex.KpathseaSearchPath(f'a{c}b')
+
+
+class TexInputPathTest(unittest.TestCase):
+
+    def test_succeed_for_some_special_characters(self):
+        dlb_contrib.tex.TexInputPath('_ &$')
+
+    def test_fails_with_multiple_consecutive_spaces(self):
+        dlb_contrib.tex.TexInputPath('a b')
+        with self.assertRaises(ValueError):
+            dlb_contrib.tex.TexInputPath('a  b')
+
+    def test_fails_for_non_7bit_ascii(self):
+        with self.assertRaises(ValueError):
+            dlb_contrib.tex.TexInputPath('a\x7Fb')
+        with self.assertRaises(ValueError):
+            dlb_contrib.tex.TexInputPath('ätsch!')
 
 
 class TexPathTest(unittest.TestCase):
@@ -44,13 +68,19 @@ class TexPathTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             dlb_contrib.tex.TexPath('a\rb.tex')
 
-    def test_fails_without_suffix(self):
+    def test_suceeds_for_single_space(self):
+        dlb_contrib.tex.TexPath('a b c.tex')
 
+    def test_fails_with_multiple_consecutive_spaces(self):
         with self.assertRaises(ValueError):
-            dlb_contrib.tex.TexPath('document')
+            dlb_contrib.tex.TexPath('a  b.tex')
 
-        with self.assertRaises(ValueError):
-            dlb_contrib.tex.TexPath('.document')
+    def test_fails_without_suffix_if_not_directory(self):
+        dlb_contrib.tex.TexPath('tex', is_dir=True)
+
+        for filename in ['tex', '.tex', '...']:
+            with self.assertRaises(ValueError):
+                dlb_contrib.tex.TexPath(filename)
 
 
 class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
@@ -131,17 +161,152 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual("invalid line in 'recorded.fls': b'PWD he/he'", str(cm.exception))
 
 
+@unittest.skipIf(not testenv.has_executable_in_path('tex'), 'requires latex in $PATH')
+class TexTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    def test_scenario1(self):
+        os.mkdir('src')
+        with open('report.tex', 'x', encoding='utf-8') as f:
+            f.write('Hello world!\\end\n')
+
+        output_path = dlb.fs.Path('build/out/')
+        tex = dlb_contrib.tex.Tex(toplevel_file='report.tex', output_file=output_path / 'report.dvi', state_files=[])
+
+        with dlb.ex.Context():
+            r = tex.start()
+            self.assertTrue(r)
+            self.assertEqual((), r.included_files)
+            self.assertTrue((output_path / 'report.dvi').native.raw.is_file())
+
+            r = tex.start()
+            self.assertFalse(r)
+
+
+@unittest.skipIf(not testenv.has_executable_in_path('tex'), 'requires tex in $PATH')
+class TexInputTest(testenv.TemporaryWorkingDirectoryTestCase):
+
+    class RawTex(dlb.ex.Tool):
+        EXECUTABLE = 'tex'
+
+        toplevel_file = dlb.ex.input.RegularFile()
+        stdout_file = dlb.ex.output.RegularFile()
+
+        async def redo(self, result, context):
+            arguments = [
+                '--cnf-line=texmf_casefold_search=0',  # kpathsea: disable casefolding search on Unix-like systems
+                '-interaction=nonstopmode', '-halt-on-error', '-file-line-error', '-no-shell-escape',
+                self.toplevel_file  # must be last
+            ]
+            await context.execute_helper(self.EXECUTABLE, arguments, stdout_output=self.stdout_file)
+
+    def test_texpath_check_prevent_suspicious_filennames(self):
+        top_file_name = 'top.tex'
+
+        failure_on_commandline_by_character: Dict[str, str] = {}
+        failure_on_input_by_character: Dict[str, str] = {}
+
+        try:
+
+            output = io.StringIO()
+            dlb.di.set_output_file(output)
+
+            with dlb.ex.Context():
+
+                suspicious_characters = (
+                    {chr(i) for i in range(1, 0x7F + 1)} -
+                    set(string.ascii_letters) -
+                    set(string.digits) -
+                    {'/'}
+                )
+
+                for character in sorted(suspicious_characters):
+                    with self.subTest(character=character):
+                        input_filename = f'{character}{character}_{character}.tex'
+
+                        with open(os.path.join('', input_filename), 'x', encoding='utf-8') as f:
+                            f.write('Hello world!\\end\n')
+
+                        with open(top_file_name, 'w', encoding='utf-8') as f:
+                            f.write(f'\\input{{./{input_filename}}}\\end\n')
+
+                        try:
+                            tool = self.RawTex(
+                                toplevel_file=input_filename,
+                                stdout_file='stdout.log'
+                            )
+                            tool.start().complete()  # by command line
+                        except dlb.ex.HelperExecutionError:
+                            failure_on_commandline_by_character[character] = tool.stdout_file.native.read_text()
+
+                        try:
+                            tool = self.RawTex(
+                                toplevel_file=top_file_name,
+                                stdout_file='stdout.log'
+                            )
+                            tool.start().complete()  # by \input{...}
+                        except dlb.ex.HelperExecutionError:
+                            failure_on_input_by_character[character] = tool.stdout_file.native.read_text()
+
+                        os.remove(input_filename)
+
+                if character in failure_on_commandline_by_character or character in failure_on_input_by_character:
+                    with self.assertRaises(ValueError):
+                        dlb_contrib.tex.TexPath(input_filename)
+                else:
+                    dlb_contrib.tex.TexPath(input_filename)
+
+            failed_by_input = set(failure_on_input_by_character.keys())
+            failed_by_command_line = set(failure_on_commandline_by_character.keys())
+
+            be_verbose = False
+
+            try:
+                self.assertTrue(failed_by_command_line.issubset(failed_by_input))
+
+                # characters with default category code other than "space" (10), "letter" (11),
+                # and "other character" (12)
+                self.assertIn('\\', failed_by_input)  # "escape character" (0)
+                self.assertIn('{', failed_by_input)  # "beginning of group" (1)
+                self.assertIn('}', failed_by_input)  # "end of group" (2)
+                self.assertIn('\r', failed_by_input)  # "end of line" (5)
+                self.assertIn('#', failed_by_input)  # "parameter" (6)
+                self.assertIn('~', failed_by_input)  # "active character" (13)
+                self.assertIn('%', failed_by_input)  # "comment character" (14)
+                self.assertIn('^', failed_by_input)  # "superscript" (7) - only disallowed if doubled
+                self.assertIn('\x7F', failed_by_input)  # "invalid character" (15)
+                self.assertNotIn('&', failed_by_input)  # "alignment tab" (4)
+                self.assertNotIn('_', failed_by_input)  # "subscript" (8)
+
+                # kpathsea:
+                self.assertIn('\t', failed_by_input)
+                self.assertIn('\n', failed_by_input)
+                self.assertNotIn('$', failed_by_input)  # variable expansion
+
+                # web2c:
+                self.assertIn('"', failed_by_input)
+            except:
+                be_verbose = True
+                raise
+            finally:
+                if be_verbose:
+                    for c in sorted(set(failed_by_input) | set(failed_by_command_line)):
+                        print(f'failed {c!r}:')
+                        failure_log_by_input = failure_on_input_by_character.get(c)
+                        failure_log_by_commandline = failure_on_commandline_by_character.get(c)
+                        if c in failure_log_by_input:
+                            print('    on \\input{...}:' +
+                                  '\n        '.join([''] + failure_log_by_input.splitlines()))
+                        if c in failure_log_by_commandline:
+                            print(
+                                '    on command line:' +
+                                '\n        '.join([''] + failure_log_by_commandline.splitlines()))
+
+        finally:
+            dlb.di.set_output_file(sys.stderr)
+
+
 @unittest.skipIf(not testenv.has_executable_in_path('latex'), 'requires latex in $PATH')
 class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
-
-    def test_fails_for_missing_extension(self):
-        with self.assertRaises(dlb.ex.DependencyError) as cm:
-            dlb_contrib.tex.Tex(toplevel_file='report', output_file='report.dvi', state_files=[])
-        msg = (
-            "keyword argument for dependency role 'toplevel_file' is invalid: 'report'\n"
-            "  | reason: invalid path for 'TexPath': 'report' (must contain '.')"
-        )
-        self.assertEqual(msg, str(cm.exception))
 
     def test_fails_for_option_without_leading_dash(self):
         class Latex(dlb_contrib.tex.Tex):
@@ -153,6 +318,25 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
             with dlb.ex.Context():
                 Latex(toplevel_file='report.tex', output_file='report.dvi', state_files=[]).start()
         self.assertEqual("not an option: 'ahoi'", str(cm.exception))
+
+    def test_fails_for_non_existing_toplevel_file(self):
+        open('report.txt.tex', 'xb').close()
+        with self.assertRaises(ValueError) as cm:
+            with dlb.ex.Context():
+                dlb_contrib.tex.Tex(toplevel_file='report.txt', output_file='report.dvi', state_files=[]).start()
+        msg = "input dependency 'toplevel_file' contains a path of a non-existent filesystem object: 'report.txt'"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_missing_content(self):
+        with open('report.tex', 'x', encoding='utf-8') as f:
+            f.write('\\end')
+
+        with self.assertRaises(ValueError) as cm:
+            with dlb.ex.Context():
+                # does not create a .dvi
+                dlb_contrib.tex.Tex(toplevel_file='report.tex', output_file='report.dvi', state_files=[]).start()
+
+        self.assertRegex(str(cm.exception), r"\A()output file missing \(no pages\): .+")
 
     def test_fails_for_nonunique_statefile_suffix(self):
         open('report.tex', 'xb').close()

@@ -8,6 +8,7 @@
 # TeX: <https://ctan.org/tex-archive/systems/knuth/dist/tex/texbook.tex>
 # LaTeX: <https://www.latex-project.org/>
 # pdflatex: <https://www.tug.org/applications/pdftex/>
+# LaTeX font encodings: <https://www.latex-project.org/help/documentation/encguide.pdf>
 # Tested with: pdfTeX 3.14159265-2.6-1.40.19 with kpathsea version 6.3.1/dev
 # Executable: 'tex'
 # Executable: 'latex'
@@ -27,7 +28,12 @@
 #           output_directory / 'report.toc']
 #       ).start()
 
-__all__ = ['KpathseaPath', 'TexPath', 'accessed_files_from_recorded', 'Tex', 'Latex']
+__all__ = [
+    'SPECIAL_CHARACTERS',
+    'TexInputPath', 'KpathseaPath', 'KpathseaSearchPath', 'TexPath',
+    'accessed_files_from_recorded',
+    'Tex', 'Latex'
+]
 
 import sys
 import os
@@ -41,6 +47,26 @@ import dlb.ex
 assert f'string' and sys.version_info >= (3, 7)
 
 
+# 7 bit ASCII characters except ones that have a default category code assigned other than "space" (10), "letter" (11),
+# or "other character" (12) according to TEXbook, p. 37.
+# Namely:
+#   - "escape character" (0)
+#   - "beginning of group" (1)
+#   - "end of group" (2)
+#   - "math shift" (3)
+#   - "alignment tab" (4)
+#   - "end of line" (5)
+#   - "parameter" (6)
+#   - "superscript" (7)
+#   - "subscript" (8)
+#   - "ignored character" (9)
+#   - "active character" (13)
+#   - "comment character" (14)
+#   - "invalid character" (15)
+SPECIAL_CHARACTERS = frozenset('\\{}$&\r#^_\0~%\x7F')
+assert len(SPECIAL_CHARACTERS) == 13
+
+
 def _check_option(option: str) -> str:
     option = str(option)
     if option[:1] != '-':
@@ -48,40 +74,91 @@ def _check_option(option: str) -> str:
     return option
 
 
+class TexInputPath(dlb.fs.Path):
+    # Path that is - with prepended './' - suitable for inclusion into a (La)TeX file with '\input{...}',
+    # assuming default category codes for all printable ASCII characters.
+    #
+    # Note: '^^;' acts exactly like '{'. E.g. '\input{a^^;b.tex}' leads to 'Runaway text? a{b.tex}'.
+
+    RESERVED_CHARACTERS = frozenset(SPECIAL_CHARACTERS - {' ', '&', '_', '$'})
+
+    def check_restriction_to_base(self, components_checked: bool):
+        if not components_checked:
+            for c in self.parts:
+                invalid_characters = set(c) & TexInputPath.RESERVED_CHARACTERS
+                if invalid_characters:
+                    raise ValueError("must not contain reserved characters: {0}".format(
+                        ','.join(repr(c) for c in sorted(invalid_characters))))
+
+                if '  ' in c:
+                    raise ValueError("must not contain multiple consecutive spaces")
+
+                max_character = max(c)
+                if ord(max_character) >= 0x80:
+                    raise ValueError(f"must not contain only (7 bit) ASCII characters, not {max_character!r}")
+
+
 class KpathseaPath(dlb.fs.RelativePath):
-    # - ENV_SEP cannot be escaped in TEXINPUTS; ENV_SEP can be one of the following: ' ', ',', ';', ':'.
+    # kpathsea:
+    # see https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/path-elt.c?view=markup#l63
+    #
     # - '$', ',', '{', '}' cannot be escaped in TEXINPUTS
     # - path must not start with '!!'
     # - '\n', '\r' in TEXINPUTS but not in the tools that use it
     # - #if defined(WIN32): '\\' is replaced by '/'
+    #
+    # web2c:
+    # see https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/web2c/lib/texmfmp.c?view=markup#l847,
+    # https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/web2c/lib/texmfmp.c?view=markup#l816
+    #
+    # - is treated differently if contains "'" or '"'
+
+    UNSAFE_CHARACTERS = frozenset('${}\n\r\\"\'')
+
+    def check_restriction_to_base(self, components_checked: bool):
+        if not components_checked:
+            for c in self.parts:
+                invalid_characters = set(c) & KpathseaPath.UNSAFE_CHARACTERS
+                if invalid_characters:
+                    raise ValueError("must not contain reserved characters: {0}".format(
+                        ','.join(repr(c) for c in sorted(invalid_characters))))
+
+
+class KpathseaSearchPath(dlb.fs.RelativePath):
+    # kpathsea:
     # see https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/path-elt.c?view=markup#l63
+    #
+    # - ENV_SEP cannot be escaped in TEXINPUTS; ENV_SEP can be one of the following: ' ', ',', ';', ':'.
 
-    RESERVED_CHARACTERS = frozenset(' ,;:${}\n\r\\')
+    UNSAFE_CHARACTERS = frozenset(' ,;:')
 
     def check_restriction_to_base(self, components_checked: bool):
         if not components_checked:
             for c in self.parts:
-                invalid_characters = set(c) & KpathseaPath.RESERVED_CHARACTERS
+                invalid_characters = set(c) & KpathseaSearchPath.UNSAFE_CHARACTERS
                 if invalid_characters:
                     raise ValueError("must not contain reserved characters: {0}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
 
-class TexPath(dlb.fs.Path):
-
-    RESERVED_CHARACTERS = frozenset('\n\r')
-
+class TexPath(TexInputPath, KpathseaPath):
     def check_restriction_to_base(self, components_checked: bool):
+        # File name   TeX         os.path.splitext()
+        # ---         ---         ---
+        #
+        # 'tex'       'tex.log'   ('tex', '')     # disallow (ambiguous)
+        # 'tex.'      'tex.log'   ('tex', '.')
+        # 'tex..'     'tex..log   ('tex.', '.')
+        # '.tex'      '.log'      ('.tex', '')    # disallow (no basename)
+        # '..tex'     '..log'     ('..tex', '')
+        # '...'       '...log'    ('...', '')
+        # '.tex.'     '.tex.log'  ('.tex', '.')
+        # 'tex..tex'  'tex..log'  ('tex.', '.tex')
+
         if not self.is_dir():
-            if '.' not in self.components[-1][1:]:
-                raise ValueError("must contain '.'")
-
-        if not components_checked:
-            for c in self.parts:
-                invalid_characters = set(c) & TexPath.RESERVED_CHARACTERS
-                if invalid_characters:
-                    raise ValueError("must not contain reserved characters: {0}".format(
-                        ','.join(repr(c) for c in sorted(invalid_characters))))
+            base_filename, ext = os.path.splitext(self.components[-1])
+            if not ext:
+                raise ValueError("must have a (non-empty) extension")
 
 
 def accessed_files_from_recorded(context, recorder_output_file: dlb.fs.Path) \
@@ -162,7 +239,7 @@ class Tex(dlb.ex.Tool):
     log_file = dlb.ex.output.RegularFile(required=False)
 
     included_files = dlb.ex.input.RegularFile[:](explicit=False)
-    input_search_directories = dlb.ex.input.Directory[:](required=False, cls=KpathseaPath)
+    input_search_directories = dlb.ex.input.Directory[:](required=False, cls=KpathseaSearchPath)
 
     # Directory of .aux, .log etc. and working directory for *EXECUTABLE*.
     # If not set, a temporary directory is used.
@@ -188,11 +265,16 @@ class Tex(dlb.ex.Tool):
                 (context.root_path / intermediary_directory).native.raw.mkdir(parents=True, exist_ok=True)
 
             arguments = [
+                '--cnf-line=texmf_casefold_search=0',  # kpathsea: disable casefolding search on Unix-like systems
                 '-interaction=nonstopmode', '-halt-on-error', '-file-line-error', '-no-shell-escape',
                 '-recorder'  # create .fls file
             ]
             arguments += [_check_option(c) for c in self.get_options()]
             arguments += [self.toplevel_file]  # must be last
+
+            # Note: since this tool is only called if *self.toplevel_file* exists, a potential fallback to a similar
+            # file name (e.g. with added suffix or "case folding") does not matter for *self.toplevel_file*.
+            # It does, however, for files included - directly or indirectly - *self.toplevel_file*.
 
             # compile TEXINPUTS
             path_separator = os.pathsep
@@ -271,6 +353,9 @@ class Tex(dlb.ex.Tool):
 
             result.included_files = sorted(read_files_in_managed_tree)
             output_file = intermediary_directory / f'{base_filename}.{self.OUTPUT_EXTENSION}'
+            if not os.path.exists(str(output_file.native)):
+                raise ValueError(f'output file missing (no pages): {output_file.as_string()!r}')
+
             context.replace_output(result.output_file, context.root_path / output_file)
 
             read_and_written_files = sorted(set(read_files) & set(written_files))
