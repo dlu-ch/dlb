@@ -8,6 +8,7 @@ linker from the GNU Binutils)."""
 # GCC: <https://gcc.gnu.org/>
 # GNU Binutils: <https://www.gnu.org/software/binutils/>
 # Tested with: gcc 8.3.0
+# Tested with: gcc 10.2.1
 # Executable: 'gcc'
 # Executable: 'g++'
 #
@@ -33,6 +34,22 @@ linker from the GNU Binutils)."""
 #           object_and_archive_files=[r.object_files[0] for r in compile_results],
 #           linked_file=output_directory / 'application'
 #       ).start()
+
+# About the effect of command line argument -o:
+#
+# In contrast to the specified behaviour, GCC does *not* always write its output to *file* if requested by '-o' *file*.
+#
+# At least for versions 2.8.0 to 12.1.0, the actual behaviour depends on a lot of factors:
+# - target-platform dependent value of object-like preprecessor macros TARGET_OBJECT_SUFFIX, TARGET_EXECUTABLE_SUFFIX
+# - presence of '.' in the last path component of *file*
+# - presence of suffix '.o' in last path component of *file*
+# - presence of command line options -c, -S, and -E (for some versions)
+# - existence of *file* (for some versions)
+#
+# See OPT_o and convert_filename() in gcc/gcc.c[c] in <git://gcc.gnu.org/git/gcc.git>.
+#
+# If *file* has a suffix that is different from '.o', all these implicit path modifications (bugs)
+# are ineffective on all platforms for the mentioned GCC versions.
 
 __all__ = [
     'Path', 'ObjectOrArchivePath',
@@ -159,7 +176,9 @@ class _CompilerGcc(dlb_contrib.clike.ClikeCompiler):
         # compile
         compile_arguments = self.get_all_compile_arguments()
         for source_file, optional_object_file in zip(result.source_files, optional_object_files):
-            with context.temporary() as make_rules_file, context.temporary() as temp_object_file:
+
+            # see "About the effect of command line argument -o" above
+            with context.temporary(suffix='.t') as make_rules_file, context.temporary(suffix='.t') as temp_object_file:
                 await context.execute_helper(
                     self.EXECUTABLE,
                     compile_arguments + [
@@ -246,7 +265,7 @@ class _LinkerGcc(dlb.ex.Tool):
         link_arguments += self.get_subprogram_link_arguments(context)
 
         # link
-        with context.temporary() as linked_file:
+        with context.temporary(suffix='.t') as linked_file:  # see "About the effect of command line argument -o" above
             link_arguments += [
                 '-o', linked_file,
                 *result.object_and_archive_files  # note: type detection by suffix of path cannot be disabled
