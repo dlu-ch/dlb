@@ -94,14 +94,14 @@ class RedoContext(_context.ReadOnlyContext):
         if di.is_unsuppressed_level(cf.level.helper_execution):
             argument_list_str = ', '.join([repr(t) for t in commandline_tokens[1:]])
             env_str = repr(env)
-            msg = (
+            di.inform(
                 f'execute helper {helper_file.as_string()!r}\n'
-                f'    path: \t{helper_file_path.as_string()!r}\n'
-                f'    arguments: \t{argument_list_str}\n'
-                f'    directory: \t{cwd.as_string()!r}\n'
-                f'    environment: \t{env_str}'
+                f'  path: \t{helper_file_path.as_string()!r}\n'
+                f'  arguments: \t{argument_list_str}\n'
+                f'  directory: \t{cwd.as_string()!r}\n'
+                f'  environment: \t{env_str}',
+                level=cf.level.helper_execution
             )
-            di.inform(msg, level=cf.level.helper_execution)
 
         # commandline_tokens is to be used by asyncio.create_subprocess_exec():
         #  - all elements must be str
@@ -570,11 +570,11 @@ def check_explicit_fs_output_dependencies(tool, dependency_actions: Tuple[_depen
                     if memo is not None and memo.stat is not None:
                         obstructive_paths.add(p)
                     if not needs_redo:
-                        msg = (
+                        di.inform(
                             f"redo necessary because of filesystem object: {p.as_string()!r}\n"
-                            f"    reason: {ut.exception_to_line(e)}"
+                            f"  reason: {ut.exception_to_line(e)}",
+                            level=cf.level.redo_reason
                         )
-                        di.inform(msg, level=cf.level.redo_reason)
                         needs_redo = True
 
     return dependency_action_by_path, obstructive_paths, needs_redo

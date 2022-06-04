@@ -360,13 +360,12 @@ class Tex(dlb.ex.Tool):
 
             read_and_written_files = sorted(set(read_files) & set(written_files))
             if read_and_written_files:
-                msg = (
+                dlb.di.inform(
                     f"{len(read_and_written_files)} file(s) were read and written "
-                    f"(consider adding them to 'state_files'):"
+                    f"(consider adding them to 'state_files'):",
+                    *[f'{p.as_string()!r}' for p in read_and_written_files],
+                    level=dlb.di.WARNING
                 )
-                for p in read_and_written_files:
-                    msg += f'\n    {p.as_string()!r}'
-                dlb.di.inform(msg, level=dlb.di.WARNING)
 
         return needs_redo
 

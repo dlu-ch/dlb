@@ -39,12 +39,10 @@ ERROR = 40
 CRITICAL = 50
 
 
-_RESERVED_TITLEEND_CHARACTERS = " .]"
+_RESERVED_TITLEEND_CHARACTERS = " .]\b"
 _RESERVED_TITLESTART_CHARACTERS = "'|" + _RESERVED_TITLEEND_CHARACTERS
 
-_CONTINUATION_LINE_PREFIX = '  | '
-_CONTINUATION_INDENTATION = ' ' * len(_CONTINUATION_LINE_PREFIX)
-
+_FIELD_SEPARATORS = frozenset('\t\b')
 _FIELD_SEPARATOR_REGEX = re.compile(r'([\t\b])')
 
 _output_file = sys.stderr
@@ -83,74 +81,84 @@ _level_indicator_by_level = {
 }
 
 
-def _normalize_message_lines(message, *, name: str) -> Tuple[List[str], bool]:
-    # Return the normalized lines of *message*.
+def _unindent_and_normalize_message_lines(message, *, name: str) -> Tuple[List[str], bool]:
+    # Return the unindented lines of *message*.
     # Use *name* as the argument name for exception messages.
     #
-    # Properties of normalized_lines:
+    # Properties of *lines*:
     #
     #   - at least 1 line
     #   - first line is not empty
     #   - last line is not empty
-    #   - 2 successive lines are not empty
+    #   - 2 successive lines are not both empty
     #   - no line ends with a space character
     #   - first line does not start with character in _RESERVED_LINESTART_CHARACTERS
-    #   - every non-empty line except the first starts with 2 space character followed by a non-space character
+    #   - every line except the first starts with '|'
 
-    normalized_lines = []
+    continuation_indentation = '  '
+
+    lines = []
     first_indentation = None  # leading white-space of first non-empty line
     has_field_separator = False
+    last_was_empty = None
 
     for lineno0, line in enumerate(message.splitlines()):
-        line = line.rstrip()
+        line = line.rstrip()  # keeps '\b'
 
-        for c in line:
-            if c < ' ':
-                if c not in '\t\b':
-                    raise ValueError(
-                        f"{name!r} must not contain ASCII control characters except '\\t' and '\\b', "
-                        f"unlike {c!r} in line {lineno0 + 1}"
-                    )
-                has_field_separator = True
+        if not line:
+            if last_was_empty is False:  # not first line and last line was not empty
+                lines.append('|')
+                last_was_empty = True
+            continue
 
-        if line:
-            if not normalized_lines:
-                # is first non-empty line
-                stripped_line = line.lstrip()
-                first_indentation = line[:len(line) - len(stripped_line)]
+        last_was_empty = False
+        characters = set(line)
+        characters_without_field_seps = characters - _FIELD_SEPARATORS
+        c = min(characters_without_field_seps or ' ')
+        if c < ' ':
+            raise ValueError(
+                f"{name!r} must not contain ASCII control characters except '\\t' and '\\b', "
+                f"unlike {c!r} in line {lineno0 + 1}"
+            )
+        has_field_separator = has_field_separator or characters_without_field_seps != characters
 
-                line = stripped_line
-                if line[0] in _RESERVED_TITLESTART_CHARACTERS:
-                    raise ValueError(
-                        f"first non-empty line in {name!r} must not start with "
-                        f"reserved character {line[0]!r}"
-                    )
-                if line[-1] in _RESERVED_TITLEEND_CHARACTERS:
-                    msg = f"first non-empty line in {name!r} must not end with {line[-1]!r}"
-                    raise ValueError(msg)
-            else:
-                line = line[len(first_indentation):] if line[:len(first_indentation)] == first_indentation else ''
-                if not line.startswith(_CONTINUATION_INDENTATION):
-                    raise ValueError(
-                        f"each continuation line in {name!r} must be indented at "
-                        f"least {len(_CONTINUATION_LINE_PREFIX)} spaces more than the first non-empty line, "
-                        f"unlike line {lineno0 + 1}"
-                    )
-            if line or (normalized_lines and not normalized_lines[-1]):
-                normalized_lines.append(line)
+        if not lines:
+            # is first non-empty line
+            stripped_line = line.lstrip()  # keeps '\b'
+            first_indentation = line[:len(line) - len(stripped_line)]
 
-    if not normalized_lines:
+            line = stripped_line
+            if line[0] in _RESERVED_TITLESTART_CHARACTERS:
+                raise ValueError(f"first non-empty line in {name!r} must not start with character {line[0]!r}")
+            if line[-1] in _RESERVED_TITLEEND_CHARACTERS:
+                raise ValueError(f"first non-empty line in {name!r} must not end with {line[-1]!r}")
+        else:
+            line = line[len(first_indentation):] if line[:len(first_indentation)] == first_indentation else ''
+            if not line.startswith(continuation_indentation):
+                raise ValueError(
+                    f"each continuation line in {name!r} must be indented at "
+                    f"least {len(continuation_indentation)} spaces more than the first non-empty line, "
+                    f"unlike line {lineno0 + 1}"
+                )
+            line = '| ' + line[len(continuation_indentation):]
+
+        lines.append(line)
+
+    if last_was_empty is True:
+        del lines[-1]
+
+    if not lines:
         raise ValueError(f"{name!r} must contain at least one non-empty line")
 
-    return normalized_lines, has_field_separator
+    return lines, has_field_separator
 
 
-def _expand_fields_and_continuations(normalized_lines: Sequence[str]) -> List[str]:
+def _expand_fields(lines: Sequence[str]) -> List[str]:
 
     fields_per_line: List[List[str]] = []
     len_by_field_index: Dict[int, int] = {}
 
-    for line in normalized_lines:
+    for line in lines:
         r = _FIELD_SEPARATOR_REGEX.split(line)  # length of list is uneven
         if len(r) > 1:
             fields = [r[i] + r[i + 1] for i in range(0, len(r) - 1, 2)] + [r[-1]]
@@ -164,7 +172,7 @@ def _expand_fields_and_continuations(normalized_lines: Sequence[str]) -> List[st
 
     # len_by_field_index[i] is the length after justification of field[i] that ends in '\t' or '\b'
 
-    formatted_lines = []
+    expanded_lines = []
     for line_index, fields in enumerate(fields_per_line):
         line = ''
 
@@ -175,29 +183,42 @@ def _expand_fields_and_continuations(normalized_lines: Sequence[str]) -> List[st
                 field = justifier(field[:-1], len_by_field_index[field_index])
             line = line + field
 
-        if formatted_lines:
-            line = _CONTINUATION_LINE_PREFIX + line[len(_CONTINUATION_LINE_PREFIX):]
-        if line_index + 1 < len(normalized_lines):
-            line = line + ' '  # not last line
+        expanded_lines.append(line.rstrip())
 
-        formatted_lines.append(line)
-
-    return formatted_lines
+    return expanded_lines
 
 
-def _format_message(message, name: str, prefix='') -> str:
+def _format_message(message, *data, name: str, prefix: str) -> str:
     # must be fast for single line
 
     if not isinstance(message, str):
         raise TypeError(f"{name!r} must be a str")
 
-    normalized_lines, has_field_separator = _normalize_message_lines(message, name=name)
-    normalized_lines[0] = prefix + normalized_lines[0]
+    lines, has_field_separator = _unindent_and_normalize_message_lines(message, name=name)
+    if has_field_separator:
+        lines = _expand_fields(lines)  # assuming len(*prefix*) = 2
 
-    if not has_field_separator and len(normalized_lines) == 1:
-        return normalized_lines[0]
+    lines[0] = prefix + lines[0]
 
-    formatted_lines = _expand_fields_and_continuations(normalized_lines)
+    last_was_empty = None
+    for d in data:
+        text = d if isinstance(d, str) else repr(d)
+        data_lines = text.splitlines() or ['']  # at least one line per *d*
+        for data_line in data_lines:
+            if data_line and min(data_line) < ' ':
+                data_line = ''.join(c if c >= ' ' else ' ' for c in data_line)
+            data_line = data_line.rstrip()
+            if data_line:
+                lines.append('| ' + data_line)
+                last_was_empty = False
+            elif not last_was_empty:
+                lines.append('|')
+                last_was_empty = True
+    if last_was_empty is True:
+        del lines[-1]
+
+    if len(lines) == 1:
+        return lines[0]
 
     # - each line consists only of characters >= U+0020
     # - no line ends with 2 space characters
@@ -206,7 +227,7 @@ def _format_message(message, name: str, prefix='') -> str:
     # - successive lines are separated by '\n'
     # - the "positions" of the (removed) '\t', '\b' are aligned over all lines
 
-    return '\n'.join(formatted_lines)
+    return ' \n  '.join(lines)
 
 
 def _checked_level(level):
@@ -245,8 +266,8 @@ def set_output_file(file):
     return f
 
 
-def format_message(message: str, level: int) -> str:  # idempotent only for single lines
-    return _format_message(message, name='message', prefix=get_level_indicator(level) + ' ')
+def format_message(message: str, *data, level: int) -> str:  # idempotent only for single lines
+    return _format_message(message, *data, name='message', prefix=get_level_indicator(level) + ' ')
 
 
 def _indent_message(message: str, nesting: int):
@@ -335,10 +356,10 @@ class Cluster:
             _output_file.write(indented_result + '\n')
 
 
-def inform(message, *, level: int = INFO, with_time: bool = False) -> bool:
+def inform(message, *data, level: int = INFO, with_time: bool = False) -> bool:
     level = _checked_level(level)
 
-    formatted_message = format_message(message, level=level)
+    formatted_message = format_message(message, *data, level=level)
 
     if not is_unsuppressed_level(level):
         return False

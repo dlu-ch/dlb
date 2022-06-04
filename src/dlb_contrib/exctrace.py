@@ -51,15 +51,15 @@ def _output_compact_tb(etype, value, tb,
         formatted_exception_lines.extend(e.splitlines())
 
     msg = 'aborted by exception:'
-    msg += '\n    '.join([''] + formatted_exception_lines)
+    msg += '\n  '.join([''] + formatted_exception_lines)
 
     line = (line.strip() or '\n').splitlines()[0]
     if line.startswith('raise '):
         line = 'raise ...'
-    msg += f'\n    caused by: {line}'
+    msg += f'\n  caused by: {line}'
 
     if traceback_file_path_abs is not None:
-        msg += f'\n    traceback: {traceback_file_path_abs!r}'
+        msg += f'\n  traceback: {traceback_file_path_abs!r}'
 
     with dlb.di.Cluster(msg, level=dlb.di.CRITICAL):
         if involved_lines:
@@ -71,7 +71,7 @@ def _output_compact_tb(etype, value, tb,
                 formatted_lines.append('...')
             dlb.di.inform(
                 f'involved lines from files in {current_directory_path_abs!r}:' +
-                '\n    '.join([''] + formatted_lines))
+                '\n  '.join([''] + formatted_lines))
 
 
 def enable_compact_with_cwd(*, traceback_file: Optional[dlb.fs.PathLike] = None,

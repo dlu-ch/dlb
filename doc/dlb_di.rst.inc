@@ -56,19 +56,19 @@ Example
    import dlb.di
    ...
 
-   with dlb.di.Cluster(f"analyze memory usage\n    see {logfile.as_string()!r} for details", is_progress=True):
+   with dlb.di.Cluster(f"analyze memory usage\n  see {logfile.as_string()!r} for details", is_progress=True):
       ram, rom, emmc = ...
 
       dlb.di.inform(
           f"""
           in use:
-              RAM:\t {ram}\b kB
-              ROM (NOR flash):\t {rom}\b kB
-              eMMC:\t {emmc}\b kB
+            RAM:\t {ram}\b kB
+            ROM (NOR flash):\t {rom}\b kB
+            eMMC:\t {emmc}\b kB
           """)
 
       if rom > 0.8 * rom_max:
-          dlb.di.inform("more than 80% of ROM used", dlb.di.WARNING)
+          dlb.di.inform("more than 80% of ROM used", level=dlb.di.WARNING)
 
 This will generate the following output:
 
@@ -88,8 +88,8 @@ Syntax
 ------
 
 Each *message* starts with a capital letter after indentation according to its nesting level (2 space characters per
-level) and ends with a ``'\n'`` after a non-space character. It can consist of multiple lines: an *initial line*
-followed by any number of *continuation lines* with the same indentation as the initial line.
+level) and ends with a ``'\n'`` (character U+000A) after a non-space character. It can consist of multiple lines:
+an *initial line* followed by any number of *continuation lines* with the same indentation as the initial line.
 The lines are separated by ``'␣\n'`` (``'␣'`` means the character U+0020):
 
 .. productionlist:: diagmessage
@@ -149,9 +149,10 @@ Module content
 
    Set the output file for all future outputs of this module to *file* and return the previous output file.
 
-   *file* is used by :mod:`dlb.di` exclusively like this: ``file.write(message)``. *message* is a (non-empty) string
-   that can be produced by the production rule :token:`message`. Its first character is meant to represent the first
-   character of a line.
+   *file* is used by :mod:`dlb.di` exclusively like this: ``file.write(message)`` where *message* is a (non-empty)
+   string can be produced by the production rule :token:`message <diagmessage:message>`
+   (so *message* can contain any Unicode character except U+0000 to U+0009 and U+000B to U+001F).
+   The first character of *message* is meant to represent the first  character of a line.
 
    :param file: new output file
    :type file: an object with a ``write(string)`` method
@@ -200,58 +201,113 @@ Module content
    :type time_ns: int
    :rtype: str
 
-.. function:: format_message(message, level)
+.. function:: format_message(message, *data, level)
 
-   Return a formatted message with aligned fields, assuming nesting level *level*.
+   Return a normalized and formatted message with aligned fields that satisfies the production rule
+   :token:`message <diagmessage:message>`, assuming nesting level *level*, defining the initial line and an arbitrary
+   number of continuation lines.
 
-   First, empty lines are removed from the beginning and the end of *message* and trailing white space characters is
-   removed from each line.
-   After that, the first line must not start with ``'␣'``, ``"'"``,  ``"|"``, ``'.'`` or ``"]"``.
-   If must not end with ``"."`` or ``"]"``.
-   Each non-empty line after the first line must start with at least 4 space characters after than the indentation of
-   the first line. Example: If the first line is indented by 8 space characters, each following non-empty line must
-   start with at least 12 space characters.
+   *message* is unindented, its fields (delimited by ``'\t'`` or ``'\b'``) expanded, then normalized.
 
-   *message* can contain fields. A field is declared by appending ``'\t'`` or ``'\b'``.
-   A field whose declaration ends with ``'\t'`` is left aligned, one whose declaration ends with ``'\t'`` is right
-   aligned over all lines of the message. In the return value the ``'\t'`` or ``'\b'`` are not present but their
-   "positions" are aligned over all lines of the message.
+   All lines of *data* - or `repr(...)` if not of type `str` - are normalized and appended as continuation lines with
+   all ASCII control character other than ``'\r'`` and ``'\n'`` replaced by ``'␣'``.
+
+   Unindenting of *message* means:
+
+   - Remove all empty and white space-only lines at the beginning if *message*; then
+   - remove the sequence of white space characters leading the first line from the beginning of
+     each line that is not empty and not white space-only.
+
+   After unindenting *message*, its first line must not start with ``'␣'``, ``"'"``,  ``"|"``, ``'.'``, ``"]"``,
+   or ``"\b"``. It must not end with ``"."``, ``"]"``, or ``"\b"``.
+   Each following line that is not non-empty and not white space-only must start with at least 2 space characters
+   (will be replace by ``'|␣'``)
+
+   *message* can contain fields.
+   Field are by separated ``'\t'`` and ``'\b'`` and the beginning and end of the line.
+   Expansion of fields means removing ``'\t'`` and ``'\b'`` and inserting the minimum required number of space
+   characters just before or after the fields such that the "positions" are aligned over all lines.
+
+   - A field followed by ``'\t'`` is left aligned (space characters are appended as necessary)
+   - A field followed by ``'\t'`` is right aligned (space characters are prepended as necessary).
+
+   Normalization means:
+
+   - Remove all trailing white space from all lines; and
+   - replace each run of consecutive empty or white space-only lines by a single empty line; and
+   - replace each line separator by ``'\n'``.
 
    Examples::
 
-      >>> dlb.di.format_message('\njust a moment! ', dlb.di.WARNING)
+      >>> dlb.di.format_message('\njust a moment! ', level=dlb.di.WARNING)
       'W just a moment!'
 
       >>> dlb.di.format_message(
       ...   """
       ...   summary:
-      ...       detail: blah blah blah...
-      ...       see also here
-      ...   """, dlb.di.INFO)
+      ...     detail: blah blah blah...
+      ...     see also here
+      ...   """,
+      ...   level=dlb.di.INFO
+      ... )
       'I summary: \n  | detail: blah blah blah... \n  | suggestion'
 
-      >>> m = ''.join(f"\n    {n}:\t {s} =\b {v}\b{u}" for n, s, v, u in metrics)
-      >>> print(dlb.di.format_message('Halstead complexity measures:' + m, dlb.di.INFO))
+      >>> missing_paths = [dlb.fs.Path('src/'), dlb.fs.Path('build/out/src/generated/')]
+      >>> dlb.di.format_message('missing:', *missing_paths, level=dlb.di.ERROR)
+      "E missing: \n  | Path('src/') \n  | Path('build/out/src/generated/')"
+
+   :param message: message (to be formatted)
+   :type message: str
+   :param data: data lines to be appended to formatted message after permissive normalization
+   :type data: iterable of str or objects *o* where `repr(o)` is a str
+   :param level: (positive) level
+   :type level: int
+   :return:
+      formatted message conforming to production rule :token:`messsage <diagmessage:message>` after appending a
+      single ``'\n'``
+   :rtype: str
+
+   :raises ValueError:
+      if normalized *message* contains only empty lines, or contains an ASCII control character other then white space
+      and ``'\b'``, or its first line that is not empty start or ends with a reserved character, or its lines are not
+      properly indented
+   :raises ValueError: if *level* is invalid
+
+.. function:: inform(message, *data, level: int = INFO, with_time: bool = False)
+
+   If level is not suppressed, output a message to the output file after the title messages of all
+   parent :class:`Cluster` instances whose output was suppressed so far.
+
+   *message* is formatted by :func:`format_message` and indented according to the nesting level.
+   If *with_time* is ``True``, a :token:`relative_time_suffix <diagmessage:relative_time_suffix>` for the current time
+   is included.
+
+   Examples::
+
+      >>> dlb.di.inform(f'size: {application_file.native.raw.stat().st_size} B')
+      I size: 147176 B
+
+      >>> metrics = [
+      ...     ('volume', 'V', 1.7, ''),
+      ...     ('programming required', 'T', 127.3, ' s'),
+      ...     ('difficulty', 'D', 12.8, '')
+      ... ]
+      >>> dlb.di.inform('\n'.join(
+      ...     [f'Halstead complexity measures:'] +
+      ...     [f'  {n}:\t {s} =\b {v}\b{u}' for n, s, v, u in metrics]
+      ... ))
       I Halstead complexity measures:
         | volume:               V =   1.7
         | programming required: T = 127.3 s
         | difficulty:           D =  12.8
 
-   :param message: message (to be formatted)
-   :type message: str
-   :param level: (positive) level
-   :type level: int
-   :return: formatted message conforming to :token:`message` after appending a single ``'\n'``
-   :rtype: str
-   :raises ValueError: if *message* would violate :token:`message` or if *level* is invalid
-
-.. function:: inform(message, *, level: int = INFO, with_time: bool = False)
-
-   If level is not suppressed, output a message to the output file after the title messages of all
-   parent :class:`Cluster` instances whose output was suppressed so far.
-
-   *message* is formatted by :func:`format_message` and indented according the nesting level.
-   If *with_time* is ``True``, a :token:`relative_time_suffix` for the current time is included.
+      >>> dlb.di.inform('summary:', 1, 'multi-\nline\x1Ftext', [{2}, False, '?'],
+      ...               level=dlb.di.ERROR, with_time=True)
+      E summary: [+0.000000s]
+        | 1
+        | multi-
+        | line text
+        | [{2}, False, '?']
 
 .. class:: Cluster(message, *, level=INFO, is_progress=False, with_time=False)
 
@@ -263,7 +319,7 @@ Module content
    With *is_progress* set to ``False``, the output when the context is entered is the same as the output of
    :meth:`inform` would be with the same parameters.
 
-   With *is_progress* set to ``True``, a :token:`progress_suffix` ``'...'`` is included in the message when the context
-   is entered. In addition, a message ``'done.`` or ``'failed with E.'`` is output when the context is exited without or
-   with an exception, respectively.
+   With *is_progress* set to ``True``, a :token:`progress_suffix <diagmessage:progress_suffix>` ``'...'`` is included in
+   the message when the context is entered. In addition, a message ``'done.`` or ``'failed with E.'`` is output when the
+   context is exited without or with an exception, respectively.
    See :ref:`dlb-di-message-example`.

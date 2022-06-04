@@ -370,12 +370,12 @@ def _show_summary(summaries: List[Tuple[datetime.datetime, int, int, int]]):
     else:
         msg = f'duration: {di.format_time_ns(duration_ns)} s\n'
 
-    msg += '    start  \tseconds  \truns\b  redos\b'
+    msg += '  start  \tseconds  \truns\b  redos\b'
     for i, (start_time, duration_ns, runs, redos) in enumerate(summaries):
         current_mark = '*' if i == len(summaries) - 1 else ''
         start_time = start_time.isoformat() + 'Z'
         duration_ns = di.format_time_ns(duration_ns)
-        msg += f'\n    {start_time}{current_mark}  \t{duration_ns}  \t{runs}\b  {redos}\b'
+        msg += f'\n  {start_time}{current_mark}  \t{duration_ns}  \t{runs}\b  {redos}\b'
         if runs > 0:
             redo_ratio_percent = 100 * redos / runs
             msg += f' ({redo_ratio_percent:.1f}%)\b'

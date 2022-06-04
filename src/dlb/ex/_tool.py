@@ -286,11 +286,11 @@ class _ToolBase:
                             memo, last_encoded_memo, encoded_path in encoded_paths_of_explicit_input_dependencies)
                         if redo_reason is not None:
                             path = _rundb.decode_encoded_path(encoded_path)
-                            msg = (
+                            di.inform(
                                 f"redo necessary because of filesystem object: {path.as_string()!r}\n"
-                                f"    reason: {redo_reason}"
+                                f"  reason: {redo_reason}",
+                                level=cf.level.redo_reason
                             )
-                            di.inform(msg, level=cf.level.redo_reason)
                             needs_redo = True
                             break
                         # TODO redo if mtime of true input not in the past (G-D4)

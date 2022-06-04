@@ -30,8 +30,11 @@ def summarize_context():
         VERSION_PARAMETERS_BY_EXECUTABLE=version_parameters_by_executable
     ).start().version_by_path
 
-    executable_lines = [
-        f'    {k.as_string()!r}: \t{v.as_string()!r} \t{version_by_path[v] if v in version_by_path else "?"}'
-        for k, v in sorted(dlb.ex.Context.active.helper.items()) if not k.is_dir()
-    ]
-    dlb.di.inform('\n'.join(['used executables:'] + executable_lines))
+    dlb.di.inform('\n'.join(
+        [
+            'used executables:'
+        ] + [
+            f'  {k.as_string()!r}: \t{v.as_string()!r} \t{version_by_path[v] if v in version_by_path else "?"}'
+            for k, v in sorted(dlb.ex.Context.active.helper.items()) if not k.is_dir()
+        ]
+    ))

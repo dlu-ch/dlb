@@ -52,9 +52,9 @@ class GetLevelMarkerTest(unittest.TestCase):
 class FormatMessageTest(unittest.TestCase):
     
     def format_info_message(self, message):
-        return dlb.di.format_message(message, dlb.di.INFO)
+        return dlb.di.format_message(message, level=dlb.di.INFO)
 
-    def test_fails_on_empty(self):
+    def test_fails_for_empty(self):
         with self.assertRaises(ValueError) as cm:
             self.format_info_message('')
         msg = "'message' must contain at least one non-empty line"
@@ -86,39 +86,77 @@ class FormatMessageTest(unittest.TestCase):
         )
         self.assertEqual(msg, str(cm.exception))
 
-    def test_removed_empty_lines_before_and_after(self):
-        m = self.format_info_message('   \n \n\n \na  \n    b\n\n   \n')
+    def test_fails_for_leading_bs(self):
+        with self.assertRaises(ValueError) as cm:
+            self.format_info_message(' \babc')
+        msg = "first non-empty line in 'message' must not start with character '\\x08'"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_fails_for_trailing_bs(self):
+        with self.assertRaises(ValueError) as cm:
+            self.format_info_message('abc\b ')
+        msg = "first non-empty line in 'message' must not end with '\\x08'"
+        self.assertEqual(msg, str(cm.exception))
+
+    def test_removes_empty_lines_before_and_after(self):
+        m = self.format_info_message('   \n \n\n \na  \n  b\n\n   \n')
         self.assertEqual("I a \n  | b", m)
 
-        m = self.format_info_message('   \r\n \r\n\r\n \r\na  \r\n    b\r\n\r\n   \r\n')
+        m = self.format_info_message('   \r\n \r\n\r\n \r\na  \r\n  b\r\n\r\n   \r\n')
         self.assertEqual("I a \n  | b", m)
 
-        m = self.format_info_message('   \r \r\r \ra  \r    b\r\r   \r')
+        m = self.format_info_message('   \r \r\r \ra  \r  b\r\r   \r')
         self.assertEqual("I a \n  | b", m)
 
-    def test_removed_empty_lines_between(self):
-        m = self.format_info_message('a\n\n\n    b\n    c')
-        self.assertEqual("I a \n  | b \n  | c", m)
+    def test_removes_empty_lines_between(self):
+        m = self.format_info_message(
+            """
+            bla
+              a
+              b
+                \t
+                       
+
+              c
+              d
+
+              e
+            """)
+        self.assertEqual(
+            'I bla \n'
+            '  | a \n'
+            '  | b \n'
+            '  | \n'
+            '  | c \n'
+            '  | d \n'
+            '  | \n'
+            '  | e',
+            m
+        )
 
     def test_unindents(self):
         m = self.format_info_message(
             """
             bla
-                a
-                b
+              a
+              b
             """)
-        self.assertEqual("I bla \n  | a \n  | b", m)
+        self.assertEqual(
+            "I bla \n"
+            "  | a \n"
+            "  | b",
+            m)
 
     def test_fails_for_underindented(self):
         with self.assertRaises(ValueError) as cm:
             self.format_info_message(
                 """
                 bla
-                    x
+                  x
                  y 
                 """)
         msg = (
-            "each continuation line in 'message' must be indented at least 4 spaces more than "
+            "each continuation line in 'message' must be indented at least 2 spaces more than "
             "the first non-empty line, unlike line 4"
         )
         self.assertEqual(msg, str(cm.exception))
@@ -127,7 +165,7 @@ class FormatMessageTest(unittest.TestCase):
             self.format_info_message(
                 """
                 bla
-                    x
+                  x
                y 
                 """)
         self.assertEqual(msg, str(cm.exception))
@@ -135,25 +173,47 @@ class FormatMessageTest(unittest.TestCase):
     def test_fails_for_reserved_start(self):
         with self.assertRaises(ValueError) as cm:
             self.format_info_message("'hehe'")
-        msg = "first non-empty line in 'message' must not start with reserved character \"'\""
+        msg = "first non-empty line in 'message' must not start with character \"'\""
         self.assertEqual(msg, str(cm.exception))
 
     def test_field_are_justified(self):
         m = self.format_info_message(
             """
-            a\tb33\t100\b
-                a2\tb2\t10\b
-                a33\tb\t1\b
+            a\tb33\t100\b:
+              a2\tb2\t10\b
+              a33\tb\t1\b
             """)
-        self.assertEqual('I a    b33100 \n  | a2 b2  10 \n  | a33b    1', m)
+        self.assertEqual(
+            'I a    b33100: \n'
+            '  | a2 b2  10 \n'
+            '  | a33b    1',
+            m
+        )
 
         m = self.format_info_message(
             """
             table:
-                a:\t A =\b 1\b
-                b2:\t B =\b 23\b
+              a:\t A =\b 1\b
+              b2:\t B =\b 23\b
             """)
-        self.assertEqual('I table: \n  | a:  A =  1 \n  | b2: B = 23', m)
+        self.assertEqual(
+            'I table: \n'
+            '  | a:  A =  1 \n'
+            '  | b2: B = 23',
+            m
+        )
+
+    def test_field_do_no_introduce_trailing_space(self):
+        m = self.format_info_message(
+            """
+            :
+              a  \b
+            """)
+        self.assertEqual(
+            'I : \n'
+            '  | a',
+            m
+        )
 
     def test_fails_for_dot_at_end_of_first_line(self):
         with self.assertRaises(ValueError) as cm:
@@ -165,6 +225,66 @@ class FormatMessageTest(unittest.TestCase):
             self.format_info_message("done.")
         msg = "first non-empty line in 'message' must not end with '.'"
         self.assertEqual(msg, str(cm.exception))
+
+    def test_continuation_lines_can_be_overidented(self):
+        m = self.format_info_message(
+            """
+            title:
+              first
+                  second                
+            """)
+        self.assertEqual(
+            'I title: \n'
+            '  | first \n'
+            '  |     second',
+            m
+        )
+
+
+class FormatMessagedDataTest(unittest.TestCase):
+
+    def test_removes_trailing_whitespace(self):
+        m = dlb.di.format_message('data:', ' a ', '    ', 'b\t', level=dlb.di.INFO)
+        self.assertEqual('I data: \n  |  a \n  | \n  | b', m)
+
+    def test_keeps_empty_lines_before(self):
+        m = dlb.di.format_message('data:', '', 'a', level=dlb.di.INFO)
+        self.assertEqual('I data: \n  | \n  | a', m)
+
+    def test_removes_empty_lines_after(self):
+        m = dlb.di.format_message('data:', 'a', '', '', level=dlb.di.INFO)
+        self.assertEqual('I data: \n  | a', m)
+
+    def test_removes_empty_lines_between(self):
+        m = dlb.di.format_message('data:', 'a', '', '   ', '\t', '', '', 'b', level=dlb.di.INFO)
+        self.assertEqual('I data: \n  | a \n  | \n  | b', m)
+
+    def test_uses_repr_for_nonstrings(self):
+        class T:
+            def __str__(self):
+                return 'str'
+
+            def __repr__(self):
+                return 'repr'
+
+        m = dlb.di.format_message('data:', 1, [T(), False, None], level=dlb.di.INFO)
+        self.assertEqual(f'I data: \n  | {1!r} \n  | {[T(), False, None]!r}', m)
+
+    def test_silently_replaces_ascii_control_characters_by_space(self):
+        class T:
+            def __repr__(self):
+                return '\0re\b\tpr\x02\x03'
+
+        m = dlb.di.format_message('data:', '\0s\b\ttr\x02\x03', T(), level=dlb.di.INFO)
+        self.assertEqual(f'I data: \n  |  s  tr \n  |  re  pr', m)
+
+    def test_allows_multiline_strings(self):
+        class T:
+            def __repr__(self):
+                return 're\npr\n'
+
+        m = dlb.di.format_message('data:', '\n\ns\n\nt\nr\n', T(), level=dlb.di.INFO)
+        self.assertEqual(f'I data: \n  | \n  | s \n  | \n  | t \n  | r \n  | re \n  | pr', m)
 
 
 class MessageThresholdTest(unittest.TestCase):
@@ -228,7 +348,7 @@ class ClusterTest(unittest.TestCase):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
-        c = dlb.di.Cluster('A\n    a')
+        c = dlb.di.Cluster('A\n  a')
         self.assertEqual('', output.getvalue())  # does not output anything
 
         with c as cr:
@@ -335,7 +455,7 @@ class ClusterTest(unittest.TestCase):
         output = io.StringIO()
         dlb.di.set_output_file(output)
 
-        regex = re.compile(r"(?m)(.|\n)* \[\+(?P<time>[0-9.]+)s\]\n\Z")
+        regex = re.compile(r"(?m)(.|\n)* \[\+(?P<time>[\d.]+)s]\n\Z")
 
         with dlb.di.Cluster('A', with_time=True, is_progress=True):
             s = output.getvalue()
@@ -360,7 +480,7 @@ class InformTest(unittest.TestCase):
     def test_output_without_cluster_is_not_indented(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        self.assertTrue(dlb.di.inform('M\n    m'))
+        self.assertTrue(dlb.di.inform('M\n  m'))
 
         self.assertEqual('I M \n  | m\n', output.getvalue())
 
@@ -369,7 +489,7 @@ class InformTest(unittest.TestCase):
         dlb.di.set_output_file(output)
 
         with dlb.di.Cluster('A'):
-            self.assertTrue(dlb.di.inform('M\n    m'))
+            self.assertTrue(dlb.di.inform('M\n  m'))
             self.assertEqual('I A\n  I M \n    | m\n', output.getvalue())
 
         dlb.di.set_threshold_level(dlb.di.WARNING)
@@ -379,19 +499,19 @@ class InformTest(unittest.TestCase):
 
         with dlb.di.Cluster('A'):
             with dlb.di.Cluster('B'):
-                self.assertTrue(dlb.di.inform('M\n    m', level=dlb.di.WARNING))
+                self.assertTrue(dlb.di.inform('M\n  m', level=dlb.di.WARNING))
                 self.assertEqual('I A\n  I B\n    W M \n      | m\n', output.getvalue())
 
     def test_suppresses_below_threshold(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        self.assertFalse(dlb.di.inform('M\n    m', level=dlb.di.DEBUG))
+        self.assertFalse(dlb.di.inform('M\n  m', level=dlb.di.DEBUG))
         self.assertEqual('', output.getvalue())
 
     def test_timing_information_is_correct(self):
         output = io.StringIO()
         dlb.di.set_output_file(output)
-        self.assertTrue(dlb.di.inform('M\n    m', with_time=True))
+        self.assertTrue(dlb.di.inform('M\n  m', with_time=True))
         self.assertRegex(output.getvalue(), r'\A()I M \[\+0\.0{1,9}s\] \n  \| m\n\Z')
 
 
@@ -410,8 +530,8 @@ class UsageExampleTest(unittest.TestCase):
             dlb.di.inform(
                 """
                 summary
-                    first\t  1\t
-                    second\t 200\t
+                  first\t  1\t
+                  second\t 200\t
                 """)
 
         self.assertEqual('D title\n  I summary \n    | first   1 \n    | second 200\n', output.getvalue())
@@ -423,16 +543,16 @@ class UsageExampleTest(unittest.TestCase):
         rom_max = 128
         logfile = dlb.fs.Path('out/linker.log')
 
-        with dlb.di.Cluster(f"analyze memory usage\n    see {logfile.as_string()!r} for details",
+        with dlb.di.Cluster(f"analyze memory usage\n  see {logfile.as_string()!r} for details",
                             is_progress=True):
-            ram, rom, emmc = (12, 108, 512)
+            ram, rom, emmc = 12, 108, 512
 
             dlb.di.inform(
                 f"""
                 in use:
-                    RAM:\t {ram}\b kB
-                    ROM (NOR flash):\t {rom}\b kB
-                    eMMC:\t {emmc}\b kB
+                  RAM:\t {ram}\b kB
+                  ROM (NOR flash):\t {rom}\b kB
+                  eMMC:\t {emmc}\b kB
                 """)
 
             if rom > 0.8 * rom_max:
@@ -451,6 +571,29 @@ class UsageExampleTest(unittest.TestCase):
         self.assertEqual(o, output.getvalue())
 
     def test_example3(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        ram, rom, emmc = 12, 108, 512
+        dlb.di.inform(
+            f"""
+            memory usage:
+              RAM:\t {ram}\b kB
+              ROM (NOR flash):\t {rom}\b kB
+              eMMC:\t {emmc}\b kB
+            """)
+        o = (
+            "I memory usage: \n"
+            "  | RAM:              12 kB \n"
+            "  | ROM (NOR flash): 108 kB \n"
+            "  | eMMC:            512 kB\n"
+        )
+        self.assertEqual(o, output.getvalue())
+
+    def test_example4(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
         # https://en.wikipedia.org/wiki/Halstead_complexity_measures
         metrics = [
             ('volume', 'V', 1.7, ''),
@@ -458,13 +601,42 @@ class UsageExampleTest(unittest.TestCase):
             ('difficulty', 'D', 12.8, '')
         ]
 
-        m = ''.join(f"\n    {n}:\t {s} =\b {v}\b{u}" for n, s, v, u in metrics)
-        s = dlb.di.format_message('Halstead complexity measures:' + m, dlb.di.INFO)
+        dlb.di.inform('\n'.join(
+            [f'Halstead complexity measures:'] +
+            [f'  {n}:\t {s} =\b {v}\b{u}' for n, s, v, u in metrics]
+        ))
 
         o = (
-            "I Halstead complexity measures: \n" 
-            "  | volume:               V =   1.7 \n" 
-            "  | programming required: T = 127.3 s \n"
-            "  | difficulty:           D =  12.8"
+            'I Halstead complexity measures: \n' 
+            '  | volume:               V =   1.7 \n' 
+            '  | programming required: T = 127.3 s \n'
+            '  | difficulty:           D =  12.8\n'
         )
-        self.assertEqual(o, s)
+        self.assertEqual(o, output.getvalue())
+
+    def test_example5(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        missing_paths = [dlb.fs.Path('src/'), dlb.fs.Path('build/out/src/generated/')]
+        dlb.di.inform('missing:', *missing_paths, level=dlb.di.ERROR)
+        o = (
+            "E missing: \n"
+            "  | Path('src/') \n"
+            "  | Path('build/out/src/generated/')\n"
+        )
+        self.assertEqual(o, output.getvalue())
+
+    def test_example6(self):
+        output = io.StringIO()
+        dlb.di.set_output_file(output)
+
+        dlb.di.inform('summary:', 1, 'multi-\nline\x1Ftext', [{2}, False, '?'], level=dlb.di.ERROR, with_time=True)
+        o = (
+            'E summary: [+0.000000s] \n'
+            '  | 1 \n'
+            '  | multi- \n'
+            '  | line text \n'
+            "  | [{2}, False, '?']\n"
+        )
+        self.assertEqual(o, output.getvalue())
