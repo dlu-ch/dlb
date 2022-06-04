@@ -506,12 +506,12 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
             with self.assertRaises(ValueError) as cm:
                 rd.replace_output('a/b', 'c/')
-            msg = "cannot replace non-directory by directory: 'a/b'"
+            msg = "cannot replace non-directory 'a/b' by directory: 'c/'"
             self.assertEqual(msg, str(cm.exception))
 
             with self.assertRaises(ValueError) as cm:
                 rd.replace_output('c/', 'a/b')
-            msg = "cannot replace directory by non-directory: 'c/'"
+            msg = "cannot replace directory 'c/' by non-directory: 'a/b'"
             self.assertEqual(msg, str(cm.exception))
 
     def test_fails_if_source_does_not_exist(self):
@@ -523,7 +523,7 @@ class ReplaceOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 rd.replace_output('a/b', dlb.fs.Path('a/b'))
             regex = (
                 r"(?m)\A"
-                r"'source' is not a permitted working tree path of an existing filesystem object: 'a/b'\n"
+                r"cannot replace 'a/b' by nonexistent or invalid source\n"
                 r"  \| reason: .*\Z"
             )
             self.assertRegex(str(cm.exception), regex)

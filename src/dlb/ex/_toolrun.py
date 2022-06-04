@@ -304,9 +304,9 @@ class RedoContext(_context.ReadOnlyContext):
 
         if path.is_dir() != source.is_dir():
             if path.is_dir():
-                msg = f"cannot replace directory by non-directory: {path.as_string()!r}"
+                msg = f"cannot replace directory {path.as_string()!r} by non-directory: {source.as_string()!r}"
             else:
-                msg = f"cannot replace non-directory by directory: {path.as_string()!r}"
+                msg = f"cannot replace non-directory {path.as_string()!r} by directory: {source.as_string()!r}"
             raise ValueError(msg)
 
         try:
@@ -315,8 +315,7 @@ class RedoContext(_context.ReadOnlyContext):
             if e.oserror is not None:
                 e = e.oserror
             msg = (
-                f"'source' is not a permitted working tree path of an existing filesystem object: "
-                f"{source.as_string()!r}\n"
+                f"cannot replace {path.as_string()!r} by nonexistent or invalid source\n"
                 f"  | reason: {ut.exception_to_line(e)}"
             )
             raise ValueError(msg) from None
