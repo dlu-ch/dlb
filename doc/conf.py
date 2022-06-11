@@ -223,7 +223,7 @@ man_pages = [
 
 # -- Options for sphinx.ext.intersphinx -----------------------------------
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/3.7', None)}
 
 # -- Options for sphinx.ext.extlinks --------------------------------------
 
