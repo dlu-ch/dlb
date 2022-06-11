@@ -1,0 +1,110 @@
+name: build
+# Keep *name* short. It is used as the title of the workflow status badge.
+
+on:
+  push: []
+  schedule:
+  - cron: '45 19 * * 5'  # every Friday at 19:45
+
+jobs:
+  test:  # job_id
+    name: >
+      Python ${{ matrix.python-version }}
+      on ${{ matrix.os }}
+      ${{ matrix.is-default == true && '[default]' || '' }}
+      ${{ matrix.do-accept-deprecation != true && '[fail on deprecation warning]' || '' }}
+      ${{ matrix.is-experimental == true && '[may fail]' || '' }}
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    continue-on-error: ${{ matrix.is-experimental == true }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: 'ubuntu-20.04'
+            python-version: '3.9'
+            is-default: true  # only job with 'default' set
+
+          - os: 'ubuntu-20.04'
+            python-version: '3.7.1'
+            # oldest Python 3.7.x available in https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+          - os: 'ubuntu-20.04'
+            python-version: '3.7'
+          - os: 'ubuntu-20.04'
+            python-version: '3.8'
+
+          - os: 'ubuntu-20.04'
+            python-version: '3.10'
+            do-accept-deprecation: true
+
+          - os: 'ubuntu-20.04'
+            python-version: '3.11.0-alpha - 3.11.0'
+            do-accept-deprecation: true
+            is-experimental: true
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: pip install coverage==6.4.1 coveralls==3.3.1
+    - name: Run tests
+      run: bash run-tests.bash dlb
+      env:
+        PYTHON3COVERAGE: coverage3
+        PYTHONWARNINGS: ${{ matrix.do-accept-deprecation == true && 'default::DeprecationWarning,default::PendingDeprecationWarning' || '' }}
+    - name: Upload test coverage data
+      if: matrix.is-default && (github.ref_type != 'branch' || github.ref == 'refs/heads/master')
+      uses: actions/upload-artifact@v3
+      with:
+        name: .coverage-dlb
+        path: test/dlb/.coverage
+
+  upload-test-coverage-of-default:
+    name: Upload test coverage data to coveralls.io
+    if: github.ref_type != 'branch' || github.ref == 'refs/heads/master'
+    needs: test
+
+    runs-on: 'ubuntu-20.04'
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+    - name: Install dependencies
+      run: pip install coveralls==3.3.1
+    - name: Download test coverage data
+      uses: actions/download-artifact@v3
+      with:
+        name: .coverage-dlb
+        path: test/dlb  # will contain all extracted files artifact
+    - name: Upload test coverage data to coveralls.io
+      run: coveralls --service=github  # needs Git working directory
+      working-directory: test/dlb
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-package:  # job_id
+    name: Build Python wheel and .zip
+
+    runs-on: 'ubuntu-20.04'
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # all commits, branches, and tags
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+    - name: Install dependencies
+      run: pip install wheel==0.37.1
+    - name: Build package
+      run: bash build-package.bash
