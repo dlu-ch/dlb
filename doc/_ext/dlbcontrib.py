@@ -440,7 +440,7 @@ class PySubModule(sphinx.directives.SphinxDirective):
 
             # make a duplicate entry in 'objects' to facilitate searching for the module in PythonDomain.find_obj()
             self.env.domaindata['py']['objects'][fq_modname] = sphinx.domains.python.ObjectEntry(
-                docname=self.env.docname, node_id=module_id, objtype='module'
+                docname=self.env.docname, node_id=module_id, objtype='module', aliased=False
             )
 
             signode['names'].append(fq_modname)
@@ -485,7 +485,7 @@ class PySubModule(sphinx.directives.SphinxDirective):
                 # make tool class a cross-reference target (:class:`xxx`)
                 objects = self.env.domaindata['py']['objects']
                 objects[fullname] = sphinx.domains.python.ObjectEntry(
-                    docname=self.env.docname, node_id=node_id, objtype='class'
+                    docname=self.env.docname, node_id=node_id, objtype='class', aliased=False
                 )
 
                 # use this module as link target for tool class
