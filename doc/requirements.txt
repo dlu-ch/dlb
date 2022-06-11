@@ -1,11 +1,12 @@
 # Referenced by '.readthedocs.yml' and 'build-doc.bash'.
 
-Sphinx==2.4.5
+Sphinx==3.0.0
 Sphinx>=2.0.0; python_version<'3.5'  # https://pypi.org/project/Sphinx/2.0.0/
 Sphinx>=1.8.0; python_version<'3.4'  # https://pypi.org/project/Sphinx/1.8.0/
 
 Jinja2<3
 MarkupSafe<2
+docutils<0.18
 
 # resulting:
 alabaster==0.7.12

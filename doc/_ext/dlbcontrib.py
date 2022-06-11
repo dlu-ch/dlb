@@ -27,13 +27,13 @@ assert not DOCSTRING_REGEX.match('a.b')
 assert DOCSTRING_REGEX.match('a. b').group('summary') == 'a.'
 assert DOCSTRING_REGEX.match('a.b.\nc').group('summary') == 'a.b.'
 
-LICENSE_REGEX = re.compile(r'^ SPDX-License-Identifier: (?P<license>[A-Za-z][A-Za-z_0-9.-]+)$')
+LICENSE_REGEX = re.compile(r'^ SPDX-License-Identifier: (?P<license>[A-Za-z][A-Za-z_\d.-]+)$')
 assert LICENSE_REGEX.match(' SPDX-License-Identifier: LGPL-3.0-or-later').group('license') == 'LGPL-3.0-or-later'
 
 DEFINITION_REGEX = re.compile(r'^ (?P<name>[^:]+): +(?P<value>.+)$')
 assert DEFINITION_REGEX.match(' Git: https://git-scm.com/')
 
-URL_REGEX = re.compile(r'(?P<before>^|\W)<(?P<url>[A-Za-z][A-Za-z0-9+-.]*://[^<>\s]+)>(?P<after>\W|$)')
+URL_REGEX = re.compile(r'(?P<before>^|\W)<(?P<url>[A-Za-z][A-Za-z\d+-.]*://[^<>\s]+)>(?P<after>\W|$)')
 assert URL_REGEX.search('<https://x>')
 assert not URL_REGEX.search('<https://a.b.c/<>')
 assert not URL_REGEX.search('<https://a.b .c/>')
@@ -275,8 +275,10 @@ class PySubModule(sphinx.directives.SphinxDirective):
                     line = line.rstrip()
                     if line:
                         if line[:len(indentation)] != indentation:
-                            msg = f"usage example in second comment block in module {fq_modname!r} not properly indented"
-                            raise self.error(msg)
+                            raise self.error(
+                                f"usage example in second comment block in module {fq_modname!r} "
+                                f"not properly indented"
+                            )
                         line = line[len(indentation):]
                     dedented_usage_example.append(line)
                 i += 1
@@ -396,7 +398,7 @@ class PySubModule(sphinx.directives.SphinxDirective):
         modname = self.arguments[0].strip()
         fq_modname = (parent_modname and parent_modname + '.' or '') + modname
 
-        fq_modname_regex = re.compile(r'^[A-Za-z_][A-Za-z_0-9]*(\.[A-Za-z_][A-Za-z_0-9]*)*$')
+        fq_modname_regex = re.compile(r'^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$')
         if not fq_modname_regex.match(fq_modname):
             raise self.error(f'invalid module name: {fq_modname!r}')
 
@@ -425,17 +427,19 @@ class PySubModule(sphinx.directives.SphinxDirective):
         if 'noindex' not in self.options:
             synopsis = summary.description.rstrip('.')
             platform = ''  # shown in module index
+            module_id = 'module-' + fq_modname
 
             self.env.domaindata['py']['modules'][fq_modname] = (
                 self.env.docname,
+                module_id,
                 synopsis,
                 platform,
-                'deprecated' in self.options
+                'deprecated' in self.options,
             )
-            # make a duplicate entry in 'objects' to facilitate searching for the module in PythonDomain.find_obj()
-            self.env.domaindata['py']['objects'][fq_modname] = (self.env.docname, 'module')
 
-            module_id = 'module-' + fq_modname
+            # make a duplicate entry in 'objects' to facilitate searching for the module in PythonDomain.find_obj()
+            self.env.domaindata['py']['objects'][fq_modname] = (self.env.docname, module_id, 'module')
+
             signode['names'].append(fq_modname)
             signode['ids'].append(module_id)
             signode['first'] = False
@@ -456,7 +460,7 @@ class PySubModule(sphinx.directives.SphinxDirective):
 
             moduleinfo_by_modname = \
                 self.env.domaindata[DOMAIN_NAME].get('moduleinfo_by_modname', collections.OrderedDict())
-            if not fq_modname in moduleinfo_by_modname:
+            if fq_modname not in moduleinfo_by_modname:
                 moduleinfo_by_modname[fq_modname] = ModuleInfo(
                     docname=self.env.docname,
                     id=module_id,
@@ -470,13 +474,14 @@ class PySubModule(sphinx.directives.SphinxDirective):
                 # in sphinx.domains.python
                 indextext = _(f'{name} (class in {fq_modname})')
                 fullname = (fq_modname and fq_modname + '.' or '') + name
+                node_id = sphinx.util.nodes.make_id(self.env, self.state.document, '', fullname)
 
                 # add tool class to index
                 self.indexnode['entries'].append(('single', indextext, fullname, '', None))
 
                 # make tool class a cross-reference target (:class:`xxx`)
                 objects = self.env.domaindata['py']['objects']
-                objects[fullname] = (self.env.docname, 'class')
+                objects[fullname] = (self.env.docname, node_id, 'class')
 
                 # use this module as link target for tool class
                 signode['ids'].append(fullname)
@@ -537,7 +542,7 @@ def process_moduleindex_nodes(app, doctree, fromdocname):
         content.append(table_from_header_texts_and_rows_of_paragraphs(
             header_row_texts=['Module', 'Executables (dynamic helpers)', 'Tool classes'],
             paragraphs_in_rows=paragraphs_in_rows,
-            rel_col_widths = [3, 2, 3]
+            rel_col_widths=[3, 2, 3]
         ))
 
         node.replace_self(content)
