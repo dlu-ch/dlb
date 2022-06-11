@@ -68,7 +68,8 @@ fi
     "${RM:?}" -rf -- "./${doc_to_root:?}/${sphinx_out_dir:?}"
     sphinx_args=("-d" "./${doc_to_root:?}/${sphinx_out_dir:?}/doctrees")
     for builder in "${builders[@]}"; do
-        "${sphinxbuild_file:?}" "${sphinx_args[@]}" -b "${builder:?}" \
+        # use -n to overrule 'nitpicky' in 'conf.py', so readthedocs can treat warnings as errors
+        "${sphinxbuild_file:?}" "${sphinx_args[@]}" -b "${builder:?}" -n \
             -D graphviz_dot="${dot_file:?}" \
             . "./${doc_to_root:?}/${sphinx_out_dir:?}/${builder:?}"
     done

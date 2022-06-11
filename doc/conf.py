@@ -110,7 +110,7 @@ todo_include_todos = False
 
 # If true, Sphinx will warn about all references where the target cannot be found.
 # Use command-line argument '-n' to act as if True.
-nitpicky = True
+nitpicky = False
 
 # -- Options for HTML output ----------------------------------------------
 
