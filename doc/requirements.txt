@@ -1,19 +1,18 @@
 # Referenced by '.readthedocs.yml' and 'build-doc.bash'.
 
-Sphinx==3.0.0
+Sphinx==3.5.4
 Sphinx>=2.0.0; python_version<'3.5'  # https://pypi.org/project/Sphinx/2.0.0/
 Sphinx>=1.8.0; python_version<'3.4'  # https://pypi.org/project/Sphinx/1.8.0/
 
 Jinja2<3
 MarkupSafe<2
-docutils<0.18
 
 # resulting:
 alabaster==0.7.12
 Babel==2.10.1
 certifi==2022.5.18.1
 charset-normalizer==2.0.12
-docutils==0.17.1
+docutils==0.16
 idna==3.3
 imagesize==1.3.0
 Jinja2==2.11.3
