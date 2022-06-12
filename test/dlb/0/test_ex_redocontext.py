@@ -233,6 +233,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.cf.level.helper_execution = dlb.di.INFO
 
             with dlb.ex.Context() as c:
+                ls_files = c.helper['ls']
                 rd = dlb.ex._toolrun.RedoContext(c, dict())
                 e = rd.execute_helper('ls', ['-l'], stdout_output=False)
 
@@ -241,11 +242,11 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
                 asyncio.get_event_loop().run_until_complete(e)
 
             msg = (
-                "I execute helper 'ls' \n" 
-                "  | path:        '/bin/ls' \n" 
-                "  | arguments:   '-l' \n"
-                "  | directory:   './' \n"
-                "  | environment: {}\n"
+                f"I execute helper 'ls' \n" 
+                f"  | path:        {ls_files.as_string()!r} \n" 
+                f"  | arguments:   '-l' \n"
+                f"  | directory:   './' \n"
+                f"  | environment: {{}}\n"
             )
             self.assertEqual(msg, output.getvalue())
 
