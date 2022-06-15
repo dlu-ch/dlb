@@ -850,7 +850,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
         module_file_name = f'{module_name}.py'
 
-        with open(os.path.join(module_file_name), 'x') as f:
+        with open(module_file_name, 'x') as f:
             f.write(
                 'import dlb.ex\n'
                 'class A(dlb.ex.Tool): pass\n'
@@ -1166,8 +1166,8 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
 
         os.mkdir('a')
-        open(os.path.join('a/__init__.py'), 'x').close()
-        with open(os.path.join('a/u.py'), 'x') as f:
+        open(os.path.join('a', '__init__.py'), 'x').close()
+        with open(os.path.join('a', 'u.py'), 'x') as f:
             f.write(
                 'import dlb.ex\n'
                 'class A(dlb.ex.Tool): pass\n'
@@ -1175,12 +1175,12 @@ class ToolRegistryTest(testenv.TemporaryWorkingDirectoryTestCase):
                 'class C(A, B): pass\n'
             )
 
-        with open(os.path.join('v.py'), 'x') as f:
+        with open('v.py', 'x') as f:
             f.write(
                 'class D: pass\n'
             )
 
-        with open(os.path.join(f'{module_name}.py'), 'x') as f:
+        with open(f'{module_name}.py', 'x') as f:
             f.write(
                 'import a.u\n'
                 'import v\n'
