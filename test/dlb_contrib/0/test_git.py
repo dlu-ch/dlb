@@ -17,8 +17,12 @@ import unittest
 
 
 class PrepareGitRepo(dlb_contrib.sh.ShScriptlet):
+    # About name of default branch created by 'git init':
+    # As of Git 2.28, the command line option '--initial-branch' <branch-name> exists and a warning is issued
+    # if not given and configuration option 'init.DefaultBranch' not set.
+    # Setting this configuration option for Git 2.28 as well as for earlier versions and suppresses the warning.
     SCRIPTLET = """
-        git init
+        git -c init.DefaultBranch=master init
         git config user.email "dlu-ch@users.noreply.github.com"
         git config user.name "dlu-ch"
                 
@@ -55,8 +59,8 @@ class PrepareGitRepo(dlb_contrib.sh.ShScriptlet):
 # each annotated tag starting with 'v' followed by a decimal digit must match this (after 'v'):
 VERSION_REGEX = re.compile(
     r'^'
-    r'(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)\.(?P<micro>0|[1-9][0-9]*)'
-    r'((?P<post>[abc])(?P<post_number>0|[1-9][0-9]*))?'
+    r'(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<micro>0|[1-9]\d*)'
+    r'((?P<post>[abc])(?P<post_number>0|[1-9]\d*))?'
     r'$')
 
 
@@ -282,7 +286,7 @@ class GitDescribeWorkingDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase)
     def test_gitignore_can_hide_every_modification(self):
         class PrepareRepoWithHiddenModifications(dlb_contrib.sh.ShScriptlet):
             SCRIPTLET = """
-                git init
+                git -c init.DefaultBranch=master init
                 git config user.email "dlu-ch@users.noreply.github.com"
                 git config user.name "dlu-ch"
                 
@@ -398,7 +402,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         origin_repo_dir = os.path.abspath(tempfile.mkdtemp())
         with testenv.DirectoryChanger(origin_repo_dir):
-            subprocess.check_output(['git', 'init'])
+            subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
             subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
             subprocess.check_output(['git', 'config', 'user.name', 'user.name'])
             subprocess.check_output(['touch', 'x'])
@@ -414,7 +418,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
             subprocess.check_output(['git', 'tag', 'v'])
             subprocess.check_output(['git', 'tag', 'w'])
 
-        subprocess.check_output(['git', 'init'])
+        subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
         subprocess.check_output(['touch', 'x'])
         subprocess.check_output(['git', 'add', 'x'])
         subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
@@ -459,7 +463,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_example(self):
         origin_repo_dir = os.path.abspath(tempfile.mkdtemp())
         with testenv.DirectoryChanger(origin_repo_dir):
-            subprocess.check_output(['git', 'init'])
+            subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
             subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
             subprocess.check_output(['git', 'config', 'user.name', 'user.name'])
             subprocess.check_output(['touch', 'x'])
@@ -467,7 +471,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
             subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
             subprocess.check_output(['git', 'tag', '-a', 'v1.2.3', '-m', 'Release'])
 
-        subprocess.check_output(['git', 'init'])
+        subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
         subprocess.check_output(['git', 'remote', 'add', 'origin', origin_repo_dir])
         subprocess.check_output(['git', 'fetch'])
         subprocess.check_output(['git', 'fetch', '--tags'])
@@ -476,7 +480,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
             class GitCheckTags(dlb_contrib.git.GitCheckTags):
                 ANNOTATED_TAG_NAME_REGEX = r'v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){2}'  # e.g. 'v1.23.0'
             version_tag_names = set(GitCheckTags().start().commit_by_annotated_tag_name)
-            self.assertEquals({'v1.2.3'}, version_tag_names)
+            self.assertEqual({'v1.2.3'}, version_tag_names)
 
 
 @unittest.skipIf(not testenv.has_executable_in_path('git'), 'requires git in $PATH')

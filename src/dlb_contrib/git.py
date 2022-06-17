@@ -6,6 +6,7 @@
 
 # Git: <https://git-scm.com/>
 # Tested with: git 2.20.1
+# Tested with: git 2.30.2
 # Executable: 'git'
 #
 # Usage example:
