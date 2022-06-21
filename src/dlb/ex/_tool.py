@@ -9,6 +9,7 @@ __all__ = ['Tool']
 
 import re
 import os
+import types
 import collections
 import hashlib
 import inspect
@@ -40,12 +41,16 @@ ToolInfo = collections.namedtuple('ToolInfo', ('permanent_local_tool_id', 'defin
 
 
 def _classify_potential_method(value):
+    if isinstance(value, (classmethod, types.ClassMethodDescriptorType)):  # not yet bound (has no __self__)
+        return 'c', value.__func__  # as created by @classmethod
+
+    if isinstance(value, (staticmethod, types.BuiltinMethodType)):
+        # Python 3.7 .. 3.9: iscallable(value) is False
+        # Python 3.10 .. 3.11: iscallable(value) is True
+        return 's', value.__func__  # as created by @staticmethod
+
     if callable(value):
         return None, value
-    elif isinstance(value, classmethod):  # not yet bound (has no __self__)
-        return 'c', value.__func__  # as created by @classmethod
-    elif isinstance(value, staticmethod):
-        return 's', value.__func__  # as created by @staticmethod
 
 
 def _check_execution_parameter(name, value, defining_classes):

@@ -844,7 +844,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
         self.assertEqual(A.definition_location[0], os.path.realpath(__file__))
 
-    def test_fails_on_import_with_relative_search_path(self):
+    def test_potentially_fails_on_import_with_relative_search_path(self):
         module_name = 'single_use_module4'
         self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
 
@@ -854,6 +854,9 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
             f.write(
                 'import dlb.ex\n'
                 'class A(dlb.ex.Tool): pass\n'
+                'import os.path\n'
+                'definition_path, _, _ = A.definition_location\n'
+                'if not os.path.isabs(definition_path): raise ValueError("definition_location is relative")'
             )
 
         sys.path.insert(0, '.')  # !
@@ -867,10 +870,12 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                 r"  \| make sure the matching module search path is an absolute path "
                 r"when the defining module is imported\Z"
             )
-            with self.assertRaisesRegex(dlb.ex.DefinitionAmbiguityError, regex):
+            try:
                 spec = importlib.util.spec_from_file_location(module_name, module_file_name)
                 spec.loader.exec_module(importlib.util.module_from_spec(spec))
                 # for some reason 'import ...' works differently on Travis CI than local, so avoid it
+            except dlb.ex.DefinitionAmbiguityError as e:
+                self.assertRegex(str(e), regex)  # < Python 3.10
         finally:
             del sys.path[0]
 

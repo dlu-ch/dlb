@@ -40,14 +40,26 @@ class InheritanceTest(unittest.TestCase):
         self.assertTrue(issubclass(dlb.ex.OutputDependency, dlb.ex.Dependency))
 
     def test_all_in_input_are_input_dependencies(self):
-        for k, v in dlb.ex.input.__dict__.items():
+        classes = {v for v in dlb.ex.input.__dict__.values() if inspect.isclass(v)}
+
+        imported_classes = {v for v in classes if v.__module__ != 'dlb.ex.input'}
+        unknown_imported_class_names = {v.__qualname__ for v in imported_classes}
+        self.assertEqual(set(), unknown_imported_class_names)
+
+        for v in classes - imported_classes:
             if inspect.isclass(v):
-                self.assertTrue(issubclass(v, dlb.ex.InputDependency))
+                self.assertTrue(issubclass(v, dlb.ex.InputDependency), repr(f"{v.__module__}.{v.__qualname__}"))
 
     def test_all_in_output_are_input_dependencies(self):
-        for k, v in dlb.ex.output.__dict__.items():
+        classes = {v for v in dlb.ex.output.__dict__.values() if inspect.isclass(v)}
+
+        imported_classes = {v for v in classes if v.__module__ != 'dlb.ex.output'}
+        unknown_imported_class_names = {v.__qualname__ for v in imported_classes} - {'Any'}  # Python 3.11: Any
+        self.assertEqual(set(), unknown_imported_class_names)
+
+        for v in classes - imported_classes:
             if inspect.isclass(v):
-                self.assertTrue(issubclass(v, dlb.ex.OutputDependency))
+                self.assertTrue(issubclass(v, dlb.ex.OutputDependency), repr(f"{v.__module__}.{v.__qualname__}"))
 
 
 class BaseDependencyTest(unittest.TestCase):
