@@ -86,7 +86,8 @@ class TemporaryDirectoryWithChmodTestCase(TemporaryDirectoryTestCase):
             except OSError:
                 pass
             else:
-                self.assertNotEqual(os.name, 'posix', "on any POSIX system permission should be denied")
+                self.assertNotEqual(os.name, 'posix',
+                                    "on any POSIX system permission should be denied (without 'root' privileges)")
                 raise unittest.SkipTest
         finally:
             probe_dir.chmod(0o700)
