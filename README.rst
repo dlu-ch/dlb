@@ -3,7 +3,7 @@
 Explicit is better than implicit
 ================================
 
-|batch-unittest| |batch-doc| |batch-cov| |batch-pypi-python| |batch-pypi|
+|batch-buildtest| |batch-doc| |batch-cov| |batch-pypi-python| |batch-pypi|
 
 dlb is a `Pythonic <https://www.python.org/dev/peps/pep-0020/>`_
 `build tool <https://en.wikipedia.org/wiki/Build_tool>`_ that does not try to mimic
@@ -33,9 +33,9 @@ See here for more: https://dlb.readthedocs.io/.
    :alt: Build of C11 application
    :target: example/c-typical/build-all.py
 
-.. |batch-unittest| image:: https://travis-ci.com/dlu-ch/dlb.svg?branch=master
-   :alt: Build status (unittests)
-   :target: https://travis-ci.com/github/dlu-ch/dlb
+.. |batch-buildtest| image:: https://github.com/dlu-ch/dlb/actions/workflows/build-and-test.yml/badge.svg?branch=master
+   :alt: Build status (tests)
+   :target: https://github.com/dlu-ch/dlb/actions/workflows/build-and-test.yml
 
 .. |batch-doc| image:: https://readthedocs.org/projects/dlb/badge/?version=latest
    :alt: Documentation status (Sphinx)
