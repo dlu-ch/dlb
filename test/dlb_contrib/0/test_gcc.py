@@ -220,6 +220,7 @@ class CplusplusTest(testenv.TemporaryWorkingDirectoryTestCase):
 
 
 @unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
 class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     # noinspection PyPep8Naming
@@ -302,6 +303,7 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 
 
 @unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipIf(not testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
