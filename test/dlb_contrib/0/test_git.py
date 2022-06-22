@@ -404,7 +404,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
         with testenv.DirectoryChanger(origin_repo_dir):
             subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
             subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
-            subprocess.check_output(['git', 'config', 'user.name', 'user.name'])
+            subprocess.check_output(['git', 'config', 'user.name', 'dlu-ch'])
             subprocess.check_output(['touch', 'x'])
             subprocess.check_output(['git', 'add', 'x'])
             subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
@@ -419,6 +419,8 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
             subprocess.check_output(['git', 'tag', 'w'])
 
         subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
+        subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
+        subprocess.check_output(['git', 'config', 'user.name', 'dlu-ch-alias'])
         subprocess.check_output(['touch', 'x'])
         subprocess.check_output(['git', 'add', 'x'])
         subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
@@ -465,7 +467,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
         with testenv.DirectoryChanger(origin_repo_dir):
             subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
             subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
-            subprocess.check_output(['git', 'config', 'user.name', 'user.name'])
+            subprocess.check_output(['git', 'config', 'user.name', 'dlu-ch'])
             subprocess.check_output(['touch', 'x'])
             subprocess.check_output(['git', 'add', 'x'])
             subprocess.check_output(['git', 'commit', '-m', 'Initial commit'])
