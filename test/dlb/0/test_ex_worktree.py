@@ -206,7 +206,9 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
 
     def test_return_stat_and_target_for_existing_directory_for_str(self):
         os.mkdir('d')
+        orig_mode = os.stat('d').st_mode
         os.chmod('d', 0x000)
+
         try:
             try:
                 os.symlink('d' + os.path.sep, 's', target_is_directory=True)
@@ -222,11 +224,13 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
             self.assertEqual(sr0.st_mode, m.stat.mode)
             self.assertEqual(m.symlink_target, 'd' + os.path.sep)
         finally:
-            os.chmod('d', 0x777)
+            os.chmod('d', orig_mode)  # would raise PermissionError on FreeBSD if more permissive than initially
 
     def test_return_stat_and_target_for_existing_directory_for_path(self):
         os.mkdir('d')
+        orig_mode = os.stat('d').st_mode
         os.chmod('d', 0x000)
+
         try:
             try:
                 os.symlink('d' + os.path.sep, 's', target_is_directory=True)
@@ -243,7 +247,7 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
             self.assertIsInstance(m.symlink_target, str)
             self.assertEqual(m.symlink_target, 'd' + os.path.sep)
         finally:
-            os.chmod('d', 0x777)
+            os.chmod('d', orig_mode)  # would raise PermissionError on FreeBSD if more permissive than initially
 
 
 class NormalizeDotDotWithoutReference(unittest.TestCase):

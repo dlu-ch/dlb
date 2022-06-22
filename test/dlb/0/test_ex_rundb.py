@@ -50,6 +50,7 @@ class CreationWithPermissionProblemTest(testenv.TemporaryDirectoryWithChmodTestC
 
     def test_fails_with_meaningful_message_on_permission_problem_when_nonexistent(self):
         os.mkdir('t')
+        orig_mode = os.stat('t').st_mode
         os.chmod('t', 0x000)
 
         try:
@@ -63,7 +64,7 @@ class CreationWithPermissionProblemTest(testenv.TemporaryDirectoryWithChmodTestC
                 with contextlib.closing(dlb.ex._rundb.Database('t/runs.sqlite')):
                     pass
         finally:
-            os.chmod('t', 0x777)
+            os.chmod('t', orig_mode)  # would raise PermissionError on FreeBSD if more permissive than initially
 
 
 class ToolInstanceDbidTest(testenv.TemporaryDirectoryTestCase):

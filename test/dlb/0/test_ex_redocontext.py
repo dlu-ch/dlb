@@ -70,22 +70,21 @@ class PrepareArgumentsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
 @unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
 class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
+    # GNU coreutils (https://man7.org/linux/man-pages/man1/ls.1.html),
+    # FreeBSD: https://www.freebsd.org/cgi/man.cgi?ls:
+    #   support '-l', '-d'
 
     def test_accepts_path_in_arguments(self):
         os.mkdir('-l')
         open(os.path.join('-l', 'content'), 'xb').close()
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
-            e = rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output='stdout.txt')
+            e = rd.execute_helper('ls', ['-d', dlb.fs.Path('-l')], stdout_output='stdout.txt')
             returncode = asyncio.get_event_loop().run_until_complete(e)
             self.assertEqual(0, returncode)
-            regex = (
-                r"(?m)\A"
-                r".+ 0\n"
-                r".+ .+ .+ .+ 0 .+ .+ .+ content\n\Z"
-            )
             with open('stdout.txt', 'rb') as f:
-                self.assertRegex(f.read().decode(), regex)
+                content = f.read().decode()
+                self.assertEqual('./-l\n', content)
 
     def test_fails_for_directory_helper(self):
         with dlb.ex.Context() as c:
@@ -110,7 +109,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
                 with open('stdout.txt', 'xb') as f:
                     # noinspection PyTypeChecker
                     asyncio.get_event_loop().run_until_complete(
-                        rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=f))
+                        rd.execute_helper('ls', ['-d', dlb.fs.Path('-l')], stdout_output=f))
             msg = (
                 "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
                 "or a path component sequence, not <class '_io.BufferedWriter'>"
@@ -123,7 +122,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(TypeError) as cm:
                 # noinspection PyTypeChecker
                 asyncio.get_event_loop().run_until_complete(
-                    rd.execute_helper('ls', ['--full-time', dlb.fs.Path('-l')], stdout_output=asyncio.subprocess.PIPE))
+                    rd.execute_helper('ls', ['-d', dlb.fs.Path('-l')], stdout_output=asyncio.subprocess.PIPE))
             msg = (
                 "'path' must be a str, dlb.fs.Path, dlb.fs.Path.Native, pathlib.PurePath, "
                 "or a path component sequence, not <class 'int'>"
@@ -224,7 +223,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
             e = rd.execute_helper('ls', ['ls --unsupported-option '], stderr_output=False,
-                                  expected_returncodes=[2])
+                                  expected_returncodes=[1, 2])  # GNU coreutils: 2, FreeBSD: 1
             asyncio.get_event_loop().run_until_complete(e)
 
     def test_informs(self):
@@ -450,7 +449,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 @unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
 class ExecuteHelperRawTest(testenv.TemporaryWorkingDirectoryTestCase):
 
-    def test_works_with_all_arguments(self):
+    def test_works_with_argument_unsupported_by_helper(self):
         async def redo(context):
             proc = await context.execute_helper_raw(
                 'ls', ['--unsupported-option '],
@@ -463,7 +462,7 @@ class ExecuteHelperRawTest(testenv.TemporaryWorkingDirectoryTestCase):
             rd = dlb.ex._toolrun.RedoContext(c, dict())
             proc = asyncio.get_event_loop().run_until_complete(redo(rd))
             self.assertIsInstance(proc, asyncio.subprocess.Process)
-            self.assertEqual(2, proc.returncode)
+            self.assertIn(proc.returncode, (1, 2))  # GNU coreutils: 2, FreeBSD: 1
 
     def test_fails_for_byteio(self):
         async def redo(context):
