@@ -6,10 +6,11 @@ shopt -s nullglob
 PYTHON3=python3
 COVERAGE3=coverage3  # pip3
 PYTHON3COVERAGE=python3-coverage  # Debian
-READLINK=readlink
 
-script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="/${0:?}"
 script_dir="${script_dir%/*}"
+script_dir="${script_dir:1}"
+script_dir="${script_dir:-.}"
 cd -- "${script_dir}"
 
 test_dir=test
@@ -23,7 +24,7 @@ for package_under_test in "${packages_under_test[@]}"; do
     cd "./${test_dir:?}/${package_under_test:?}"  # as PyCharm does it
 
     for f in test_*.bash; do
-        "./${f:?}"
+        "${BASH:?}" "./${f:?}"
     done
 
     if [ -n "$(which "${COVERAGE3:?}")" ]; then

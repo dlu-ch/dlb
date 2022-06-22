@@ -1,12 +1,14 @@
 #!/bin/sh
 set -e
 
-READLINK=readlink
 FIND=find
 RM=rm
 
-script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="/${0:?}"
 script_dir="${script_dir%/*}"
+script_dir="${script_dir:1}"
+script_dir="${script_dir:-.}"
+
 mtime_probe=.mtime-probe
 mtime_probe2=.mtime-probe2
 

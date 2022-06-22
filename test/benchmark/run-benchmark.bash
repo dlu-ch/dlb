@@ -25,14 +25,14 @@ CP=cp
 MKDIR=mkdir
 TOUCH=touch
 GREP=grep
-READLINK=readlink
 CURL=curl
 PYTHON2=python2
 PYTHON3=python3
-READLINK=readlink
 
-script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="/${0:?}"
 script_dir="${script_dir%/*}"
+script_dir="${script_dir:1}"
+script_dir="${script_dir:-.}"
 cd -- "${script_dir}"
 
 build_dir="../../build/out/benchmark/"

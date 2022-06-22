@@ -10,10 +10,11 @@ set -e
 
 RM=rm
 PYTHON=python3
-READLINK=readlink
 
-script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="/${0:?}"
 script_dir="${script_dir%/*}"
+script_dir="${script_dir:1}"
+script_dir="${script_dir:-.}"
 cd -- "${script_dir}"
 
 out_dir=build/out

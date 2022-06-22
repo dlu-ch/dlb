@@ -3,10 +3,11 @@
 set -e
 
 PYTHON3=python3
-READLINK=readlink
 
-script_dir="$("${READLINK:?}" -e -- "$0")"
+script_dir="/${0:?}"
 script_dir="${script_dir%/*}"
+script_dir="${script_dir:1}"
+script_dir="${script_dir:-.}"
 path_to_root=../..
 cd -- "${script_dir:?}"
 
