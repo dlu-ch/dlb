@@ -108,3 +108,22 @@ jobs:
       run: pip install wheel==0.37.1
     - name: Build package
       run: bash build-package.bash
+
+  build-doc:  # job_id
+    name: Build documentation
+
+    runs-on: 'ubuntu-20.04'
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # all commits, branches, and tags
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+    - name: Install dependencies
+      # https://packages.ubuntu.com/focal/graphviz
+      run: sudo apt-get install graphviz=2.42.2-3build2
+    - name: Build HTML documentation
+      run: bash build-doc.bash html
