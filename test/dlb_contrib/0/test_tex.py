@@ -44,8 +44,19 @@ class KpathseaSearchPathTest(unittest.TestCase):
 
 class TexInputPathTest(unittest.TestCase):
 
-    def test_succeed_for_some_special_characters(self):
-        dlb_contrib.tex.TexInputPath('_ &$')
+    def test_fails_for_most_special_characters(self):
+        self.assertEqual(16 - 3, len(dlb_contrib.tex.SPECIAL_CHARACTERS))
+        for c in dlb_contrib.tex.SPECIAL_CHARACTERS - {' ', '$'}:
+            with self.subTest(character=c):
+                with self.assertRaises(ValueError):
+                    dlb_contrib.tex.TexInputPath(f'a{c}b')
+
+        # '&' and '_':
+        # - fails for TeX 3.14159265 (TeX Live 2019/dev/Debian) kpathsea version 6.3.1/dev
+        # - succeeds for TeX 3.14159265 (TeX Live 2020/Debian) kpathsea version 6.3.2
+
+        dlb_contrib.tex.TexInputPath(' ')
+        dlb_contrib.tex.TexInputPath('$')
 
     def test_fails_with_multiple_consecutive_spaces(self):
         dlb_contrib.tex.TexInputPath('a b')
@@ -193,7 +204,6 @@ class TexInputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         async def redo(self, result, context):
             arguments = [
-                '--cnf-line=texmf_casefold_search=0',  # kpathsea: disable casefolding search on Unix-like systems
                 '-interaction=nonstopmode', '-halt-on-error', '-file-line-error', '-no-shell-escape',
                 self.toplevel_file  # must be last
             ]
@@ -274,13 +284,18 @@ class TexInputTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertIn('%', failed_by_input)  # "comment character" (14)
                 self.assertIn('^', failed_by_input)  # "superscript" (7) - only disallowed if doubled
                 self.assertIn('\x7F', failed_by_input)  # "invalid character" (15)
-                self.assertNotIn('&', failed_by_input)  # "alignment tab" (4)
-                self.assertNotIn('_', failed_by_input)  # "subscript" (8)
+
+                # '&' and '_':
+                # - fails for TeX 3.14159265 (TeX Live 2019/dev/Debian) kpathsea version 6.3.1/dev
+                # - succeeds for TeX 3.14159265 (TeX Live 2020/Debian) kpathsea version 6.3.2
 
                 # kpathsea:
                 self.assertIn('\t', failed_by_input)
                 self.assertIn('\n', failed_by_input)
-                self.assertNotIn('$', failed_by_input)  # variable expansion
+
+                # '$':
+                # - fails for TeX 3.14159265 (TeX Live 2019/dev/Debian) kpathsea version 6.3.1/dev
+                # - succeeds for TeX 3.14159265 (TeX Live 2020/Debian) kpathsea version 6.3.2
 
                 # web2c:
                 self.assertIn('"', failed_by_input)
@@ -293,10 +308,10 @@ class TexInputTest(testenv.TemporaryWorkingDirectoryTestCase):
                         print(f'failed {c!r}:')
                         failure_log_by_input = failure_on_input_by_character.get(c)
                         failure_log_by_commandline = failure_on_commandline_by_character.get(c)
-                        if c in failure_log_by_input:
+                        if failure_log_by_input and c in failure_log_by_input:
                             print('    on \\input{...}:' +
                                   '\n        '.join([''] + failure_log_by_input.splitlines()))
-                        if c in failure_log_by_commandline:
+                        if failure_log_by_commandline and c in failure_log_by_commandline:
                             print(
                                 '    on command line:' +
                                 '\n        '.join([''] + failure_log_by_commandline.splitlines()))

@@ -9,7 +9,8 @@
 # LaTeX: <https://www.latex-project.org/>
 # pdflatex: <https://www.tug.org/applications/pdftex/>
 # LaTeX font encodings: <https://www.latex-project.org/help/documentation/encguide.pdf>
-# Tested with: pdfTeX 3.14159265-2.6-1.40.19 with kpathsea version 6.3.1/dev
+# Tested with: pdfTeX 3.14159265-2.6-1.40.19 (TeX Live 2019/dev/Debian) kpathsea version 6.3.1/dev
+# Tested with: pdfTeX 3.14159265-2.6-1.40.21 (TeX Live 2020/Debian) kpathsea version 6.3.2
 # Executable: 'tex'
 # Executable: 'latex'
 #
@@ -80,7 +81,7 @@ class TexInputPath(dlb.fs.Path):
     #
     # Note: '^^;' acts exactly like '{'. E.g. '\input{a^^;b.tex}' leads to 'Runaway text? a{b.tex}'.
 
-    RESERVED_CHARACTERS = frozenset(SPECIAL_CHARACTERS - {' ', '&', '_', '$'})
+    RESERVED_CHARACTERS = frozenset(SPECIAL_CHARACTERS - {' ', '$'})
 
     def check_restriction_to_base(self, components_checked: bool):
         if not components_checked:
@@ -264,8 +265,9 @@ class Tex(dlb.ex.Tool):
             if self.intermediary_directory is not None:
                 (context.root_path / intermediary_directory).native.raw.mkdir(parents=True, exist_ok=True)
 
+            # note: --cnf-line=texmf_casefold_search=0 is not supported with
+            # pdfTeX 3.14159265-2.6-1.40.19 (TeX Live 2019/dev/Debian) kpathsea version 6.3.1/dev
             arguments = [
-                '--cnf-line=texmf_casefold_search=0',  # kpathsea: disable casefolding search on Unix-like systems
                 '-interaction=nonstopmode', '-halt-on-error', '-file-line-error', '-no-shell-escape',
                 '-recorder'  # create .fls file
             ]
