@@ -138,6 +138,50 @@ class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
             vfstype_name_by_mountpoint
         )
 
+        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.', contained_paths=[])
+        self.assertEqual({}, vfstype_name_by_mountpoint)
+
+        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.', contained_paths=[
+            '/tmp/t/test\012m\011ou\rnt/x/y',
+            '/.//boot/efi',
+            '/dev/../boot/efi/'
+        ])
+        self.assertEqual({
+            dlb.fs.Path('/tmp/t/test\012m\011ou\rnt/'): 'tmpfs',
+            dlb.fs.Path('/boot/efi/'): 'vfat',
+            dlb.fs.Path('/dev/'): 'devtmpfs'
+        }, vfstype_name_by_mountpoint)
+
+    def test_is_correct_for_oci_excerpt(self):
+        os.mkdir('self')
+        with open(os.path.join('self', 'mounts'), 'xb') as f:
+            f.write(
+                b'/dev/mapper/g-home / xfs rw,nosuid,nodev,relatime,attr2,inode64,logbufs=8,logbsize=32k,noquota 0 0\n'
+                b'proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0\n'
+                b'tmpfs /dev tmpfs rw,nosuid,size=65536k,mode=755,uid=1000,gid=1000 0 0\n'
+                b'sysfs /sys sysfs ro,nosuid,nodev,noexec,relatime 0 0\n'
+                b'mqueue /dev/mqueue mqueue rw,nosuid,nodev,noexec,relatime 0 0\n'
+                b'tmpfs /etc/resolv.conf tmpfs rw,nosuid,nodev,relatime,size=1626876k,nr_inodes=406719,mode=700,uid=1000,gid=1000 0 0\n'
+                b'cgroup2 /sys/fs/cgroup cgroup2 ro,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0\n'
+                b'udev /dev/null devtmpfs rw,nosuid,relatime,size=8105068k,nr_inodes=2026267,mode=755 0 0\n'
+                b'devpts /dev/console devpts rw,nosuid,noexec,relatime,gid=100004,mode=620,ptmxmode=666 0 0\n'
+            )
+
+        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.')
+        self.assertEqual({
+                dlb.fs.Path('/'): 'xfs',
+                dlb.fs.Path('/proc/'): 'proc',
+                dlb.fs.Path('/dev/'): 'tmpfs',
+                dlb.fs.Path('/sys/'): 'sysfs',
+                dlb.fs.Path('/dev/mqueue/'): 'mqueue',
+                dlb.fs.Path('/etc/resolv.conf/'): 'tmpfs',  # note: is actually a regular file
+                dlb.fs.Path('/sys/fs/cgroup/'): 'cgroup2',
+                dlb.fs.Path('/dev/null/'): 'devtmpfs',
+                dlb.fs.Path('/dev/console/'): 'devpts',
+            },
+            vfstype_name_by_mountpoint
+        )
+
     def test_fails_for_corrupt_line(self):
         os.mkdir('self')
         with open(os.path.join('self', 'mounts'), 'xb') as f:
@@ -149,48 +193,27 @@ class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.')
         self.assertEqual("unexpected line in 'self/mounts': b'mount tmpfs rw,relatime 0 0\\n'", str(cm.exception))
 
-    def test_fails_if_mountpoint_does_not_exist(self):
+    def test_succeeds_if_mountpoint_does_not_exist(self):
         self.assertFalse(os.path.exists('/tmp/this/does/not/exist'))
 
         os.mkdir('self')
         with open(os.path.join('self', 'mounts'), 'xb') as f:
             f.write(b'none /tmp/this/does/not/exist tmpfs rw,relatime 0 0\n')
 
-        dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.')
+        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.')
+        self.assertEqual({dlb.fs.Path('/tmp/this/does/not/exist/'): 'tmpfs'}, vfstype_name_by_mountpoint)
 
-        with self.assertRaises(RuntimeError) as cm:
-            dlb_contrib.linux.get_mounted_filesystems(['.'], proc_root_directory='.')
-        self.assertEqual("not a real path: '/tmp/this/does/not/exist'", str(cm.exception))
+    def test_fails_for_relative_contained_paths(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.', contained_paths=['x/y'])
+        self.assertEqual("invalid path for 'AbsolutePath': 'x/y' (must be absolute)", str(cm.exception))
 
+    @unittest.skipIf(sys.platform != 'linux', 'Linux only')  # involves native absolute paths
     def test_can_query_running_kernel(self):
         vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems()
         self.assertIn(dlb.fs.Path('/'), vfstype_name_by_mountpoint)
         self.assertTrue(all(p.is_absolute() for p in vfstype_name_by_mountpoint))
         self.assertTrue(all(p.is_dir() for p in vfstype_name_by_mountpoint))
-
-    def test_filter_does_work(self):  # mount points must exist
-        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems()
-        nonroot_mountpoints = sorted(p for p in vfstype_name_by_mountpoint if len(p.parts) > 1)
-        self.assertGreater(len(nonroot_mountpoints), 1)
-        nonroot_mountpoint = nonroot_mountpoints[0]
-
-        filtered_vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems([nonroot_mountpoint])
-        self.assertLess(len(filtered_vfstype_name_by_mountpoint), len(vfstype_name_by_mountpoint))
-        self.assertIn(dlb.fs.Path('/'), filtered_vfstype_name_by_mountpoint)
-        self.assertIn(nonroot_mountpoint, filtered_vfstype_name_by_mountpoint)
-
-        filtered_vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(['.'])
-        self.assertLess(len(filtered_vfstype_name_by_mountpoint), len(vfstype_name_by_mountpoint))
-        if len(filtered_vfstype_name_by_mountpoint) > 1:
-            longest_mountpoint = sorted(filtered_vfstype_name_by_mountpoint)[-1]
-            self.assertNotEqual(dlb.fs.Path('/'), longest_mountpoint)
-
-            self.assertFalse((longest_mountpoint / 'tmp/this/does/not/exist').native.raw.exists())
-            filtered_vfstype_name_by_mountpoint2 = \
-                dlb_contrib.linux.get_mounted_filesystems([longest_mountpoint / 'tmp/this/does/not/exist'])
-            self.assertEqual(filtered_vfstype_name_by_mountpoint, filtered_vfstype_name_by_mountpoint2)
-
-        self.assertEqual({}, dlb_contrib.linux.get_mounted_filesystems([]))
 
 
 class CpuInfoTest(testenv.TemporaryWorkingDirectoryTestCase):

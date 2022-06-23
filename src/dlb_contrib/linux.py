@@ -213,8 +213,11 @@ def get_mounted_filesystems(contained_paths: Optional[Iterable[dlb.fs.PathLike]]
                             proc_root_directory: dlb.fs.PathLike = PROC_ROOT_DIRECTORY) -> Dict[dlb.fs.Path, str]:
     # Return mountpoint (absolute path) and name of filesystem type (e.g. 'xfs') for all mounted filesystems according
     # to *source_path*.
-    # If *contained_paths* is not None, only filesystems whose mountpoint is a prefix of os.path.realpath(p)
-    # for any member *p* of *contained_paths* are returned.
+    #
+    # If *contained_paths* is not None, only filesystems with a mountpoint that is the "longest prefix" of a member of
+    # *contained_paths* are returned. More precisely:
+    # A mountpoint *p* is returned if and only if it is a component-wise prefix of a *q* from *contained_paths*
+    # (interpreted as a dlb.fs.Path), and no other mountpoint with more components is a component-wise prefix of *q*.
 
     # /proc/mounts, /proc/self/mounts:
     #   https://man7.org/linux/man-pages/man5/proc.5.html:
@@ -261,34 +264,44 @@ def get_mounted_filesystems(contained_paths: Optional[Iterable[dlb.fs.PathLike]]
     #   - The second field (mount point) is an path formatted by seq_path_root().
 
     proc_root_directory = dlb.fs.Path(proc_root_directory)
-    vfstype_name_by_mountpoint = {}
-
     if contained_paths is not None:
-        contained_paths = [os.path.realpath(dlb.fs.Path(p).native) for p in contained_paths]
+         contained_paths = [dlb.fs.AbsolutePath(p) for p in contained_paths]
+
+    vfstype_name_by_mountpoint = {}
 
     mounts_file = proc_root_directory / 'self/mounts'
     with open(mounts_file.native, 'rb') as f:
         for line in f:  # split onle by b'\n'; https://docs.python.org/3/library/io.html#io.IOBase.readline
             try:
-                _, mountpoint, vfstype_name, _, _, _ = line.rstrip().split(b' ')  # ValueError if corrupt
-                mountpoint = dlb_contrib.backslashescape.unquote_octal(mountpoint)
+                _, potential_mountpoint, vfstype_name, _, _, _ = line.rstrip().split(b' ')  # ValueError if corrupt
+                potential_mountpoint = dlb_contrib.backslashescape.unquote_octal(potential_mountpoint)
             except ValueError:
                 raise RuntimeError(f'unexpected line in {mounts_file.as_string()!r}: {line!r}') from None
 
-            mountpoint = os.fsdecode(mountpoint)
-            if os.path.isabs(mountpoint):  # not 'none'
+            potential_mountpoint = os.fsdecode(potential_mountpoint)
+            if potential_mountpoint[:1] == '/':  # not empty and not 'none'
+                # mountpoint can also be a file inside a OCI container (e.g.  '/etc/resolv.conf')
+                # https://stackoverflow.com/questions/70683597/docker-mounts-etc-hosts-files-from-host-system-to-container
+
+                mountpoint = dlb.fs.Path(potential_mountpoint, is_dir=True)
                 vfstype_name = vfstype_name.decode('ascii')
+                vfstype_name_by_mountpoint[mountpoint] = vfstype_name  # last one wins
 
-                ignore = False
-                if contained_paths is not None:
-                    if not os.path.isdir(mountpoint) or os.path.realpath(mountpoint) != mountpoint:
-                        raise RuntimeError(f'not a real path: {mountpoint!r}')
-                    if not any(os.path.commonpath([os.path.realpath(p), mountpoint]) == mountpoint
-                               for p in contained_paths):
-                        ignore = True
+    if contained_paths is None:
+        return vfstype_name_by_mountpoint
 
-                if not ignore:
-                    # last one wins
-                    vfstype_name_by_mountpoint[dlb.fs.Path(dlb.fs.Path.Native(mountpoint), is_dir=True)] = vfstype_name
+    # filter (longest match wins)
+    filtered_vfstype_name_by_mountpoint = {}
+    for p in contained_paths:
+        containing_mountpoint = None
+        for mountpoint in sorted(vfstype_name_by_mountpoint):
+            mp = mountpoint.components
+            if p.components[:len(mp)] == mp:  # is *mountpoint* a prefix of *p*?
+                if containing_mountpoint is None or len(containing_mountpoint.components) < len(mp):
+                    containing_mountpoint = mountpoint
 
-    return vfstype_name_by_mountpoint
+        if containing_mountpoint is not None:
+            filtered_vfstype_name_by_mountpoint[containing_mountpoint] = \
+                vfstype_name_by_mountpoint[containing_mountpoint]
+
+    return filtered_vfstype_name_by_mountpoint
