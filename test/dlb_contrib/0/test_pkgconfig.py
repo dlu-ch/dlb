@@ -105,9 +105,12 @@ class PkgConfigWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
 
 
 @unittest.skipIf(not testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
-@unittest.skipIf(not os.path.isdir('/usr/include/gtk-3.0/'), 'requires GTK+ 3.0')
 class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
 
+    @unittest.skipIf(not os.path.isfile('/usr/lib/x86_64-linux-gnu/pkgconfig/gtk+-3.0.pc'),
+                     'requires GTK+ 3.0')  # Debian package 'libgtk-3-dev'
+    @unittest.skipIf(not os.path.isfile('/usr/lib/x86_64-linux-gnu/pkgconfig/orte.pc'),
+                     'requires orte')  # Debian package 'libopenmpi-dev'
     def test_gtk(self):
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
             LIBRARY_NAMES = ('gtk+-3.0', 'orte')
