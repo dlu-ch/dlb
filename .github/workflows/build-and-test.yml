@@ -7,7 +7,7 @@ on:
   - cron: '45 19 * * 5'  # every Friday at 19:45
 
 jobs:
-  test:  # job_id
+  test-dlb:  # job_id
     name: >
       Python ${{ matrix.python-version }}
       on ${{ matrix.os }}
@@ -64,10 +64,30 @@ jobs:
         name: .coverage-dlb
         path: test/dlb/.coverage
 
+  test-dlb_contrib-earliest:  # job_id
+    name: Oldest supported tool versions
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/dlu-ch/test_dlb_contrib_debian10:latest
+      options: --cap-add SYS_PTRACE
+
+    steps:
+    - run:
+        git -c http.sslVerify=false clone -n ${{ format('{0}/{1}.git', github.server_url, github.repository) }} dlb 
+        && cd dlb 
+        && git -c advice.detachedHead=false checkout ${{ github.ref_name }}
+      working-directory: /home/tester
+    - run: bash run-tests.bash dlb_contrib
+      working-directory: /home/tester/dlb
+      env:
+        PYTHON3COVERAGE:
+        PYTHONWARNINGS:
+
   upload-test-coverage-of-default:
     name: Upload test coverage data to coveralls.io
     if: github.ref_type != 'branch' || github.ref == 'refs/heads/master'
-    needs: test
+    needs: test-dlb
 
     runs-on: 'ubuntu-20.04'
     timeout-minutes: 5
