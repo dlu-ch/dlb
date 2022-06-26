@@ -6,10 +6,14 @@ on:
   schedule:
   - cron: '45 19 * * 5'  # every Friday at 19:45
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test-dlb:  # job_id
     name: >
-      Python ${{ matrix.python-version }}
+      Test 'dlb' with Python ${{ matrix.python-version }}
       on ${{ matrix.os }}
       ${{ matrix.is-default == true && '[default]' || '' }}
       ${{ matrix.do-accept-deprecation != true && '[fail on deprecation warning]' || '' }}
@@ -65,24 +69,90 @@ jobs:
         path: test/dlb/.coverage
 
   test-dlb_contrib-earliest:  # job_id
-    name: Oldest supported tool versions
-    runs-on: ubuntu-latest
+    name: Test 'dlb_contrib' [oldest supported tool versions]
+    needs: test-dlb
 
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/dlu-ch/test_dlb_contrib_debian10:latest
       options: --cap-add SYS_PTRACE
 
     steps:
-    - run:
-        git -c http.sslVerify=false clone -n ${{ format('{0}/{1}.git', github.server_url, github.repository) }} dlb 
-        && cd dlb 
-        && git -c advice.detachedHead=false checkout ${{ github.ref_name }}
+    - name: Checkout Git repository
+      run: |
+        set -e
+        git -c http.sslVerify=false clone -n ${{ format('{0}/{1}.git', github.server_url, github.repository) }} dlb
+        cd dlb
+        git -c advice.detachedHead=false checkout ${{ github.ref_name }}
       working-directory: /home/tester
+      env:
+        HOME: /home/tester
+
     - run: bash run-tests.bash dlb_contrib
       working-directory: /home/tester/dlb
       env:
         PYTHON3COVERAGE:
         PYTHONWARNINGS:
+
+  test-examples-earliest:  # job_id
+    name: Run examples [oldest supported tool versions]
+    needs:
+    - build-package
+    - test-dlb_contrib-earliest
+
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dlu-ch/test_dlb_contrib_debian10:latest
+
+    steps:
+    - name: Checkout Git repository
+      run: |
+        set -e
+        git -c http.sslVerify=false clone -n ${{ format('{0}/{1}.git', github.server_url, github.repository) }} dlb 
+        cd dlb 
+        git -c advice.detachedHead=false checkout ${{ github.ref_name }}
+      working-directory: /home/tester
+      env:
+        HOME: /home/tester
+
+    - name: Install dlb
+      run: |
+        set -e
+        export PATH="${PATH:?}:~/.local/bin"
+        bash build-package.bash
+        pip3 install --user dist/dlb-*.whl
+      working-directory: /home/tester/dlb
+      env:
+        HOME: /home/tester
+    - name: Build examples twice (except 'c-msvc')
+      run: |
+        set -e
+        shopt -s nullglob
+        export PATH="${PATH:?}:~/.local/bin"  # for 'dlb' installed by pip
+        
+        for example_dir in example/*; do
+            example="${example_dir##*/}"
+            echo "::group::${example:?}"  # GitHub Actions workflow command
+        
+            if [ "${example:?}" == "c-msvc" ]; then                
+                printf 'skip %q\n' "${example:?}"
+            else (
+                cd -- "${example_dir:?}"
+                if [ -f build-all.py ]; then
+                    dlb build*.py
+                    dlb
+                fi
+                if [ -f build-all ]; then
+                    bash build-all
+                    bash build-all
+                fi
+            ) fi
+
+            echo "::endgroup::"  # GitHub Actions workflow command        
+        done
+      working-directory: /home/tester/dlb
+      env:
+        HOME: /home/tester
 
   upload-test-coverage-of-default:
     name: Upload test coverage data to coveralls.io
