@@ -107,17 +107,68 @@ class PkgConfigWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
 @unittest.skipIf(not testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
 class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
 
-    @unittest.skipIf(not os.path.isfile('/usr/lib/x86_64-linux-gnu/pkgconfig/gtk+-3.0.pc'),
-                     'requires GTK+ 3.0')  # Debian package 'libgtk-3-dev'
-    @unittest.skipIf(not os.path.isfile('/usr/lib/x86_64-linux-gnu/pkgconfig/orte.pc'),
-                     'requires orte')  # Debian package 'libopenmpi-dev'
-    def test_gtk(self):
+    def test_faked_gtk_and_orte(self):
+        # from /usr/lib/x86_64-linux-gnu/pkgconfig/gtk+-3.0.pc of Debian GNU/Linux 10.12,
+        # requirements reduced/renamed, comments and empty lines removed:
+        with open('fake-gtk+-3.0.pc', 'xb') as f:
+            f.write(
+                b'prefix=/usr\n'
+                b'exec_prefix=${prefix}\n'
+                b'libdir=/usr/lib/x86_64-linux-gnu\n'
+                b'includedir=${prefix}/include\n'
+                b'targets=x11 broadway wayland\n'
+                b'gtk_binary_version=3.0.0\n'
+                b'gtk_host=x86_64-pc-linux-gnu\n'
+                b'Name: GTK+\n'
+                b'Description: GTK+ Graphical UI Library\n'
+                b'Version: 3.24.5\n'
+                b'Requires: fake-gdk-3.0\n'
+                b'Libs: -L${libdir} -lgtk-3 \n'
+                b'Cflags: -I${includedir}/gtk-3.0\n' 
+            )
+
+        with open('fake-gdk-3.0.pc', 'xb') as f:
+            # from /usr/lib/x86_64-linux-gnu/pkgconfig/gdk-3.0.pc of Debian GNU/Linux 10.12,
+            # requirements, comments, and empty lines removed:
+            f.write(
+                b'prefix=/usr\n'
+                b'exec_prefix=${prefix}\n'
+                b'libdir=/usr/lib/x86_64-linux-gnu\n'
+                b'includedir=${prefix}/include\n'
+                b'targets=x11 broadway wayland\n'
+                b'Name: GDK\n'
+                b'Description: GTK+ Drawing Kit\n'
+                b'Version: 3.24.5\n'
+                b'Libs: -L${libdir} -lgdk-3\n'
+                b'Cflags: -I${includedir}/gtk-3.0\n'
+            )
+
+        with open('fake-orte.pc', 'xb') as f:
+            # from /usr/lib/x86_64-linux-gnu/pkgconfig/orte.pc of Debian GNU/Linux 10.12,
+            # requirements, comments, and empty lines removed:
+            f.write(
+                b"Name: Open MPI Run-Time Environment (ORTE)\n"
+                b"Description: Open MPI's run-time environment functionality\n"
+                b"Version: 3.1.3\n"
+                b"URL: http://www.open-mpi.org/\n"
+                b"prefix=/usr\n"
+                b"exec_prefix=${prefix}\n"
+                b"includedir=${prefix}/lib/x86_64-linux-gnu/openmpi/include\n"
+                b"libdir=${prefix}/lib/x86_64-linux-gnu/openmpi/lib\n"
+                b"pkgincludedir=${includedir}/openmpi\n"
+                b"Libs: -L${libdir} -lopen-rte\n"
+                b"Libs.private: -lopen-pal -lhwloc -ldl -levent -levent_pthreads -lutil -lm\n" 
+                b"Cflags: -I${includedir} -I${includedir}/openmpi -pthread\n"
+            )
+
         class PkgConfig(dlb_contrib.pkgconfig.PkgConfig):
-            LIBRARY_NAMES = ('gtk+-3.0', 'orte')
-            VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'gtk+-3.0': ['> 3.0.1', '< 4.0']}
+            LIBRARY_NAMES = ('fake-gtk+-3.0', 'fake-orte')
+            VERSION_CONSTRAINTS_BY_LIBRARY_NAME = {'fake-gtk+-3.0': ['> 3.0.1', '< 4.0']}
 
         with dlb.ex.Context():
             dlb.di.set_threshold_level(dlb.di.DEBUG)
+            dlb.ex.Context.active.env.import_from_outer('PKG_CONFIG_PATH', pattern='.+', example='/a/b:/c')
+            dlb.ex.Context.active.env['PKG_CONFIG_PATH'] = '.'
             result = PkgConfig().start()
 
         self.assertIn('libgdk-3.so', result.library_filenames)
