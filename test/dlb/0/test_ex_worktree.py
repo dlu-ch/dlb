@@ -227,7 +227,8 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
             # note: trailing os.path.sep is necessary irrespective of target_is_directory
 
             sr0 = os.lstat('s')
-            m = dlb.ex._worktree.read_filesystem_object_memo(dlb.fs.Path(os.path.join(os.getcwd(), 's')))
+            m = dlb.ex._worktree.read_filesystem_object_memo(
+                dlb.fs.Path(dlb.fs.Path.Native(os.getcwd()), is_dir=True) / 's')
             self.assertIsInstance(m, dlb.ex._rundb.FilesystemObjectMemo)
 
             self.assertEqual(sr0.st_mode, m.stat.mode)

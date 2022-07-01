@@ -106,7 +106,7 @@ class ZipDirectorySpecialTest(testenv.TemporaryWorkingDirectoryTestCase):
         open(os.path.join('d', 'a'), 'xb').close()
         os.mkdir('d2')
         open(os.path.join('d2', 'c'), 'xb').close()
-        testtool.symlink_or_skip('../d2/', os.path.join('d', 'b'), target_is_directory=True)
+        testtool.symlink_or_skip(os.path.join('..', 'd2', ''), os.path.join('d', 'b'), target_is_directory=True)
 
         with dlb.ex.Context():
             dlb_contrib.zip.ZipDirectory(
