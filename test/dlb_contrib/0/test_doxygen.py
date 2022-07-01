@@ -120,7 +120,7 @@ class DoxygenWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestCas
         self.assertEqual(msg, str(cm.exception))
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('doxygen'), 'requires doxygen in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('doxygen'), 'requires doxygen in $PATH')
 class DoxygenExecutionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_empty_doxyfile(self):
@@ -133,7 +133,7 @@ class DoxygenExecutionTest(testenv.TemporaryWorkingDirectoryTestCase):
                 output_directory='d/').start()
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('doxygen'), 'requires doxygen in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('doxygen'), 'requires doxygen in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

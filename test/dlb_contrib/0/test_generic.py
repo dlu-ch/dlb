@@ -92,7 +92,7 @@ class EmptyVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual({}, version_by_path)
 
 
-@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+@unittest.skipUnless(os.path.isfile('/bin/ls'), 'requires ls')
 class LsVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_ls(self):
         class VersionQuery(dlb_contrib.generic.VersionQuery):

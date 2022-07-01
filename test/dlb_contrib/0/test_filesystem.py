@@ -10,6 +10,7 @@ import sys
 import os.path
 import os
 import errno
+import testtool
 import unittest
 
 
@@ -37,7 +38,7 @@ class HardlinkOrCopyTest(testenv.TemporaryWorkingDirectoryTestCase):
         used_hardlink = dlb_contrib.filesystem.hardlink_or_copy(src='a', dst='o', use_hard_link=False)
         self.assertFalse(used_hardlink)
 
-    @unittest.skipIf(sys.platform == 'win32', 'POSIX filesystem only')
+    @unittest.skipUnless(sys.platform != 'win32', 'requires POSIX filesystem')
     def test_fails_if_target_inaccessible(self):
         os.mkdir('d')
         open('a', 'x').close()
@@ -57,12 +58,7 @@ class HardlinkOrCopyTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_symbolic_link(self):
         open('f', 'wb').close()
-        try:
-            os.symlink('f', 's', target_is_directory=False)
-            self.assertTrue(os.path.islink('s'))
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('f', 's', target_is_directory=False)
 
         with self.assertRaises(RuntimeError) as cm:
             dlb_contrib.filesystem.hardlink_or_copy(src='s', dst='o')

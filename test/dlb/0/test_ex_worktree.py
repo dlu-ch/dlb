@@ -9,6 +9,7 @@ import os.path
 import string
 import tempfile
 import unittest
+import testtool
 
 
 class FilenamePortabilityTest(unittest.TestCase):
@@ -83,13 +84,7 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
 
     def test_removes_symbolic_link(self):
         open('f', 'wb').close()
-
-        try:
-            os.symlink('f', 's', target_is_directory=False)
-            self.assertTrue(os.path.islink('s'))
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('f', 's', target_is_directory=False)
 
         dlb.ex._worktree.remove_filesystem_object(os.path.join(os.getcwd(), 's'))
         self.assertFalse(os.path.exists('s'))
@@ -210,12 +205,8 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
         os.chmod('d', 0x000)
 
         try:
-            try:
-                os.symlink('d' + os.path.sep, 's', target_is_directory=True)
-                # note: trailing os.path.sep is necessary irrespective of target_is_directory
-            except OSError:  # on platform or filesystem that does not support symlinks
-                self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-                raise unittest.SkipTest from None
+            testtool.symlink_or_skip('d' + os.path.sep, 's', target_is_directory=True)
+            # note: trailing os.path.sep is necessary irrespective of target_is_directory
 
             sr0 = os.lstat('s')
             m = dlb.ex._worktree.read_filesystem_object_memo(os.path.join(os.getcwd(), 's'))
@@ -232,12 +223,8 @@ class ReadFilesystemObjectMemoTest(testenv.TemporaryDirectoryTestCase):
         os.chmod('d', 0x000)
 
         try:
-            try:
-                os.symlink('d' + os.path.sep, 's', target_is_directory=True)
-                # note: trailing os.path.sep is necessary irrespective of target_is_directory
-            except OSError:  # on platform or filesystem that does not support symlinks
-                self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-                raise unittest.SkipTest from None
+            testtool.symlink_or_skip('d' + os.path.sep, 's', target_is_directory=True)
+            # note: trailing os.path.sep is necessary irrespective of target_is_directory
 
             sr0 = os.lstat('s')
             m = dlb.ex._worktree.read_filesystem_object_memo(dlb.fs.Path(os.path.join(os.getcwd(), 's')))
@@ -294,12 +281,7 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
     def test_with_nonparent_symlink_is_correct(self):
         os.makedirs('a')
         os.makedirs(os.path.join('x', 'd', 'e'))
-
-        try:
-            os.symlink('x', 'c', target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('x', 'c', target_is_directory=True)
 
         c = dlb.ex._worktree.normalize_dotdot_native_components(('a', '..', 'c', 'd', 'e', '..'),
                                                                 ref_dir_path=os.getcwd())
@@ -328,12 +310,7 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
     def test_fails_for_parent_symlink(self):
         os.makedirs('x')
         os.makedirs(os.path.join('c', 'd'))
-
-        try:
-            os.symlink('x', 'a', target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('x', 'a', target_is_directory=True)
 
         regex = r"\A()not a collapsable path, since this is a symbolic link: '.+'\Z"
         with self.assertRaisesRegex(dlb.ex._error.WorkingTreePathError, regex):
@@ -346,12 +323,7 @@ class GetCheckRootPathFromCwdTest(testenv.TemporaryDirectoryTestCase):
     def test_fails_for_symlink(self):
         os.mkdir('a')
         os.makedirs(os.path.join('x', 'y'))
-
-        try:
-            os.symlink(os.path.join('..', 'x'), os.path.join('a', 'b'), target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip(os.path.join('..', 'x'), os.path.join('a', 'b'), target_is_directory=True)
 
         os.mkdir(os.path.join('a', 'b', 'y', '.dlbroot'))
         with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:

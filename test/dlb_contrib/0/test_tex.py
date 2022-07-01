@@ -172,7 +172,7 @@ class RecordedTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual("invalid line in 'recorded.fls': b'PWD he/he'", str(cm.exception))
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('tex'), 'requires latex in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('tex'), 'requires latex in $PATH')
 class TexTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_scenario1(self):
@@ -193,7 +193,7 @@ class TexTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertFalse(r)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('tex'), 'requires tex in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('tex'), 'requires tex in $PATH')
 class TexInputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     class RawTex(dlb.ex.Tool):
@@ -320,7 +320,7 @@ class TexInputTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.di.set_output_file(sys.stderr)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('latex'), 'requires latex in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('latex'), 'requires latex in $PATH')
 class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_option_without_leading_dash(self):
@@ -521,8 +521,8 @@ class LatexTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertFalse(log_file.native.raw.exists())
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('tex'), 'requires tex in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('latex'), 'requires latex in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('tex'), 'requires tex in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('latex'), 'requires latex in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

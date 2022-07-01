@@ -6,8 +6,10 @@ import testenv  # also sets up module search paths
 import dlb.fs
 import dlb.ex
 import dlb_contrib.zip
+import sys
 import os.path
 import zipfile
+import testtool
 import unittest
 
 
@@ -83,7 +85,7 @@ class ZipDirectoryWithoutPrefixDirectoriesTest(testenv.TemporaryWorkingDirectory
                 self.assertTrue((t / 'c').native.raw.is_file())
 
 
-@unittest.skipIf(os.name != 'posix', 'requires POSIX filesystem semantics')
+@unittest.skipUnless(sys.platform != 'win32', 'requires POSIX filesystem')
 class ZipDirectorySpecialTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_filename_with_backslash(self):
         os.mkdir('d')
@@ -104,11 +106,7 @@ class ZipDirectorySpecialTest(testenv.TemporaryWorkingDirectoryTestCase):
         open(os.path.join('d', 'a'), 'xb').close()
         os.mkdir('d2')
         open(os.path.join('d2', 'c'), 'xb').close()
-        try:
-            os.symlink('../d2/', os.path.join('d', 'b'), target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('../d2/', os.path.join('d', 'b'), target_is_directory=True)
 
         with dlb.ex.Context():
             dlb_contrib.zip.ZipDirectory(

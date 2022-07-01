@@ -22,7 +22,7 @@ class PathTest(unittest.TestCase):
             dlb_contrib.msbatch.BatchFilePath('..bat')
 
 
-@unittest.skipIf(sys.platform != 'win32', 'requires MS Windows')
+@unittest.skipUnless(sys.platform == 'win32', 'requires MS Windows')
 class BatchFileTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_batchfile_is_found(self):

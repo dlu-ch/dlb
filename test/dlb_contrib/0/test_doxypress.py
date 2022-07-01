@@ -76,7 +76,7 @@ class DoxyPressWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
         self.assertEqual(msg, str(cm.exception))
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('doxypress'), 'requires doxypress in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('doxypress'), 'requires doxypress in $PATH')
 class DoxyPressExecutionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_for_empty_doxyfile(self):
@@ -90,7 +90,7 @@ class DoxyPressExecutionTest(testenv.TemporaryWorkingDirectoryTestCase):
                     output_directory='d/').start()
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('doxypress'), 'requires doxypress in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('doxypress'), 'requires doxypress in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

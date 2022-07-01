@@ -15,8 +15,8 @@ class ThisIsAUnitTest(unittest.TestCase):
     pass
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('ar'), 'requires ar in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('ar'), 'requires ar in $PATH')
 class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
@@ -39,7 +39,7 @@ class ArTest(testenv.TemporaryWorkingDirectoryTestCase):
                                             archive_file='libexample.a').start()
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('ar'), 'requires ar in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('ar'), 'requires ar in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

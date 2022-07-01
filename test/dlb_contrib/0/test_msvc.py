@@ -40,7 +40,6 @@ class ThisIsAUnitTest(unittest.TestCase):
     pass
 
 
-@unittest.skipIf(sys.platform == 'win32', 'not on Windows')
 class NonWindowsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_toolinstance_can_be_constructed(self):
@@ -49,6 +48,7 @@ class NonWindowsTest(testenv.TemporaryWorkingDirectoryTestCase):
                                                include_search_directories=['i/'])
         dlb_contrib.msvc.LinkerMsvc(linkable_files=['a.o'], linked_file='a')
 
+    @unittest.skipUnless(sys.platform != 'win32', 'requires non-Windows platform')
     def test_fails_on_run(self):
         os.mkdir('i')
         open('a.c', 'x').close()
@@ -62,7 +62,7 @@ class NonWindowsTest(testenv.TemporaryWorkingDirectoryTestCase):
             CCompiler(source_files=['a.c'], object_files=['a.o'], include_search_directories=['i/']).start()
 
 
-@unittest.skipIf(not os.path.isdir(vctools_install_dir), 'requires msvc')
+@unittest.skipUnless(os.path.isdir(vctools_install_dir), 'requires msvc')
 class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
@@ -267,7 +267,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
             t.start()
 
 
-@unittest.skipIf(not os.path.isdir(vctools_install_dir), 'requires msvc')
+@unittest.skipUnless(os.path.isdir(vctools_install_dir), 'requires msvc')
 class CppTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_ignores_extension(self):

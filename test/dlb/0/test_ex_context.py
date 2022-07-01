@@ -11,6 +11,7 @@ import os.path
 import stat
 import time
 import datetime
+import testtool
 import unittest
 
 
@@ -165,12 +166,7 @@ class WorkingTreeRequirementTest(testenv.TemporaryDirectoryTestCase):
     def test_fails_if_dlbroot_is_symlink_to_dir(self):
         os.mkdir('dlbroot_sysmlink_target')
 
-        try:
-            os.symlink('dlbroot_sysmlink_target', '.dlbroot', target_is_directory=True)
-            self.assertTrue(os.path.islink('.dlbroot'))
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('dlbroot_sysmlink_target', '.dlbroot', target_is_directory=True)
 
         with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
             with dlb.ex.Context():
@@ -198,8 +194,7 @@ class ManagementTreeSetupTest(testenv.TemporaryWorkingDirectoryTestCase):
         os.chmod(temp_path, stat.S_IMODE(sr0.st_mode) ^ stat.S_IXOTH)  # change permission
         sr1 = os.stat(temp_path)
         if stat.S_IMODE(sr0.st_mode) == stat.S_IMODE(sr1.st_mode):
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, the permission should have changed')
-            raise unittest.SkipTest
+            raise unittest.SkipTest('requires POSIX filesystem')
 
         with dlb.ex.Context():
             self.assertTrue(os.path.isdir(temp_path))
@@ -212,12 +207,7 @@ class ManagementTreeSetupTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         symlink_target = os.path.join('.dlbroot', 't_sysmlink_target')
         os.mkdir(symlink_target)
-        try:
-            os.symlink(symlink_target, temp_path, target_is_directory=True)
-            self.assertTrue(os.path.islink(temp_path))
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip(symlink_target, temp_path, target_is_directory=True)
 
         with dlb.ex.Context():
             self.assertTrue(os.path.isdir(temp_path))
@@ -239,7 +229,7 @@ class ManagementTreeSetupTest(testenv.TemporaryWorkingDirectoryTestCase):
         try:
             open(os.path.join('.dlbroot', 'O'), 'xb').close()
         except FileExistsError:
-            raise unittest.SkipTest from None  # filesystem is not case-sensitive
+            raise unittest.SkipTest('requires case-sensitive filesystem') from None
 
         with dlb.ex.Context():
             self.assertTrue(os.path.isfile(os.path.join('.dlbroot', 'o')))
@@ -628,12 +618,7 @@ class ManagedTreePathTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_fails_on_symlink_in_managedtree_if_not_assuming(self):
         os.makedirs(os.path.join('x', 'b'))
-
-        try:
-            os.symlink('x', 'a', target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('x', 'a', target_is_directory=True)
 
         with dlb.ex.Context():
             with self.assertRaises(dlb.ex.WorkingTreePathError) as cm:

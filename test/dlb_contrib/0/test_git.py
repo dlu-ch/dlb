@@ -224,8 +224,8 @@ class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):
         return True
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('git'), 'requires git in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('sh'), 'requires sh in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('git'), 'requires git in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('sh'), 'requires sh in $PATH')
 class GitDescribeWorkingDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):
@@ -338,8 +338,8 @@ class DefaultVersionTagTest(unittest.TestCase):
         self.assertTrue(self.REGEX.fullmatch('v1.2.3patch747'))
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('git'), 'requires git in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('sh'), 'requires sh in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('git'), 'requires git in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('sh'), 'requires sh in $PATH')
 class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_local_only(self):
@@ -485,7 +485,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual({'v1.2.3'}, version_tag_names)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('git'), 'requires git in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('git'), 'requires git in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

@@ -4,8 +4,8 @@
 
 import testenv  # also sets up module search paths
 import dlb.ex._mult
-import unittest
 import random
+import unittest
 
 
 class ConstructionTest(unittest.TestCase):

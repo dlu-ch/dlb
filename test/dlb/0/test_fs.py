@@ -775,7 +775,7 @@ class NativeTest(unittest.TestCase):
         self.assertFalse(issubclass(dlb.fs.NoSpacePath.Native, dlb.fs.PortableWindowsPath.Native))
 
 
-@unittest.skipIf(not isinstance(pathlib.Path(), pathlib.WindowsPath), 'Windows only')
+@unittest.skipUnless(isinstance(pathlib.Path(), pathlib.WindowsPath), 'requires MS Windows')
 class NativeWindowsTest(unittest.TestCase):
 
     def test_constructor_fails_for_invalid_path(self):
@@ -1157,7 +1157,7 @@ class PropagateMtimeTest(testenv.TemporaryDirectoryTestCase):
         with self.assertRaises(FileNotFoundError):
             dlb.fs.Path('d/').propagate_mtime()
 
-    @unittest.skipIf(sys.platform == 'win32', 'POSIX filesystem only')
+    @unittest.skipUnless(sys.platform != 'win32', 'requires POSIX filesystem')
     def test_does_not_change_atime(self):
         os.mkdir('d')
         open(os.path.join('d', 'a'), 'x').close()

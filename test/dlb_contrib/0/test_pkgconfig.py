@@ -104,7 +104,7 @@ class PkgConfigWithoutActualExecutionTest(testenv.TemporaryWorkingDirectoryTestC
         self.assertEqual(({}, ('--libs', 'abc')), r)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
 class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_faked_gtk_and_orte(self):
@@ -176,7 +176,7 @@ class PkgConfigTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual(('-pthread',), result.other_options)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('pkg-config'), 'requires pkg-config in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

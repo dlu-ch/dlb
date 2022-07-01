@@ -45,7 +45,7 @@ class KernelInfoTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.linux.get_kernel_info(proc_root_directory='.', max_size=len(version) - 1)
         self.assertEqual("does not end with '\\n' (too large?): 'sys/kernel/version'", str(cm.exception))
 
-    @unittest.skipIf(sys.platform != 'linux', 'Linux only')
+    @unittest.skipUnless(sys.platform == 'linux', 'requires Linux')
     def test_can_query_running_kernel(self):
         dlb_contrib.linux.get_kernel_info()
 
@@ -102,12 +102,11 @@ class MemoryInfoTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.linux.get_memory_info(proc_root_directory='.')
         self.assertEqual("missing key in 'meminfo': 'MemAvailable'", str(cm.exception))
 
-    @unittest.skipIf(sys.platform != 'linux', 'Linux only')
+    @unittest.skipUnless(sys.platform == 'linux', 'requires Linux')
     def test_can_query_running_kernel(self):
         dlb_contrib.linux.get_memory_info()
 
 
-@unittest.skipIf(sys.platform != 'linux', 'Linux only')  # involves native absolute paths
 class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_is_correct_for_typical(self):
@@ -208,7 +207,7 @@ class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.', contained_paths=['x/y'])
         self.assertEqual("invalid path for 'AbsolutePath': 'x/y' (must be absolute)", str(cm.exception))
 
-    @unittest.skipIf(sys.platform != 'linux', 'Linux only')  # involves native absolute paths
+    @unittest.skipUnless(sys.platform == 'linux', 'requires Linux')  # involves native absolute paths
     def test_can_query_running_kernel(self):
         vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems()
         self.assertIn(dlb.fs.Path('/'), vfstype_name_by_mountpoint)
@@ -377,7 +376,7 @@ class CpuInfoTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.linux.get_cpu_info(proc_root_directory='.')
         self.assertEqual("unexpected key-value line: b'processor\\t: 0'", str(cm.exception))
 
-    @unittest.skipIf(sys.platform != 'linux', 'Linux only')
+    @unittest.skipUnless(sys.platform == 'linux', 'requires Linux')
     def test_can_query_running_kernel(self):
         cpu_info = dlb_contrib.linux.get_cpu_info()
         self.assertGreaterEqual(cpu_info.cpu_count, 1)

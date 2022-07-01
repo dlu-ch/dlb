@@ -127,10 +127,10 @@ class ParseLineTest(unittest.TestCase):
             dlb_contrib.strace.syscall_from_line(b'')
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('strace'), 'requires strace in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('bash'), 'requires bash in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('cat'), 'requires cat in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('cp'), 'requires cat in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('strace'), 'requires strace in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('bash'), 'requires bash in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('cat'), 'requires cat in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('cp'), 'requires cat in $PATH')
 class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_discovers_read_files(self):
@@ -170,7 +170,7 @@ class RunStracedTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual((dlb.fs.Path('y'),), r.written_files)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('strace'), 'requires strace in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('strace'), 'requires strace in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):

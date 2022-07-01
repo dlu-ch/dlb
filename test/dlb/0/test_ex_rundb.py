@@ -32,7 +32,9 @@ class CreationTest(testenv.TemporaryDirectoryTestCase):
         try:
             os.mkdir('a:b')
         except OSError:
-            raise unittest.SkipTest from None  # POSIX does not require the support of ':' in a file name
+            # POSIX does not require the support of ':' in a file name
+            raise unittest.SkipTest("requires filesystem that supports ':' in filename") from None
+
         with contextlib.closing(dlb.ex._rundb.Database(':memory:')):
             os.path.isfile(':memory:')
 

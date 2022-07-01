@@ -58,7 +58,7 @@ class QuoteTest(unittest.TestCase):
         self.assertEqual("'a'\\''b'", dlb_contrib.sh.quote("a'b"))
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('sh'), 'requires sh in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('sh'), 'requires sh in $PATH')
 class ShTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_line_output(self):

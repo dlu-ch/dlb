@@ -14,6 +14,7 @@ import tempfile
 import zipfile
 import io
 import importlib
+import testtool
 import unittest
 
 
@@ -403,12 +404,7 @@ class RedoIfNonRegularFileInputModifiedTest(testenv.TemporaryWorkingDirectoryTes
         open(os.path.join('src', 'a.cpp'), 'xb').close()
 
         nonregular = os.path.join('src', 'n')
-
-        try:
-            os.symlink('a/', nonregular, target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip('a/', nonregular, target_is_directory=True)
 
         t = ATool(source_file='src/a.cpp', object_file='a.o', dummy_file='src/n')
 
@@ -428,9 +424,8 @@ class RedoIfNonRegularFileInputModifiedTest(testenv.TemporaryWorkingDirectoryTes
         os.remove(nonregular)
         try:
             os.mkfifo(nonregular)
-        except OSError:  # on platform or filesystem that does not support named pipe
-            self.assertNotEqual(os.name, 'posix', 'on a typical POSIX system, named pipes should be supported')
-            raise unittest.SkipTest from None
+        except OSError:
+            raise unittest.SkipTest('require support for named pipes') from None
 
         with dlb.ex.Context():
             output = io.StringIO()

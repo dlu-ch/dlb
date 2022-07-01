@@ -86,9 +86,8 @@ class TemporaryDirectoryWithChmodTestCase(TemporaryDirectoryTestCase):
             except OSError:
                 pass
             else:
-                self.assertNotEqual(os.name, 'posix',
-                                    "on any POSIX system permission should be denied (without 'root' privileges)")
-                raise unittest.SkipTest
+                # note: UID 0 on a Unix-like system can access file system object even after with chmod(0x000)
+                raise unittest.SkipTest('require filesystem that prevents access based on chmod()')
         finally:
             probe_dir.chmod(0o700)
             if probe_file.exists():
@@ -131,3 +130,13 @@ class CommandlineToolTestCase(unittest.TestCase):
         sys.stderr = self._stderr
         sys.stdout.close()
         sys.stdout = self._stdout
+
+
+def symlink_or_skip(src, dst, *args, **kwargs):
+    try:
+        os.symlink(src, dst, *args, **kwargs)
+    except OSError:  # on platform or filesystem that does not support symlinks
+        raise unittest.SkipTest('requires symlink support') from None
+
+    if not os.path.islink(dst):
+        raise unittest.SkipTest('requires symlink support')

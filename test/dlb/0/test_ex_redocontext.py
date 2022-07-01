@@ -13,6 +13,7 @@ import os.path
 import io
 import asyncio
 import unittest
+import testtool
 
 
 class ThisIsAUnitTest(unittest.TestCase):
@@ -68,7 +69,7 @@ class PrepareArgumentsTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual([str(dlb.fs.Path('a.c').native)], arguments)
 
 
-@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+@unittest.skipUnless(os.path.isfile('/bin/ls'), 'requires ls')
 class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
     # GNU coreutils (https://man7.org/linux/man-pages/man1/ls.1.html),
     # FreeBSD: https://www.freebsd.org/cgi/man.cgi?ls:
@@ -169,11 +170,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
     def test_fails_for_uncollapsable_path_relative_to_cwd(self):
         os.mkdir('a')
         os.makedirs(os.path.join('x', 'y', 'b', 'c'))
-        try:
-            os.symlink(os.path.join('..', 'x', 'y', 'b'), os.path.join('a', 'b'), target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
+        testtool.symlink_or_skip(os.path.join('..', 'x', 'y', 'b'), os.path.join('a', 'b'), target_is_directory=True)
 
         with dlb.ex.Context() as c:
             rd = dlb.ex._toolrun.RedoContext(c, dict())
@@ -254,7 +251,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.cf.level.helper_execution = orig
 
 
-@unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')
+@unittest.skipUnless(os.path.isfile('/bin/sh'), 'requires sh')
 class ExecuteHelperEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_can_override_envvar(self):
@@ -270,7 +267,7 @@ class ExecuteHelperEnvVarTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertEqual(b'x-zzz...', f.read().strip())
 
 
-@unittest.skipIf(not os.path.isfile('/bin/sh'), 'requires sh')
+@unittest.skipUnless(os.path.isfile('/bin/sh'), 'requires sh')
 class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_returns_output_as_bytes_without_processor(self):
@@ -447,7 +444,7 @@ class ExecuteHelperWithOutputTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
 
-@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+@unittest.skipUnless(os.path.isfile('/bin/ls'), 'requires ls')
 class ExecuteHelperRawTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_works_with_argument_unsupported_by_helper(self):
@@ -703,12 +700,8 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
             action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.output.NonRegularFile(), 'test')
             rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('a'): action})
 
-            try:
-                os.symlink('/x/y', 'a')
-                os.symlink('/u/v', 'b')
-            except OSError:  # on platform or filesystem that does not support symlinks
-                self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-                raise unittest.SkipTest from None
+            testtool.symlink_or_skip('/x/y', 'a')
+            testtool.symlink_or_skip('/u/v', 'b')
 
             output = io.StringIO()
             dlb.di.set_output_file(output)
@@ -724,12 +717,7 @@ class ReplaceNonRegularFileOutputTest(testenv.TemporaryWorkingDirectoryTestCase)
         with dlb.ex.Context() as c:
             action = dlb.ex._dependaction.NonRegularFileOutputAction(dlb.ex.output.NonRegularFile(), 'test')
             rd = dlb.ex._toolrun.RedoContext(c, {dlb.fs.Path('x/y/a'): action})
-
-            try:
-                os.symlink('/u/v', 'b')
-            except OSError:  # on platform or filesystem that does not support symlinks
-                self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-                raise unittest.SkipTest from None
+            testtool.symlink_or_skip('/u/v', 'b')
 
             output = io.StringIO()
             dlb.di.set_output_file(output)

@@ -153,7 +153,7 @@ class FindPathInTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertIsNone(p)
 
 
-@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+@unittest.skipUnless(os.path.isfile('/bin/ls'), 'requires ls')
 class HelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_find_helpers_of_none_for_root_mean_true(self):
@@ -270,7 +270,7 @@ class ExplicitHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
                     helper0['a'] = '/a'
 
 
-@unittest.skipIf(not os.path.isfile('/bin/ls'), 'requires ls')
+@unittest.skipUnless(os.path.isfile('/bin/ls'), 'requires ls')
 class ImplicitHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_implicit_in_inner_affects_outer(self):

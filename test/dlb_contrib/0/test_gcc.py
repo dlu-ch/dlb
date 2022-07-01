@@ -12,6 +12,7 @@ import dlb_contrib.gcc
 import sys
 import os.path
 import textwrap
+import testtool
 import unittest
 from typing import List, Iterable, Union
 
@@ -44,7 +45,7 @@ class PathTest(unittest.TestCase):
             dlb_contrib.gcc.ObjectOrArchivePath('..a')
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
 class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
@@ -166,7 +167,7 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual("not a macro: 'a('", str(cm.exception))
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
 class CplusplusTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_example(self):
@@ -219,8 +220,8 @@ class CplusplusTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb_contrib.gcc.CplusplusLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').start()
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
 class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     # noinspection PyPep8Naming
@@ -276,12 +277,7 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
                                        subprogram_directory='/usr/bin/').start()
 
     def test_succeeds_for_relative_subprogram_directory(self):
-        try:
-            os.symlink('/usr/', 'u', target_is_directory=True)
-        except OSError:  # on platform or filesystem that does not support symlinks
-            self.assertNotEqual(os.name, 'posix', 'on any POSIX system, symbolic links should be supported')
-            raise unittest.SkipTest from None
-
+        testtool.symlink_or_skip('/usr/', 'u', target_is_directory=True)
         with dlb.ex.Context():
             dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o', 'b.o', 'c.o'], linked_file='a',
                                        subprogram_directory='u/bin/').start()
@@ -302,8 +298,8 @@ class CLinkerTest(testenv.TemporaryWorkingDirectoryTestCase):
                        linked_file='e').start()
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
-@unittest.skipIf(not testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('g++'), 'requires g++ in $PATH')
 class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_version_is_string_with_dot(self):
@@ -331,7 +327,7 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
                 self.assertGreaterEqual(version.count('.'), 2)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
 class CCompileCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_not_overwritten(self):
@@ -362,7 +358,7 @@ class CCompileCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
         self.assertEqual('', output.getvalue())
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
 class CConstantConditionCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_not_overwritten(self):
@@ -431,7 +427,7 @@ class CConstantConditionCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertIsNone(r)
 
 
-@unittest.skipIf(not testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
+@unittest.skipUnless(testenv.has_executable_in_path('gcc'), 'requires gcc in $PATH')
 class CSizeOfCheckTest(testenv.TemporaryWorkingDirectoryTestCase):
 
     def test_not_overwritten(self):
