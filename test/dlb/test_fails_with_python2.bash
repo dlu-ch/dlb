@@ -11,6 +11,12 @@ script_dir="${script_dir:-.}"
 path_to_root=../..
 cd -- "${script_dir:?}"
 
+python2="$(command -v "${PYTHON2:?}" || echo)"
+if [ -z "${python2}" ]; then
+    echo "${0##*/} ... skipped 'requires Python 2'" >&3
+    exit 0
+fi
+
 (
     trap 'echo error: ${0##*/} aborted' EXIT
     PYTHONPATH="${path_to_root:?}/src" "${PYTHON2:?}" <<EOF
@@ -24,4 +30,4 @@ EOF
     trap - EXIT
 )
 
-echo "${0##*/}: completed successfully"
+echo "${0##*/} ... ok" >&3

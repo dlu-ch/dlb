@@ -23,4 +23,4 @@ cd -- "${script_dir:?}"
     trap - EXIT
 )
 
-echo "${0##*/}: completed successfully"
+echo "${0##*/} ... ok" >&3
