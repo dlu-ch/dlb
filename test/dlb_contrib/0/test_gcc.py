@@ -19,7 +19,6 @@ from typing import List, Iterable, Union
 
 class CCompiler(dlb_contrib.gcc.CCompilerGcc):
     DEFINITIONS = {
-        '__GNUC__': None,  # predefined
         'ONE': 1,
         'LINE_SEPARATOR': '"\\n"',
         'print(l)': 'printf(l LINE_SEPARATOR)'
@@ -60,10 +59,6 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                     #error "ONE is not defined"
                 #endif
                 
-                #ifdef __GNUC__
-                    #error "__GNUC__ is defined"
-                #endif
-
                 int main() {
                     print(GREETING);
                     return 0;
@@ -103,6 +98,35 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             dlb_contrib.gcc.CLinkerGcc(object_and_archive_files=['a.o'], linked_file='a').start()
+
+    def test_can_undefine_predefined(self):
+        # Note: Do not combine undefining predefined preprocessor macros with inclusion of file of the
+        # standard library.
+
+        with open('a.c', 'w', encoding='utf-8') as f:
+            f.write(textwrap.dedent(
+                '''
+                #ifdef __GNUC__
+                    #error "__GNUC__ is defined"
+                #endif
+
+                int main() {
+                    return 0;
+                }
+                '''
+            ))
+
+        dlb.di.set_threshold_level(dlb.di.DEBUG)
+        dlb.di.set_output_file(sys.stderr)
+
+        t = dlb_contrib.gcc.CCompilerGcc(source_files=['a.c'], object_files=['a.o'],
+                                         DEFINITIONS={'__GNUC__': None})  # predefined
+        with dlb.ex.Context():
+            result = t.start()
+
+        self.assertEqual((), result.included_files)
+        self.assertTrue(os.path.isfile(result.object_files[0].native))
+        self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
     def test_fails_for_colon_in_name(self):
         with self.assertRaises(dlb.ex.DependencyError) as cm:

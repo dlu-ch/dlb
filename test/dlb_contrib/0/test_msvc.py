@@ -21,7 +21,6 @@ vctools_install_dir = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\C
 
 class CCompiler(dlb_contrib.msvc.CCompilerMsvc):
     DEFINITIONS = {
-        '_MSC_VER': None,  # predefined
         'ONE': 1,
         'LINE_SEPARATOR': '"\\n"'
     }
@@ -77,10 +76,6 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
                     #error "ONE is not defined"
                 #endif
 
-                #ifdef _MSC_VER
-                    #error "_MSC_VER is defined"
-                #endif
-
                 int main() {
                     const char *p = GREETING;
                     return 0;
@@ -131,6 +126,43 @@ class CTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.ex.Context.active.env['LIB'] = os.getcwd()
             dlb.ex.Context.active.helper['link.exe'] = binary_path / 'link.exe'
             DllLinker(linkable_files=['a.o'], linked_file='a').start()
+
+    def test_can_undefine_predefined(self):
+        # Note: Do not combine undefining predefined preprocessor macros with inclusion of file of the
+        # standard library.
+
+        with open('a.c', 'w', encoding='utf-8') as f:
+            f.write(textwrap.dedent(
+                '''
+                #ifdef _MSC_VER
+                    #error "_MSC_VER is defined"
+                #endif
+
+                int main() {
+                    return 0;
+                }
+                '''
+            ))
+
+        dlb.di.set_threshold_level(dlb.di.DEBUG)
+        dlb.di.set_output_file(sys.stderr)
+        binary_path = dlb.fs.Path(dlb.fs.Path.Native(vctools_install_dir), is_dir=True) / 'bin/Hostx64/x64/'
+
+        t = dlb_contrib.msvc.CCompilerMsvc(source_files=['a.c'], object_files=['a.o'],
+                                           DEFINITIONS={'_MSC_VER': None})  # predefined
+        with dlb.ex.Context():
+            # see <program-dir>\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars*.bat
+            dlb.ex.Context.active.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
+            dlb.ex.Context.active.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
+            dlb.ex.Context.active.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*', example='C:\\X;D:\\Y')
+            dlb.ex.Context.active.env['INCLUDE'] = os.getcwd()
+            dlb.ex.Context.active.helper['cl.exe'] = binary_path / 'cl.exe'
+
+            result = t.start()
+
+        self.assertEqual((), result.included_files)
+        self.assertTrue(os.path.isfile(result.object_files[0].native))
+        self.assertTrue(all(os.path.isfile(p.native) for p in result.included_files))
 
     def test_detects_included_files_with_unrepresentable_character_in_abspath(self):
         strange_dir_name = '统一码'  # not in cp437 or cp850
