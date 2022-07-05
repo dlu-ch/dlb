@@ -55,4 +55,4 @@ class VersionTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(1, len(version_by_path))
             version = version_by_path[path]
             self.assertIsInstance(version, str)
-            self.assertGreaterEqual(version.count('.'), 2)
+            self.assertGreaterEqual(version.count('.'), 1)
