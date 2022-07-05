@@ -57,7 +57,7 @@ jobs:
     - name: Install dependencies
       run: pip install coverage==6.4.1 coveralls==3.3.1
     - name: Run tests
-      run: bash run-tests.bash dlb
+      run: bash run-tests.bash --valid-skip-reason='requires Python 2' --valid-skip-reason='requires MS Windows' dlb
       env:
         PYTHON3COVERAGE: coverage3
         PYTHONWARNINGS: ${{ matrix.do-accept-deprecation == true && 'default::DeprecationWarning,default::PendingDeprecationWarning' || '' }}
@@ -69,7 +69,7 @@ jobs:
         path: test/dlb/.coverage
 
   test-dlb_contrib-earliest:  # job_id
-    name: Test 'dlb_contrib' [oldest supported tool versions]
+    name: Test 'dlb' and 'dlb_contrib' [oldest supported tool versions]
     needs: test-dlb
 
     runs-on: ubuntu-latest
@@ -88,7 +88,7 @@ jobs:
       env:
         HOME: /home/tester
 
-    - run: bash run-tests.bash dlb_contrib
+    - run: bash run-tests.bash --valid-skip-reason='requires MS Windows' --valid-skip-reason='requires msvc' dlb dlb_contrib
       working-directory: /home/tester/dlb
       env:
         PYTHON3COVERAGE:

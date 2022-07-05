@@ -12,8 +12,11 @@
 #
 # Usage example:
 #
-#     PYTHON3COVERAGE= run-tests.bash  # all packages, without coverage report
-#     run-tests.bash dlb  # only package dlb, with coverage report
+#     # all packages, without coverage report, do not check skip reasons of skipped tests
+#     PYTHON3COVERAGE= run-tests.bash --no-skip-reason-check
+#
+#     # only package dlb, with coverage report, fail with any skip reason except 'requires MS Windows'
+#     run-tests.bash dlb --valid-skip-reason='requires MS Windows'
 
 set -e
 set -o pipefail
@@ -41,7 +44,41 @@ test_out_dir="build/out/test"
 test_report_name="report.log"
 test_output_name="stdout_and_stderr.log"
 
-packages_under_test=("$@")
+packages_under_test=()
+valid_skip_reasons=()
+
+function show_usage() {
+    printf 'Usage: %q [--valid-skip-reason=REASON ... ] [ -- ] [ PACKAGE ... ]\n' "${0##*/}" >&2
+    exit 2
+}
+
+do_check_skip_reasons=1
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --)
+            break
+            ;;
+        --no-skip-reason-check)
+            do_check_skip_reasons=0
+            ;;
+        --valid-skip-reason=*)
+            valid_skip_reasons+=("${1##--valid-skip-reason=}")
+            ;;
+        -*)
+            show_usage
+            ;;
+        *)
+            packages_under_test+=("$1")
+            ;;
+    esac
+    shift
+done
+packages_under_test+=("$@")
+
+if [ "${do_check_skip_reasons:?}" -eq 0 ]; then
+    valid_skip_reasons=()
+fi
+
 if [ "${#packages_under_test[@]}" -eq 0 ]; then
     packages_under_test=(dlb dlb_contrib)
 fi
@@ -121,16 +158,20 @@ for package_under_test in "${packages_under_test[@]}"; do
 done
 
 # Summarize all skipped tests
+skipped_report="${test_out_dir:?}/skipped.log"
 (
     cd "./${test_out_dir:?}"
-    skipped_report="skipped.log"
-    "${FIND:?}" . -name "${test_report_name:?}" -exec "${GREP:?}" -e ' \.\.\. skipped ' {} \; > "${skipped_report:?}.t"
-    "${MV:?}" -- "${skipped_report:?}.t" "${skipped_report:?}"
+    "${FIND:?}" . -name "${test_report_name:?}" -exec "${GREP:?}" -e ' \.\.\. skipped ' {} \;
+) > "${skipped_report:?}.t"
+"${MV:?}" -- "${skipped_report:?}.t" "${skipped_report:?}"
 
-    if [ -s "${skipped_report:?}" ]; then
-        printf '\nSkipped tests:\n%s\n' "$(<"${skipped_report:?}")" >&2
+if [ -s "${skipped_report:?}" ]; then
+    printf '\nSkipped tests:\n%s\n' "$(<"${skipped_report:?}")" >&2
+    if [ "${do_check_skip_reasons:?}" -ne 0 ]; then
+        "${PYTHON3:?}" "build/check_skipped_log_for_invalid_reasons.py" \
+            "${skipped_report:?}" "${valid_skip_reasons[@]}"
     fi
-)
+fi
 
 trap - EXIT
 printf '\ntest of packages was successful: %s\n' "${packages_under_test[*]}" >&2
