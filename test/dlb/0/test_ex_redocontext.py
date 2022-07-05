@@ -230,7 +230,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
             dlb.cf.level.helper_execution = dlb.di.INFO
 
             with dlb.ex.Context() as c:
-                ls_files = c.helper['ls']
+                ls_file = c.helper['ls']
                 rd = dlb.ex._toolrun.RedoContext(c, dict())
                 e = rd.execute_helper('ls', ['-l'], stdout_output=False)
 
@@ -240,7 +240,7 @@ class ExecuteHelperTest(testenv.TemporaryWorkingDirectoryTestCase):
 
             msg = (
                 f"I execute helper 'ls' \n" 
-                f"  | path:        {ls_files.as_string()!r} \n" 
+                f"  | path:        {ls_file.as_string()!r} \n" 
                 f"  | arguments:   '-l' \n"
                 f"  | directory:   './' \n"
                 f"  | environment: {{}}\n"

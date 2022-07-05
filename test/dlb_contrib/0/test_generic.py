@@ -102,6 +102,7 @@ class LsVersionQueryTest(testenv.TemporaryWorkingDirectoryTestCase):
 
         with dlb.ex.Context():
             version_by_path = VersionQuery().start().version_by_path
+            ls_file = dlb.ex.Context.active.helper['ls']
 
-        self.assertEqual([dlb.fs.Path('/bin/ls')], sorted(version_by_path.keys()))
-        self.assertRegex(version_by_path[dlb.fs.Path('/bin/ls')], r'[0-9]+(\.[0-9]+)+')
+        self.assertEqual([ls_file], sorted(version_by_path.keys()))
+        self.assertRegex(version_by_path[ls_file], r'[0-9]+(\.[0-9]+)+')
