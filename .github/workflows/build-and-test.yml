@@ -74,7 +74,7 @@ jobs:
 
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dlu-ch/test_dlb_contrib_debian10:latest
+      image: ghcr.io/dlu-ch/dlb_contrib_test_debian10
       options: --cap-add SYS_PTRACE
 
     steps:
@@ -102,7 +102,7 @@ jobs:
 
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dlu-ch/test_dlb_contrib_debian10:latest
+      image: ghcr.io/dlu-ch/dlb_examples_test_debian10
 
     steps:
     - name: Checkout Git repository
