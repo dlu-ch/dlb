@@ -330,12 +330,13 @@ class GetCheckRootPathFromCwdTest(testenv.TemporaryDirectoryTestCase):
         with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
             dlb.ex._worktree.get_checked_root_path_from_cwd(
                 os.path.abspath(os.path.join('a', 'b', 'y')), path_cls=dlb.fs.Path)
-        msg = (
-            "supposedly equivalent forms of current directory's path point to different filesystem objects\n"
-            "  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n"
-            "  | try again?"
+        regex= (
+            r"(?m)\A"
+            r"current directory has a non-canonical path\n"
+            r"  \| would be equivalent otherwise: .+, .+\n"
+            r"  \| reason: unresolved symbolic links, filesystem with aliasing paths, or a moved directory"
         )
-        self.assertEqual(msg, str(cm.exception))
+        self.assertRegex(str(cm.exception), regex)
 
 
 class UniquePathProviderTest(unittest.TestCase):

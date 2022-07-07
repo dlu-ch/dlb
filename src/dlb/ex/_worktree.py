@@ -323,10 +323,13 @@ def get_checked_root_path_from_cwd(cwd: str, path_cls: Type[fs.Path]):
         if real_root_path != root_path.native.raw:
             raise ValueError
     except (ValueError, OSError, RuntimeError):
+        # Note on MS Windows:
+        # os.getcwd() is different after 'cd <p1>' and 'cd <p1>' if <p1> and <p2> denote the same directory
+        # but have path components with different representation (short [8.3] file name vs. full file name).
         msg = (
-            "supposedly equivalent forms of current directory's path point to different filesystem objects\n"
-            "  | reason: unresolved symbolic links, dlb bug, Python bug or a moved directory\n"
-            "  | try again?"
+            f"current directory has a non-canonical path\n"
+            f"  | would be equivalent otherwise: {real_root_path!r}, {root_path.native.raw!r}\n"
+            f"  | reason: unresolved symbolic links, filesystem with aliasing paths, or a moved directory"
         )
         raise _error.NoWorkingTreeError(msg) from None
 
