@@ -632,11 +632,12 @@ class UsageExampleTest(unittest.TestCase):
         dlb.di.set_output_file(output)
 
         dlb.di.inform('summary:', 1, 'multi-\nline\x1Ftext', [{2}, False, '?'], level=dlb.di.ERROR, with_time=True)
-        o = (
-            'E summary: [+0.000000s] \n'
-            '  | 1 \n'
-            '  | multi- \n'
-            '  | line text \n'
-            "  | [{2}, False, '?']\n"
+        regex = (
+            r"(?m)\A"
+            r"E summary: \[\+0\.0{1,6}s\] \n"
+            r"  \| 1 \n"
+            r"  \| multi- \n"
+            r"  \| line text \n"
+            r"  \| \[\{2\}, False, '\?'\]\n\Z"
         )
-        self.assertEqual(o, output.getvalue())
+        self.assertRegex(output.getvalue(), regex)
