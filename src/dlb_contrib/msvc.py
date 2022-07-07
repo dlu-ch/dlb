@@ -18,7 +18,6 @@
 #   import dlb.ex
 #   import dlb_contrib.msvc
 #
-#   TODO fix this import code
 #   def setup_paths_for_msvc(context):
 #       # VCINSTALLDIR must be defined, the other environment variables are set by build/setup.bat with the help of
 #       # %VCINSTALLDIR%\VC\Auxiliary\Build\vcvars*.bat.
@@ -34,6 +33,7 @@
 #       context.env.import_from_outer('SYSTEMROOT', pattern=r'.+', example='C:\\WINDOWS')
 #       context.env.import_from_outer('INCLUDE', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
 #       context.env.import_from_outer('LIB', pattern=r'[^;]+(;[^;]+)*;?', example='C:\\X;D:\\Y')
+#       context.env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
 #       context.env['INCLUDE'] = environment['INCLUDE']
 #       context.env['LIB'] = environment['LIB']
 #
