@@ -11,6 +11,7 @@ defaults:
     shell: bash
 
 jobs:
+
   test-dlb:  # job_id
     name: >
       Test 'dlb' with Python ${{ matrix.python-version }}
@@ -251,3 +252,79 @@ jobs:
       run: sudo apt-get install graphviz=2.42.2-3build2
     - name: Build HTML documentation
       run: bash build-doc.bash html
+
+  test-dlb-windows:  # job_id
+    name: >
+      Test 'dlb' with Python ${{ matrix.python-version }}
+      on ${{ matrix.os }}
+      ${{ matrix.do-accept-deprecation != true && '[fail on deprecation warning]' || '' }}
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    continue-on-error: false
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: 'windows-latest'  # e.g. MS Windows Server 2022
+            python-version: '3.9'
+
+          - os: 'windows-latest'  # e.g. MS Windows Server 2022
+            python-version: '3.7.1'
+            # oldest Python 3.7.x available in https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+
+          - os: 'windows-latest'  # e.g. MS Windows Server 2022
+            python-version: '3.10'
+            do-accept-deprecation: true
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Run tests
+      run: |
+        foreach ($dir in Get-ChildItem -Path [0-9]* -Directory -Name) {
+            python3 -m unittest discover --start-directory=$dir -v
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+      shell: pwsh
+      working-directory: test/dlb
+      env:
+        PYTHONWARNINGS: ${{ matrix.do-accept-deprecation == true && 'default::DeprecationWarning,default::PendingDeprecationWarning' || '' }}
+
+  test-dlb_contrib-windows:  # job_id
+    name: >
+      Test 'dlb_contrib' with Python ${{ matrix.python-version }}
+      on ${{ matrix.os }}
+      ${{ matrix.do-accept-deprecation != true && '[fail on deprecation warning]' || '' }}
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    continue-on-error: false
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: 'windows-latest'  # e.g. MS Windows Server 2022
+            python-version: '3.9'
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Run tests
+      run: |
+        foreach ($dir in Get-ChildItem -Path [0-9]* -Directory -Name) {
+            python3 -m unittest discover --start-directory=$dir -v
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+      shell: pwsh
+      working-directory: test/dlb_contrib
+      env:
+        PYTHONWARNINGS: ${{ matrix.do-accept-deprecation == true && 'default::DeprecationWarning,default::PendingDeprecationWarning' || '' }}
