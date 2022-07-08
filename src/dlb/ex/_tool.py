@@ -485,6 +485,9 @@ class _ToolMeta(type):
                 f"defining module is imported"
             )
 
+        # Note: on MS Windows, the path of the current working directory is not unique
+        source_path = os.path.realpath(source_path)
+
         try:
             in_archive_path = None
             if not os.path.isfile(source_path):
