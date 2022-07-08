@@ -49,7 +49,11 @@ class TemporaryDirectoryTestCase(unittest.TestCase):  # change to temporary dire
 
     def setUp(self):
         self._original_cwd = os.getcwd()
-        self._temp_dir_path = os.path.abspath(tempfile.mkdtemp())
+
+        # Note: in older Python versions on MS Windows, os.path.realpath() does not replace short filenames
+        # by long file names while pathlib.Path.resolve() does.
+        self._temp_dir_path = str(pathlib.Path(tempfile.mkdtemp()).resolve(strict=True))
+
         try:
             os.chdir(self._temp_dir_path)
             if self._show_dir_change:

@@ -400,7 +400,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
         class GitCheckTags2(GitCheckTags):
             DO_SYNC_CHECK_LIGHTWEIGHT_TAGS = True
 
-        origin_repo_dir = os.path.abspath(tempfile.mkdtemp())
+        origin_repo_dir = os.path.realpath(tempfile.mkdtemp())
         with testenv.DirectoryChanger(origin_repo_dir):
             subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
             subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
@@ -463,7 +463,7 @@ class GitCheckTagsTest(testenv.TemporaryWorkingDirectoryTestCase):
             self.assertEqual(msg, str(cm.exception))
 
     def test_example(self):
-        origin_repo_dir = os.path.abspath(tempfile.mkdtemp())
+        origin_repo_dir = os.path.realpath(tempfile.mkdtemp())
         with testenv.DirectoryChanger(origin_repo_dir):
             subprocess.check_output(['git', '-c', 'init.DefaultBranch=master', 'init'])
             subprocess.check_output(['git', 'config', 'user.email', 'dlu-ch@users.noreply.github.com'])
