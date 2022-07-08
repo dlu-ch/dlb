@@ -43,7 +43,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
             orig_isfile = os.path.isfile
 
             def isfile_except_zip_file_path(path):
-                return False if path == zip_file_path else orig_isfile(path)
+                return False if os.path.realpath(path) == os.path.realpath(zip_file_path) else orig_isfile(path)
 
             os.path.isfile = isfile_except_zip_file_path
             try:
