@@ -424,7 +424,7 @@ class RedoIfNonRegularFileInputModifiedTest(testenv.TemporaryWorkingDirectoryTes
         os.remove(nonregular)
         try:
             os.mkfifo(nonregular)
-        except OSError:
+        except (OSError, AttributeError):
             raise unittest.SkipTest('require support for named pipes') from None
 
         with dlb.ex.Context():
