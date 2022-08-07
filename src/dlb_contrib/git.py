@@ -56,20 +56,21 @@ assert f'string' and sys.version_info >= (3, 7)
 
 
 GIT_DESCRIPTION_REGEX = re.compile(
-    r'^(?P<tag>.+)-(?P<commit_number>0|[1-9][0-9]*)-g(?P<latest_commit_hash>[0-9a-f]{40})(?P<dirty>\??)$')
-assert GIT_DESCRIPTION_REGEX.match('v1.2.3-0-ge08663af738857fcb4448d0fc00b95334bbfd500?')
+    r'^(?P<tag>.+)-(?P<commit_number>0|[1-9]\d*)-g(?P<latest_commit_hash>[\da-f]{40}|[\da-f]{64})(?P<dirty>\??)$')
+assert GIT_DESCRIPTION_REGEX.match('v1.2.3-0-ge08663af738857fcb4448d0fc00b95334bbfd500?')  # SHA1
+assert GIT_DESCRIPTION_REGEX.match('v1.2.3-0-g5af3f6df2a0bfbd38c6aee80833558b6e156bef08cecf9aa3be34e6d55cb7ba9')
 
 C_ESCAPED_PATH_REGEX = re.compile(r'^"([^"\\]|\\.)*"$')
 
-STATUS_UPSTREAM_BRANCH_COMPARE_REGEX = re.compile(r'^\+(?P<ahead_count>[0-9]+) -(?P<behind_count>[0-9]+)$')
+STATUS_UPSTREAM_BRANCH_COMPARE_REGEX = re.compile(r'^\+(?P<ahead_count>\d+) -(?P<behind_count>\d+)$')
 
 # <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
 ORDINARY_TRACKED_REGEX = re.compile(
-    r'^(?P<change>[A-Z.]{2}) (?P<sub>[A-Z.]{4}) ([0-7]+ ){3}([0-9a-f]+ ){2}(?P<path>.+)$')
+    r'^(?P<change>[A-Z.]{2}) (?P<sub>[A-Z.]{4}) ([0-7]+ ){3}([\da-f]+ ){2}(?P<path>.+)$')
 
 # <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path><sep><origPath>
 MOVED_TRACKED_REGEX = re.compile(
-    r'^(?P<change>[A-Z.]{2}) (?P<sub>[A-Z.]{4}) ([0-7]+ ){3}([0-9a-f]+ ){2}[RC][0-9]+ '
+    r'^(?P<change>[A-Z.]{2}) (?P<sub>[A-Z.]{4}) ([0-7]+ ){3}([\da-f]+ ){2}[RC]\d+ '
     r'(?P<path_before>.+)\t(?P<path>.+)$')
 
 
@@ -190,7 +191,7 @@ def check_refname(name: str):
 class GitDescribeWorkingDirectory(dlb.ex.Tool):
     # Describe the state of the Git working directory at the working tree's root.
     # This includes tag, commit and changed files.
-    # Fails if the Git working directory contains not annotated tag match *TAG_PATTERN*.
+    # Fails if the Git working directory does not contain an annotated tag that matches *TAG_PATTERN*.
 
     # Dynamic helper, looked-up in the context.
     EXECUTABLE = 'git'
@@ -207,7 +208,9 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     # Most recent annotated tag reachable from commit *latest_commit_hash* and matching *TAG_PATTERN*.
     tag_name = dlb.ex.output.Object(explicit=False)  # e.g. 'v1.2.3'
 
-    # SHA-1 hash of the latest commit as a hex string of 40 characters ('0' - '9', 'a' - 'f').
+    # SHA-1 hash of the latest commit as a hex string of exactly 40 digits
+    # or SHA-256 hash of the latest commit as a hex string of exactly 64 digits.
+    # Hex string digits: '0' - '9', 'a' - 'f'.
     latest_commit_hash = dlb.ex.output.Object(explicit=False)  # e.g. '97db12cb0d88c1c157a371f48cf2e0884bf82ade'
 
     # Number of commits since the tag denoted by *tag_name* as a non-negative integer.
@@ -232,15 +235,35 @@ class GitDescribeWorkingDirectory(dlb.ex.Tool):
     untracked_files = dlb.ex.output.Object(explicit=False)
 
     async def redo(self, result, context):
+        # Git 2.27.0 introduced the optional (and still experimental) use of hashes other than SHA-1 to identify its
+        # objects: The size and meaning of the commit hash is determined by the object-format setting of the repository
+        # which is set by 'git init --object-format=...' and queried by 'git rev-parse --show-object-format'.
+        #
+        # According to https://git-scm.com/docs/hash-function-transition/, all objects in a Git repository with
+        # object format 'sha256' can be identified by either their 64 digit SHA-256 hash or their 40 digit SHA-1 hash.
+        # In the future, the command-line interface will be extended to support invocations like this
+        # (note --output-format=... and the ...'^{sha1}' notation):
+        #
+        #   git --output-format=sha1 log abac87a^{sha1}..f787cac^{sha256}
+        #
+        # The output of 'git describe' includes a commit hash.
+        # Other than the size, the output does not include an indication of the object format.
+        # Number of digits ('0' - '9', 'a' - 'f') of commit hash:
+        # - exactly 40 digits for object format 'sha1'; and
+        # - exactly 64 digits for object format 'sha256'.
+
         arguments = [
             'describe',
-            '--long', '--abbrev=41', '--dirty=?',
+            '--long', '--abbrev=65', '--dirty=?',
             f'--candidates={self.MATCHING_TAG_CANDIDATE_COUNT}', '--match', self.TAG_PATTERN
         ]
         _, stdout = await context.execute_helper_with_output(self.EXECUTABLE, arguments)
         # Note: untracked files in working directory do not make it dirty in terms of 'git describe'
 
-        m = GIT_DESCRIPTION_REGEX.match(stdout.strip().decode())
+        output = stdout.strip().decode()
+        m = GIT_DESCRIPTION_REGEX.match(output)
+        if not m:
+            raise ValueError(f'unexpected output: {output!r}')
         result.tag_name = m.group('tag')
         result.latest_commit_hash = m.group('latest_commit_hash')
         result.commit_number_from_tag_to_latest_commit = int(m.group('commit_number'), 10)
@@ -324,7 +347,7 @@ class GitCheckTags(dlb.ex.Tool):
         commit_by_annotated_tag_name = {}
         commit_by_lightweight_tag_name = {}
 
-        line_regex = re.compile(rb'(?P<commit>[a-f0-9]{40})\trefs/tags/(?P<tag>[^ ^]+)(?P<peeled>\^{})?')
+        line_regex = re.compile(rb'(?P<commit>[\da-f]{40})\trefs/tags/(?P<tag>[^ ^]+)(?P<peeled>\^{})?')
         for line in stdout.splitlines():
             m = line_regex.fullmatch(line)
             commit_hash = m.group('commit').decode()

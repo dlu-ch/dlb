@@ -28,6 +28,9 @@ class VersionQuery(dlb_contrib.git.GitDescribeWorkingDirectory):
     async def redo(self, result, context):
         await super().redo(result, context)
 
+        if len(result.latest_commit_hash) != 40:
+            raise ValueError('repository not configured for SHA-1 as its (output) object format')
+
         shortened_commit_hash_length = min(40, max(1, int(self.SHORTENED_COMMIT_HASH_LENGTH)))
 
         version = result.tag_name[1:]

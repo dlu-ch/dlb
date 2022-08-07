@@ -201,6 +201,9 @@ class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):
     async def redo(self, result, context):
         await super().redo(result, context)
 
+        if len(result.latest_commit_hash) != 40:
+            raise ValueError('repository not configured for SHA-1 as its (output) object format')
+
         shortened_commit_hash_length = min(40, max(1, int(self.SHORTENED_COMMIT_HASH_LENGTH)))
 
         version = result.tag_name[1:]
@@ -282,6 +285,41 @@ class GitDescribeWorkingDirectoryTest(testenv.TemporaryWorkingDirectoryTestCase)
 
         self.assertIsNone(result.branch_refname)
         self.assertRegex(result.wd_version, r'1\.2\.3c4-dev3\+[0-9a-f]{8}$')
+
+    def test_sha256_object_format_is_supported(self):
+        with dlb.ex.Context():
+            git_version = dlb_contrib.generic.VersionQuery(
+                VERSION_PARAMETERS_BY_EXECUTABLE={
+                    DescribeWorkingDirectory.EXECUTABLE: DescribeWorkingDirectory.VERSION_PARAMETERS
+                }
+            ).start().version_by_path[dlb.ex.Context.active.helper[DescribeWorkingDirectory.EXECUTABLE]]
+
+            git_version_info = tuple(int(c, 10) for c in git_version.split('.')[:2])
+            if git_version_info < (2, 27):
+                raise unittest.SkipTest('requires git >= 2.27.0')
+
+        class PrepareRepoWithSha256(dlb_contrib.sh.ShScriptlet):
+            SCRIPTLET = """
+                git -c init.DefaultBranch=master init --object-format=sha256 
+                git config user.email "dlu-ch@users.noreply.github.com"
+                git config user.name "dlu-ch"
+
+                echo x > x
+                git add x
+                git commit -m 'Initial commit'
+                git tag -a v0.0.0 -m 'Initial tag'        
+                """
+
+        with dlb.ex.Context():
+            PrepareRepoWithSha256().start().complete()
+
+            with self.assertRaises(ValueError) as cm:
+                DescribeWorkingDirectory().start().complete()
+            self.assertEqual('repository not configured for SHA-1 as its (output) object format', str(cm.exception))
+
+            result = dlb_contrib.git.GitDescribeWorkingDirectory().start()
+
+        self.assertEqual(64, len(result.latest_commit_hash))
 
     def test_gitignore_can_hide_every_modification(self):
         class PrepareRepoWithHiddenModifications(dlb_contrib.sh.ShScriptlet):

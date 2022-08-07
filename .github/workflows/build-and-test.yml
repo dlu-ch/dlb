@@ -58,7 +58,11 @@ jobs:
     - name: Install dependencies
       run: pip install coverage==6.4.1 coveralls==3.3.1
     - name: Run tests
-      run: bash run-tests.bash --valid-skip-reason='requires Python 2' --valid-skip-reason='requires MS Windows' dlb
+      run: >
+        bash run-tests.bash 
+        --valid-skip-reason='requires Python 2' 
+        --valid-skip-reason='requires MS Windows'
+        dlb
       env:
         PYTHON3COVERAGE: coverage3
         PYTHONWARNINGS: ${{ matrix.do-accept-deprecation == true && 'default::DeprecationWarning,default::PendingDeprecationWarning' || '' }}
@@ -90,7 +94,12 @@ jobs:
         HOME: /home/tester
 
     - name: Run tests
-      run: bash run-tests.bash --valid-skip-reason='requires MS Windows' --valid-skip-reason='requires msvc' dlb dlb_contrib
+      run: >
+        bash run-tests.bash 
+        --valid-skip-reason='requires MS Windows' 
+        --valid-skip-reason='requires msvc' 
+        --valid-skip-reason='requires git >= 2.27.0'
+        dlb dlb_contrib
       working-directory: /home/tester/dlb
       env:
         PYTHON3COVERAGE:
