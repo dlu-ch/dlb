@@ -126,8 +126,9 @@ class KpathseaPath(dlb.fs.RelativePath):
 
 
 class KpathseaSearchPath(dlb.fs.RelativePath):
-    # kpathsea:
-    # see https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/path-elt.c?view=markup#l63
+    # kpathsea: see
+    # - https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/path-elt.c?view=markup#l63
+    # - https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/c-pathch.h?view=markup#l77
     #
     # - ENV_SEP cannot be escaped in TEXINPUTS; ENV_SEP can be one of the following: ' ', ',', ';', ':'.
 
@@ -246,10 +247,12 @@ class Tex(dlb.ex.Tool):
     # If not set, a temporary directory is used.
     intermediary_directory = dlb.ex.output.Directory(required=False)
 
-    # must not contain unexpanded variables (because these are not imported)
+    # Global search paths in environment variable TEXINPUTS are *appended* (unchanged) to the ones
+    # in *input_search_directories*.
+    # Must not contain unexpanded variables (because these are not imported).
     global_input_search_paths = dlb.ex.input.EnvVar(name='TEXINPUTS', pattern=r'[^$]*', example='.:~/tex//:',
                                                     required=False, explicit=False)
-    # environment variables:
+    # Environment variables:
     # https://www.tug.org/texinfohtml/kpathsea.html
     # https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/texmf.in?view=markup
 
@@ -279,7 +282,6 @@ class Tex(dlb.ex.Tool):
             # It does, however, for files included - directly or indirectly - *self.toplevel_file*.
 
             # compile TEXINPUTS
-            path_separator = os.pathsep
             texinputs = []
             if self.input_search_directories:
                 texinputs = [
@@ -288,7 +290,8 @@ class Tex(dlb.ex.Tool):
                     for p in self.input_search_directories
                 ]
             texinputs += [result.global_input_search_paths.raw] if result.global_input_search_paths else ['']
-            env = {'TEXINPUTS': path_separator.join(texinputs)}
+            # https://www.tug.org/svn/pdftex/tags/pdftex-1.40.19/source/src/texk/kpathsea/c-pathch.h?view=markup#l77
+            env = {'TEXINPUTS': os.pathsep.join(texinputs)}
 
             base_filename, _ = os.path.splitext(self.toplevel_file.components[-1])
             recorder_output_file = intermediary_directory / f'{base_filename}.fls'
