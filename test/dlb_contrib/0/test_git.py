@@ -159,6 +159,15 @@ class CheckRefNameTest(unittest.TestCase):
     def test_at_at_certain_position_is_valid(self):
         dlb_contrib.git.check_refname('a/{@}/b')
 
+    def test_nonascii_is_valid(self):
+        dlb_contrib.git.check_refname('äuä')
+
+    def test_leading_dash_is_valid(self):
+        dlb_contrib.git.check_refname('-master')
+
+    def test_head_is_valid(self):
+        dlb_contrib.git.check_refname('HEAD')
+
     def test_single_at_is_invalid(self):
         with self.assertRaises(ValueError) as cm:
             dlb_contrib.git.check_refname('a/@/b')
@@ -186,6 +195,23 @@ class CheckRefNameTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             dlb_contrib.git.check_refname('a\x7Fb')
         self.assertEqual(str(cm.exception), "refname component must not contain ASCII control character")
+
+
+class CheckBranchNameTest(unittest.TestCase):
+
+    def test_typical_is_valid(self):
+        dlb_contrib.git.check_branch_name('master')
+        dlb_contrib.git.check_branch_name('wip/develop-old')
+
+    def test_leading_dash_is_invalid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_branch_name('-master')
+        self.assertEqual(str(cm.exception), "must not start with '-'")
+
+    def test_head_is_invalid(self):
+        with self.assertRaises(ValueError) as cm:
+            dlb_contrib.git.check_branch_name('HEAD')
+        self.assertEqual(str(cm.exception), 'reserved')
 
 
 class DescribeWorkingDirectory(dlb_contrib.git.GitDescribeWorkingDirectory):

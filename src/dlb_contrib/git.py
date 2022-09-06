@@ -40,7 +40,7 @@
 
 __all__ = [
     'GIT_DESCRIPTION_REGEX',
-    'modifications_from_status', 'check_refname',
+    'modifications_from_status', 'check_refname', 'check_branch_name',
     'GitDescribeWorkingDirectory', 'GitCheckTags'
 ]
 
@@ -167,6 +167,7 @@ def modifications_from_status(lines: Iterable[str]) \
 
 def check_refname(name: str):
     # Check if *name* is a valid refname according to https://git-scm.com/docs/git-check-ref-format.
+    # Note: Not every valid refname is a valid branch name.
     # Raises ValueError if not.
 
     components = name.split('/')
@@ -185,7 +186,21 @@ def check_refname(name: str):
             raise ValueError('refname component must not contain ASCII control character')
         for s in ('..', '/', '\\', ' ', '~', '^', ':', '?', '*', '[', '@{'):
             if s in c:
-                raise ValueError('refname component must not contain {}'.format(repr(s)))
+                raise ValueError(f'refname component must not contain {s!r}')
+
+
+def check_branch_name(name: str):
+    # Check if *name* is a valid branch name.
+    # Raises ValueError if not.
+
+    check_refname(name)
+
+    # https://github.com/git/git/blob/v2.20.1/branch.c#L185
+    # https://github.com/git/git/blob/v2.20.1/sha1-name.c#L1528
+    if name[0] == '-':
+        raise ValueError("must not start with '-'")
+    if name == 'HEAD':
+        raise ValueError('reserved')
 
 
 class GitDescribeWorkingDirectory(dlb.ex.Tool):
