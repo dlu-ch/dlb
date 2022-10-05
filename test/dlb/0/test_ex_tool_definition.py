@@ -844,7 +844,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
         self.assertEqual(A.definition_location[0], os.path.realpath(__file__))
 
-    def test_potentially_fails_on_import_with_relative_search_path(self):
+    def test_fails_on_import_with_relative_search_path_before_python3dot10(self):
         module_name = 'single_use_module4'
         self.assertNotIn(module_name, sys.modules)  # needs a name different from all already loaded modules
 
@@ -861,6 +861,7 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
 
         sys.path.insert(0, '.')  # !
         importlib.invalidate_caches()
+        ok = False
         try:
             regex = (
                 r"(?m)\A"
@@ -874,10 +875,16 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                 spec = importlib.util.spec_from_file_location(module_name, module_file_name)
                 spec.loader.exec_module(importlib.util.module_from_spec(spec))
                 # for some reason 'import ...' works differently on Travis CI than local, so avoid it
+                ok = True
             except dlb.ex.DefinitionAmbiguityError as e:
                 self.assertRegex(str(e), regex)  # < Python 3.10
         finally:
             del sys.path[0]
+
+        if sys.version_info[:2] >= (3, 10):
+            self.assertTrue(ok)
+        else:
+            self.assertFalse(ok)
 
     def test_fails_for_equal_dynamic_definitions(self):
         # noinspection PyAbstractClass
