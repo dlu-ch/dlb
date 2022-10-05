@@ -85,7 +85,9 @@ Now, we can use :file:`dlb` to run :file:`build.py`::
    $ dlb build
    hello there!
 
-We could also have used ``python3 "${PWD}"/build.py`` instead of ``dlb build``. ``dlb`` comes in handy when you are
+We could also have used ``python3 "${PWD}"/build.py`` instead of ``dlb build``. [#calldblscriptwithinterpreter1]_
+
+``dlb`` comes in handy when you are
 working in a subdirectory of the :term:`working tree` or when you need modules from ZIP archives
 (e.g. :ref:`dlb itself <usage-self-contained-project>`)::
 
@@ -277,6 +279,8 @@ A redo of *t* from above is considered necessary if at least one of the followin
    A modification of an output dependency is always treated as purposeful.
    This allows for modification of output dependencies after they were generated (e.g. for source code formatting
    or for small fixes in a huge set of generated HTML documents). [#noredoonoutputmodification1]_
+
+.. _dlb-tool-instance-identification:
 
 Tool instances are identified by their class (file path and line number of definition) and their fingerprint.
 The fingerprint includes the concrete dependencies of the tool instance which are defined by arguments of the
@@ -619,3 +623,16 @@ Write scripts and tools
    It avoids complicated assumptions related to the :term:`mtimes <mtime>` of different filesystems,
    helps to promote a clean structure of project files and makes it possible to move an entire
    :term:`working tree` without changing the meaning of the :term:`run-database` in an unpredictable manner.
+
+.. [#calldblscriptwithinterpreter1]
+   It is good practise to always use absolute paths when calling a :term:`dlb script <script>` directly with a
+   Python interpreter, e.g. like this: ``python3 "${PWD}"/build.py``.
+   This is why:
+
+   - Every Python file that defines a subclass of :class:`dlb.ex.Tool` must have an absolute path known to the
+     Python interpreter, since dlb relies on absolute file paths as part of the
+     :ref:`indentification of tools instances <dlb-tool-instance-identification>`.
+
+   - Before Python 3.9, a call like ``python3 build.py`` results in ``build.py`` being assigned a relative
+     module path (:attr:`__file__`).
+     This causes a :class:`dlb.ex.DefinitionAmbiguityError` if it defines a subclass of :class:`dlb.ex.Tool`.

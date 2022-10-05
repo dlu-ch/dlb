@@ -481,9 +481,21 @@ class _ToolMeta(type):
                 f"invalid tool definition: location of definition depends on current working directory\n"
                 f"  | class: {cls!r}\n"
                 f"  | source file: {defining_frame.filename!r}\n"
-                f"  | make sure the matching module search path is an absolute path when the "
-                f"defining module is imported"
+                f"  | make sure the source file is loaded from an absolute path "
+                f"(directy or from a module search path in sys.path)"
             )
+            # This happens when a dlb script that defines a subclass of dlb.ex.Tool
+            # is loaded directly from a relative path with a Python interpreter before Python 3.9:
+            #
+            #   python3 path/to/script.py
+            #
+            # Use this instead:
+            #
+            #   python3 "$PWD"/path/to/script.py
+            #
+            # https://docs.python.org/3/whatsnew/3.9.html#other-language-changes:
+            #    [...] the __file__ attribute of the __main__ module became an absolute path,
+            #    rather than a relative path
 
         # Note: on MS Windows, the path of the current working directory is not unique
         source_path = os.path.realpath(source_path)

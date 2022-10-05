@@ -868,8 +868,8 @@ class ToolDefinitionAmbiguityTest(testenv.TemporaryDirectoryTestCase):
                 r"invalid tool definition: location of definition depends on current working directory\n"
                 r"  \| class: <class '.+'>\n"
                 r"  \| source file: '.+'\n"
-                r"  \| make sure the matching module search path is an absolute path "
-                r"when the defining module is imported\Z"
+                r"  \| make sure the source file is loaded from an absolute path "
+                r"\(directy or from a module search path in sys\.path\)\Z"
             )
             try:
                 spec = importlib.util.spec_from_file_location(module_name, module_file_name)
