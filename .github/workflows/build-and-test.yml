@@ -43,9 +43,12 @@ jobs:
           - os: 'ubuntu-20.04'
             python-version: '3.10'
             do-accept-deprecation: true
+          - os: 'ubuntu-20.04'
+            python-version: '3.11'
+            do-accept-deprecation: true
 
           - os: 'ubuntu-20.04'
-            python-version: '3.11.0-alpha - 3.11.0'
+            python-version: '3.12.0-alpha - 3.12.0'
             do-accept-deprecation: true
             is-experimental: true
 
