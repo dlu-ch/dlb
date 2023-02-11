@@ -276,7 +276,7 @@ Module content
 .. function:: inform(message, *data, level: int = INFO, with_time: bool = False)
 
    If level is not suppressed, output a message to the output file after the title messages of all
-   parent :class:`Cluster` instances whose output was suppressed so far.
+   outer :class:`Cluster` instances whose output was suppressed so far.
 
    *message* is formatted by :func:`format_message` and indented according to the nesting level.
    If *with_time* is ``True``, a :token:`relative_time_suffix <diagmessage:relative_time_suffix>` for the current time

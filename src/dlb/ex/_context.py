@@ -59,7 +59,7 @@ class _BaseEnvVarDict:
         self._context = context
 
         # all environment variables defined in this context or one of its outer contexts
-        self._value_by_name = {} if context.parent is None else dict(context.parent.env._value_by_name)
+        self._value_by_name = {} if context.outer is None else dict(context.outer.env._value_by_name)
 
         # all environment variables declared in this context:
         self._pattern_by_name: Dict[str, Pattern] = {}
@@ -68,15 +68,15 @@ class _BaseEnvVarDict:
         self._check_non_empty_str(name=name)
         if name in self._pattern_by_name:
             return True
-        return self._context.parent is not None and self._context.parent.env.is_imported(name)
+        return self._context.outer is not None and self._context.outer.env.is_imported(name)
 
     def _find_violated_validation_pattern(self, name, value) -> Optional[Pattern]:
         pattern = self._pattern_by_name.get(name)
         if pattern is not None and not pattern.fullmatch(value):
             return pattern
-        if self._context.parent is None:
+        if self._context.outer is None:
             return
-        return self._context.parent.env._find_violated_validation_pattern(name, value)
+        return self._context.outer.env._find_violated_validation_pattern(name, value)
 
     @staticmethod
     def _check_non_empty_str(**kwargs):
@@ -139,8 +139,8 @@ class _EnvVarDict(_BaseEnvVarDict):
         value = self._value_by_name.get(name)
         if value is None:
             # import from innermost outer context that has the environment variable defined
-            if self._context.parent is not None:
-                value = self._context.parent.env._value_by_name.get(name)
+            if self._context.outer is not None:
+                value = self._context.outer.env._value_by_name.get(name)
 
         if value is not None and not pattern.fullmatch(value):
             raise ValueError(f"current value is not matched by 'pattern': {value!r}")
@@ -228,7 +228,7 @@ class _BaseHelperDict:
 
         self._context = context
         self._explicit_abs_path_by_helper_path: Dict[fs.Path, fs.Path] = \
-            {} if context.parent is None else dict(context.parent.helper._explicit_abs_path_by_helper_path)
+            {} if context.outer is None else dict(context.outer.helper._explicit_abs_path_by_helper_path)
 
         self._implicit_abs_path_by_helper_path = implicit_abs_path_by_helper_path
 
@@ -681,7 +681,7 @@ class Context(_BaseContext, metaclass=_ContextMeta):
         self._env: Optional[_EnvVarDict] = None
         self._helper: Optional[_HelperDict] = None
 
-        self._parent: Optional[Context] = None
+        self._outer: Optional[Context] = None
         self._optional_redo_sequencer = None  # constructed when needed
         self._root_specifics: Optional[_RootSpecifics] = None
 
@@ -698,8 +698,8 @@ class Context(_BaseContext, metaclass=_ContextMeta):
         return self._redo_sequencer.get_result_proxy(tool_instance_dbid)
 
     @property
-    def parent(self) -> Optional['Context']:
-        return self._parent
+    def outer(self) -> Optional['Context']:
+        return self._outer
 
     @property
     def env(self) -> _EnvVarDict:
@@ -753,7 +753,7 @@ class Context(_BaseContext, metaclass=_ContextMeta):
                     f'  | move the working directory or choose a less restrictive path class for the root context'
                 )
                 raise ValueError(msg) from None
-            self._parent = _contexts[-1]
+            self._outer = _contexts[-1]
         else:
             self._root_specifics = _RootSpecifics(self._path_cls)
 
@@ -781,7 +781,7 @@ class Context(_BaseContext, metaclass=_ContextMeta):
                 raise _error.ContextNestingError from None
             _contexts.pop()
 
-            self._parent = None
+            self._outer = None
             self._env = None
             self._helper = None
 

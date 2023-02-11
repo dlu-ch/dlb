@@ -313,7 +313,7 @@ class Cluster:
             for c in _clusters:
                 if c == self:
                     break
-                c.inform_title()  # is parent of self
+                c.inform_title()  # is outer of self
 
             title = get_level_indicator(self._level) + self._pre_formatted_title[1:]
             suffix = '...' if self._is_progress else ''
