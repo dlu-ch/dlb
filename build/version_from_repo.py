@@ -12,7 +12,7 @@ VERSION_REGEX = re.compile(
 def _version_from_describe(describe_word):
     m = re.compile(r'v(?P<version>[0-9a-z.]+)-(?P<n>[0-9]+)-g(?P<hash>[0-9a-f]+)').fullmatch(describe_word)
     if not m:
-        raise ValueError("git describe: {}".format(repr(describe_word)))
+        raise ValueError(f'git describe: {describe_word!r}')
 
     last_version = m.group('version')
     commits_since_tag = int(m.group('n'), base=10)

@@ -123,14 +123,12 @@ class CommonOfConcreteValidationTest(unittest.TestCase):
         paths = ['1', '2', '1']
         with self.assertRaises(ValueError) as cm:
             CommonOfConcreteValidationTest.D[:]().validate(paths)
-        msg = "iterable must be duplicate-free but contains Path('1') more than once"
-        self.assertEqual(str(cm.exception), msg)
+        self.assertEqual("iterable must be duplicate-free but contains Path('1') more than once", str(cm.exception))
 
     def test_value_must_be_iterable(self):
         with self.assertRaises(TypeError) as cm:
             CommonOfConcreteValidationTest.D[:]().validate(1)
-        msg = "'int' object is not iterable"
-        self.assertEqual(str(cm.exception), msg)
+        self.assertEqual("'int' object is not iterable", str(cm.exception))
 
     def test_validate_with_str_of_bytes_fails_with_meaningful_message(self):
         msg = "since dependency has a multiplicity, value must be iterable (other than 'str' or 'bytes')"

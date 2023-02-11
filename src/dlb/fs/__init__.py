@@ -710,7 +710,7 @@ class PortablePosixPath(PosixPath):
                 # IEEE Std 1003.1-2008, section 3.278 Portable Filename Character Set
                 invalid_characters = set(c) - PortablePosixPath.CHARACTERS
                 if invalid_characters:
-                    raise ValueError("must not contain these characters: {0}".format(
+                    raise ValueError("must not contain these characters: {}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
         n = sum(len(c) for c in components) + max(0, len(components) - 2)
@@ -746,7 +746,7 @@ class WindowsPath(Path):
             for c in parts:
                 invalid_characters = set(c) & reserved
                 if invalid_characters:
-                    raise ValueError("must not contain reserved characters: {0}".format(
+                    raise ValueError("must not contain reserved characters: {}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
                 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#naming_conventions

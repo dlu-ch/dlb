@@ -455,7 +455,7 @@ class _ToolMeta(type):
         protected_attrs = (set(_ToolBase.__dict__.keys()) - _ToolMeta.OVERRIDEABLE_ATTRIBUTES | {'__new__'})
         attrs = set(cls.__dict__) & protected_attrs
         if attrs:
-            raise AttributeError("must not be overridden in a 'dlb.ex.Tool': {}".format(repr(sorted(attrs)[0])))
+            raise AttributeError(f"must not be overridden in a 'dlb.ex.Tool': {sorted(attrs)[0]!r}")
         cls._check_own_attributes()
         dependency_names, execution_parameter_names = cls._get_names()
 

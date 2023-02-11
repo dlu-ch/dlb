@@ -88,7 +88,7 @@ class _BaseEnvVarDict:
 
     def __repr__(self) -> str:
         items = sorted(self.items())
-        args = ', '.join('{}: {}'.format(repr(k), repr(v)) for k, v in items)
+        args = ', '.join(f'{k!r}: {v!r}' for k, v in items)
         return f"{self.__class__.__name__}({{{args}}})"
 
     # dictionary methods
@@ -234,7 +234,7 @@ class _BaseHelperDict:
 
     def __repr__(self) -> str:
         items = sorted(self.items())
-        args = ', '.join('{}: {}'.format(repr(k.as_string()), repr(v.as_string())) for k, v in items)
+        args = ', '.join(f'{k.as_string()!r}: {v.as_string()!r}' for k, v in items)
         return f"{self.__class__.__name__}({{{args}}})"
 
     # dictionary methods

@@ -123,7 +123,7 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
             "not a defined environment variable in the context: 'A_B_C'\n"
             "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
         )
-        self.assertEqual(str(cm.exception), repr(msg))
+        self.assertEqual(repr(msg), str(cm.exception))
 
     def test_imported_is_initially_undefined(self):
         with dlb.ex.Context():
@@ -153,7 +153,7 @@ class ImportFromOuterTest(testenv.TemporaryWorkingDirectoryTestCase):
                     "not a defined environment variable in the context: 'A_B_C'\n"
                     "  | use 'dlb.ex.Context.active.env.import_from_outer()' or 'dlb.ex.Context.active.env[...] = ...'"
                 )
-                self.assertEqual(str(cm.exception), repr(msg))
+                self.assertEqual(repr(msg), str(cm.exception))
 
                 with dlb.ex.Context():
                     dlb.ex.Context.active.env['A_B_C'] = 'XYYYZ'
@@ -234,7 +234,7 @@ class AccessTest(testenv.TemporaryWorkingDirectoryTestCase):
             with self.assertRaises(KeyError) as cm:
                 del dlb.ex.Context.active.env['A_B_C']
             msg = "not a defined environment variable in the context: 'A_B_C'"
-            self.assertEqual(str(cm.exception), repr(msg))
+            self.assertEqual(repr(msg), str(cm.exception))
 
     def test_assignment_fail_if_not_imported(self):
         with dlb.ex.Context():

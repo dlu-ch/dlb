@@ -402,7 +402,7 @@ class RunResult:
     def __repr__(self) -> str:
         # noinspection PyProtectedMember
         dependencies = [(n, getattr(self, n)) for n in self._tool.__class__._dependency_names]
-        args = ', '.join('{}={}'.format(k, repr(v)) for k, v in dependencies if v is not NotImplemented)
+        args = ', '.join(f'{k}={v!r}' for k, v in dependencies if v is not NotImplemented)
         return f"{self.__class__.__name__}({args})"
 
 

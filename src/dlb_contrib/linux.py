@@ -265,7 +265,7 @@ def get_mounted_filesystems(contained_paths: Optional[Iterable[dlb.fs.PathLike]]
 
     proc_root_directory = dlb.fs.Path(proc_root_directory)
     if contained_paths is not None:
-         contained_paths = [dlb.fs.AbsolutePath(p) for p in contained_paths]
+        contained_paths = [dlb.fs.AbsolutePath(p) for p in contained_paths]
 
     vfstype_name_by_mountpoint = {}
 

@@ -330,7 +330,7 @@ class GetCheckRootPathFromCwdTest(testenv.TemporaryDirectoryTestCase):
         with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
             dlb.ex._worktree.get_checked_root_path_from_cwd(
                 os.path.abspath(os.path.join('a', 'b', 'y')), path_cls=dlb.fs.Path)
-        regex= (
+        regex = (
             r"(?m)\A"
             r"current directory has a non-canonical path\n"
             r"  \| would be equivalent otherwise: .+, .+\n"

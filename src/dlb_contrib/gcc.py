@@ -77,7 +77,7 @@ class Path(dlb.fs.PosixPath):
         if components_checked:
             return
         if any(s in c for c in self.parts for s in Path.UNSAFE_CHARACTERS):
-            raise ValueError("must not contain these characters: {0}".format(
+            raise ValueError("must not contain these characters: {}".format(
                 ','.join(repr(c) for c in sorted(Path.UNSAFE_CHARACTERS))))
 
 

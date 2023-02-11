@@ -88,7 +88,7 @@ class TexInputPath(dlb.fs.Path):
             for c in self.parts:
                 invalid_characters = set(c) & TexInputPath.RESERVED_CHARACTERS
                 if invalid_characters:
-                    raise ValueError("must not contain reserved characters: {0}".format(
+                    raise ValueError("must not contain reserved characters: {}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
                 if '  ' in c:
@@ -121,7 +121,7 @@ class KpathseaPath(dlb.fs.RelativePath):
             for c in self.parts:
                 invalid_characters = set(c) & KpathseaPath.UNSAFE_CHARACTERS
                 if invalid_characters:
-                    raise ValueError("must not contain reserved characters: {0}".format(
+                    raise ValueError("must not contain reserved characters: {}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
 
@@ -139,7 +139,7 @@ class KpathseaSearchPath(dlb.fs.RelativePath):
             for c in self.parts:
                 invalid_characters = set(c) & KpathseaSearchPath.UNSAFE_CHARACTERS
                 if invalid_characters:
-                    raise ValueError("must not contain reserved characters: {0}".format(
+                    raise ValueError("must not contain reserved characters: {}".format(
                         ','.join(repr(c) for c in sorted(invalid_characters))))
 
 

@@ -195,10 +195,7 @@ class MultiplicityHolderTest(unittest.TestCase):
 
     def test_repr_is_meaningful(self):
         r = repr(MultiplicityHolderTest.M)
-        regex = (
-            r"<class '.+\.MultiplicityHolderTest\.M'>\Z"
-        )
-        self.assertRegex(r, regex)
+        self.assertRegex(r, r"<class '.+\.MultiplicityHolderTest\.M'>\Z")
 
         r = repr(MultiplicityHolderTest.M[:3])
         regex = (

@@ -137,14 +137,17 @@ class MountedFilesystemsTest(testenv.TemporaryWorkingDirectoryTestCase):
             vfstype_name_by_mountpoint
         )
 
-        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.', contained_paths=[])
+        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(
+            proc_root_directory='.', contained_paths=[])
         self.assertEqual({}, vfstype_name_by_mountpoint)
 
-        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(proc_root_directory='.', contained_paths=[
-            '/tmp/t/test\012m\011ou\rnt/x/y',
-            '/.//boot/efi',
-            '/dev/../boot/efi/'
-        ])
+        vfstype_name_by_mountpoint = dlb_contrib.linux.get_mounted_filesystems(
+            proc_root_directory='.',
+            contained_paths=[
+                '/tmp/t/test\012m\011ou\rnt/x/y',
+                '/.//boot/efi',
+                '/dev/../boot/efi/'
+            ])
         self.assertEqual({
             dlb.fs.Path('/tmp/t/test\012m\011ou\rnt/'): 'tmpfs',
             dlb.fs.Path('/boot/efi/'): 'vfat',
