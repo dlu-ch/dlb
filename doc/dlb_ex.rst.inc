@@ -108,7 +108,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
              ... = dlb.ex.Context.active.root_path
              ... = dlb.ex.Context.active.find_path_in(...)
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: root_path
 
@@ -118,7 +118,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       is representable as an instance of :attr:`path_cls <Context.path_cls>` of the :term:`active context` and every
       possible outer context.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: executable_search_paths
 
@@ -127,34 +127,34 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       It is compiled from the members :func:`python:os.get_exec_path()` when the root context is entered.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: path_cls
 
       The subclass of :class:`.dlb.fs.Path` as defined in the constructor.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: max_parallel_redo_count
 
       The maximum number of redos started in this context than can be pending at the same time as defined in the
       constructor.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: find_helpers
 
       Find dynamic helpers not defined explicitly in :attr:`executable_search_paths`?
       As defined in the constructor.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: env
 
       The :ref:`environment variable dictionary object <dlb-ex-environment-variable-dictionary-objects>` with
       this context as its associated :term:`context`.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: helper
 
@@ -182,7 +182,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
          >>> dlb.ex.Context.active.helper['tmp/']  # with '/home/schmutzli/projects/esel' as the working tree's root
          Path('/home/schmutzli/projects/esel/out/t')
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. method:: find_path_in(path, search_prefixes=None)
 
@@ -210,13 +210,13 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       The current :term:`working tree time` in nanoseconds as an integer.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. attribute:: is_working_tree_case_sensitive
 
       Return ``True`` if the filesystem that contains the working tree is case-sensitive, and ``False`` otherwise.
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. method:: working_tree_path_of(path, *, is_dir=None, existing=False, collapsable=False, \
                                     allow_nontemporary_management=False, allow_temporary=False)
@@ -263,7 +263,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
           if *path* does not exist in the parts of the :term:`working tree` that are described by
           *allow_nontemporary_management* and *allow_temporary*
       :raises ValueError: if the resulting path is not representable
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. method:: temporary(*, suffix='', is_dir=False)
 
@@ -301,7 +301,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
 
       :raises ValueError: if *suffix* is invalid
       :raises FileExistsError: if the regular file or directory exists (when used as content manager)
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
    .. method:: summary_of_latest_runs(*, max_count=1)
 
@@ -324,7 +324,7 @@ Combine contexts with :class:`message clusters <dlb.di.Cluster>` to describe wha
       :param max_count: maximum number of runs
       :rtype: list of tuples
 
-      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`).
+      :raises NotRunningError: if :term:`dlb is not running <run of dlb>`
 
 
 .. _dlb-ex-environment-variable-dictionary-objects:
@@ -374,7 +374,7 @@ Example::
        del dlb.ex.Context.active.env['LANG']  # undefine 'LANG'
        dlb.ex.Context.active.env['LANG'] = 'fr_FR'  # ok
 
-Environment variable dictionary object support the following methods and attributes:
+Environment variable dictionary objects support the following methods and attributes:
 
 .. method:: EnvVarDict.import_from_outer(name, *, pattern, value_if_undefined=None, example=None)
 
@@ -423,11 +423,11 @@ Environment variable dictionary object support the following methods and attribu
 
 .. method:: EnvVarDict.items()
 
-   Returns a new view of the dictionary’s items (name, value) pairs of all defined environment variables.
+   Return a new view of the dictionary’s items (name, value) pairs of all defined environment variables.
 
 .. describe:: name in env
 
-   Returns `True` if there is an environment variable named *name* defined in *env*, else `False`.
+   Return `True` if there is an environment variable named *name* defined in *env*, else `False`.
 
 .. describe:: name not in env
 
@@ -435,7 +435,7 @@ Environment variable dictionary object support the following methods and attribu
 
 .. describe:: env[name] = value
 
-   Defines an imported environment variable named *name* with value *value* in the associated :term:`context` and
+   Define an imported environment variable named *name* with value *value* in the associated :term:`context` and
    all its future inner contexts.
 
    Raises :exc:`KeyError`, if *name* was not imported in the associated  :term:`context` or one of its outer contexts.
@@ -448,7 +448,7 @@ Environment variable dictionary object support the following methods and attribu
 
 .. describe:: del env[name]
 
-   Undefines a defined environment variable named *name* in the associated :term:`context` and all its future
+   Undefine a defined environment variable named *name* in the associated :term:`context` and all its future
    inner contexts.
 
    Raises :exc:`KeyError`, if *name* is not defined in the :term:`context`.

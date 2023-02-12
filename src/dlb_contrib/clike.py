@@ -97,7 +97,7 @@ FUNCTIONLIKE_MACRO_REGEX = re.compile((
 
 
 def string_literal_from_bytes(text: bytes, max_line_length: Optional[int] = None) -> str:
-    # Return a character string literal for *text*, containing only printable ASCII characters except '`'" and no
+    # Return a character string literal for *text*, containing only printable ASCII characters except '`' and no
     # trigraph sequences.
     #
     # If *max_line_length* is not None, the string literal is broken into lines of at most *max_line_length* characters

@@ -65,7 +65,7 @@ class RemoveFilesystemObjectTest(testenv.TemporaryDirectoryTestCase):
 
         with self.assertRaises(TypeError) as cm:
             dlb.ex._worktree.remove_filesystem_object('/tmp/x', abs_empty_dir_path=b'x')
-        msg = "'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes"
+        msg = "'abs_empty_dir_path' must be None or a str or a dlb.fs.Path object, not bytes"
         self.assertEqual(msg, str(cm.exception))
 
     def test_removes_existing_regular_file(self):
@@ -298,7 +298,7 @@ class NormalizeDotDotWithReference(testenv.TemporaryDirectoryTestCase):
         with self.assertRaises(TypeError) as cm:
             # noinspection PyTypeChecker
             dlb.ex._worktree.normalize_dotdot_native_components(('a', 'b'), ref_dir_path=b'/tmp')
-        self.assertEqual("'ref_dir_path' must be a str", str(cm.exception))
+        self.assertEqual("'ref_dir_path' must be None or a str", str(cm.exception))
 
     def test_fails_for_nonexistent_symlink(self):
         os.makedirs('a')

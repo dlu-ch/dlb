@@ -117,7 +117,7 @@ def _unindent_and_normalize_message_lines(message, *, name: str) -> Tuple[List[s
         c = min(characters_without_field_seps or ' ')
         if c < ' ':
             raise ValueError(
-                f"{name!r} must not contain ASCII control characters except '\\t' and '\\b', "
+                f"{name!r} must not contain ASCII control characters except line separators, '\\t', and '\\b', "
                 f"unlike {c!r} in line {lineno0 + 1}"
             )
         has_field_separator = has_field_separator or characters_without_field_seps != characters

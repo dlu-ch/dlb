@@ -212,7 +212,8 @@ ut.set_module_name_to_parent(_ReadOnlyEnvVarDictView)
 class _BaseHelperDict:
 
     def __init__(self, context: 'Context', implicit_abs_path_by_helper_path: Optional[Dict[fs.Path, fs.Path]]):
-        # a 'self.get(helper_path)' or 'self[help_path]' tries these steps in order until the result is not None
+        # A call of 'self.get(helper_path)' or 'self[help_path]' tries these steps in the following order until
+        # the result is not None:
         #
         #     1. self._explicit_abs_path_by_helper_path.get(helper_path)
         #     2  self._implicit_abs_path_by_helper_path.get(helper_path) if implicit_abs_path_by_helper_path is not None

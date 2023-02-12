@@ -82,7 +82,7 @@ class FormatMessageTest(unittest.TestCase):
             self.format_info_message('abc\n    a\0')
         msg = (
             "'message' must not contain ASCII control characters except "
-            "'\\t' and '\\b', unlike '\\x00' in line 2"
+            "line separators, '\\t', and '\\b', unlike '\\x00' in line 2"
         )
         self.assertEqual(msg, str(cm.exception))
 

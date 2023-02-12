@@ -123,7 +123,7 @@ def remove_filesystem_object(abs_path: Union[str, fs.Path], *,
     if abs_empty_dir_path is not None:
         if isinstance(abs_empty_dir_path, bytes):
             # prevent special treatment by byte paths
-            raise TypeError("'abs_empty_dir_path' must be a str or dlb.fs.Path object, not bytes")
+            raise TypeError("'abs_empty_dir_path' must be None or a str or a dlb.fs.Path object, not bytes")
 
         if isinstance(abs_empty_dir_path, fs.Path):
             abs_empty_dir_path = str(abs_empty_dir_path.native)
@@ -272,7 +272,7 @@ def normalize_dotdot_native_components(components: Tuple[str, ...], *, ref_dir_p
     normalized_components = tuple(str(c) for c in components)
     if ref_dir_path is not None:
         if not isinstance(ref_dir_path, str):
-            raise TypeError("'ref_dir_path' must be a str")
+            raise TypeError("'ref_dir_path' must be None or a str")
         if not os.path.isabs(ref_dir_path):
             raise ValueError("'ref_dir_path' must be None or absolute")
 
