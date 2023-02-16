@@ -335,8 +335,15 @@ class GetCheckRootPathFromCwdTest(testenv.TemporaryDirectoryTestCase):
             r"current directory has a non-canonical path\n"
             r"  \| would be equivalent otherwise: .+, .+\n"
             r"  \| reason: unresolved symbolic links, filesystem with aliasing paths, or a moved directory"
+            r"\Z"
         )
         self.assertRegex(str(cm.exception), regex)
+
+    def test_fails_for_nonexisting(self):
+        with self.assertRaises(dlb.ex._error.NoWorkingTreeError) as cm:
+            dlb.ex._worktree.get_checked_root_path_from_cwd(
+                os.path.abspath('non-existing'), path_cls=dlb.fs.Path)
+        self.assertRegex(str(cm.exception), r"(?m)\Apath of current directory cannot be resolved: .+\Z")
 
 
 class UniquePathProviderTest(unittest.TestCase):

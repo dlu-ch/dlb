@@ -312,26 +312,27 @@ def get_checked_root_path_from_cwd(cwd: str, path_cls: Type[fs.Path]):
         )
         raise ValueError(msg) from None
 
-    # from pathlib.py of Python 3.7.3:
-    # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
-
     root_path_str = str(root_path.native)
 
     try:
         # may raise FileNotFoundError, RuntimeError
         real_root_path = root_path.native.raw.resolve(strict=True)
-        if real_root_path != root_path.native.raw:
-            raise ValueError
-    except (ValueError, OSError, RuntimeError):
-        # Note on MS Windows:
-        # os.getcwd() is different after 'cd <p1>' and 'cd <p1>' if <p1> and <p2> denote the same directory
-        # but have path components with different representation (short [8.3] file name vs. full file name).
-        msg = (
+    except (OSError, RuntimeError):
+        raise _error.NoWorkingTreeError(
+            f"path of current directory cannot be resolved: {root_path.native.raw!r}") from None
+
+    # from pathlib.py of Python 3.7.3:
+    # "NOTE: according to POSIX, getcwd() cannot contain path components which are symlinks."
+
+    # on MS Windows:
+    # os.getcwd() is different after 'cd <p1>' and 'cd <p1>' if <p1> and <p2> denote the same directory
+    # but have path components with different representation (short [8.3] file name vs. full file name).
+
+    if real_root_path != root_path.native.raw:
+        raise _error.NoWorkingTreeError(
             f"current directory has a non-canonical path\n"
-            f"  | would be equivalent otherwise: {real_root_path!r}, {root_path.native.raw!r}\n"
-            f"  | reason: unresolved symbolic links, filesystem with aliasing paths, or a moved directory"
-        )
-        raise _error.NoWorkingTreeError(msg) from None
+            f"  | would be equivalent otherwise: {real_root_path!r}, {root_path.native.raw!r}\n" 
+            f"  | reason: unresolved symbolic links, filesystem with aliasing paths, or a moved directory")
 
     msg = (
         f'current directory is no working tree: {root_path.as_string()!r}\n'
