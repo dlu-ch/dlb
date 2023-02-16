@@ -650,9 +650,9 @@ class DependencyRoleOverrideTest(unittest.TestCase):
             class CTool(BTool):
                 source_file = dlb.ex.input.RegularFile(required=False)
         self.assertRegex(
+            str(cm.exception),
             r"^attribute 'source_file' of base class may only be overridden by a "
-            r"<class 'dlb.ex.input.RegularFile'> at least as restrictive$",
-            str(cm.exception))
+            r"<class 'dlb.ex.input.RegularFile'> at least as restrictive$")
 
     # noinspection PyUnusedLocal,PyAbstractClass
     def test_can_only_override_with_similar_multiplicity(self):
