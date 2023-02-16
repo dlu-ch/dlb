@@ -101,6 +101,10 @@ class PathFromPathlibTest(unittest.TestCase):
         p = dlb.fs.Path(pathlib.PureWindowsPath('\\\\name\\r\\a\\b\\c'))
         self.assertEqual(repr(p), "Path('//name/r/a/b/c')")
 
+        if sys.version_info[:2] >= (3, 12):
+            p = dlb.fs.Path(pathlib.PureWindowsPath('\\\\name'))
+            self.assertEqual(repr(p), "Path('//name/')")
+
     def test_fails_for_incomplete(self):
         with self.assertRaises(ValueError) as cm:
             dlb.fs.Path(pathlib.PureWindowsPath('C:'))
@@ -110,8 +114,12 @@ class PathFromPathlibTest(unittest.TestCase):
             dlb.fs.Path(pathlib.PureWindowsPath('C:a\\b\\c'))
         self.assertEqual("neither absolute nor relative: root is missing", str(cm.exception))
 
+        if sys.version_info[:2] < (3, 12):
+            with self.assertRaises(ValueError) as cm:
+                dlb.fs.Path(pathlib.PureWindowsPath('\\\\name'))
+            self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
         with self.assertRaises(ValueError) as cm:
-            dlb.fs.Path(pathlib.PureWindowsPath('\\\\name'))
+            dlb.fs.Path(pathlib.PureWindowsPath('\\\\name')).pure_windows
         self.assertEqual("neither absolute nor relative: drive is missing", str(cm.exception))
 
 
