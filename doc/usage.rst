@@ -370,6 +370,114 @@ this: :dlbrepo:`example/c-minimal/build-all.py`.
 The package :mod:`dlb_contrib` provides tools and utilities to build upon.
 
 
+Paths and interaction with the filesystem
+-----------------------------------------
+
+Building software typically means to transform the content of a directory tree (e.g. a Git repository) to a set
+of build product.
+Portable, fast, robust manipulation of the paths of filesystem objects is therefore crucial.
+
+dlb provides :class:`dlb.fs.Path` for this purpose.
+
+Paths represented by :class:`dlb.fs.Path` instances are always in their shortest equivalent form
+(note that this does not include removal of ``'..'`` path component which would alter the meaning of the path).
+
+   >>> dlb.fs.Path('a/b/') == dlb.fs.Path('a/b/.//.')
+   True
+   >>> dlb.fs.Path('a/b/') == dlb.fs.Path('a/b/c/..')
+   False
+
+Directory paths and non-directory paths (e.g. of regular files, device files, or named pipes) are different and
+support different operations:
+
+   >>> dlb.fs.Path('a/b/').is_dir()
+   True
+   >>> dlb.fs.Path('a/b/') == dlb.fs.Path('a/b')
+   False
+
+   >>> dlb.fs.Path('a/') / 'b/c'
+   Path('a/b/c')
+   >>> dlb.fs.Path('a') / 'b/c'
+   ValueError: cannot append to non-directory path: Path('a')
+
+   >>> dlb.fs.Path('a/b/c')[:-1]
+   Path('a/b/')
+
+Representable paths can be restricted by subclassing;
+only paths valid for *all* base classes can be constructed.
+
+   >>> dlb.fs.NoSpacePath('a/x y/')
+   ValueError: invalid path for 'NoSpacePath': 'a/x y/' (must not contain space)
+
+   >>> class Path(dlb.fs.NoSpacePath, dlb.fs.NormalizedPath):
+   >>>     pass
+   >>> Path('a/b/c')
+   Path('a/b/c')
+   >>> Path('a/x y/')
+   ValueError: invalid path for 'Path': 'a/x y/' (must not contain space)
+   >>> Path('a/..')
+   ValueError: invalid path for 'Path': 'a/../' (must be normalized)
+
+Paths can be appended to directory paths as :class:`dlb.fs.Path` instances, as strings, as path component sequence.
+The restriction of the path beeing appended apply to the resulting path.
+
+   >>> output_directory = dlb.fs.NoSpacePath('build/out/')
+   >>> variant_name = 'posix'
+   >>> output_directory / f'build/{variant_name}/'
+   NoSpacePath('build/out/build/posix/')
+
+   >>> output_directory / ['build', variant_name]
+   NoSpacePath('build/out/build/posix')
+
+   >>> variant_name = 'po six'
+   >>> output_directory / f'build/{variant_name}/'
+   ValueError: invalid path for 'NoSpacePath': 'build/po six/' (must not contain space)
+
+:class:`dlb.fs.Path` instances are platform-independent and have to be converted to native path instances to access the
+native filesystem. These native path instances are non-portable and do not differentiate between directory paths
+and non-directory paths.
+A path that has a equivalent and unambiguous native representation on platform running dlb can be converted
+with :meth:`native()` <dlb.fs.Path.native()>:
+
+   >>> p = dlb.fs.Path(...)
+   >>> os.path.islink(str(p.native))  # string-like path - fast
+   >>> p.native.raw.islink()  # p.native.raw is a pathlib.Path - slower
+
+To convert a native path string to a :class:`dlb.fs.Path`, first convert it to a :class:`dlb.fs.Path.Native`:
+
+   >>> installation_directory = dlb.fs.Path(dlb.fs.Path.Native(os.environ.get('XY_INSTALL_DIR', '.')), is_dir=True)
+
+Relative native paths are guaranteed to start with ``'.'``.
+This prevents accidental unsafe use of native paths as command argument, e.g. ``-rf`` as an element in a list of paths
+used as argument for :command:`rm`.
+Implicit conversion to :class::``str`` would undermine this safeguard and is therefore not performed.
+To explicitly convert to a string representation, use :meth:`as_string() <dlb.fs.Path.as_string()>`
+
+   >>> dlb.fs.Path('path/to/executable').as_string()
+   'path/to/executable'
+
+Directory paths support provide powerful directory traversal methods with optional filters:
+
+   >>> dlb.fs.Path('x/y/').list(is_dir=True)  # list of all (direct) subdirectories
+
+The iterator are suitable even for huge directory trees large number of matching filesystem object,
+e.g. to calculate the sum of the file size of all non-directory objects with a file name that (case insensitively)
+ends in ``'.py'`` in the current directory and any of its subdirectories:
+
+   >>> sum([p.native.raw.stat().st_size for p in
+   ...      dlb.fs.Path('.').iterdir(name_filter=r'(?i).+\.py',
+   ...                               is_dir=False, recurse_name_filter='')])
+   1423
+
+Best practices:
+
+- Use paths relative to the root of the working tree as far as possible. Avoid absolute paths.
+- If a tool or dlb script is restricted to a subset of possible paths (e.g. not space), use a subclass of
+  :class:`dlb.fs.Path` that enforces this restriction (e.g. :class:`dlb.fs.NoSpacePath`).
+- Name variables holding :class:`dlb.fs.Path` objects by the expected type of the filesystem object:
+  ``..._directory`` for a directory, ``..._file`` for a file.
+
+
 .. _usage-self-contained-project:
 
 Self-contained projects: dlb as part of the repository
