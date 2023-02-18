@@ -527,12 +527,12 @@ might be useful which can easily be achieved with :class:`!MessageColorator` fro
 PyCharm integration
 -------------------
 
-If you use `PyCharm`_ to edit (and/or run and debug), your :term:`dlb scripts <script>` you can take advantage
+If you use `PyCharm`_ to edit (and/or run and debug) your :term:`dlb scripts <script>`, you can take advantage
 of the integrated referral to external HTML documentation: Place the caret in the editor on a dlb object
 (anything except a module) --- e.g. between the ``P`` and the ``a`` of ``dlb.fs.Path`` ---
 and press :kbd:`Shift+F1` or :kbd:`Ctrl+Q` to show the HTML documentation in your web browser.
 
-Configuration (as of PyCharm 2020.1):
+Configuration (as of PyCharm 2022.3):
 Add the following documentation URLs in the settings page :menuselection:`Tool --> External Documentation`:
 
 +-------------------+---------------------------------------------------------------------------------+
