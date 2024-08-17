@@ -17,6 +17,9 @@ LABEL org.opencontainers.image.base.name="docker.io/library/ubuntu:rolling"
 ENV OCI_IMAGE_TITLE="dlb_contrib_test_ubuntu"
 LABEL org.opencontainers.image.title="${OCI_IMAGE_TITLE}"
 
+# Ubuntu 20.04 LTS is the latest release that contains Python 2 packages (marked as deprecated);
+# Ubuntu 22.04 LTS no longer contains Pyhton 2 packages (e.g. python2-minimal).
+# https://lists.ubuntu.com/archives/ubuntu-devel/2020-February/040918.html
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         dash \
@@ -28,7 +31,6 @@ RUN apt-get update \
         make \
         strace \
         doxygen \
-        python2-minimal \
         python3 \
         git \
         pkg-config \
