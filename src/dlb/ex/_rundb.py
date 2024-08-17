@@ -269,7 +269,7 @@ class Database:
         # *rundb_path*.
 
         self._suggestion_if_database_error = str(suggestion_if_database_error)
-        self._start_datetime = datetime.datetime.utcnow()
+        self._start_datetime = datetime.datetime.now(tz=datetime.timezone.utc).replace(tzinfo=None)
 
         if max_dependency_age is None:
             oldest_dependency_datetime = None
